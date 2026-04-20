@@ -2,7 +2,7 @@
 task:
   id: SPEC-003
   type: story
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: S
@@ -23,6 +23,7 @@ references:
     - DEC-003  # config resolution order
     - DEC-004  # tags as comma-joined TEXT (user passes verbatim)
     - DEC-006  # cobra as the CLI framework
+    - DEC-007  # required-flag validation in RunE (emitted during build)
   constraints:
     - no-cgo
     - no-sql-in-cli-layer
@@ -452,26 +453,81 @@ If any of these feels necessary during build, write a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-003-brag-add-command`
+- **PR (if applicable):** opened after `just advance-cycle SPEC-003 verify`.
+- **All acceptance criteria met?** yes
+  - All eight `TestAdd_*` tests pass, both `TestErrUser_*` tests pass,
+    and SPEC-001's three `TestRootCmd_*` tests still pass. `gofmt -l .`
+    is empty, `go vet ./...` is clean, `go build ./cmd/brag` and
+    `CGO_ENABLED=0 go build ./cmd/brag` both succeed.
 - **New decisions emitted:**
-  - (none expected)
+  - `DEC-007` — required-flag validation lives in `RunE`, not
+    `MarkFlagRequired`. Emitted at confidence 0.80 because the choice
+    is project-wide and binds future subcommands, but is trivially
+    reversible if cobra ever exposes a wrappable hook.
 - **Deviations from spec:**
-  - [list]
+  - Dropped `cmd.MarkFlagRequired("title")` from the `NewAddCmd`
+    sketch. Reason: cobra's required-flag validation returns a plain
+    error before `RunE` runs, so `errors.Is(err, cli.ErrUser)` is
+    false — which makes `TestAdd_MissingTitleIsUserError` fail and
+    mis-classifies the exit code as 2 instead of 1. The `RunE`
+    `strings.TrimSpace(title) == ""` check already covers missing,
+    empty, and whitespace-only titles because the flag default is
+    `""`. Captured in DEC-007.
+  - Added a `regexp` import to `add_test.go` for the pipeable-output
+    assertion (the spec's Failing Tests section didn't list it
+    explicitly in the imports line but said "Regex `^\d+\n$` is fine").
+  - Narrowed `.gitignore` line 23 from `brag` to `/brag`. The former
+    pattern was silently ignoring the entire `cmd/brag/` directory,
+    meaning SPEC-001's `cmd/brag/main.go` was never actually committed
+    to version control. The fix is a two-character edit (`brag` →
+    `/brag`) restricting the pattern to a top-level file — i.e. the
+    compiled binary. Without this, SPEC-003's required modification
+    to `cmd/brag/main.go` (register the subcommand, add error-code
+    mapping) cannot be committed at all. User-confirmed as part of
+    this PR rather than a separate chore PR. This slightly stretches
+    `one-spec-per-pr` but is strictly necessary for SPEC-003 to ship.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - `list` is already queued as SPEC-004; it will inherit the
+    `ErrUser` + `main.go` exit-code mapping plumbing from this spec.
+  - The `MarkFlagRequired` convention established here (DEC-007) should
+    be referenced by SPEC-004's design-phase implementation context.
+  - STAGE-001 ship reflection should note the SPEC-001 ship process
+    missed a gitignore-regression guard. A `git ls-files cmd/` check
+    at ship time, or a "fresh-clone build" step, would have caught
+    this earlier.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — The spec's Notes-for-the-Implementer sketch includes
+   `MarkFlagRequired("title")` in the same file as a test that asserts
+   `errors.Is(err, ErrUser)` for the missing-flag case. Cobra's
+   required-flag validator short-circuits `RunE` with an unwrappable
+   error, so those two prescriptions can't both hold. I had to pick
+   one and document the deviation. A sentence in the spec saying
+   "validate in `RunE`; do not rely on `MarkFlagRequired` for the
+   ErrUser contract" would have saved the analysis.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — The spec doesn't explicitly say *how* required flags should be
+   enforced repo-wide. Now it's DEC-007. Future subcommand specs
+   should reference DEC-007 in their Implementation Context so the
+   same tension doesn't re-surface. Also: SPEC-001's ship process
+   missed a `.gitignore` regression that silently excluded the entire
+   `cmd/brag/` directory from version control — a "fresh-clone builds"
+   sanity check at ship time would have caught it. Fixed in passing
+   under this spec (see deviations); worth promoting to a
+   stage-level lesson.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Run the failing tests once right after writing them (before any
+   implementation) to confirm they actually fail for the expected
+   reason. I wrote tests + implementation in sequence, and only saw
+   them pass at the end — which is good for TDD rhythm but meant the
+   `MarkFlagRequired` / `ErrUser` conflict showed up during
+   implementation rather than during test-authoring. Catching it
+   earlier would have ordered the DEC-007 write-up differently.
 
 ---
 
