@@ -2,7 +2,7 @@
 task:
   id: SPEC-001
   type: story
-  cycle: verify
+  cycle: build
   blocked: false
   priority: high
   complexity: S
@@ -100,37 +100,37 @@ default) isolated in its own package and unit-tested.
 All of these must hold. Each maps to at least one test in "Failing
 Tests" below; the CI command column shows how to verify manually.
 
-- [ ] `go build ./cmd/brag` exits 0 and produces an executable named
+- [x] `go build ./cmd/brag` exits 0 and produces an executable named
       `brag` in the repo root (or in the current directory if built
       from elsewhere). *[go build ./cmd/brag && ls brag]*
-- [ ] `./brag --version` writes a non-empty version string to stdout,
+- [x] `./brag --version` writes a non-empty version string to stdout,
       writes nothing to stderr, exits 0. Version string for this spec
       is the literal `"dev"` (goreleaser will inject a real one in
       STAGE-004 via `-ldflags`). *[root_test: TestRootCmd_VersionFlag]*
-- [ ] `./brag --help` writes cobra's help output to stdout including
+- [x] `./brag --help` writes cobra's help output to stdout including
       the flags `--db` and `--version`, exits 0.
       *[root_test: TestRootCmd_HelpFlag]*
-- [ ] `./brag` with no args prints the help text and exits 0. (This is
+- [x] `./brag` with no args prints the help text and exits 0. (This is
       cobra's default when a command has no `Run`/`RunE` and no
       subcommands.) *[root_test: TestRootCmd_NoArgs]*
-- [ ] `config.ResolveDBPath("")` with `BRAGFILE_DB` unset returns the
+- [x] `config.ResolveDBPath("")` with `BRAGFILE_DB` unset returns the
       default `~/.bragfile/db.sqlite` path, expanded to an absolute
       path (no `~`). *[config_test: TestResolveDBPath_Default]*
-- [ ] `config.ResolveDBPath("/tmp/foo.db")` returns `/tmp/foo.db`
+- [x] `config.ResolveDBPath("/tmp/foo.db")` returns `/tmp/foo.db`
       regardless of env. *[config_test: TestResolveDBPath_FlagWins]*
-- [ ] With `BRAGFILE_DB="/tmp/env.db"` set and flag empty,
+- [x] With `BRAGFILE_DB="/tmp/env.db"` set and flag empty,
       `ResolveDBPath("")` returns `/tmp/env.db`.
       *[config_test: TestResolveDBPath_EnvWhenFlagEmpty]*
-- [ ] With `BRAGFILE_DB="/tmp/env.db"` set and flag non-empty,
+- [x] With `BRAGFILE_DB="/tmp/env.db"` set and flag non-empty,
       `ResolveDBPath("/tmp/flag.db")` returns `/tmp/flag.db` (flag
       beats env). *[config_test: TestResolveDBPath_FlagBeatsEnv]*
-- [ ] `config.ResolveDBPath("~/weird.db")` returns an absolute path
+- [x] `config.ResolveDBPath("~/weird.db")` returns an absolute path
       with `~` expanded to the user's home.
       *[config_test: TestResolveDBPath_ExpandsTilde]*
-- [ ] `gofmt -l .` produces empty output.
+- [x] `gofmt -l .` produces empty output.
       *[manual or CI step: gofmt -l . | test -z "$(cat)"]*
-- [ ] `go vet ./...` exits 0.
-- [ ] `go test ./...` exits 0.
+- [x] `go vet ./...` exits 0.
+- [x] `go test ./...` exits 0.
 
 ## Failing Tests
 
@@ -163,19 +163,29 @@ Imports: `testing`, `os`, `path/filepath`, `strings`, package under test.
 Imports: `testing`, `bytes`, `strings`, `github.com/spf13/cobra`,
 package under test.
 
+All root_test cases use the **separate-buffers** pattern:
+`var outBuf, errBuf bytes.Buffer; cmd.SetOut(&outBuf); cmd.SetErr(&errBuf)`.
+This is the prescribed pattern for every subcommand test that follows
+SPEC-001 — sharing one buffer hides violations of the
+`stdout-is-for-data-stderr-is-for-humans` constraint.
+
 - **`TestRootCmd_VersionFlag`** — Build `cmd := NewRootCmd("test-v0")`,
-  `cmd.SetArgs([]string{"--version"})`, attach a `bytes.Buffer` to
-  `cmd.SetOut`, call `cmd.Execute()`. Assert: returns nil error, buffer
-  contains `"test-v0"`.
+  `cmd.SetArgs([]string{"--version"})`, wire `outBuf`/`errBuf` per the
+  pattern above, call `cmd.Execute()`. Assert: returns nil error,
+  `outBuf` contains `"test-v0"`, `errBuf.Len() == 0` (nothing on
+  stderr — this is the empirical check of the stdout/stderr split).
 - **`TestRootCmd_HelpFlag`** — Same setup with args `["--help"]`.
-  Assert: returns nil error, buffer contains substrings `"--db"` and
-  `"Usage:"`.
+  Assert: returns nil error, `outBuf` contains substrings `"--db"`
+  and `"Usage:"`, `errBuf.Len() == 0`.
 - **`TestRootCmd_NoArgs`** — args `[]`. Assert: returns nil error,
-  buffer contains `"Usage:"` (cobra's default when no subcommands).
+  `outBuf` contains `"Usage:"` (cobra's default when no subcommands),
+  `errBuf.Len() == 0`.
 
 Notes for the implementer on testing patterns:
-- Use `cmd.SetOut(&buf)` and `cmd.SetErr(&buf)` to capture output.
-  Cobra writes help to the output set by `SetOut`.
+- Always wire `cmd.SetOut(&outBuf)` and `cmd.SetErr(&errBuf)` to
+  **separate** buffers. Asserting on a merged buffer would mask a
+  stdout/stderr violation — the whole point of these tests is to
+  enforce the split at the CLI boundary.
 - Use `t.Setenv` (Go 1.17+) — it auto-restores env on test cleanup.
   Never `os.Setenv` directly in tests.
 
@@ -309,6 +319,27 @@ than expanding SPEC-001.
    — Nothing significant. The spec was well-scoped and the implementation
    was straightforward. The cobra help template behavior could be noted in
    the spec's "Notes for the Implementer" section for future reference.
+
+### Punch-list iteration (2026-04-20)
+
+Addresses the two items from the verify cycle's punch list:
+
+1. **Stdout/stderr split now empirically tested.** `internal/cli/root_test.go`
+   was rewritten to use separate `outBuf` and `errBuf` buffers via
+   `cmd.SetOut(&outBuf)` / `cmd.SetErr(&errBuf)`. `TestRootCmd_VersionFlag`,
+   `TestRootCmd_HelpFlag`, and `TestRootCmd_NoArgs` now each assert
+   `errBuf.Len() == 0` in addition to the stdout substring check. The
+   prior single-buffer setup could not distinguish stdout from stderr
+   and so left the `stdout-is-for-data-stderr-is-for-humans` constraint
+   unverified at the test layer. The SPEC's `## Failing Tests` section
+   was updated to prescribe the separate-buffers pattern as the template
+   every subsequent subcommand spec in STAGE-001 onward should follow.
+2. **Acceptance-criteria checkboxes ticked.** The list was accurate
+   after the original build (`gofmt`/`vet`/`test` all clean) but the
+   boxes had been left unchecked. Now ticked.
+
+No implementation code changed (only tests + spec). `gofmt -l .`,
+`go vet ./...`, and `go test ./...` remain clean.
 
 ---
 
