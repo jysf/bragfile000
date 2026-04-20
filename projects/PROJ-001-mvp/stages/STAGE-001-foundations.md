@@ -101,14 +101,15 @@ other ticket while STAGE-002 builds out the richer commands.
       exit-code mapping (1 for user error, 2 for internal). Emitted
       DEC-007 (required-flag validation in `RunE`, not
       `MarkFlagRequired`) during build. Approved clean, no punch list.
-- [ ] SPEC-004 (build) — `brag list` command (S). Cobra subcommand,
-      no filter flags yet, reads all rows reverse-chronological via
-      `Store.List(ListFilter{})`, prints tab-separated
-      `<id>\t<created_at>\t<title>` lines. Test shape includes
-      empty-DB case, reverse-chrono ordering, tab-format invariants,
-      `--db` flag respected, storage-error-is-internal propagation.
+- [x] SPEC-004 (shipped on 2026-04-20) — `brag list` command (S).
+      Cobra subcommand, no filter flags yet, reads all rows reverse-
+      chronological via `Store.List(ListFilter{})`, prints tab-
+      separated `<id>\t<created_at>\t<title>` lines. Approved clean,
+      no punch list, no new DECs. Demonstrated lesson-compounding:
+      build session applied SPEC-002's tie-break rule and SPEC-003's
+      "run failing tests once to confirm they fail" reflection.
 
-**Count:** 3 shipped / 0 active / 1 pending
+**Count:** 4 shipped / 0 active / 0 pending
 
 **Complexity check:** no L specs. SPEC-002 is the only M; the others
 are S. Stage size is healthy (4 specs, within the 3–8 guideline).

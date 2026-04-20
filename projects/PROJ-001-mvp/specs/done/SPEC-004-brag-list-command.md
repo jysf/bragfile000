@@ -2,7 +2,7 @@
 task:
   id: SPEC-004
   type: story
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: S
@@ -445,13 +445,31 @@ If any of these feels necessary during build, write a new spec.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended 2026-04-20 during the **ship** cycle. Outcome-focused,
+distinct from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   Test-helper parameter design: when prescribing a test helper in a
+   spec, verify every parameter is actually load-bearing in every
+   test that calls it. SPEC-004 prescribed `newListTestRoot(t,
+   dbPath)` but `dbPath` turned out unused in some of the tests —
+   the build session silenced it with `_ = dbPath`, which is correct
+   but cosmetic spec noise. Small thing; flagging it so future specs
+   pressure-test helper signatures before shipping to build.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   No. SPEC-004 shipped cleanly because every prior lesson — separate
+   `outBuf`/`errBuf` (SPEC-001), monotonic tie-break for ordering
+   tests (SPEC-002), `RunE` validation not `MarkFlagRequired`
+   (SPEC-003), `/`-anchored gitignore (SPEC-003) — already lives in
+   AGENTS.md and the build session correctly applied them. The
+   framework proved itself on this spec. No new rule earned means
+   the accumulated rules are doing their job.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   No. STAGE-001's backlog closes with SPEC-004. Next move is
+   Prompt 1d (Stage Ship) for the whole stage, then Prompt 1c to
+   frame STAGE-002 — that's where deferred items (filter flags on
+   `list`, FTS5 + `brag search`, `show`/`edit`/`delete`, editor-
+   launch capture) get scoped into their next waves of work.
+   Nothing is slipping.
