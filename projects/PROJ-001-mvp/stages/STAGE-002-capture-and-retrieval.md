@@ -120,13 +120,15 @@ ones). Complexity mix: 5 × S, 3 × M, no L. Stage size is 8 specs —
 at the upper bound of the 3–8 guideline but coherent; no item splits
 cleanly to a different stage.
 
-- [ ] SPEC-005 (not yet framed, **S**) — **`brag add` ergonomic polish.**
+- [ ] SPEC-005 (build, **S**) — **`brag add` ergonomic polish.**
       Add single-letter shorthands (`-t` title, `-d` description,
-      `-T` tags, `-p` project, `-k` type, `-i` impact). Update add's
-      `Long` description with a usage example. Update root command's
-      `Long` so `brag --help` points users at `brag <cmd> --help`
-      for flag detail. First spec in this stage — unblocks the user's
-      immediate dogfooding friction.
+      `-T` tags, `-p` project, `-k` type, `-i` impact). Refresh
+      add's `Long` with an Examples block. Append one line to
+      root's `Long` pointing users at `brag <command> --help` for
+      per-subcommand flag detail. Updates `docs/tutorial.md` to
+      show shorthand alongside long form. 10 new tests across
+      `add_test.go` + `root_test.go`; purely additive, no existing
+      test changes.
 
 - [ ] SPEC-006 (not yet framed, **M**) — **`list` filter flags + Store
       filtering.** Populate `ListFilter` with `Tag`, `Project`, `Type`,
