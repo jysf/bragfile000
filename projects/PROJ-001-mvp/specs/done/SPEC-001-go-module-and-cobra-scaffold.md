@@ -2,7 +2,7 @@
 task:
   id: SPEC-001
   type: story
-  cycle: build
+  cycle: ship
   blocked: false
   priority: high
   complexity: S
@@ -345,13 +345,26 @@ No implementation code changed (only tests + spec). `gofmt -l .`,
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended 2026-04-20 during the **ship** cycle. Outcome-focused,
+distinct from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   Prescribe separate `outBuf` and `errBuf` in the spec's **Failing
+   Tests** section from day one for any CLI command test. The
+   `stdout-is-for-data-stderr-is-for-humans` constraint implies that
+   shape; the original SPEC-001 collapsed both into a single buffer,
+   which the verify session caught as a gap on the second pass.
+   Future specs that add subcommands (SPEC-003, SPEC-004, …) should
+   inherit the split-buffer pattern automatically via AGENTS.md §9.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   Yes — `AGENTS.md` §9 (Testing Conventions) gets one new bullet
+   explicitly requiring separate `outBuf`/`errBuf` in cobra command
+   tests with a no-cross-leakage assertion. That carries the lesson
+   forward without cluttering the spec template (tests are per-spec,
+   not templated). Applied in the same ship commit.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   No. SPEC-002 / SPEC-003 / SPEC-004 are already in STAGE-001's
+   backlog. The split-buffer lesson applies prospectively and will
+   travel via the AGENTS.md update.

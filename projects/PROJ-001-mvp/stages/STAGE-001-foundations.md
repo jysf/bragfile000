@@ -84,10 +84,11 @@ other ticket while STAGE-002 builds out the richer commands.
 
 ## Spec Backlog
 
-- [ ] SPEC-001 (build) — Go module + Cobra scaffold (S). Module init,
-      root command, `cmd/brag/main.go`, package layout, `--version`,
-      `--help`, root `--db` flag wiring, `internal/config` path
-      resolver per DEC-003.
+- [x] SPEC-001 (shipped on 2026-04-20) — Go module + Cobra scaffold (S).
+      Module init, root command, `cmd/brag/main.go`, package layout,
+      `--version`, `--help`, root `--db` flag wiring, `internal/config`
+      path resolver per DEC-003. One verify punch-list iteration on
+      stdout/stderr buffer split.
 - [ ] SPEC-002 (design) — SQLite storage + migrations (M). Pure-Go
       sqlite driver, `internal/storage/store.go`, embedded migration
       SQL, `entries` + `schema_migrations` tables, `Open`, `Add`,
@@ -99,7 +100,7 @@ other ticket while STAGE-002 builds out the richer commands.
       no filter flags yet, reads all rows reverse-chronological,
       plain-text output, test asserts output shape.
 
-**Count:** 0 shipped / 0 active / 4 pending
+**Count:** 1 shipped / 0 active / 3 pending
 
 **Complexity check:** no L specs. SPEC-002 is the only M; the others
 are S. Stage size is healthy (4 specs, within the 3–8 guideline).
