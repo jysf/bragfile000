@@ -1,0 +1,37 @@
+# guidance/questions.yaml
+# Open questions under active investigation. Agents can see what we're
+# still figuring out and avoid re-deriving answers in isolation.
+#
+# Every question MUST have:
+#   - id: stable kebab-case identifier
+#   - question: the question in one sentence
+#   - priority: critical | high | medium | low
+#   - status: open | investigating | answered
+#   - raised_by: human | claude | <agent-id>
+#   - raised_at: YYYY-MM-DD
+#   - assigned_to: null | <agent-id> | <human>
+#
+# When a question is answered, either:
+#   (a) update status to "answered" and link to the DEC-XXX that records the answer, or
+#   (b) delete the question if it was resolved without a formal decision.
+
+questions:
+  - id: example-caching-strategy
+    question: "Should session state be cached in Redis or in-memory?"
+    priority: medium
+    status: open
+    raised_by: claude
+    raised_at: 2026-04-19
+    assigned_to: null
+    notes: |
+      Initial deployment is single-instance so in-memory works, but
+      horizontal scaling will require Redis. Deferring until traffic
+      justifies it.
+
+  - id: example-rate-limit-scope
+    question: "Should rate limits be per-IP, per-user, or both?"
+    priority: low
+    status: open
+    raised_by: human
+    raised_at: 2026-04-19
+    assigned_to: null
