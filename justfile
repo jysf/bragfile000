@@ -88,6 +88,33 @@ weekly-review:
     @./scripts/weekly-review.sh
 
 # ----------------------------------------------------------------------------
+# APP COMMANDS — bragfile itself
+# ----------------------------------------------------------------------------
+
+# Build ./brag in the repo root (no install; for ad-hoc testing)
+build:
+    @go build -o brag ./cmd/brag
+    @echo "✓ Built ./brag (current dir)"
+
+# Install brag to Go's GOBIN (~/go/bin by default). Ensure that directory is on your $PATH.
+install:
+    @go install ./cmd/brag
+    @echo "✓ Installed brag. Verify with: brag --version"
+
+# Remove the installed binary from GOBIN / ~/go/bin.
+uninstall:
+    @rm -f "$(go env GOBIN 2>/dev/null || echo "$(go env GOPATH)/bin")/brag"
+    @echo "✓ Uninstalled brag (if present)"
+
+# Run the full Go test suite.
+test:
+    @go test ./...
+
+# Run brag without installing. Usage: just run list   |   just run add --title "x"
+run *ARGS:
+    @go run ./cmd/brag {{ARGS}}
+
+# ----------------------------------------------------------------------------
 # HELPERS
 # ----------------------------------------------------------------------------
 

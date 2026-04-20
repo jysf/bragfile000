@@ -48,13 +48,37 @@ See `AGENTS.md` section 13 for the full discipline.
 ## The app itself
 
 `brag` is a terminal CLI that stores brag-worthy work moments in a local
-SQLite database at `~/.bragfile/db.sqlite`. Core operations are `add`,
-`list`, `search`, `show`, `edit`, `delete`, `export`, and `summary`.
-`brag add` with no arguments opens `$EDITOR` against a templated
-markdown buffer; fields are parsed on save.
+SQLite database at `~/.bragfile/db.sqlite`. Core operations today:
+`add` and `list`. `show`, `edit`, `delete`, `search`, `export`, and
+`summary` arrive in later stages. `brag add` with no arguments opens
+`$EDITOR` against a templated markdown buffer in a future stage;
+fields are parsed on save.
 
-Build, test, and run commands will live in `AGENTS.md` Section 4 once
-the repo/project design cycle (Prompt 2a) has filled it in.
+### Install locally (from source)
+
+Requires Go 1.26+ and `just` (optional — pure `go` commands work too).
+
+```bash
+git clone https://github.com/jysf/bragfile000.git
+cd bragfile000
+just install              # or: go install ./cmd/brag
+brag --version            # verify ~/go/bin is on your $PATH
+brag add --title "my first brag"
+brag list
+```
+
+Homebrew install (`brew install bragfile`) arrives in STAGE-004.
+
+### Daily commands
+
+See `AGENTS.md` §4 for the full list. Most common:
+
+```bash
+just run -- list          # run without installing
+just test                 # run the test suite
+just build                # build ./brag locally
+just install              # install/upgrade brag on $PATH
+```
 
 ## Where things live
 

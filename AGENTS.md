@@ -70,8 +70,15 @@ These are the APP's commands. For template/workflow commands, see `justfile`.
 go mod download                              # install module deps after go.mod exists
 
 # --- daily development ---
+just build                                   # build ./brag in repo root (wraps `go build ./cmd/brag`)
+just install                                 # install brag to ~/go/bin (wraps `go install ./cmd/brag`)
+just uninstall                               # remove installed brag binary
+just test                                    # run all tests (wraps `go test ./...`)
+just run -- list                             # run without installing (e.g. `just run list`, `just run add --title "x"`)
+# direct-go equivalents are also fine:
 go build ./cmd/brag                          # build binary into ./brag
-go run ./cmd/brag <args>                     # run without building (e.g. go run ./cmd/brag list)
+go install ./cmd/brag                        # install to $GOBIN (default ~/go/bin)
+go run ./cmd/brag <args>                     # run without building
 go test ./...                                # run all tests
 go test ./internal/storage -run TestAdd -v   # run a single test in a package
 gofmt -w .                                   # format (write in place)
