@@ -66,3 +66,28 @@ func TestRootCmd_NoArgs(t *testing.T) {
 		t.Errorf("expected stderr to be empty, got %q", errBuf.String())
 	}
 }
+
+func TestRoot_HelpPointsAtSubcommandHelp(t *testing.T) {
+	var outBuf, errBuf bytes.Buffer
+	cmd := NewRootCmd("test-v0")
+	cmd.SetOut(&outBuf)
+	cmd.SetErr(&errBuf)
+	cmd.SetArgs([]string{"--help"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errBuf.Len() != 0 {
+		t.Errorf("expected stderr to be empty, got %q", errBuf.String())
+	}
+	out := outBuf.String()
+	if !strings.Contains(out, "--help") {
+		t.Errorf("expected help output to mention %q, got %q", "--help", out)
+	}
+	hasPlaceholder := strings.Contains(out, "<command>") ||
+		strings.Contains(out, "<cmd>") ||
+		strings.Contains(out, "brag <")
+	if !hasPlaceholder {
+		t.Errorf("expected root Long to point at subcommand help (\"<command>\", \"<cmd>\", or \"brag <\"), got %q", out)
+	}
+}

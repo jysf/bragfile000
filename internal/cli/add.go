@@ -16,15 +16,25 @@ func NewAddCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
 		Short: "Add a new brag entry",
-		Long:  "Add a new brag entry. Title is required; other fields are optional.",
-		RunE:  runAdd,
+		Long: `Add a new brag entry. Title is required; other fields are optional.
+
+Examples:
+  brag add -t "shipped the auth refactor"
+  brag add -t "cut p99 latency" -T "auth,perf" -p "platform" \
+           -i "unblocked mobile v3 release"
+  brag add --title "..." --description "..." --tags "..." \
+           --project "..." --type "..." --impact "..."
+
+Short forms: -t title, -d description, -T tags, -p project,
+-k type, -i impact.`,
+		RunE: runAdd,
 	}
-	cmd.Flags().String("title", "", "short headline (required)")
-	cmd.Flags().String("description", "", "free-form body")
-	cmd.Flags().String("tags", "", "comma-joined tag list (e.g. \"auth,perf\")")
-	cmd.Flags().String("project", "", "project / initiative this brag belongs to")
-	cmd.Flags().String("type", "", "free-form category (shipped, learned, mentored, ...)")
-	cmd.Flags().String("impact", "", "impact statement (metric, quote, outcome)")
+	cmd.Flags().StringP("title", "t", "", "short headline (required)")
+	cmd.Flags().StringP("description", "d", "", "free-form body")
+	cmd.Flags().StringP("tags", "T", "", "comma-joined tag list (e.g. \"auth,perf\")")
+	cmd.Flags().StringP("project", "p", "", "project / initiative this brag belongs to")
+	cmd.Flags().StringP("type", "k", "", "free-form category (shipped, learned, mentored, ...)")
+	cmd.Flags().StringP("impact", "i", "", "impact statement (metric, quote, outcome)")
 	// MarkFlagRequired is intentionally omitted: cobra's required-flag
 	// validation returns a plain error that cannot carry our ErrUser
 	// sentinel, and the RunE TrimSpace check below already covers
