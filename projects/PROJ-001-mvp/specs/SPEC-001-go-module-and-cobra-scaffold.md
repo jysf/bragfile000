@@ -279,7 +279,7 @@ than expanding SPEC-001.
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** `feat/spec-001-go-module-and-cobra-scaffold`
-- **PR (if applicable):** pending
+- **PR (if applicable):** https://github.com/jysf/bragfile000/pull/1
 - **All acceptance criteria met?** yes
 - **New decisions emitted:**
   - None. DEC-003 and DEC-006 (written during design) were sufficient.
