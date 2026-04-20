@@ -15,6 +15,7 @@ const Version = "dev"
 func main() {
 	root := cli.NewRootCmd(Version)
 	root.AddCommand(cli.NewAddCmd())
+	root.AddCommand(cli.NewListCmd())
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "brag: %s\n", err.Error())
