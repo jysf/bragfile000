@@ -2,7 +2,7 @@
 task:
   id: SPEC-005
   type: chore
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: S
@@ -333,26 +333,35 @@ If any of these feels necessary during build, create a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-005-brag-add-ergonomic-polish`
+- **PR (if applicable):** to be opened after `just advance-cycle SPEC-005 verify`
+- **All acceptance criteria met?** yes
+  - `brag add -t "x"` equivalent to `brag add --title "x"` ✓ (`TestAdd_ShorthandTitleEquivalentToLong`)
+  - `-d`, `-T`, `-p`, `-k`, `-i` each persist to the right column ✓ (`TestAdd_Shorthand{Description,Tags,Project,Type,Impact}`)
+  - Mixed short + long form works ✓ (`TestAdd_ShorthandAndLongFormMix`)
+  - `brag add -t ""` returns `ErrUser` like the long form ✓ (`TestAdd_EmptyShorthandTitleIsUserError`)
+  - Help renders `-X, --long` pairs ✓ (`TestAdd_HelpShowsShorthands`)
+  - Help shows Examples / `brag add` invocation ✓ (`TestAdd_HelpShowsExamples`)
+  - `brag --help` points at `<command> --help` ✓ (`TestRoot_HelpPointsAtSubcommandHelp`)
+  - All prior SPEC-001/003/004 tests still green (no existing test modified) ✓
+  - `gofmt -l .` empty, `go vet ./...` clean, `CGO_ENABLED=0 go build ./...` succeeds, `go test ./...` green ✓
 - **New decisions emitted:**
-  - (none expected; pure ergonomic polish)
+  - (none — pure ergonomic polish; the shorthand mapping and Long-refresh wording were pre-locked in the spec body and `## Notes for the Implementer`)
 - **Deviations from spec:**
-  - [list]
+  - None. Shorthand letters, `Long` copy for `add`, and the single new line on root's `Long` match the suggested text verbatim. No drive-by changes.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - No new specs. STAGE-002 backlog already covers `list` filter shorthands (SPEC-006) and subsequent commands' shorthands when they are introduced.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing was unclear. Shorthand table was pre-locked, `Long` copy was pre-suggested, and the test list enumerated acceptance criteria one-to-one. This is the most prescriptive spec in the stage to date and it paid off — build was almost mechanical. The only judgment call was the `TestAdd_HelpShowsExamples` substring (cobra's `Usage:` block already contains `brag add`, so the test would pass even without an Examples block); kept it as-written per spec, since verify will check the Long body visually.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. `DEC-006` (cobra → `StringP` is the shorthand API), `DEC-007` (keep `RunE`-validated title, don't reach for `MarkFlagRequired`), `stdout-is-for-data-stderr-is-for-humans`, `test-before-implementation`, and `one-spec-per-pr` were each load-bearing during build — every one got used. `errors-wrap-with-context` was listed but truly didn't apply (no new error paths) and the spec correctly flagged that inline.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing structural. The fail-first test run surfaced the exact expected failure modes (`unknown shorthand flag: 't'`, missing `"-t, --title"` substring, missing `<command>` placeholder) before any implementation line changed — that pattern is now worth the ~30 seconds every time. Worth noting for the next `add`-adjacent spec: cobra's help renders `-X, --long string` with a hard-coded comma-space; future "help contains X" substring asserts can rely on that, which is what this spec did.
 
 ---
 

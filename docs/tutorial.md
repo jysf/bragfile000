@@ -32,12 +32,14 @@ Minimum — just a title:
 
 ```bash
 brag add --title "shipped STAGE-001 end-to-end in a day"
+# or with the shorthand:
+brag add -t "shipped STAGE-001 end-to-end in a day"
 ```
 
 It prints the inserted ID (just a number) on stdout. You can pipe it:
 
 ```bash
-id=$(brag add --title "untangled the auth flake")
+id=$(brag add -t "untangled the auth flake")
 echo "captured as id=$id"
 ```
 
@@ -57,6 +59,22 @@ postmortem in doc-042" \
   --type "shipped" \
   --impact "unblocked mobile v3 release"
 ```
+
+Or with single-letter shorthands (`-t` title, `-d` description, `-T`
+tags, `-p` project, `-k` type, `-i` impact):
+
+```bash
+brag add \
+  -t "cut p99 login latency from 600ms to 120ms" \
+  -d "replaced the join-on-every-request with a redis lookup; \
+postmortem in doc-042" \
+  -T "auth,perf,backend" \
+  -p "platform" \
+  -k "shipped" \
+  -i "unblocked mobile v3 release"
+```
+
+Run `brag add --help` to see them listed alongside the long forms.
 
 Notes on the fields:
 

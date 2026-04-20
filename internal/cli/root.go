@@ -7,9 +7,11 @@ import (
 // NewRootCmd creates the root cobra command for the brag CLI.
 func NewRootCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "brag",
-		Short:   "Capture and retrieve career accomplishments",
-		Long:    "Bragfile — a local-first CLI for engineers to capture and retrieve career accomplishments for retros, reviews, and resumes.",
+		Use:   "brag",
+		Short: "Capture and retrieve career accomplishments",
+		Long: `Bragfile — a local-first CLI for engineers to capture and retrieve career accomplishments for retros, reviews, and resumes.
+
+Run 'brag <command> --help' for command-specific flags and usage.`,
 		Version: version,
 		// Print help when invoked with no args and no subcommands.
 		// This also makes the command "runnable" so cobra includes
