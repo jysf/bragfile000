@@ -89,10 +89,10 @@ other ticket while STAGE-002 builds out the richer commands.
       `--version`, `--help`, root `--db` flag wiring, `internal/config`
       path resolver per DEC-003. One verify punch-list iteration on
       stdout/stderr buffer split.
-- [ ] SPEC-002 (design) — SQLite storage + migrations (M). Pure-Go
+- [ ] SPEC-002 (build) — SQLite storage + migrations (M). Pure-Go
       sqlite driver, `internal/storage/store.go`, embedded migration
       SQL, `entries` + `schema_migrations` tables, `Open`, `Add`,
-      `List(filter)` stub, full test coverage on temp dir.
+      `List(ListFilter)` stub, full test coverage on temp dir.
 - [ ] SPEC-003 (design) — `brag add` command (S). Cobra subcommand,
       required `--title`, optional `--description --tags --project
       --type --impact`, writes via storage, prints inserted ID.
