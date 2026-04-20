@@ -2,7 +2,7 @@
 task:
   id: SPEC-002
   type: story
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: M
@@ -391,26 +391,59 @@ If any of these feels necessary during build, write a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-002-sqlite-storage-and-migrations`
+- **PR (if applicable):** opened at end of build (link added on push)
+- **All acceptance criteria met?** yes — all 15 named tests pass;
+  `gofmt -l .` empty; `go vet ./...` clean; `go build ./...` and
+  `CGO_ENABLED=0 go build ./...` both succeed.
 - **New decisions emitted:**
-  - (none expected; all storage decisions are pre-existing DECs)
+  - (none; all storage decisions were pre-existing: DEC-001, DEC-002,
+    DEC-004, DEC-005)
 - **Deviations from spec:**
-  - [list]
+  - `List` uses a secondary `ORDER BY id DESC` tie-break on top of
+    `created_at DESC`. `time.RFC3339` only has second precision, so
+    three `Add`s with 10ms spacing share the same `created_at` string;
+    without a tie-break `TestList_ReverseChronological` would be
+    non-deterministic. AUTOINCREMENT IDs (DEC-005) are monotone, so
+    `id DESC` produces the insertion-order reversal the spec expects.
+  - `Add` truncates `time.Now().UTC()` to the second before returning
+    it on the hydrated `Entry`, so the in-memory `CreatedAt` matches
+    the RFC3339 string that ends up in the DB (the
+    `UpdatedAt.Equal(CreatedAt)` assertion stays true on round-trip).
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - STAGE-002: populate `ListFilter` fields and WHERE-clause logic;
+    add FTS5 virtual table via `0002_add_fts.sql`; revisit the
+    `created_at DESC, id DESC` tie-break if anything relies on a
+    finer-than-second ordering (it probably shouldn't).
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — `TestList_ReverseChronological` sleeps 10 ms between `Add` calls
+   "so RFC3339 timestamps strictly differ", but RFC3339 is
+   second-precision — 10 ms is not enough. The spec didn't call out a
+   tie-break ordering. I added a secondary `id DESC`, which is
+   consistent with DEC-005 but is an implicit assumption worth making
+   explicit in the spec (or bumping the sleep to 1.1 s, which would
+   slow the suite for no real benefit).
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — Nothing missing. The spec's Implementation Context plus DEC-001/
+   002/004/005 covered every question that came up. Minor nit: the
+   `entries` columns are nullable per the data-model doc, so the `List`
+   scan has to use `sql.NullString`; the spec's `Outputs` section shows
+   them as plain `TEXT` without calling that out. Not a blocker — just
+   a thing I noticed when scanning rows.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Write the scan-side of `List` before the insert-side of `Add`.
+   Doing it in insert-first order meant I built the hydrated `Entry`
+   return value, then discovered (when writing `List`) that nullable
+   columns need `sql.NullString`; the return shape in `Add` happened to
+   be fine because I never round-trip through a nullable scan there,
+   but working read-first would have surfaced the null-handling
+   question earlier and kept the two code paths symmetric from the
+   start.
 
 ---
 
