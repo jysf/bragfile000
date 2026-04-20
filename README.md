@@ -1,6 +1,11 @@
-# My App
+# Bragfile
 
-*This file replaces the template README when you run `just init` — rename or customize as needed.*
+A local-first CLI for engineers to capture and retrieve career
+accomplishments ("brags") for retros, reviews, and resumes. Go + embedded
+SQLite; installs via `brew install bragfile`; binary is `brag`.
+
+> **Status:** in development. See `projects/PROJ-001-mvp/brief.md` for
+> what's being built in this wave of work.
 
 This repo uses a spec-driven workflow where Claude plays every role (architect, implementer, reviewer) across different sessions.
 
@@ -42,12 +47,14 @@ See `AGENTS.md` section 13 for the full discipline.
 
 ## The app itself
 
-[REPLACE: describe what this repo actually builds. The workflow above
-is the *meta-process*; this section is about the *app*. Include:]
+`brag` is a terminal CLI that stores brag-worthy work moments in a local
+SQLite database at `~/.bragfile/db.sqlite`. Core operations are `add`,
+`list`, `search`, `show`, `edit`, `delete`, `export`, and `summary`.
+`brag add` with no arguments opens `$EDITOR` against a templated
+markdown buffer; fields are parsed on save.
 
-- What the app does (1 paragraph)
-- How to run it locally (link to AGENTS.md Section 4)
-- How to run tests
+Build, test, and run commands will live in `AGENTS.md` Section 4 once
+the repo/project design cycle (Prompt 2a) has filled it in.
 
 ## Where things live
 
@@ -62,8 +69,9 @@ is the *meta-process*; this section is about the *app*. Include:]
 | `projects/*/brief.md` | What this project is and why |
 | `projects/*/stages/` | Stages within a project |
 | `projects/*/specs/` | Specs within a project (with folded-in Implementation Context) |
-| `src/` | [REPLACE: the actual app code] |
+| `cmd/brag/` | CLI entrypoint (added during STAGE-001) |
+| `internal/` | Implementation packages: storage, commands, editor, export |
 
 ## License
 
-[REPLACE]
+MIT. See `LICENSE`.

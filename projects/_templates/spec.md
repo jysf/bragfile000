@@ -16,7 +16,7 @@ project:
   id: PROJ-XXX
   stage: STAGE-XXX
 repo:
-  id: my-app
+  id: <repo-id>
 
 agents:
   architect: claude-opus-4-7

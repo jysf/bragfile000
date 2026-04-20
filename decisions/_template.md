@@ -18,7 +18,7 @@ agent:
 project:
   id: PROJ-XXX                       # the project during which this was decided
 repo:
-  id: my-app
+  id: <repo-id>
 
 created_at: YYYY-MM-DD
 supersedes: null                     # DEC-YYY if this replaces a prior decision

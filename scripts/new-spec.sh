@@ -65,9 +65,12 @@ sed_inplace() {
     fi
 }
 
+REPO_ID=$(get_repo_id)
+
 sed_inplace "s|SPEC-XXX|${SPEC_ID}|g" "$SPEC_FILE"
 sed_inplace "s|STAGE-XXX|${STAGE_ID}|g" "$SPEC_FILE"
 sed_inplace "s|PROJ-XXX|${PROJECT_ID}|g" "$SPEC_FILE"
+sed_inplace "s|<repo-id>|${REPO_ID}|g" "$SPEC_FILE"
 sed_inplace "s|<Short Title>|${TITLE}|g" "$SPEC_FILE"
 sed_inplace "s|YYYY-MM-DD|$(today)|g" "$SPEC_FILE"
 

@@ -10,24 +10,24 @@ kind: RepoContext
 
 metadata:
   repo:
-    id: my-app                        # REPLACE: short kebab-case identifier for the app
-    name: "My App"                    # REPLACE: human-readable name
-    purpose: "[REPLACE: one sentence describing what the app does]"
-    url: "github.com/YOUR-ORG/YOUR-REPO"  # REPLACE
+    id: bragfile
+    name: "Bragfile"
+    purpose: "Local-first CLI for engineers to capture and retrieve career accomplishments for retros, reviews, and resumes."
+    url: "github.com/jysf/bragfile000"
 
   business:
-    criticality: medium               # critical | high | medium | low
-    owner: my-team                    # REPLACE
+    criticality: low                  # personal tool; no uptime obligation
+    owner: jysf
     contacts:
-      - "[REPLACE: email or slack channel]"
+      - "jyashinsky@gmail.com"
 
 spec:
   stack:
-    language: "[REPLACE: e.g., typescript]"
-    runtime: "[REPLACE: e.g., node-20]"
-    framework: "[REPLACE: e.g., next.js-14]"
-    database: "[REPLACE: e.g., postgres-16]"
-    hosting: "[REPLACE: e.g., vercel]"
+    language: "go"
+    runtime: "go-1.26"                # latest stable as of project start (2026-04-19)
+    framework: "cobra"
+    database: "sqlite-3 (embedded, via modernc.org/sqlite — pure Go, no CGO)"
+    hosting: "local CLI; distributed via homebrew tap github.com/jysf/homebrew-bragfile"
 
   # Standard paths; do not change without also updating AGENTS.md.
   paths:
@@ -39,6 +39,6 @@ spec:
     templates: ./projects/_templates
 
   observability:
-    sampling: null                    # Used if you adopt ContextCore.
-    alert_routing: null               # REPLACE: e.g., "#my-team-oncall"
-    runbook_base: null                # REPLACE: e.g., "./runbooks/"
+    sampling: null                    # n/a for a local CLI
+    alert_routing: null               # n/a
+    runbook_base: null                # n/a
