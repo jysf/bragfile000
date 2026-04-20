@@ -69,9 +69,15 @@ brag list
 
 Homebrew install (`brew install bragfile`) arrives in STAGE-004.
 
-### Daily commands
+### Using the tool
 
-See `AGENTS.md` §4 for the full list. Most common:
+See [`docs/tutorial.md`](docs/tutorial.md) for a walk-through: capturing
+your first brag, full-metadata form, reading entries back, where the
+data lives, daily-habit tips, and what's not yet implemented.
+
+### Daily commands (for working on `brag` itself)
+
+See [`AGENTS.md` §4](AGENTS.md) for the full list. Most common:
 
 ```bash
 just run -- list          # run without installing

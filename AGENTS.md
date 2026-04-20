@@ -311,6 +311,9 @@ Most decisions should land between 0.7 and 0.95. 1.0 only for truly locked choic
 - Projects: `/projects/`
 - Templates: `/projects/_templates/`
 - Architecture: `/docs/architecture.md`
+- Data model: `/docs/data-model.md`
+- CLI contract: `/docs/api-contract.md`
+- User tutorial (how to use `brag`): `/docs/tutorial.md`
 - Phase prompts: `/FIRST_SESSION_PROMPTS.md`
 - First walkthrough: `/GETTING_STARTED.md`
 - Daily commands: run `just --list`
