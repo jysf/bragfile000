@@ -20,21 +20,45 @@ constraints:
     added_at: 2026-04-19
     rationale: "Baseline security hygiene."
 
-  - id: use-project-logger
-    rule: "Use the project logger in src/lib/log.ts. Do not use console.log, console.error, or introduce new logging libraries."
+  - id: no-cgo
+    rule: "Do not introduce any dependency that requires CGO. The build must remain pure Go so goreleaser can cross-compile on any arch without a C toolchain."
     severity: blocking
-    paths: ["src/**"]
+    paths: ["**/*.go", "go.mod", "go.sum"]
     added_by: claude
     added_at: 2026-04-19
-    rationale: "Consistency and structured logging. See DEC-001."
+    rationale: "DEC-001 — pure-Go sqlite driver; STAGE-004 distribution depends on cross-compile working out of the box."
 
-  - id: no-auth-changes-without-approval
-    rule: "Do not modify authentication or authorization logic without human approval. If a spec requires auth changes, stop and request review."
+  - id: no-sql-in-cli-layer
+    rule: "Files under internal/cli/ must not import database/sql or any SQL driver. All persistence goes through internal/storage."
     severity: blocking
-    paths: ["src/auth/**", "src/middleware/auth*"]
-    added_by: human
+    paths: ["internal/cli/**"]
+    added_by: claude
     added_at: 2026-04-19
-    rationale: "Auth touches security and compliance; changes need human eyes."
+    rationale: "Architecture principle 2 (architecture.md) — CLI is a thin shell over storage. Keeps commands testable and future frontends (TUI, API) feasible."
+
+  - id: storage-tests-use-tempdir
+    rule: "Storage-layer tests MUST use t.TempDir() for the DB path, never a shared or on-disk path. No test relies on ~/.bragfile/."
+    severity: blocking
+    paths: ["internal/storage/**_test.go"]
+    added_by: claude
+    added_at: 2026-04-19
+    rationale: "Tests must be hermetic and parallel-safe; the user's real DB is never a test fixture."
+
+  - id: migrations-are-append-only
+    rule: "Never edit or rename a migration file once it has been merged to main. Reversal or correction happens by adding a new forward migration."
+    severity: blocking
+    paths: ["internal/storage/migrations/**"]
+    added_by: claude
+    added_at: 2026-04-19
+    rationale: "DEC-002 — embedded migrations; applied-version tracking depends on filenames being stable."
+
+  - id: timestamps-in-utc-rfc3339
+    rule: "All timestamps stored in SQLite are RFC3339 UTC, written from Go (time.Now().UTC().Format(time.RFC3339)), not via SQLite CURRENT_TIMESTAMP."
+    severity: blocking
+    paths: ["internal/storage/**"]
+    added_by: claude
+    added_at: 2026-04-19
+    rationale: "Explicit tz avoids daylight-savings and UTC-drift surprises. Data-model doc calls this out."
 
   - id: test-before-implementation
     rule: "Failing tests are written as part of the spec during design. Implementation makes those tests pass. Do not skip this order."
@@ -45,12 +69,28 @@ constraints:
     rationale: "TDD discipline; provides automatic verification of acceptance criteria."
 
   - id: no-new-top-level-deps-without-decision
-    rule: "Do not add a new top-level dependency (package.json, pyproject.toml, etc.) without first emitting a DEC-XXX file justifying the choice."
+    rule: "Do not add a new top-level dependency to go.mod without first emitting a DEC-XXX file justifying the choice."
     severity: warning
-    paths: ["package.json", "pyproject.toml", "Cargo.toml", "go.mod"]
+    paths: ["go.mod", "go.sum"]
     added_by: claude
     added_at: 2026-04-19
-    rationale: "Dependencies are forever. Force deliberation."
+    rationale: "Dependencies are forever. Force deliberation. Especially relevant given no-cgo."
+
+  - id: errors-wrap-with-context
+    rule: "Errors returned from internal/storage or internal/cli MUST be wrapped with context via fmt.Errorf(\"<operation>: %w\", err). Bare err returns are not acceptable."
+    severity: warning
+    paths: ["internal/**/*.go", "cmd/**/*.go"]
+    added_by: claude
+    added_at: 2026-04-19
+    rationale: "Error messages need to be legible at the CLI boundary. Go 1.13+ error wrapping is the convention."
+
+  - id: stdout-is-for-data-stderr-is-for-humans
+    rule: "Command output intended for scripting (IDs, tabular rows, export bodies) goes to stdout. Human-readable prompts, errors, and prefixed messages go to stderr."
+    severity: blocking
+    paths: ["internal/cli/**", "cmd/**"]
+    added_by: claude
+    added_at: 2026-04-19
+    rationale: "Pipeability. CLI-contract.md specifies this; violating it breaks `id=$(brag add ...)`."
 
   - id: one-spec-per-pr
     rule: "Each PR must reference exactly one SPEC-XXX in its description. Bundled changes are rejected."

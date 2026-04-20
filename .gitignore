@@ -19,6 +19,9 @@ out/
 .next/
 .turbo/
 
+# Go compiled binary
+brag
+
 # IDE
 .vscode/
 .idea/

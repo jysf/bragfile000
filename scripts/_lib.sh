@@ -126,6 +126,25 @@ today() {
     date +%Y-%m-%d
 }
 
+# Read the app's repo.id from .repo-context.yaml. Falls back to "my-app" if
+# the file is missing or the key cannot be found. Assumes the standard
+# template shape (metadata.repo.id at 4-space indent).
+get_repo_id() {
+    local ctx="${REPO_ROOT}/.repo-context.yaml"
+    if [ ! -f "$ctx" ]; then
+        echo "my-app"
+        return
+    fi
+    local id
+    id=$(grep -E '^    id:' "$ctx" | head -n1 \
+         | sed -E 's/^    id:[[:space:]]*//; s/[[:space:]]*#.*$//; s/["'"'"']//g; s/[[:space:]]+$//')
+    if [ -z "$id" ]; then
+        echo "my-app"
+    else
+        echo "$id"
+    fi
+}
+
 # Update a YAML front-matter scalar in a markdown file.
 # Usage: update_frontmatter_scalar path/to/file.md task.cycle verify
 # This is a deliberately simple awk-based updater for flat YAML. Requires

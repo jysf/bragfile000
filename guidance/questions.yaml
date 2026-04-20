@@ -16,22 +16,59 @@
 #   (b) delete the question if it was resolved without a formal decision.
 
 questions:
-  - id: example-caching-strategy
-    question: "Should session state be cached in Redis or in-memory?"
+  - id: tags-storage-model
+    question: "Is comma-joined TEXT still the right shape for tags once `list --tag` and FTS5 `search` are implemented, or do we need to migrate to a normalized tags/entry_tags pair?"
     priority: medium
     status: open
     raised_by: claude
     raised_at: 2026-04-19
     assigned_to: null
     notes: |
-      Initial deployment is single-instance so in-memory works, but
-      horizontal scaling will require Redis. Deferring until traffic
-      justifies it.
+      DEC-004 picked comma-joined TEXT at confidence 0.65 for MVP. The
+      risk is (1) the "auth" matching "authoring" false-positive unless
+      LIKE is wrapped with sentinel commas, and (2) FTS5 tokenization
+      may produce odd search behavior on comma-separated terms.
+      Revisit during STAGE-002 when `list --tag` and `search` ship.
+      If either of those specs needs more than ~20 extra lines of code
+      to get right with comma-joined tags, that's the signal to
+      normalize.
 
-  - id: example-rate-limit-scope
-    question: "Should rate limits be per-IP, per-user, or both?"
+  - id: shareable-ids
+    question: "Will we ever need IDs that are portable across machines (sync, sharing, export-import), and if so when do we add a ULID column alongside the integer PK?"
     priority: low
     status: open
-    raised_by: human
+    raised_by: claude
     raised_at: 2026-04-19
     assigned_to: null
+    notes: |
+      DEC-005 picked INTEGER AUTOINCREMENT at confidence 0.70. Revisit
+      if and when sync or cross-machine export enters scope (earliest
+      in a post-MVP project). The migration path is additive: add a
+      `ulid TEXT UNIQUE` column, backfill, switch user-facing CLI to
+      accept either form. No data loss.
+
+  - id: editor-template-format
+    question: "What exact format does the editor-launch markdown buffer use — YAML front-matter plus a body, or a simpler key-value header?"
+    priority: medium
+    status: open
+    raised_by: claude
+    raised_at: 2026-04-19
+    assigned_to: null
+    notes: |
+      Arrives in STAGE-002 (SPEC for `brag edit` / `brag add` no-args).
+      Leading candidate: YAML front-matter for optional fields (tags,
+      project, type, impact), then `# <title>` and the description as
+      the body. Decide before writing the spec, as it affects parser
+      choice and round-trip of existing entries for `edit`.
+
+  - id: summary-grouping-heuristics
+    question: "How does `brag summary --range week` decide on grouping order (project first vs type first vs tag first) when an entry has all three?"
+    priority: low
+    status: open
+    raised_by: claude
+    raised_at: 2026-04-19
+    assigned_to: null
+    notes: |
+      Lands in STAGE-003. Leaning toward: always group by `project`
+      first, then `type` second, with tags shown inline per entry.
+      Make this choice when writing the summary spec — not now.

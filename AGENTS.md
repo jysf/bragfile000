@@ -10,10 +10,10 @@ Instructions for Claude working across all phases of this repository. Read this 
 
 ## 1. Repo Overview
 
-- **Repo (the app):** [REPLACE: My App]
-- **Purpose:** [REPLACE: one sentence]
-- **Primary stakeholders:** [REPLACE]
-- **Active project:** [REPLACE: PROJ-001 — MVP]
+- **Repo (the app):** Bragfile (`brag` CLI, homebrew formula `bragfile`)
+- **Purpose:** Local-first Go CLI for engineers to capture and retrieve career accomplishments ("brags") for retros, reviews, and resumes. Stores entries in embedded SQLite at `~/.bragfile/db.sqlite`.
+- **Primary stakeholders:** solo developer (jysf). No other stakeholders in PROJ-001.
+- **Active project:** `PROJ-001-mvp` — ship a usable, distributable MVP via `brew install bragfile` within ~2 weeks.
 
 See `.repo-context.yaml` for structured metadata.
 
@@ -49,16 +49,15 @@ binds PROJ-002 as well.
 
 ## 3. Tech Stack
 
-Replace with your actual stack. Be specific about versions.
-
-- **Language:** [REPLACE]
-- **Runtime:** [REPLACE]
-- **Framework:** [REPLACE]
-- **Database:** [REPLACE]
-- **Testing:** [REPLACE]
-- **Linter / Formatter:** [REPLACE]
-- **Hosting:** [REPLACE]
-- **CI:** [REPLACE]
+- **Language:** Go
+- **Runtime:** Go 1.26.x (latest stable; pinned via `go.mod` `go 1.26`). Update via `brew upgrade go`.
+- **Framework:** `spf13/cobra` for CLI argv + subcommands.
+- **Database:** SQLite 3, embedded, accessed via `modernc.org/sqlite` (pure Go, **no CGO**). See DEC-001.
+- **Testing:** Go stdlib `testing` package. Storage tests use `t.TempDir()` (enforced by `storage-tests-use-tempdir` constraint).
+- **Linter / Formatter:** `gofmt` (enforced) + `go vet`. `golangci-lint` welcome but not required in CI yet.
+- **Hosting:** None. Local CLI only.
+- **Distribution:** `goreleaser` → GitHub Releases → homebrew tap at `github.com/jysf/homebrew-bragfile` (arriving in STAGE-004).
+- **CI:** GitHub Actions (to be set up in STAGE-004). Must run `go test ./...` and `gofmt -l .` and fail on any diff.
 
 ---
 
@@ -67,14 +66,29 @@ Replace with your actual stack. Be specific about versions.
 These are the APP's commands. For template/workflow commands, see `justfile`.
 
 ```bash
-[REPLACE: install command]
-[REPLACE: dev command]
-[REPLACE: test command]
-[REPLACE: test single file command]
-[REPLACE: lint command]
-[REPLACE: typecheck command]
-[REPLACE: build command]
+# --- once, to bootstrap (SPEC-001 creates go.mod; nothing to install until then) ---
+go mod download                              # install module deps after go.mod exists
+
+# --- daily development ---
+go build ./cmd/brag                          # build binary into ./brag
+go run ./cmd/brag <args>                     # run without building (e.g. go run ./cmd/brag list)
+go test ./...                                # run all tests
+go test ./internal/storage -run TestAdd -v   # run a single test in a package
+gofmt -w .                                   # format (write in place)
+gofmt -l .                                   # lint (list unformatted files; CI fails if non-empty)
+go vet ./...                                 # static checks
+
+# --- release (STAGE-004) ---
+goreleaser release --clean                   # full release (tag triggers this in CI)
+goreleaser build --snapshot --clean          # local cross-compile smoke test
+
+# --- runtime (once built) ---
+./brag --version
+./brag add --title "..."
+./brag list
 ```
+
+macOS note: `brew upgrade go` to move to the latest Go. `brew install goreleaser` once we hit STAGE-004.
 
 ---
 
@@ -107,7 +121,15 @@ These are the APP's commands. For template/workflow commands, see `justfile`.
 │   │   └── specs/
 │   │       └── done/
 │   └── PROJ-002-<slug>/
-└── src/                               # [REPLACE]
+├── cmd/
+│   └── brag/                          # CLI entrypoint (main package)
+└── internal/                          # implementation packages (not importable externally)
+    ├── cli/                           # one file per subcommand; no SQL here
+    ├── config/                        # --db / BRAGFILE_DB / default resolution
+    ├── storage/                       # Store, Entry, embedded migrations
+    │   └── migrations/                # NNNN_*.sql, embedded via embed.FS
+    ├── editor/                        # (STAGE-002) $EDITOR launch + markdown parse
+    └── export/                        # (STAGE-003) markdown + sqlite-file exporters
 ```
 
 ---
@@ -156,42 +178,52 @@ DECs are stable; specs come and go. DECs don't reciprocally list specs.
 
 ## 8. Coding Conventions
 
-- **Naming:** [REPLACE]
-- **File organization:** [REPLACE]
-- **Imports:** [REPLACE]
-- **Error handling:** [REPLACE]
-- **Logging:** [REPLACE]
-- **Comments:** Explain *why*, not *what*.
+- **Naming:** standard Go. Exported identifiers in `CamelCase`, unexported in `camelCase`. Package names are short, lowercase, no underscores (`cli`, `storage`, `config`).
+- **File organization:** one subcommand per file under `internal/cli/` (`add.go`, `list.go`, …). One concept per file under `internal/storage/` (`store.go`, `entry.go`, `migrate.go`).
+- **Imports:** `gofmt`-sorted. Grouped by stdlib / third-party / internal with a blank line between groups.
+- **Error handling:** wrap with context: `fmt.Errorf("add entry: %w", err)`. Return errors; don't panic. No custom error types in PROJ-001 unless a DEC justifies one.
+- **Logging:** none in MVP. If we ever add structured logging it gets a dedicated DEC. CLI talks to users via stdout/stderr directly (see `stdout-is-for-data-stderr-is-for-humans` constraint).
+- **No SQL outside `internal/storage`.** Enforced by the `no-sql-in-cli-layer` constraint.
+- **Comments:** Explain *why*, not *what*. No doc comments on unexported helpers unless they are non-obvious.
 - **No dead code.** Delete, don't comment out.
 
 ---
 
 ## 9. Testing Conventions
 
-- Every new function gets at least one test.
-- Test file naming: [REPLACE]
-- Coverage expectations: [REPLACE]
+- Every new exported function gets at least one test.
+- Test file naming: Go convention — `foo_test.go` next to `foo.go` in the same package.
+- Storage tests use `t.TempDir()` for the DB path. Never touch `~/.bragfile`.
+- CLI command tests construct a `*cobra.Command` with an in-memory `bytes.Buffer` for stdout/stderr and assert on that buffer, not on the host's terminal.
+- Coverage expectations: no hard threshold. Every storage method and every command has at least one happy-path and one error-path test. Migration runner has a "runs twice is a no-op" test.
 - **TDD:** Tests live in the spec's `## Failing Tests` section, written
-  during **design**, made to pass during **build**.
+  during **design**, made to pass during **build**. Enforced by the `test-before-implementation` constraint.
 
 ---
 
 ## 10. Git and PR Conventions
 
-- **Branch:** `feat/spec-NNN-<slug>`, etc.
-- **One spec per branch, one PR per branch.**
-- **Commits:** [REPLACE]
+- **Branch:** `feat/spec-NNN-<slug>` for feature specs. `fix/spec-NNN-<slug>` for bug specs. `chore/<slug>` is acceptable for non-spec infra work (e.g., CI changes).
+- **One spec per branch, one PR per branch.** Enforced by the `one-spec-per-pr` constraint.
+- **Commits:** Conventional-style short subject. `feat(storage): add Entry type`, `fix(cli): exit 1 when --title empty`, `docs: update architecture.md`, `chore(ci): add go-test job`. Body optional; when present, explain *why*. Avoid "WIP" commits on branches that will be opened as PRs — squash or rebase first.
 - **PR description must include:**
-  - Project: `PROJ-NNN`
+  - Project: `PROJ-001`
   - Stage: `STAGE-NNN`
   - Spec: `SPEC-NNN`
   - Decisions referenced, constraints checked, new `DEC-*` files
+- Do not force-push to `main`. Branch protection on `main` should require PR + passing CI.
 
 ---
 
 ## 11. Domain Glossary
 
-- **[REPLACE: Term]** — [REPLACE: Definition]
+- **brag / entry** — one captured moment worth remembering for a retro, review, or resume. Single row in the `entries` table.
+- **capture** — the act of creating an entry, either via `brag add --title ...` (flags form) or `brag add` with no args opening `$EDITOR` on a templated markdown buffer (STAGE-002).
+- **Store** — the `*storage.Store` Go type that owns the `*sql.DB` and all typed methods. The only package that imports a SQL driver.
+- **migration** — a single `NNNN_*.sql` file under `internal/storage/migrations/`, embedded into the binary, applied automatically in lexical order on `storage.Open`.
+- **export** — a one-shot dump of entries, either as a Markdown report (stdout or `--out file.md`) or as a portable SQLite file copy (via `VACUUM INTO`).
+- **summary** — a rule-based (non-LLM) aggregation of entries grouped by project/type over a time range. STAGE-003.
+- **tap** — a homebrew tap repo (`github.com/jysf/homebrew-bragfile`) hosting the `bragfile.rb` formula. Created in STAGE-004.
 
 ---
 
