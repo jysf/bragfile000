@@ -2,7 +2,7 @@
 task:
   id: SPEC-004
   type: story
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: S
@@ -378,26 +378,68 @@ If any of these feels necessary during build, write a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-004-brag-list-command`
+- **PR (if applicable):** (opened after `just advance-cycle`)
+- **All acceptance criteria met?** yes
+  - Confirmed: `go test ./...` green (7 new `TestListCmd_*` tests + all
+    prior tests still pass), `gofmt -l .` empty, `go vet ./...` clean,
+    `CGO_ENABLED=0 go build ./...` succeeds, smoke-test via built
+    binary produces the exact tab-separated, reverse-chronological,
+    id-DESC-tie-break output the api-contract specifies.
 - **New decisions emitted:**
-  - (none expected; `list` is pure re-use of prior decisions)
+  - None. Implementation is pure reuse of DEC-003 (config resolution),
+    DEC-005 (integer IDs as plain decimals), DEC-006 (cobra), and the
+    `add.go` shape. DEC-007 did not need to fire — `list` has no
+    required flags.
 - **Deviations from spec:**
-  - [list]
+  - `newListTestRoot` helper receives `dbPath` but does not consume it;
+    tests pass `dbPath` into `root.SetArgs([]string{"--db", dbPath,
+    "list", …})`. Kept the spec's signature for consistency; the
+    parameter reads as documentation of "the DB this root is going to
+    talk to" without binding the helper to any particular arg shape.
+    Explicit `_ = dbPath` marks it intentional.
+  - `TestListCmd_PrintsReverseChronological` does NOT sleep between
+    `Add` calls. Three rapid inserts share a created_at second; the
+    `id DESC` tie-break in `Store.List` already produces the required
+    `third, second, first` order. Adding sleeps would have made the
+    test slow (~3s) for no invariant gain — and the whole point of the
+    SPEC-002 lesson is that sleeps alone aren't the mechanism. The
+    ordering invariant is covered without them here; the explicit
+    tie-break case lives in `TestListCmd_TieBreakIsIDDescending`.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None new. Stage backlog items (filter flags, alternate output
+    formats, paging) are already captured in STAGE-002 scope and in
+    this spec's Out-of-scope section.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — The `newListTestRoot` helper signature includes a `dbPath`
+   parameter with no described use inside the body ("test drives
+   args"). I spent a few minutes deciding whether the helper should
+   stash it, `SetArgs` with it, or leave it as a hint to callers. The
+   spec's intent became clear once I accepted that it's just a
+   documentation hook — but a one-liner clarification ("the helper
+   doesn't consume dbPath; the caller uses it when calling SetArgs")
+   would have saved the deliberation.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. The spec's `## Implementation Context` was
+   self-contained: DEC-003/005/006/007, `no-sql-in-cli-layer`,
+   `stdout-is-for-data-stderr-is-for-humans`, `errors-wrap-with-
+   context`, `test-before-implementation`, and `one-spec-per-pr` were
+   the exact levers this implementation needed. The `add.go` code
+   sample in "Notes for the Implementer" was load-bearing — it
+   removed the last ambiguity about `RunE` body shape.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Write the tests without the between-Add sleeps from the
+   beginning rather than adding and then removing them. The SPEC-002
+   lesson is *exactly* "sleeps don't establish order under RFC3339
+   second precision; monotonic tie-break does", and `Store.List`
+   already provides the tie-break. Three rapid inserts with the
+   `id DESC` tie-break IS the correct way to assert reverse-chron
+   order — faster, stronger invariant, no flake window.
 
 ---
 
