@@ -1,96 +1,69 @@
-# Spec-Driven Multi-Agent Repo Template
+# My App
 
-A GitHub template for running spec-driven development on an app (or apps) where the **repo is the app** and **projects are waves of work** against that app. Works whether you use Claude alone or Claude plus a dedicated implementer agent (Kilo Code, Factory Droids, AdaL, etc.).
+*This file replaces the template README when you run `just init` — rename or customize as needed.*
+
+This repo uses a spec-driven workflow where Claude plays every role (architect, implementer, reviewer) across different sessions.
 
 ## Hierarchy
 
 ```
-Repo (the app — persists forever)
- └─ Project (a wave of work: "MVP", "v2 improvements", "redesign")
+Repo (this app)
+ └─ Project (a wave of work: "MVP", "v2 improvements")
      └─ Stage (a coherent chunk within a project)
          └─ Spec (an individual task)
               └─ Cycle (Frame → Design → Build → Verify → Ship)
 ```
 
-- **Repo** accumulates architecture, conventions, constraints, and decisions across all projects.
-- **Projects** are bounded waves of work. You may have one active project, several sequential projects over time, or (rarely) multiple active projects.
-- **Stages** are epic-sized chunks within a project. A project typically has 2–5 stages.
-- **Specs** are individual implementable tasks. Each belongs to exactly one stage.
-- **Cycles** are the 5-phase lifecycle a spec goes through.
+## Getting started
 
-## Using this template
+**First time?** Read `GETTING_STARTED.md` — it walks you through your first project end-to-end.
 
-**Option A — GitHub template (recommended):**
+**Daily work?** Run `just --list` to see available commands.
 
-Click **"Use this template"** at the top of this repo on GitHub. Create your new repo. Clone it. Then inside your new repo:
-
+**Common commands:**
 ```bash
-just init
+just status                        # See active project, stage, specs by cycle
+just new-spec "title" STAGE-001    # Scaffold a new spec
+just advance-cycle SPEC-001 verify # Update a spec's cycle
+just archive-spec SPEC-001         # Move a shipped spec to done/
+just weekly-review                 # Print the weekly review prompt
 ```
 
-This asks whether you want the `claude-only` or `claude-plus-agents` variant, then moves the right files to the repo root and removes what you don't need.
+## Key discipline in this variant
 
-**Option B — Clone and delete git:**
+Because Claude plays every role, context contamination is the biggest risk. Four habits keep it at bay:
 
-```bash
-git clone https://github.com/YOUR-USERNAME/THIS-TEMPLATE.git my-new-repo
-cd my-new-repo
-rm -rf .git && git init
-just init
-```
+1. **New Claude session per cycle** (especially design → build and build → verify)
+2. **The spec file is the source of truth** between sessions — no "as I said earlier"
+3. **Weekly review is non-optional** (`just weekly-review`)
+4. **Honest confidence values** on decisions
 
-## After `just init`
+See `AGENTS.md` section 13 for the full discipline.
 
-You'll have a repo root containing:
-- `AGENTS.md` — conventions for all agents working here
-- `CLAUDE.md` — pointer to `AGENTS.md` for Claude Code
-- `GETTING_STARTED.md` — walkthrough for your first project
-- `FIRST_SESSION_PROMPTS.md` — copy-paste prompts for each phase
-- `.repo-context.yaml` — describes the app (the repo)
-- `justfile` — commands you'll run daily
-- `docs/`, `guidance/`, `decisions/` — repo-level (accumulate across all projects)
-- `projects/PROJ-001-example-mvp/` — example project you can learn from or delete
+## The app itself
 
-**Next step:** open `GETTING_STARTED.md` and follow it.
+[REPLACE: describe what this repo actually builds. The workflow above
+is the *meta-process*; this section is about the *app*. Include:]
 
-## The two variants at a glance
+- What the app does (1 paragraph)
+- How to run it locally (link to AGENTS.md Section 4)
+- How to run tests
 
-### `claude-plus-agents/` — Claude architects, a separate agent implements
+## Where things live
 
-For workflows where:
-- Claude writes specs + reviews PRs (architect + reviewer)
-- A different tool (Kilo Code, Factory Droids, AdaL, Cursor, etc.) implements
-
-Adds `/projects/*/handoffs/` — explicit handoff documents that carry context between agents that don't share memory.
-
-### `claude-only/` — Claude does everything
-
-For workflows where Claude plays every role — architect, implementer, reviewer. No separate implementer tool.
-
-No `/handoffs/` folder. The context the implementer needs is folded into each spec's `## Implementation Context` section.
-
-**Not sure which?** Start with `claude-only`. Migration to `claude-plus-agents` later is about an hour of mechanical work.
-
-## `just` commands available
-
-Run `just --list` to see everything. The main ones:
-
-| Command | What it does |
+| Path | Purpose |
 |---|---|
-| `just init` | One-time: choose variant, scaffold the repo |
-| `just status` | Current state: active project, stage, specs by cycle, stale items |
-| `just new-spec "title" STAGE-NNN` | Scaffold a new spec with next available ID |
-| `just new-stage "title" PROJ-NNN` | Scaffold a new stage in the active (or named) project |
-| `just advance-cycle SPEC-NNN verify` | Update a spec's `task.cycle` field |
-| `just archive-spec SPEC-NNN` | Move a shipped spec to `done/` + update stage backlog |
-| `just weekly-review` | Load recent activity and print the Weekly Review prompt |
-
-## What ContextCore concepts this template uses
-
-This template is philosophically aligned with [ContextCore](https://github.com/neil-the-nowledgeable/contextcore) — the same vocabulary (`task.*`, `insight.*`, `guidance.*`, `handoff.*`, `project.*`), the same artifact model, the same forward-compatibility to OTel-based observability. But it requires no infrastructure — everything is markdown files until (and only if) you graduate to the full ContextCore stack.
-
-See `docs/CONTEXTCORE_ALIGNMENT.md` for details (created by `just init`).
+| `AGENTS.md` | Conventions for Claude working in this repo |
+| `.repo-context.yaml` | Structured metadata about the app |
+| `docs/` | Architecture, data model, API contract |
+| `guidance/` | Repo-level rules and open questions |
+| `decisions/` | Decision log (accumulates across projects) |
+| `projects/` | Each project (wave of work) lives here |
+| `projects/*/brief.md` | What this project is and why |
+| `projects/*/stages/` | Stages within a project |
+| `projects/*/specs/` | Specs within a project (with folded-in Implementation Context) |
+| `src/` | [REPLACE: the actual app code] |
 
 ## License
 
-Do whatever you want with this template.
+[REPLACE]
