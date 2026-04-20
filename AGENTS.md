@@ -195,6 +195,7 @@ DECs are stable; specs come and go. DECs don't reciprocally list specs.
 - Test file naming: Go convention — `foo_test.go` next to `foo.go` in the same package.
 - Storage tests use `t.TempDir()` for the DB path. Never touch `~/.bragfile`.
 - CLI command tests construct a `*cobra.Command` with in-memory buffers for stdout/stderr and assert on them, not on the host's terminal. Use **separate `outBuf` and `errBuf`** (`cmd.SetOut(&outBuf)` / `cmd.SetErr(&errBuf)`) and assert no cross-leakage — e.g., a `--version` test must assert `errBuf.Len() == 0` in addition to the stdout substring check. This enforces the `stdout-is-for-data-stderr-is-for-humans` constraint at the test layer. Lesson earned in SPEC-001 verify punch list (2026-04-20).
+- Time-based ordering tests must use a monotonic tie-break column (e.g., `id DESC` under DEC-005) in addition to `created_at DESC`. Sleep-based timestamp separation alone is insufficient because RFC3339 is second-precision — a test that sleeps 10ms between rows will see identical `created_at` strings and produce non-deterministic ordering without a tie-break. Lesson earned in SPEC-002 build reflection (2026-04-20).
 - Coverage expectations: no hard threshold. Every storage method and every command has at least one happy-path and one error-path test. Migration runner has a "runs twice is a no-op" test.
 - **TDD:** Tests live in the spec's `## Failing Tests` section, written
   during **design**, made to pass during **build**. Enforced by the `test-before-implementation` constraint.

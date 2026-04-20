@@ -89,10 +89,11 @@ other ticket while STAGE-002 builds out the richer commands.
       `--version`, `--help`, root `--db` flag wiring, `internal/config`
       path resolver per DEC-003. One verify punch-list iteration on
       stdout/stderr buffer split.
-- [ ] SPEC-002 (build) — SQLite storage + migrations (M). Pure-Go
-      sqlite driver, `internal/storage/store.go`, embedded migration
-      SQL, `entries` + `schema_migrations` tables, `Open`, `Add`,
-      `List(ListFilter)` stub, full test coverage on temp dir.
+- [x] SPEC-002 (shipped on 2026-04-20) — SQLite storage + migrations (M).
+      Pure-Go sqlite driver, `internal/storage/store.go`, embedded
+      migration SQL, `entries` + `schema_migrations` tables, `Open`,
+      `Add`, `List(ListFilter)` stub, full test coverage on temp dir.
+      Approved clean, no punch list.
 - [ ] SPEC-003 (design) — `brag add` command (S). Cobra subcommand,
       required `--title`, optional `--description --tags --project
       --type --impact`, writes via storage, prints inserted ID.
@@ -100,7 +101,7 @@ other ticket while STAGE-002 builds out the richer commands.
       no filter flags yet, reads all rows reverse-chronological,
       plain-text output, test asserts output shape.
 
-**Count:** 1 shipped / 0 active / 3 pending
+**Count:** 2 shipped / 0 active / 2 pending
 
 **Complexity check:** no L specs. SPEC-002 is the only M; the others
 are S. Stage size is healthy (4 specs, within the 3–8 guideline).

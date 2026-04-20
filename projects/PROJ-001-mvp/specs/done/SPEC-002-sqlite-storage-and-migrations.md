@@ -2,7 +2,7 @@
 task:
   id: SPEC-002
   type: story
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M
@@ -449,13 +449,31 @@ If any of these feels necessary during build, write a new spec.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended 2026-04-20 during the **ship** cycle. Outcome-focused,
+distinct from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   Prescribe the timestamp tie-break in the spec itself.
+   `TestList_ReverseChronological` used a 10ms sleep between `Add`
+   calls to differentiate timestamps, but RFC3339 is second-precision
+   — the sleeps were irrelevant. Build session caught it and added
+   `ORDER BY created_at DESC, id DESC`, which is correct and
+   consistent with DEC-005 (monotonic `INTEGER AUTOINCREMENT`). Next
+   spec I write that involves time-ordering will either bump sleeps
+   beyond one second (slow the suite, rarely worth it) or explicitly
+   prescribe the monotonic tie-break up front.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   Yes — one AGENTS.md §9 addition: time-based ordering tests must
+   use a monotonic tie-break column (e.g., `id DESC` under DEC-005)
+   because RFC3339 is second-precision; sleep-based timestamp
+   separation alone is insufficient. Applied in the same ship commit
+   so any future ordering tests in SPEC-003/004 or beyond inherit it.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   No. SPEC-003 (`brag add`) and SPEC-004 (`brag list`) are already
+   in STAGE-001's backlog. The tie-break lesson and the
+   nullable-columns observation (from build-phase Q2) apply
+   prospectively via the AGENTS.md §9 update and via data-model.md
+   (which already marks each column's nullability — the lesson is
+   for spec authors to mirror that into the spec's Outputs section).
