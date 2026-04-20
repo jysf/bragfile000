@@ -120,15 +120,12 @@ ones). Complexity mix: 5 × S, 3 × M, no L. Stage size is 8 specs —
 at the upper bound of the 3–8 guideline but coherent; no item splits
 cleanly to a different stage.
 
-- [ ] SPEC-005 (build, **S**) — **`brag add` ergonomic polish.**
-      Add single-letter shorthands (`-t` title, `-d` description,
-      `-T` tags, `-p` project, `-k` type, `-i` impact). Refresh
-      add's `Long` with an Examples block. Append one line to
-      root's `Long` pointing users at `brag <command> --help` for
-      per-subcommand flag detail. Updates `docs/tutorial.md` to
-      show shorthand alongside long form. 10 new tests across
-      `add_test.go` + `root_test.go`; purely additive, no existing
-      test changes.
+- [x] SPEC-005 (shipped on 2026-04-20, **S**) — **`brag add`
+      ergonomic polish.** Shipped single-letter shorthands for all
+      six `add` flags (`-t -d -T -p -k -i`), Examples block in `Long`,
+      root help pointer to `brag <command> --help`. Approved clean,
+      no punch list. Earned a §9 lesson on assertion specificity
+      (distinctive tokens, not generic substrings).
 
 - [ ] SPEC-006 (not yet framed, **M**) — **`list` filter flags + Store
       filtering.** Populate `ListFilter` with `Tag`, `Project`, `Type`,
@@ -186,7 +183,7 @@ cleanly to a different stage.
       filter flags as `list` if trivial; otherwise they land in a
       later polish spec.
 
-**Count:** 0 shipped / 0 active / 8 pending
+**Count:** 1 shipped / 0 active / 7 pending
 
 **Complexity check:** 5 × S, 3 × M, 0 × L. Stage is at the upper
 bound of the 3–8 spec guideline. No split recommended — each spec

@@ -206,7 +206,8 @@ DECs are stable; specs come and go. DECs don't reciprocally list specs.
 - Coverage expectations: no hard threshold. Every storage method and every command has at least one happy-path and one error-path test. Migration runner has a "runs twice is a no-op" test.
 - **TDD:** Tests live in the spec's `## Failing Tests` section, written
   during **design**, made to pass during **build**. Enforced by the `test-before-implementation` constraint.
-- In build: after writing the failing tests and before touching implementation, run `go test ./...` once and confirm the tests fail for the *expected* reason (the assertion you wrote, not a stray compilation error or undefined-symbol). Catches spec defects at the cheapest moment. Lesson earned in SPEC-003 Q3 ship reflection and validated by SPEC-004 build (2026-04-20).
+- In build: after writing the failing tests and before touching implementation, run `go test ./...` once and confirm the tests fail for the *expected* reason (the assertion you wrote, not a stray compilation error or undefined-symbol). Catches spec defects at the cheapest moment. If fail-first reports an "unexpectedly passing" test, investigate before proceeding — usually the assertion is too weak (see next bullet). Lesson earned in SPEC-003 Q3 ship reflection and validated by SPEC-004 build (2026-04-20).
+- When a test asserts that help or documentation output contains a substring, pick a token that is unique to the content under test — e.g. a distinctive example phrase or an explicit label like `"Examples:"` — not a generic word that cobra or another auto-rendering layer may already produce. Generic substring asserts give false-positive passes: SPEC-005's `TestAdd_HelpShowsExamples` asserted `outBuf` contained `"brag add"` but cobra's `Usage: brag add [flags]` line already contains that string, so the test would have passed without the implementation. Lesson earned in SPEC-005 build reflection (2026-04-20).
 
 ---
 

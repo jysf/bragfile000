@@ -2,7 +2,7 @@
 task:
   id: SPEC-005
   type: chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: S
@@ -367,13 +367,34 @@ If any of these feels necessary during build, create a new spec.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended 2026-04-20 during the **ship** cycle. Outcome-focused,
+distinct from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   Assert on distinctive content, not generic substrings.
+   `TestAdd_HelpShowsExamples` was written to check `outBuf` contained
+   `"brag add"` — but cobra's auto-rendered `Usage: brag add [flags]`
+   line already contains that string, so the test would have passed
+   even if the Examples block in `Long` had been omitted entirely.
+   Build session honestly flagged this during self-review; verify
+   ratified it. Next time a spec asserts on help or documentation
+   content, I'll pin the assertion to something cobra (or any
+   auto-rendering layer) can't generate on its own — e.g. the literal
+   label `"Examples:"` or a unique phrase from one of the example
+   lines.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   Yes — one AGENTS.md §9 addition on assertion specificity: when a
+   test asserts that help or documentation output contains a
+   substring, pick a token unique to the content under test (a
+   distinctive example phrase, or an explicit label like
+   `"Examples:"`), not a generic word that cobra or other auto-
+   rendering may already produce. Complements the existing
+   fail-first rule — if fail-first reports an "unexpectedly passing"
+   test, investigate before proceeding. Applied in this ship commit.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   No. SPEC-006 (`list` filter flags) is next in STAGE-002's
+   backlog. The assertion-specificity lesson applies prospectively
+   to every spec that tests help / rendered output — it'll travel
+   via the AGENTS.md §9 update.
