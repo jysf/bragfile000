@@ -94,16 +94,18 @@ other ticket while STAGE-002 builds out the richer commands.
       migration SQL, `entries` + `schema_migrations` tables, `Open`,
       `Add`, `List(ListFilter)` stub, full test coverage on temp dir.
       Approved clean, no punch list.
-- [ ] SPEC-003 (build) — `brag add` command (S). Cobra subcommand,
-      required `--title`, optional `--description --tags --project
-      --type --impact`, writes via storage, prints inserted ID.
-      Introduces `cli.ErrUser` sentinel + `main.go` exit-code mapping
-      (1 for user error, 2 for internal).
+- [x] SPEC-003 (shipped on 2026-04-20) — `brag add` command (S).
+      Cobra subcommand, required `--title`, optional `--description
+      --tags --project --type --impact`, writes via storage, prints
+      inserted ID. Introduced `cli.ErrUser` sentinel + `main.go`
+      exit-code mapping (1 for user error, 2 for internal). Emitted
+      DEC-007 (required-flag validation in `RunE`, not
+      `MarkFlagRequired`) during build. Approved clean, no punch list.
 - [ ] SPEC-004 (design) — `brag list` command (S). Cobra subcommand,
       no filter flags yet, reads all rows reverse-chronological,
       plain-text output, test asserts output shape.
 
-**Count:** 2 shipped / 0 active / 2 pending
+**Count:** 3 shipped / 0 active / 1 pending
 
 **Complexity check:** no L specs. SPEC-002 is the only M; the others
 are S. Stage size is healthy (4 specs, within the 3–8 guideline).

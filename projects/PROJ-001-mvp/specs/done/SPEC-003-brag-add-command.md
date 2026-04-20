@@ -2,7 +2,7 @@
 task:
   id: SPEC-003
   type: story
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: S
@@ -533,13 +533,33 @@ If any of these feels necessary during build, write a new spec.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended 2026-04-20 during the **ship** cycle. Outcome-focused,
+distinct from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   The spec prescribed `MarkFlagRequired("title")` in Notes for the
+   Implementer *and* required `errors.Is(err, cli.ErrUser)` detection
+   on missing title in the acceptance criteria — but cobra's
+   required-flag validator returns an unwrappable plain error, so
+   both can't hold simultaneously. Build session caught the conflict
+   and emitted DEC-007 correctly. Next time I write a spec with both
+   an exit-code contract and cobra flag behavior, I'll either verify
+   cobra's actual error-wrapping behavior before prescribing a
+   framework helper, or (better) prescribe `RunE` validation up
+   front whenever exit-code classification matters.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   Yes — one AGENTS.md §10 addition: gitignore patterns for compiled
+   binary names must be anchored to the repo root (`/brag`, not
+   `brag`) to avoid shadowing directories of the same name. SPEC-001
+   shipped with the unanchored pattern, which silently hid
+   `cmd/brag/main.go` until SPEC-003 tried to commit a change inside
+   it. Applied in the same ship commit.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   No. SPEC-004 (`brag list`) is next in backlog and its design
+   session should reference DEC-007 when prescribing error handling
+   for any list-specific validation. The stage-level reflection
+   (Prompt 1d, after SPEC-004 ships) should surface the SPEC-001
+   ship-gate gap — verify flagged this as a stage-level lesson, not
+   a new spec.

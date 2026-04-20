@@ -213,6 +213,7 @@ DECs are stable; specs come and go. DECs don't reciprocally list specs.
   - Spec: `SPEC-NNN`
   - Decisions referenced, constraints checked, new `DEC-*` files
 - Do not force-push to `main`. Branch protection on `main` should require PR + passing CI.
+- **`.gitignore` for compiled binaries must be anchored.** Write `/brag`, not `brag` — an unanchored pattern matches every `brag` path at any depth and will silently shadow a directory of the same name (e.g., `cmd/brag/`). Lesson earned in SPEC-003 build reflection (2026-04-20, when SPEC-001's unanchored `brag` pattern hid `cmd/brag/main.go`).
 
 ---
 
