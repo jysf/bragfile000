@@ -80,8 +80,10 @@ real entries.
 
 ## Stage Plan
 
-- [ ] STAGE-001 (not yet framed) — Foundations: repo skeleton, Cobra
-      scaffold, SQLite schema + migrations, `add` + `list`.
+- [x] STAGE-001 (shipped on 2026-04-20) — Foundations: repo skeleton,
+      Cobra scaffold, SQLite schema + migrations, `add` + `list`.
+      4 specs shipped (SPEC-001/002/003/004), 1 new DEC (DEC-007),
+      4 lessons landed in AGENTS.md §9/§10.
 - [ ] STAGE-002 (not yet framed) — Capture & retrieval: `show`, `edit`
       (editor-launch templated), `delete`, FTS5 `search`.
 - [ ] STAGE-003 (not yet framed) — Export & summary: markdown export,
@@ -89,7 +91,7 @@ real entries.
 - [ ] STAGE-004 (not yet framed) — Distribution: goreleaser, homebrew
       tap, README, release notes.
 
-**Count:** 0 shipped / 0 active / 4 pending
+**Count:** 1 shipped / 0 active / 3 pending
 
 ## Dependencies
 

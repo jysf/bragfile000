@@ -1,7 +1,7 @@
 ---
 stage:
   id: STAGE-001
-  status: active
+  status: shipped
   priority: high
   target_complete: 2026-04-26
 
@@ -11,7 +11,7 @@ repo:
   id: bragfile
 
 created_at: 2026-04-19
-shipped_at: null
+shipped_at: 2026-04-20
 ---
 
 # STAGE-001: Foundations
@@ -162,12 +162,59 @@ their own DEC.
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped.*
+*Filled in 2026-04-20 when the stage shipped.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <not yet>
-- **How many specs did it actually take?** <not yet>
-- **What changed between starting and shipping?** <not yet>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes.
+  `brag add --title "..."` → `brag list` works end-to-end against
+  `~/.bragfile/db.sqlite`. Empirical smoke test at stage close: two
+  adds with the same title produce distinct IDs (1, 2); `brag list`
+  returns both reverse-chronological with monotonic `id DESC` tie-
+  break when timestamps collide within a second. All 7 stage-level
+  success criteria verified.
+
+- **How many specs did it actually take?** 4 specs — SPEC-001,
+  SPEC-002, SPEC-003, SPEC-004. Matches the plan exactly. No splits,
+  no additions, no cancellations. Complexity distribution (S/M/S/S)
+  matched estimates.
+
+- **What changed between starting and shipping?** Two small course-
+  corrections during build cycles, neither requiring rework of
+  shipped specs. (1) SPEC-003's build discovered that cobra's
+  `MarkFlagRequired` returns an unwrappable plain error incompatible
+  with the `ErrUser` sentinel contract → emitted DEC-007 and moved
+  required-flag validation into `RunE`. (2) SPEC-001's `.gitignore`
+  used unanchored `brag` which shadowed `cmd/brag/`; SPEC-003
+  narrowed it to `/brag` as a disclosed drive-by.
+
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <not yet>
+  Three already applied during their originating ships:
+  - §9: separate `outBuf`/`errBuf` in CLI tests with no-cross-
+    leakage asserts (SPEC-001 ship).
+  - §9: monotonic tie-break column in time-based ordering tests
+    (SPEC-002 ship).
+  - §10: `/`-anchor gitignore patterns for binary names (SPEC-003
+    ship).
+
+  One new stage-level addition applied in this ship:
+  - §9: run the just-written failing tests once before implementation
+    and confirm they fail for the expected reason. Lesson earned in
+    SPEC-003 Q3 ship reflection and validated by SPEC-004 build.
+
 - **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <not yet>
+  Yes, one — the "run failing tests first to confirm they fail for
+  the right reason" discipline from SPEC-003 Q3 ship reflection
+  demonstrably improved SPEC-004's build pace (caught spec defects
+  earlier, landed cleaner). Promoted to AGENTS.md §9 above.
+
+  SPEC-004's Q1 helper-parameter hygiene observation (unused
+  `dbPath` in a test helper) is real but too niche to carry into
+  AGENTS.md — left as a spec-level observation in the SPEC-004
+  reflection.
+
+**Deferred to STAGE-002 (noted at stage-ship time for framing):**
+- `list` filter flags (`--tag`, `--project`, `--type`, `--since`, `--limit`)
+- `brag show <id>`, `brag edit <id>`, `brag delete <id>`
+- Editor-launch capture: `brag add` with no args opens `$EDITOR`
+- FTS5 virtual table + `brag search "query"`
+- `ListFilter` struct gets fields + WHERE-clause logic in `Store.List`
+- `Store.Get`, `Update`, `Delete`, `Search` methods
