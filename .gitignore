@@ -19,8 +19,8 @@ out/
 .next/
 .turbo/
 
-# Go compiled binary
-brag
+# Go compiled binary (top-level only; do not match cmd/brag/ directory)
+/brag
 
 # IDE
 .vscode/

@@ -17,6 +17,10 @@ func NewRootCmd(version string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
+		// main.go owns error formatting and exit-code mapping; silence
+		// cobra's default "Error: ..." line and usage-on-failure dump.
+		SilenceErrors: true,
+		SilenceUsage:  true,
 	}
 
 	cmd.PersistentFlags().String("db", "", "path to bragfile db (default ~/.bragfile/db.sqlite)")
