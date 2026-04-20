@@ -101,9 +101,12 @@ other ticket while STAGE-002 builds out the richer commands.
       exit-code mapping (1 for user error, 2 for internal). Emitted
       DEC-007 (required-flag validation in `RunE`, not
       `MarkFlagRequired`) during build. Approved clean, no punch list.
-- [ ] SPEC-004 (design) — `brag list` command (S). Cobra subcommand,
-      no filter flags yet, reads all rows reverse-chronological,
-      plain-text output, test asserts output shape.
+- [ ] SPEC-004 (build) — `brag list` command (S). Cobra subcommand,
+      no filter flags yet, reads all rows reverse-chronological via
+      `Store.List(ListFilter{})`, prints tab-separated
+      `<id>\t<created_at>\t<title>` lines. Test shape includes
+      empty-DB case, reverse-chrono ordering, tab-format invariants,
+      `--db` flag respected, storage-error-is-internal propagation.
 
 **Count:** 3 shipped / 0 active / 1 pending
 
