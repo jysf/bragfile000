@@ -1,8 +1,7 @@
 # Using `brag` — tutorial
 
-> **Scope:** what you can do with `brag` today (through the end of
-> STAGE-001). `show`, `edit`, `delete`, `search`, `export`, and
-> `summary` all arrive in later stages. See
+> **Scope:** what you can do with `brag` today. `search`, `export`, and
+> `summary` arrive in later stages. See
 > [`projects/PROJ-001-mvp/brief.md`](../projects/PROJ-001-mvp/brief.md)
 > for the full plan.
 
@@ -139,6 +138,33 @@ brag list --since 2026-01-01                    # since a specific date
 - `--limit N` caps the row count.
 - Multiple filters combine via AND.
 
+### Edit an entry
+
+Fix a typo, flesh out a description, or revise metadata after the fact:
+
+```bash
+brag edit 42
+# opens $EDITOR on a buffer that looks like:
+#
+#   Title: untangled the auth flake
+#   Tags: auth
+#
+#   notes go here
+#
+# change any header or the body, save + quit → prints "Updated." on stderr.
+# quit without saving (or save unchanged) → prints "No changes." on stderr.
+```
+
+`brag` resolves the editor via `$EDITOR` → `$VISUAL` → `vi`, so you can
+override it per invocation:
+
+```bash
+EDITOR="code --wait" brag edit 42
+```
+
+Deleting the `Title:` header (or leaving it empty) fails the save with
+an exit-1 user error and leaves the entry untouched.
+
 ### Delete an entry
 
 Caught a typo and want to start over? `brag delete <id>`:
@@ -246,7 +272,6 @@ So you don't ask the tool for things it can't do:
 | Want | Status |
 |---|---|
 | `brag add` with no args (editor-launch on `$EDITOR`) | STAGE-002 |
-| `brag edit <id>` | STAGE-002 |
 | `brag search "query"` (FTS5 full-text search) | STAGE-002 |
 | `brag export --format markdown` | STAGE-003 |
 | `brag export --format sqlite` | STAGE-003 |

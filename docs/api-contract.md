@@ -90,9 +90,26 @@ table, description as body). Exit 1 if the ID does not exist.
 brag edit 42
 ```
 
-Opens `$EDITOR` on the markdown round-trip of the entry. On save,
-reparses and updates. Unsaved changes (editor exits non-zero) leave
-the DB untouched.
+The primary mechanism for updating entries in PROJ-001. Flag-based
+update (e.g. `brag update 42 -t "new"`) is a deferred polish spec;
+for now, every change goes through the editor round-trip.
+
+`brag` resolves the editor as `$EDITOR` → `$VISUAL` → `vi`, writes
+the entry to a temp `.md` file as a `net/textproto`-style header block
+plus markdown body (DEC-009), and spawns the editor against it. On
+save, it re-parses the buffer, preserves `id` and `created_at`,
+bumps `updated_at`, and writes the new field values via
+`Store.Update`.
+
+- Saving byte-identical content (SHA-256 comparison) aborts cleanly:
+  stderr prints `No changes.`, exit 0, DB untouched.
+- Saving a successful edit prints `Updated.` to stderr, exit 0.
+- If the saved buffer is missing or has an empty `Title:` header, the
+  command exits 1 (user error); the DB is unchanged.
+- If the editor exits non-zero (e.g. `:cq` in vim) the command exits
+  2 (internal error); the DB is unchanged.
+- Missing/non-numeric/non-positive `<id>` or a no-longer-existent
+  entry exit 1 (user error).
 
 ### `brag delete <id>` — delete an entry (STAGE-002)
 
@@ -165,3 +182,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - Architecture: [./architecture.md](./architecture.md)
 - Data model: [./data-model.md](./data-model.md)
 - `DEC-003` — config resolution order
+- `DEC-009` — editor buffer format (`brag edit <id>`)

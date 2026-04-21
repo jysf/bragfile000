@@ -2,7 +2,7 @@
 task:
   id: SPEC-009
   type: story
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: M
@@ -281,8 +281,13 @@ escape hatch for mutation.
 - [ ] `editor.Launch` with an injected fake that leaves the file
       byte-identical returns the original bytes with `changed=false`.
       *[TestLaunch_UnchangedBufferReturnsFalse]*
-- [ ] `editor.Launch` with an injected fake that returns an error
-      returns a wrapped error. *[TestLaunch_EditFuncErrorPropagates]*
+- [ ] `editor.Launch` with an injected fake that writes modified bytes
+      AND returns an error returns a wrapped error.
+      *[TestLaunch_EditFuncErrorPropagates]*
+- [ ] `editor.Launch` with an injected fake that returns an error but
+      leaves the buffer byte-identical to initial returns
+      `(initial, false, nil)` — the git `:cq` abort path from locked
+      decision #6. *[TestLaunch_EditFuncErrorOnUnmodifiedFileIsAborted]*
 - [ ] `resolveEditor` returns `["foo"]` when `$EDITOR=foo`.
       *[TestResolveEditor_UsesEditor]*
 - [ ] `resolveEditor` returns `["bar"]` when `$EDITOR` is empty and
@@ -406,9 +411,14 @@ Imports: `testing`, `os`, `bytes`, package under test.
   a no-op (just returns nil). Call `Launch([]byte("X"), fake)`.
   Assert edited equals `[]byte("X")`, changed is false, err is
   nil.
-- **`TestLaunch_EditFuncErrorPropagates`** — fake returns
-  `errors.New("boom")`. Assert err is non-nil and its `.Error()`
-  contains "boom".
+- **`TestLaunch_EditFuncErrorPropagates`** — fake writes modified
+  bytes, then returns `errors.New("boom")`. Assert err is non-nil
+  and its `.Error()` contains "boom". (Exercises the error + changed
+  path; the error + unchanged path is the :cq abort below.)
+- **`TestLaunch_EditFuncErrorOnUnmodifiedFileIsAborted`** — fake
+  returns an error without touching the file. Assert `err == nil`,
+  `changed == false`, `edited == initial`. Pins locked decision #6
+  so the git `:cq` UX doesn't regress into an internal error.
 - **`TestResolveEditor_UsesEditor`** — `t.Setenv("EDITOR", "foo")`,
   `t.Setenv("VISUAL", "")`. Assert `resolveEditor()` returns
   `[]string{"foo"}`.
@@ -900,26 +910,140 @@ If any of these feels necessary during build, write a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-009-brag-edit-command-and-editor-package`
+- **PR (if applicable):** opened on advance-cycle
+- **All acceptance criteria met?** yes
+  - `go test ./...` green (editor: 18 new tests; storage: 6 new
+    Update tests; cli: 10 new edit tests; all prior specs still pass).
+  - `gofmt -l .` empty, `go vet ./...` clean, `CGO_ENABLED=0 go
+    build ./...` succeeds.
 - **New decisions emitted:**
-  - (DEC-009 was emitted during design; no in-build DEC expected)
+  - None in build. DEC-009 was emitted during design; no additional
+    non-trivial choices surfaced that warranted a new DEC.
 - **Deviations from spec:**
-  - [list]
+  - **Parse body handling.** The Notes reference implementation
+    included `strings.TrimPrefix(string(remaining), "\n")` after
+    reading the post-header body. I dropped the TrimPrefix: Go's
+    `textproto.Reader.ReadMIMEHeader` already consumes the blank-
+    line terminator, so no leading `\n` remains. Adding TrimPrefix
+    would silently drop a legitimate first-line newline inside a
+    description that happens to start with a blank line. Round-trip
+    + multiline-description tests confirm the simpler form is
+    correct; the spec's snippet was defensive against a non-existent
+    condition.
+  - **`Launch` tempfile close error.** Checked the explicit
+    `f.Close()` error in `Launch` rather than the spec's bare
+    `f.Close()` call — `errors-wrap-with-context` is a warning-
+    severity constraint and the close error is a real failure mode
+    (disk full on last flush, etc.); this keeps parity with the
+    preceding `f.Write` error handling.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - No new backlog items. SPEC-010 (`brag add` no-args editor) is
+    already queued and will reuse `editor.Render` / `editor.Parse` /
+    `editor.Launch` as-is.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Very little. The Notes section included a near-complete
+   implementation, including a self-flagged bug ("Wait — the
+   resolveEditor above iterates EDITOR then VISUAL…") which on
+   re-reading was a false alarm (the iteration order in the snippet
+   is actually correct: EDITOR is tried first, VISUAL second). The
+   one genuine nit was the `strings.TrimPrefix(remaining, "\n")`
+   line — tracing `ReadMIMEHeader`'s behavior made it clear the
+   TrimPrefix was unnecessary and potentially destructive on leading-
+   blank-line descriptions, but that took a careful read rather
+   than being obvious.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. Every constraint that fired (`stdout-is-for-data-stderr-is-
+   for-humans`, `no-sql-in-cli-layer`, `errors-wrap-with-context`,
+   `test-before-implementation`, `timestamps-in-utc-rfc3339`) was
+   already in the spec's front-matter and its Implementation
+   Context's "Constraints that apply" rundown. The one small thing
+   worth noting for future specs: `editor.Default` is a package-
+   level `var` (assignable) rather than a `func`, which is
+   deliberate — it lets tests substitute editors without a new
+   test-hook mechanism. Future specs that extend `editor` should
+   preserve this var-based extensibility.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — One-second `time.Sleep`s in three storage tests
+   (`TestUpdate_PreservesCreatedAt`, `TestUpdate_BumpsUpdatedAt`,
+   `TestUpdate_ReturnsHydratedEntry`) cost ~3.3s of wall-clock in
+   the test suite. The forced sleep is because `Store.Update`
+   truncates to second precision via `time.Now().UTC().Truncate(time.
+   Second)` (matching `Store.Add`'s SPEC-002 discipline). A future
+   refactor could parameterize the clock on `Store` (or add a test-
+   only seam) to make the UpdatedAt comparison deterministic
+   without sleeps — but that's a cross-cutting change belonging to
+   a dedicated spec, not a drive-by here. For this build, the
+   sleeps were the lowest-risk way to exercise the behavior the
+   acceptance criteria required.
+
+### Punch-list iteration (2026-04-21)
+
+Verify returned a punch list. Two items, both addressed in this
+iteration:
+
+1. **Locked design decision #6 silently dropped in `Launch`.** The
+   spec's "Locked design decisions" item 6 (git `:cq` convention)
+   prescribes: if `edit()` exits non-zero AND the buffer is byte-
+   identical to initial, treat as an aborted edit → return
+   `(initial, false, nil)` with no error. The prior build wrapped
+   every `edit()` error unconditionally in `internal/editor/launch.go`,
+   so a clean `:cq` abort surfaced as an internal error (exit 2)
+   instead of the intended "No changes." (exit 0). Missed in the
+   original Deviations record.
+
+   Resolution:
+   - `internal/editor/launch.go` — on `edit()` error, read the
+     temp file and SHA-256-compare to initial before deciding:
+     unchanged → `(initial, false, nil)`; changed → wrap and
+     return. The read-and-hash now runs on every code path, so a
+     post-edit read failure is still surfaced.
+   - `TestLaunch_EditFuncErrorPropagates` — fake now writes
+     `"PARTIAL"` to the file before returning `errors.New("boom")`,
+     so the "error + changed" path is still exercised.
+   - `TestEditCmd_EditorErrorIsInternal` — same shape: the fake
+     writes `"Title: partial\n\n"` before erroring, so the CLI
+     still sees an internal (non-user) error with the row
+     unchanged.
+   - New `TestLaunch_EditFuncErrorOnUnmodifiedFileIsAborted` pins
+     the `:cq` semantics directly: fake errors without touching
+     the file → `err == nil`, `changed == false`,
+     `edited == initial`.
+   - Spec's "Editor launch" acceptance criteria + `launch_test.go`
+     Failing-Tests section both updated to include the new case
+     and to note that the error-propagation test now asserts
+     against a modified buffer.
+
+2. **Test count off by one.** Build Completion and the PR body
+   claimed "11 new edit tests"; `internal/cli/edit_test.go`
+   actually has 10. Corrected the top-level "All acceptance
+   criteria met?" summary to `cli: 10 new edit tests`. The new
+   editor-package test from item 1 bumps editor-package count
+   from `17 → 18`, which the same summary now reflects.
+
+**Files changed in this iteration:**
+
+- `internal/editor/launch.go` — `Launch` now hashes the post-edit
+  file contents on every return path, honoring decision #6.
+- `internal/editor/launch_test.go` —
+  `TestLaunch_EditFuncErrorPropagates` fake updated to write
+  modified bytes before erroring; new
+  `TestLaunch_EditFuncErrorOnUnmodifiedFileIsAborted`.
+- `internal/cli/edit_test.go` —
+  `TestEditCmd_EditorErrorIsInternal` fake updated likewise.
+- This spec — "Editor launch" acceptance criteria and
+  `launch_test.go` Failing-Tests section updated; Build Completion
+  summary counts corrected (editor 17 → 18, cli 11 → 10); this
+  Punch-list iteration block appended.
+
+**Verification:** `gofmt -l .` empty, `go vet ./...` clean,
+`CGO_ENABLED=0 go build ./...` clean, `go test ./...` green
+(editor 18, storage 6 Update, cli 10, all prior specs still pass).
 
 ---
 

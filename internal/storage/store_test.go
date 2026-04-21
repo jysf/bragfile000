@@ -630,6 +630,126 @@ func TestDelete_NotFoundReturnsErrNotFound(t *testing.T) {
 	}
 }
 
+func TestUpdate_ReplacesUserEditableFields(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	inserted, err := s.Add(Entry{Title: "orig", Description: "orig body", Tags: "a"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+
+	if _, err := s.Update(inserted.ID, Entry{
+		Title:       "new",
+		Description: "new body",
+		Tags:        "x,y",
+		Project:     "p",
+		Type:        "t",
+		Impact:      "i",
+	}); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	got, err := s.Get(inserted.ID)
+	if err != nil {
+		t.Fatalf("Get after Update: %v", err)
+	}
+	if got.Title != "new" || got.Description != "new body" ||
+		got.Tags != "x,y" || got.Project != "p" ||
+		got.Type != "t" || got.Impact != "i" {
+		t.Errorf("Update did not replace fields; got %+v", got)
+	}
+}
+
+func TestUpdate_PreservesID(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	inserted, err := s.Add(Entry{Title: "orig"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	returned, err := s.Update(inserted.ID, Entry{Title: "new"})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if returned.ID != inserted.ID {
+		t.Errorf("ID = %d, want %d", returned.ID, inserted.ID)
+	}
+}
+
+func TestUpdate_PreservesCreatedAt(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	inserted, err := s.Add(Entry{Title: "orig"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	origCreated := inserted.CreatedAt
+	time.Sleep(1100 * time.Millisecond)
+
+	returned, err := s.Update(inserted.ID, Entry{Title: "new"})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if !returned.CreatedAt.Equal(origCreated) {
+		t.Errorf("CreatedAt = %v, want %v (must be preserved)", returned.CreatedAt, origCreated)
+	}
+}
+
+func TestUpdate_BumpsUpdatedAt(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	inserted, err := s.Add(Entry{Title: "orig"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	origUpdated := inserted.UpdatedAt
+	time.Sleep(1100 * time.Millisecond)
+
+	returned, err := s.Update(inserted.ID, Entry{Title: "new"})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if !returned.UpdatedAt.After(origUpdated) {
+		t.Errorf("UpdatedAt = %v, want strictly after %v", returned.UpdatedAt, origUpdated)
+	}
+	if loc := returned.UpdatedAt.Location().String(); loc != "UTC" {
+		t.Errorf("UpdatedAt.Location = %q, want UTC", loc)
+	}
+}
+
+func TestUpdate_NotFoundReturnsErrNotFound(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	_, err := s.Update(999, Entry{Title: "x"})
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("Update(999): err = %v, want errors.Is(err, ErrNotFound)", err)
+	}
+}
+
+func TestUpdate_ReturnsHydratedEntry(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	inserted, err := s.Add(Entry{Title: "orig"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	time.Sleep(1100 * time.Millisecond)
+
+	returned, err := s.Update(inserted.ID, Entry{Title: "new", Tags: "x"})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if returned.ID == 0 {
+		t.Errorf("returned.ID is zero; expected hydrated Entry")
+	}
+	if returned.Title != "new" || returned.Tags != "x" {
+		t.Errorf("returned = %+v; expected input values reflected", returned)
+	}
+	if !returned.UpdatedAt.After(inserted.UpdatedAt) {
+		t.Errorf("returned.UpdatedAt = %v, want strictly after %v", returned.UpdatedAt, inserted.UpdatedAt)
+	}
+}
+
 func TestStore_CloseNoError(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "db.sqlite")
