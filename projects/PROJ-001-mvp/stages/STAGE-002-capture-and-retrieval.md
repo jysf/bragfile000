@@ -127,13 +127,14 @@ cleanly to a different stage.
       no punch list. Earned a §9 lesson on assertion specificity
       (distinctive tokens, not generic substrings).
 
-- [ ] SPEC-006 (build, **S**) — **`brag show <id>` + `Store.Get(id)`.**
-      Thin cobra subcommand + storage method. Prints the entry as
-      markdown: `# <title>`, a metadata table, `## Description` body
-      (sections/rows omitted when empty). Exit 1 via `ErrUser` if ID
-      missing, non-numeric, non-positive, or zero-args/too-many-args.
-      Introduces `storage.ErrNotFound` sentinel. DEC-007 extends to
-      positional-arg validation (no `cobra.ExactArgs`).
+- [x] SPEC-006 (shipped on 2026-04-20, **S**) — **`brag show <id>`
+      + `Store.Get(id)`.** Cobra subcommand, markdown output (title
+      heading + metadata table + optional `## Description`;
+      rows/sections omitted when empty). Introduced `storage.
+      ErrNotFound` sentinel. Extended DEC-007 to positional-arg
+      validation (no `cobra.ExactArgs`). Approved clean, no punch
+      list. DEC-007's References section amended to document the
+      extension.
 
 - [ ] SPEC-007 (not yet framed, **M**) — **`list` filter flags + Store
       filtering.** Populate `ListFilter` with `Tag`, `Project`, `Type`,
@@ -185,7 +186,7 @@ cleanly to a different stage.
       filter flags as `list` if trivial; otherwise they land in a
       later polish spec.
 
-**Count:** 1 shipped / 0 active / 7 pending
+**Count:** 2 shipped / 0 active / 6 pending
 
 **Complexity check:** 5 × S, 3 × M, 0 × L. Stage is at the upper
 bound of the 3–8 spec guideline. No split recommended — each spec

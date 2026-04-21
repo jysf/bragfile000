@@ -108,6 +108,16 @@ Revisit if:
 
 ## References
 
-- Related specs: SPEC-003 (introduces `ErrUser`, exit-code mapping)
+- Related specs:
+  - SPEC-003 (introduces `ErrUser`, exit-code mapping; the decision's
+    origin).
+  - SPEC-006 (extends the same principle to **positional-argument
+    validation**: do not use `cobra.ExactArgs(1)` or similar `Args`
+    validators; parse and validate positional args in `RunE` so that
+    count-mismatch / non-numeric / non-positive IDs return via
+    `UserErrorf` and classify as exit code 1. Shipped 2026-04-20
+    without a new DEC — the reasoning above generalizes verbatim.
+    This entry documents the extension for future specs that run
+    into the same concern, most immediately SPEC-008 `delete`).
 - Related constraints: `stdout-is-for-data-stderr-is-for-humans`
 - Related docs: `./docs/api-contract.md` (exit-code table)

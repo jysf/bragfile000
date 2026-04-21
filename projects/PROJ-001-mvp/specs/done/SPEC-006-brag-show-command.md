@@ -2,7 +2,7 @@
 task:
   id: SPEC-006
   type: story
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: S
@@ -527,13 +527,31 @@ If any of these feels necessary during build, write a new spec.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended 2026-04-20 during the **ship** cycle. Outcome-focused,
+distinct from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   Keep investing in the same pattern that just worked: thorough
+   Implementation Context, prescriptive test list, distinctive-token
+   assertions. SPEC-006's build was unusually clean, and the build
+   session explicitly credited the spec's Implementation Context for
+   the lack of ambiguity. Not "I would change X" but "this is now
+   the proven recipe for an S spec." Keep the bar this high for
+   SPEC-007 / SPEC-008 even though smaller specs tempt shorter specs.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   One small documentation amendment: append a note to DEC-007's
+   References section that the principle has been extended
+   successfully to positional-arg validation in SPEC-006 (no
+   `cobra.ExactArgs`). Not a supersession — the pattern is unchanged;
+   the DEC's underlying reasoning generalizes. This turns DEC-007
+   from a one-use decision into the documented canonical pattern for
+   "cobra built-in validators return unwrappable errors → validate
+   in RunE." Makes it discoverable for future specs that run into
+   the same concern (SPEC-008 delete will). Applied in this ship
+   commit.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   No. SPEC-007 (`list` filter flags, M) is next pending in STAGE-002
+   and unblocked. SPEC-008 (`delete`) is queued after. Nothing
+   slipping.
