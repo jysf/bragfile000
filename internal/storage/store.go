@@ -124,6 +124,24 @@ func (s *Store) Get(id int64) (Entry, error) {
 	return e, nil
 }
 
+// Delete removes the entry with the given id. Returns an error wrapping
+// ErrNotFound if no row matches.
+func (s *Store) Delete(id int64) error {
+	res, err := s.db.ExecContext(context.Background(),
+		`DELETE FROM entries WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("delete entry %d: %w", id, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("delete entry %d: %w", id, err)
+	}
+	if n == 0 {
+		return fmt.Errorf("delete entry %d: %w", id, ErrNotFound)
+	}
+	return nil
+}
+
 // List returns entries matching the populated fields of f, combined
 // via AND, ordered created_at DESC with id DESC as the tie-break.
 // A zero-value ListFilter returns every row.

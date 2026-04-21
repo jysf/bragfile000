@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -602,6 +603,30 @@ func TestList_FilterPreservesOrder(t *testing.T) {
 		if e.ID != wantIDs[i] {
 			t.Errorf("pos %d: id=%d, want %d (titles=%v)", i, e.ID, wantIDs[i], titlesOf(got))
 		}
+	}
+}
+
+func TestDelete_RemovesRow(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	inserted, err := s.Add(Entry{Title: "to be deleted"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	if err := s.Delete(inserted.ID); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	if _, err := s.Get(inserted.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("Get after Delete: err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestDelete_NotFoundReturnsErrNotFound(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	err := s.Delete(999)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("Delete(999): err = %v, want ErrNotFound", err)
 	}
 }
 
