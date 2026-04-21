@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jysf/bragfile000/internal/storage/storagetest"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -329,20 +331,13 @@ func addWithTags(t *testing.T, s *Store, title, tags, project, typ string) Entry
 	return e
 }
 
-// backdateCreatedAt opens a second *sql.DB against the same file and
-// runs a direct UPDATE to set an entry's created_at to a specific RFC3339
-// timestamp. This keeps Store.Add's contract unchanged while letting
-// --since tests seed rows in the past.
-func backdateCreatedAt(t *testing.T, path string, id int64, at time.Time) {
+// mustBackdate forwards to storagetest.Backdate and t.Fatals on error.
+// Same name and shape as the helper in cli's list_test.go so future
+// readers don't have to mentally translate between packages.
+func mustBackdate(t *testing.T, path string, id int64, at time.Time) {
 	t.Helper()
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		t.Fatalf("sql.Open(%s): %v", path, err)
-	}
-	defer db.Close()
-	ts := at.UTC().Format(time.RFC3339)
-	if _, err := db.Exec("UPDATE entries SET created_at = ? WHERE id = ?", ts, id); err != nil {
-		t.Fatalf("backdate id=%d: %v", id, err)
+	if err := storagetest.Backdate(path, id, at); err != nil {
+		t.Fatalf("storagetest.Backdate: %v", err)
 	}
 }
 
@@ -510,9 +505,9 @@ func TestList_FilterBySince(t *testing.T) {
 	b := addWithTags(t, s, "recent", "", "", "")
 	c := addWithTags(t, s, "newest", "", "", "")
 
-	backdateCreatedAt(t, path, a.ID, now.Add(-3*24*time.Hour))
-	backdateCreatedAt(t, path, b.ID, now.Add(-1*24*time.Hour))
-	backdateCreatedAt(t, path, c.ID, now)
+	mustBackdate(t, path, a.ID, now.Add(-3*24*time.Hour))
+	mustBackdate(t, path, b.ID, now.Add(-1*24*time.Hour))
+	mustBackdate(t, path, c.ID, now)
 
 	twoDaysAgo := now.Add(-2 * 24 * time.Hour)
 	got, err := s.List(ListFilter{Since: twoDaysAgo})
@@ -564,10 +559,10 @@ func TestList_FilterCombined(t *testing.T) {
 	// Miss: too old.
 	old := addWithTags(t, s, "old", "auth", "platform", "shipped")
 
-	backdateCreatedAt(t, path, hit.ID, now)
-	backdateCreatedAt(t, path, missP.ID, now)
-	backdateCreatedAt(t, path, missT.ID, now)
-	backdateCreatedAt(t, path, old.ID, now.Add(-10*24*time.Hour))
+	mustBackdate(t, path, hit.ID, now)
+	mustBackdate(t, path, missP.ID, now)
+	mustBackdate(t, path, missT.ID, now)
+	mustBackdate(t, path, old.ID, now.Add(-10*24*time.Hour))
 
 	got, err := s.List(ListFilter{
 		Tag:     "auth",

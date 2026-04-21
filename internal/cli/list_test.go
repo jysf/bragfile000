@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bytes"
-	"database/sql"
 	"errors"
 	"path/filepath"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jysf/bragfile000/internal/storage"
+	"github.com/jysf/bragfile000/internal/storage/storagetest"
 	"github.com/spf13/cobra"
 )
 
@@ -18,10 +18,9 @@ import (
 // attached, wires separate stdout/stderr buffers, and clears
 // BRAGFILE_DB so host env doesn't leak in. The caller drives args via
 // cmd.SetArgs.
-func newListTestRoot(t *testing.T, dbPath string) (*cobra.Command, *bytes.Buffer, *bytes.Buffer) {
+func newListTestRoot(t *testing.T) (*cobra.Command, *bytes.Buffer, *bytes.Buffer) {
 	t.Helper()
 	t.Setenv("BRAGFILE_DB", "")
-	_ = dbPath
 	root := NewRootCmd("test")
 	root.AddCommand(NewListCmd())
 	outBuf := &bytes.Buffer{}
@@ -43,7 +42,7 @@ func TestListCmd_EmptyPrintsNothing(t *testing.T) {
 		t.Fatalf("storage.Close: %v", err)
 	}
 
-	root, outBuf, errBuf := newListTestRoot(t, dbPath)
+	root, outBuf, errBuf := newListTestRoot(t)
 	root.SetArgs([]string{"--db", dbPath, "list"})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -72,7 +71,7 @@ func TestListCmd_PrintsReverseChronological(t *testing.T) {
 		t.Fatalf("storage.Close: %v", err)
 	}
 
-	root, outBuf, errBuf := newListTestRoot(t, dbPath)
+	root, outBuf, errBuf := newListTestRoot(t)
 	root.SetArgs([]string{"--db", dbPath, "list"})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -112,7 +111,7 @@ func TestListCmd_TabSeparatedFormat(t *testing.T) {
 		t.Fatalf("storage.Close: %v", err)
 	}
 
-	root, outBuf, errBuf := newListTestRoot(t, dbPath)
+	root, outBuf, errBuf := newListTestRoot(t)
 	root.SetArgs([]string{"--db", dbPath, "list"})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -170,7 +169,7 @@ func TestListCmd_TieBreakIsIDDescending(t *testing.T) {
 		t.Fatalf("expected b.ID > a.ID; got a=%d b=%d", a.ID, b.ID)
 	}
 
-	root, outBuf, errBuf := newListTestRoot(t, dbPath)
+	root, outBuf, errBuf := newListTestRoot(t)
 	root.SetArgs([]string{"--db", dbPath, "list"})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -215,7 +214,7 @@ func TestListCmd_RespectsDBFlag(t *testing.T) {
 		}
 	}
 
-	root, outBuf, errBuf := newListTestRoot(t, dbA)
+	root, outBuf, errBuf := newListTestRoot(t)
 	root.SetArgs([]string{"--db", dbA, "list"})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -238,7 +237,7 @@ func TestListCmd_StorageOpenErrorIsInternal(t *testing.T) {
 	// main.go maps it to exit 2 (internal).
 	dir := t.TempDir()
 
-	root, outBuf, errBuf := newListTestRoot(t, dir)
+	root, outBuf, errBuf := newListTestRoot(t)
 	root.SetArgs([]string{"--db", dir, "list"})
 	err := root.Execute()
 	if err == nil {
@@ -269,25 +268,19 @@ func seedListEntry(t *testing.T, dbPath, title, tags, project, typ string) stora
 	return e
 }
 
-// backdateCLI sets created_at on an entry via direct SQL. Parallel of
-// backdateCreatedAt in the storage test package; CLI tests live in a
-// different package so we keep a local copy.
-func backdateCLI(t *testing.T, dbPath string, id int64, at time.Time) {
+// mustBackdate forwards to storagetest.Backdate and t.Fatals on error;
+// CLI tests cannot import database/sql per the no-sql-in-cli-layer
+// constraint, so the SQL UPDATE lives in the storagetest sub-package.
+func mustBackdate(t *testing.T, dbPath string, id int64, at time.Time) {
 	t.Helper()
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		t.Fatalf("sql.Open: %v", err)
-	}
-	defer db.Close()
-	ts := at.UTC().Format(time.RFC3339)
-	if _, err := db.Exec("UPDATE entries SET created_at = ? WHERE id = ?", ts, id); err != nil {
-		t.Fatalf("backdate id=%d: %v", id, err)
+	if err := storagetest.Backdate(dbPath, id, at); err != nil {
+		t.Fatalf("storagetest.Backdate: %v", err)
 	}
 }
 
 func runListCmd(t *testing.T, dbPath string, args ...string) (stdout, stderr string, runErr error) {
 	t.Helper()
-	root, outBuf, errBuf := newListTestRoot(t, dbPath)
+	root, outBuf, errBuf := newListTestRoot(t)
 	full := append([]string{"--db", dbPath, "list"}, args...)
 	root.SetArgs(full)
 	runErr = root.Execute()
@@ -379,8 +372,8 @@ func TestListCmd_FilterBySince_ISODate(t *testing.T) {
 	old := seedListEntry(t, dbPath, "old-entry", "", "", "")
 	newEntry := seedListEntry(t, dbPath, "new-entry", "", "", "")
 
-	backdateCLI(t, dbPath, old.ID, time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
-	backdateCLI(t, dbPath, newEntry.ID, time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC))
+	mustBackdate(t, dbPath, old.ID, time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
+	mustBackdate(t, dbPath, newEntry.ID, time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC))
 
 	out, errOut, err := runListCmd(t, dbPath, "--since", "2026-01-01")
 	if err != nil {
@@ -403,8 +396,8 @@ func TestListCmd_FilterBySince_Days(t *testing.T) {
 	newEntry := seedListEntry(t, dbPath, "two-days-ago", "", "", "")
 
 	now := time.Now().UTC()
-	backdateCLI(t, dbPath, old.ID, now.Add(-10*24*time.Hour))
-	backdateCLI(t, dbPath, newEntry.ID, now.Add(-2*24*time.Hour))
+	mustBackdate(t, dbPath, old.ID, now.Add(-10*24*time.Hour))
+	mustBackdate(t, dbPath, newEntry.ID, now.Add(-2*24*time.Hour))
 
 	out, errOut, err := runListCmd(t, dbPath, "--since", "7d")
 	if err != nil {
@@ -427,8 +420,8 @@ func TestListCmd_FilterBySince_Weeks(t *testing.T) {
 	newEntry := seedListEntry(t, dbPath, "ten-days-ago", "", "", "")
 
 	now := time.Now().UTC()
-	backdateCLI(t, dbPath, old.ID, now.Add(-30*24*time.Hour))
-	backdateCLI(t, dbPath, newEntry.ID, now.Add(-10*24*time.Hour))
+	mustBackdate(t, dbPath, old.ID, now.Add(-30*24*time.Hour))
+	mustBackdate(t, dbPath, newEntry.ID, now.Add(-10*24*time.Hour))
 
 	out, errOut, err := runListCmd(t, dbPath, "--since", "2w")
 	if err != nil {
@@ -451,8 +444,8 @@ func TestListCmd_FilterBySince_Months(t *testing.T) {
 	newEntry := seedListEntry(t, dbPath, "sixty-days", "", "", "")
 
 	now := time.Now().UTC()
-	backdateCLI(t, dbPath, old.ID, now.Add(-100*24*time.Hour))
-	backdateCLI(t, dbPath, newEntry.ID, now.Add(-60*24*time.Hour))
+	mustBackdate(t, dbPath, old.ID, now.Add(-100*24*time.Hour))
+	mustBackdate(t, dbPath, newEntry.ID, now.Add(-60*24*time.Hour))
 
 	// 3m = 90 days per DEC-008 approximation.
 	out, errOut, err := runListCmd(t, dbPath, "--since", "3m")
@@ -496,9 +489,9 @@ func TestListCmd_CombinedFilters(t *testing.T) {
 	old := seedListEntry(t, dbPath, "combined-old", "", "platform", "")
 
 	now := time.Now().UTC()
-	backdateCLI(t, dbPath, hit.ID, now.Add(-2*24*time.Hour))
-	backdateCLI(t, dbPath, missP.ID, now.Add(-2*24*time.Hour))
-	backdateCLI(t, dbPath, old.ID, now.Add(-20*24*time.Hour))
+	mustBackdate(t, dbPath, hit.ID, now.Add(-2*24*time.Hour))
+	mustBackdate(t, dbPath, missP.ID, now.Add(-2*24*time.Hour))
+	mustBackdate(t, dbPath, old.ID, now.Add(-20*24*time.Hour))
 
 	out, errOut, err := runListCmd(t, dbPath,
 		"--project", "platform",
@@ -597,8 +590,7 @@ func TestListCmd_EmptyFilterValueIsUserError(t *testing.T) {
 }
 
 func TestListCmd_HelpShowsFilters(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "test.db")
-	root, outBuf, errBuf := newListTestRoot(t, dbPath)
+	root, outBuf, errBuf := newListTestRoot(t)
 	root.SetArgs([]string{"list", "--help"})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -615,8 +607,7 @@ func TestListCmd_HelpShowsFilters(t *testing.T) {
 }
 
 func TestListCmd_HelpShape(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "test.db")
-	root, outBuf, errBuf := newListTestRoot(t, dbPath)
+	root, outBuf, errBuf := newListTestRoot(t)
 	root.SetArgs([]string{"list", "--help"})
 
 	if err := root.Execute(); err != nil {
