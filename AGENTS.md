@@ -40,6 +40,14 @@ In this variant, Claude plays architect and implementer in **separate
 sessions**. The spec file itself carries all the context — see its
 `## Implementation Context` section.
 
+**Note on the `agents.architect` / `agents.implementer` front-matter
+fields:** under the `claude-only` variant these default to the same
+model id for every spec (informational only), so identical values in
+both fields are NOT evidence of same-session contamination — that
+would have to be inferred from commit/session timestamps instead.
+The fields become meaningful signal in the `claude-plus-agents`
+variant where separate agents occupy each role.
+
 **Decisions persist at repo level.** A decision made during PROJ-001
 binds PROJ-002 as well.
 

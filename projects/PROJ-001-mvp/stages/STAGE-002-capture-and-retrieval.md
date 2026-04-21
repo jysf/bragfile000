@@ -148,14 +148,13 @@ cleanly to a different stage.
       `internal/storage/storagetest` sub-package. Earned the
       "During design" rule in AGENTS.md §12.
 
-- [ ] SPEC-008 (build, **S**) — **`brag delete <id>` +
-      `Store.Delete(id)`.** Prompts for y/N confirmation on stdin
-      unless `--yes`/`-y` is passed. Hard delete (no soft-delete).
-      Exit 1 via `ErrUser` on invalid/missing/non-existent ID;
-      exit 0 on clean user-aborted decline (amends api-contract.md
-      exit-code clause). Reuses SPEC-006's DEC-007 positional-arg
-      pattern. All feedback to stderr; stdout stays empty. 13
-      failing tests (11 CLI + 2 storage).
+- [x] SPEC-008 (shipped on 2026-04-20, **S**) — **`brag delete
+      <id>` + `Store.Delete(id)`.** Shipped y/N confirmation
+      prompt + `--yes`/`-y` bypass, hard delete, strict
+      stdout-empty stream discipline. Amended api-contract.md:
+      decline → exit 0 (deliberate user choice), not exit 1.
+      Approved with a yellow-flag note on template field semantics
+      (addressed in ship via AGENTS.md §2 note). No new DECs.
 
 - [ ] SPEC-009 (not yet framed, **M**) — **`internal/editor` package
       + `brag edit <id>` + `Store.Update(id, Entry)`.** Introduces the
@@ -188,7 +187,7 @@ cleanly to a different stage.
       filter flags as `list` if trivial; otherwise they land in a
       later polish spec.
 
-**Count:** 3 shipped / 0 active / 5 pending
+**Count:** 4 shipped / 0 active / 4 pending
 
 **Complexity check:** 5 × S, 3 × M, 0 × L. Stage is at the upper
 bound of the 3–8 spec guideline. No split recommended — each spec

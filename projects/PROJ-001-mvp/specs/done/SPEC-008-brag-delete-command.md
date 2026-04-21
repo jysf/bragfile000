@@ -2,7 +2,7 @@
 task:
   id: SPEC-008
   type: story
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: S
@@ -579,13 +579,37 @@ If any of these feels necessary during build, write a new spec.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended 2026-04-20 during the **ship** cycle. Outcome-focused,
+distinct from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   Keep writing prescriptive specs. SPEC-008's build completed
+   cleanly and quickly because the Implementation Context hand-fed
+   the `runDelete` and `Store.Delete` code blocks — the same recipe
+   SPEC-005 and SPEC-006 validated. Verify flagged a yellow
+   observation that a "too-prescriptive" spec means the build
+   session does "almost no design work," which is technically true
+   but is actually the intended framework behavior. Not a change
+   to make, but a framework-level nuance worth filing: the
+   spec-as-code-prescription pattern is the thing paying interest,
+   not an anti-pattern. Logged the nuance to
+   `framework-feedback/process-feedback.md` as an addendum.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   One small template-clarity note: the spec.md template's
+   `agents.architect` and `agents.implementer` fields both default
+   to the same model id for every spec, so they're informational
+   noise under the `claude-only` variant, not a contamination
+   signal. Verify's yellow flag on SPEC-008 misread "architect ==
+   implementer == claude-opus-4-7" as evidence of same-session
+   contamination, when it's actually just the template default.
+   Adding a one-line note to AGENTS.md §2 ("Work Hierarchy")
+   clarifying the fields' semantics under `claude-only`. This
+   ship commit applies that note.
 
-3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+3. **Is there a follow-up spec to write now before I forget?**
+   No. SPEC-009 (`internal/editor` package + `brag edit <id>` +
+   `Store.Update`, M) is next pending in STAGE-002 — editor-launch
+   capture, which is a genuine shape change from the ID-taking
+   commands we've been shipping. SPEC-010/011/012 remain queued
+   after.
