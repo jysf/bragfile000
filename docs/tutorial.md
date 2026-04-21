@@ -139,6 +139,23 @@ brag list --since 2026-01-01                    # since a specific date
 - `--limit N` caps the row count.
 - Multiple filters combine via AND.
 
+### Delete an entry
+
+Caught a typo and want to start over? `brag delete <id>`:
+
+```bash
+brag delete 42
+# prints to stderr:
+#   Delete entry 42 ("untnagled the auth flake")? [y/N]
+# type y + enter to confirm; anything else aborts cleanly.
+
+brag delete 42 -y    # skip the prompt (scripting / muscle memory)
+```
+
+Declining at the prompt exits 0 (no harm done). The delete is a hard
+delete — there is no undo, no trash bin. The `.sqlite` file is your
+backup.
+
 ---
 
 ## 5. Where the data lives
@@ -229,7 +246,7 @@ So you don't ask the tool for things it can't do:
 | Want | Status |
 |---|---|
 | `brag add` with no args (editor-launch on `$EDITOR`) | STAGE-002 |
-| `brag show <id>` / `brag edit <id>` / `brag delete <id>` | STAGE-002 |
+| `brag edit <id>` | STAGE-002 |
 | `brag search "query"` (FTS5 full-text search) | STAGE-002 |
 | `brag export --format markdown` | STAGE-003 |
 | `brag export --format sqlite` | STAGE-003 |

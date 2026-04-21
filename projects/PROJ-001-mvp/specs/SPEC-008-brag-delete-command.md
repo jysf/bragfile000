@@ -2,7 +2,7 @@
 task:
   id: SPEC-008
   type: story
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: S
@@ -524,26 +524,56 @@ If any of these feels necessary during build, write a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-008-brag-delete-command`
+- **PR (if applicable):** (opened after advance-cycle)
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - (none expected; design decisions are inline in the spec)
+  - None. Every design decision was inline in the spec; none rose to
+    DEC-level weight during implementation.
 - **Deviations from spec:**
-  - [list]
+  - Drive-by (disclosed): `docs/tutorial.md` §9 "What's NOT there
+    yet" had a compound `show / edit / delete` line. Striking just
+    `delete` would have left `show` — already shipped in SPEC-006 —
+    incorrectly advertised as not-yet-shipped. I removed both `show`
+    and `delete`, leaving the row as `edit <id>` only. This matches
+    the spec's own parenthetical ("`show` already shipped so the
+    table may need editing anyway — leave `edit <id>` in the
+    STAGE-002 bucket"). Not a surprise, but disclosing here for
+    completeness.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - `docs/tutorial.md` §4 still has the stale line "`brag show <id>`
+    arrives in STAGE-002 to dump a single entry in full" even though
+    SPEC-006 shipped it. Left untouched — out of scope here. A
+    tutorial-refresh spec could sweep this once STAGE-002 finishes.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing slowed me down meaningfully. The spec was one of the
+   cleanest so far: exact struct for `runDelete`, exact struct for
+   `Store.Delete`, a full failing-test list with per-test assertion
+   hints, and prior-art pointers to `show.go`/`show_test.go` for
+   shape. The only soft spot was the `TestDeleteCmd_YesFlagLongAndShort`
+   hint ("run twice, two entries") — cobra's parsed-args state is
+   sticky on a single `*cobra.Command`, so I used two fresh roots to
+   guarantee the second `SetArgs` took effect. Not a spec defect,
+   just a cobra quirk worth noting for future multi-invocation tests.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. DEC-005/006/007, `no-sql-in-cli-layer`,
+   `storage-tests-use-tempdir`, `stdout-is-for-data-stderr-is-for-
+   humans`, `errors-wrap-with-context`, `test-before-implementation`,
+   `one-spec-per-pr` — all already cited. Every path in `delete.go`
+   stayed inside those rails without fighting them.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — I'd codify the "separate-root-per-SetArgs-invocation" pattern
+   into a tiny `freshRoot(t, cmd) *cobra.Command` helper rather than
+   inlining `NewRootCmd(...) + AddCommand(...)` a second time inside
+   `TestDeleteCmd_YesFlagLongAndShort`. Not worth introducing in this
+   spec (one test, two call sites), but the next time a test exercises
+   two cobra invocations in the same test body it'd be nicer to have
+   a named helper. Could land in a future test-harness polish spec.
 
 ---
 

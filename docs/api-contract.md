@@ -99,10 +99,13 @@ the DB untouched.
 ```
 brag delete 42
 brag delete 42 --yes
+brag delete 42 -y
 ```
 
-Prompts for confirmation on stdin unless `--yes` is passed. Exit 1 if
-the ID does not exist or the user declines.
+Prompts for confirmation on stdin unless `--yes` (`-y`) is passed.
+Exit 1 if the ID does not exist, the arg is invalid, or missing.
+Exit 0 (no error) if the user declines the confirmation prompt — a
+deliberate choice, not an error.
 
 ### `brag search "query"` — full-text search (STAGE-002)
 
