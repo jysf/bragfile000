@@ -19,6 +19,13 @@ type Entry struct {
 	UpdatedAt   time.Time
 }
 
-// ListFilter is the filter passed to Store.List. Empty for MVP —
-// filter fields (tag, project, since, …) arrive in STAGE-002.
-type ListFilter struct{}
+// ListFilter is the filter passed to Store.List. A zero value means
+// "no filter": every field's zero value contributes no WHERE clause.
+// Populated fields combine via AND.
+type ListFilter struct {
+	Tag     string    // sentinel-comma token match against comma-joined tags
+	Project string    // exact equality on entries.project
+	Type    string    // exact equality on entries.type
+	Since   time.Time // entries.created_at >= Since (RFC3339 UTC)
+	Limit   int       // LIMIT N; 0 = no limit
+}

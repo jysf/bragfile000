@@ -2,7 +2,7 @@
 task:
   id: SPEC-007
   type: story
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: M
@@ -365,16 +365,17 @@ Notes for the implementer on testing patterns:
   undefined `ParseSince`, missing flag on `list` command, etc.). If
   any test unexpectedly passes, tighten the assertion (§9, SPEC-005
   lesson).
-- For `--since`-backed storage tests, backdate with direct SQL:
-  ```go
-  _, err := db.Exec(`UPDATE entries SET created_at = ? WHERE id = ?`,
-      twoDaysAgo.Format(time.RFC3339), id)
-  ```
-  This keeps `Add`'s contract unchanged (always uses `time.Now()`).
-  The `db *sql.DB` isn't exported from `Store` — tests can open a
-  second `*sql.DB` against the same temp path for the UPDATE, or
-  the build session may add a small unexported test helper on
-  `Store`. Either is acceptable.
+- For `--since`-backed tests, backdate with the canonical helper
+  `storagetest.Backdate(dbPath, id, at)` from
+  `internal/storage/storagetest/`. That sub-package owns the direct
+  SQL UPDATE so `internal/cli/**` test files can stay free of
+  `database/sql` (the `no-sql-in-cli-layer` constraint is blocking
+  and applies to test files too — there is no `_test.go` exclusion
+  in the constraint's path glob). Storage tests call the same helper
+  for consistency; an earlier draft of this section said "either is
+  acceptable" between a CLI-local helper and a storage-side helper,
+  but a CLI-local helper imports `database/sql` and violates the
+  constraint, so it is NOT acceptable. Always use `storagetest`.
 - For `TestList_TagFilterNullAndEmpty`, setting NULL requires a
   direct SQL INSERT (the `Entry` struct has a non-pointer string
   field; `Add` always stores `""`, never NULL). That's fine — the
@@ -636,26 +637,149 @@ If any of these feels necessary during build, write a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-007-list-filter-flags`
+- **PR (if applicable):** opened after `just advance-cycle`.
+- **All acceptance criteria met?** yes. `go test ./...`, `gofmt -l .`,
+  `go vet ./...`, `CGO_ENABLED=0 go build ./...` all clean. All 25 new
+  tests green alongside every prior SPEC-001…006 test.
 - **New decisions emitted:**
-  - (none expected; DEC-008 was written during design)
+  - None. DEC-008 was written during design; no non-trivial build-
+    time choice warranted a new DEC.
 - **Deviations from spec:**
-  - [list]
+  - Renamed the CLI test helper to `seedListEntry` to avoid a
+    package-level collision with `seedEntry` in SPEC-006's
+    `show_test.go` (same `cli` package). The spec suggested
+    "`seed…`/`newRootWithList`"; this is a mechanical rename, not a
+    semantic change.
+  - Added a small `backdateCLI` helper inside `list_test.go` (mirrors
+    the storage package's `backdateCreatedAt`). The spec's
+    implementer notes mentioned the second-`*sql.DB` technique; I
+    inlined the three-line helper rather than exporting anything
+    from `Store`.
+  - `brag list`'s `Short` string changed from "List all brag entries"
+    to "List brag entries" — one-word edit, reads cleaner now that
+    the command takes filters. Noted because it's a user-visible
+    string change.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - No new specs required for STAGE-002. Backlog unchanged.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing substantive. The `Implementation Context` spelled out
+   the WHERE-clause builder, the `Changed()` pattern, and the
+   backdating approach; each mapped 1:1 to a block of code. The
+   only blip was the helper-name collision with `show_test.go`'s
+   `seedEntry`, which the spec couldn't have known about without
+   asking me to grep — a two-minute fix.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No new one. DEC-008 arriving alongside the spec meant the
+   `--since` contract was locked; DEC-007's extension to positional
+   args didn't apply here but the flag-validation half did. Every
+   blocking constraint I hit (stdout-vs-stderr, timestamps-UTC-RFC3339,
+   no-SQL-in-CLI) was already listed.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Run `grep -rn seedEntry internal/cli` before naming a new test
+   helper in the same package. It's not a tools-problem — the spec
+   even listed `show_test.go` as a prior-art file — I just didn't
+   cross-check helper names before writing the file. Cheap lesson.
+   Also: the `_ = dbPath` line in `newListTestRoot` is dead (the
+   spec's helper kept it from a prior iteration). I left it alone to
+   keep the diff minimal but a future spec could drop it.
+
+### Punch-list iteration (2026-04-20)
+
+Verify returned a punch list. Two items, both addressed in this
+iteration:
+
+1. **Constraint violation: `database/sql` in `internal/cli/`.** The
+   prior build added a `backdateCLI` helper to
+   `internal/cli/list_test.go` that called `sql.Open("sqlite", …)`
+   directly. The `no-sql-in-cli-layer` constraint (severity:
+   blocking, paths: `["internal/cli/**"]`) has no `_test.go`
+   exclusion, so the test file violated it. The "Notes for the
+   Implementer" sentence saying the second-`*sql.DB` technique was
+   "acceptable" was a spec defect that misled the build into the
+   simpler, non-conforming path; a spec cannot override a blocking
+   constraint.
+
+   Resolution:
+   - New sub-package `internal/storage/storagetest/` exporting
+     `func Backdate(dbPath string, id int64, at time.Time) error`.
+     Lives under `internal/storage/`, so importing it does not pull
+     `database/sql` into the CLI test file's import set.
+   - `internal/cli/list_test.go` no longer imports `database/sql`;
+     `backdateCLI` is replaced by a four-line `mustBackdate` wrapper
+     that forwards to `storagetest.Backdate` and `t.Fatal`s on
+     error. Verified with `grep -rn database/sql internal/cli/`
+     (no matches).
+   - `internal/storage/store_test.go` had its own `backdateCreatedAt`
+     helper duplicating the same UPDATE; renamed to `mustBackdate`
+     and pointed at `storagetest.Backdate` for a single canonical
+     implementation.
+   - Spec's "Notes for the Implementer" rewritten to prescribe
+     `storagetest` and explicitly call out that the prior "either
+     is acceptable" wording was a defect.
+
+2. **Mailed-in Q1 of the build reflection.** The original Q1 said
+   nothing was unclear, but the deviations enumerated in the same
+   block — `seedListEntry` rename, `backdateCLI` helper, `Short`
+   tweak, the dead `_ = dbPath` — were themselves friction signals.
+   Rewriting Q1 honestly:
+
+   > **Q1 (rewritten).** Three things were friction worth naming.
+   > First and largest: the spec's "Either is acceptable" sentence
+   > about backdating made the path of least resistance — a
+   > CLI-package helper that directly opens `*sql.DB` — feel
+   > sanctioned. It wasn't; it violated `no-sql-in-cli-layer` (a
+   > blocking constraint with no `_test.go` exclusion). I should
+   > have noticed the contradiction during build and stopped to
+   > raise a spec defect instead of taking the easy path. Lesson:
+   > when a spec says "either A or B is acceptable" and one option
+   > would clearly cross a blocking constraint, the spec is wrong
+   > and you flag it before writing code. Second: the
+   > `seedListEntry` rename (from the spec-suggested `seedEntry`)
+   > happened because SPEC-006's `show_test.go` already defined
+   > `seedEntry` in the same `cli` package. I caught it via
+   > compiler error rather than by reading prior-art tests, even
+   > though the spec listed `show_test.go` explicitly. Same-package
+   > helper-name collision is now plausible enough across SPEC-002
+   > / SPEC-006 / SPEC-007 that a naming convention (e.g. always
+   > `seed<Cmd>Entry` / always `mustBackdate`) is worth a future
+   > housekeeping spec. Third: I left `_ = dbPath` in
+   > `newListTestRoot` as dead code rather than removing both the
+   > line and the unused parameter. This punch-list iteration
+   > deletes both — `dbPath` was vestigial from an earlier draft
+   > that set `BRAGFILE_DB` to it, and Go doesn't require unused
+   > parameters to be silenced.
+
+   The other two reflection answers (Q2 on missing
+   constraints/decisions; Q3 on what to do differently) stand as
+   originally written, with the addition that "grep for the
+   helper name in the same package before defining a new one"
+   from Q3 also generalizes to "read the prior spec's test files
+   completely before writing test scaffolding".
+
+**Files changed in this iteration:**
+
+- `internal/storage/storagetest/storagetest.go` (new) — canonical
+  `Backdate` helper.
+- `internal/cli/list_test.go` — drop `database/sql` import; drop
+  `backdateCLI`; replace with `mustBackdate` wrapping
+  `storagetest.Backdate`; drop `_ = dbPath` and the unused
+  `dbPath` parameter from `newListTestRoot`; drop two unused
+  `dbPath` declarations in the help-only tests.
+- `internal/storage/store_test.go` — drop `backdateCreatedAt`;
+  replace with `mustBackdate` wrapping `storagetest.Backdate`;
+  add storagetest import.
+- This spec — Notes for the Implementer rewritten; this
+  Punch-list iteration block appended.
+
+**Verification:** `gofmt -l .` empty, `go vet ./...` clean,
+`CGO_ENABLED=0 go build ./...` clean, `go test ./...` green
+(all prior tests + the SPEC-007 additions still pass).
 
 ---
 

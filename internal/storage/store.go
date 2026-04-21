@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -123,14 +124,44 @@ func (s *Store) Get(id int64) (Entry, error) {
 	return e, nil
 }
 
-// List returns all entries in created_at DESC order. The ListFilter
-// fields are ignored for MVP (they land in STAGE-002).
-func (s *Store) List(_ ListFilter) ([]Entry, error) {
-	rows, err := s.db.QueryContext(context.Background(),
-		`SELECT id, title, description, tags, project, type, impact, created_at, updated_at
-         FROM entries
-         ORDER BY created_at DESC, id DESC`,
-	)
+// List returns entries matching the populated fields of f, combined
+// via AND, ordered created_at DESC with id DESC as the tie-break.
+// A zero-value ListFilter returns every row.
+func (s *Store) List(f ListFilter) ([]Entry, error) {
+	var conds []string
+	var args []interface{}
+
+	if f.Tag != "" {
+		// Sentinel-comma match: ',tags,' LIKE '%,<tag>,%' (DEC-004).
+		// NULL tags never match (NULL LIKE x is NULL → false).
+		conds = append(conds, "',' || tags || ',' LIKE ?")
+		args = append(args, "%,"+f.Tag+",%")
+	}
+	if f.Project != "" {
+		conds = append(conds, "project = ?")
+		args = append(args, f.Project)
+	}
+	if f.Type != "" {
+		conds = append(conds, "type = ?")
+		args = append(args, f.Type)
+	}
+	if !f.Since.IsZero() {
+		conds = append(conds, "created_at >= ?")
+		args = append(args, f.Since.UTC().Format(time.RFC3339))
+	}
+
+	q := `SELECT id, title, description, tags, project, type, impact, created_at, updated_at
+         FROM entries`
+	if len(conds) > 0 {
+		q += " WHERE " + strings.Join(conds, " AND ")
+	}
+	q += " ORDER BY created_at DESC, id DESC"
+	if f.Limit > 0 {
+		q += " LIMIT ?"
+		args = append(args, f.Limit)
+	}
+
+	rows, err := s.db.QueryContext(context.Background(), q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list entries: %w", err)
 	}

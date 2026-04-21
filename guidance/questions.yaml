@@ -19,10 +19,11 @@ questions:
   - id: tags-storage-model
     question: "Is comma-joined TEXT still the right shape for tags once `list --tag` and FTS5 `search` are implemented, or do we need to migrate to a normalized tags/entry_tags pair?"
     priority: medium
-    status: open
+    status: answered
     raised_by: claude
     raised_at: 2026-04-19
     assigned_to: null
+    answered_by: SPEC-007 (2026-04-20)
     notes: |
       DEC-004 picked comma-joined TEXT at confidence 0.65 for MVP. The
       risk is (1) the "auth" matching "authoring" false-positive unless
@@ -32,6 +33,15 @@ questions:
       If either of those specs needs more than ~20 extra lines of code
       to get right with comma-joined tags, that's the signal to
       normalize.
+
+      Answered by SPEC-007 (2026-04-20): the sentinel-comma LIKE
+      pattern (`',' || tags || ',' LIKE '%,<tag>,%'`) resolves concern
+      (1) in a single SQL line with no normalization and no new
+      migration. A regression test (`TestList_TagFilterNoFalsePositive`)
+      pins the `"auth"` vs `"authoring"` case. DEC-004's Validation
+      section now references SPEC-007. Concern (2) re-opens if/when
+      FTS5 lands in SPEC-011 — kept this question for the record,
+      but the MVP-scale answer is "comma-joined stays".
 
   - id: shareable-ids
     question: "Will we ever need IDs that are portable across machines (sync, sharing, export-import), and if so when do we add a ULID column alongside the integer PK?"

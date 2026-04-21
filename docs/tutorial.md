@@ -120,6 +120,25 @@ brag list | awk -F'\t' '{print $1, $3}'    # id + title, space-separated
 type, and impact are stored but not printed. `brag show <id>` arrives
 in STAGE-002 to dump a single entry in full.
 
+### Filter flags
+
+Narrow the list without piping through `grep`:
+
+```bash
+brag list --tag auth                            # entries tagged "auth"
+brag list --project platform --since 7d         # last week, one project
+brag list --type shipped --limit 5              # 5 most recent shipped
+brag list --since 2026-01-01                    # since a specific date
+```
+
+- `--tag` matches a single tag as a comma-separated token — `--tag
+  auth` matches `"auth"` and `"auth,perf"` but not `"authoring"`.
+- `--project` and `--type` are exact, case-sensitive.
+- `--since` accepts `YYYY-MM-DD` (midnight UTC) or a duration like
+  `7d`, `2w`, `3m` (days / weeks / 30-day months).
+- `--limit N` caps the row count.
+- Multiple filters combine via AND.
+
 ---
 
 ## 5. Where the data lives
@@ -211,7 +230,6 @@ So you don't ask the tool for things it can't do:
 |---|---|
 | `brag add` with no args (editor-launch on `$EDITOR`) | STAGE-002 |
 | `brag show <id>` / `brag edit <id>` / `brag delete <id>` | STAGE-002 |
-| `brag list --tag auth` (filter flags) | STAGE-002 |
 | `brag search "query"` (FTS5 full-text search) | STAGE-002 |
 | `brag export --format markdown` | STAGE-003 |
 | `brag export --format sqlite` | STAGE-003 |
