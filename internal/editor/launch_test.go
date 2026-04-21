@@ -39,13 +39,39 @@ func TestLaunch_UnchangedBufferReturnsFalse(t *testing.T) {
 }
 
 func TestLaunch_EditFuncErrorPropagates(t *testing.T) {
-	fake := func(path string) error { return errors.New("boom") }
+	// Write modified bytes before returning an error, to exercise the
+	// "error + changed buffer" path. The "error + unchanged buffer" path
+	// is the :cq abort covered by TestLaunch_EditFuncErrorOnUnmodifiedFileIsAborted.
+	fake := func(path string) error {
+		if err := os.WriteFile(path, []byte("PARTIAL"), 0o600); err != nil {
+			return err
+		}
+		return errors.New("boom")
+	}
 	_, _, err := Launch([]byte("X"), fake)
 	if err == nil {
 		t.Fatal("Launch: expected error, got nil")
 	}
 	if !bytes.Contains([]byte(err.Error()), []byte("boom")) {
 		t.Errorf("error = %q; expected to contain %q", err.Error(), "boom")
+	}
+}
+
+// TestLaunch_EditFuncErrorOnUnmodifiedFileIsAborted pins locked design
+// decision #6: when the editor exits non-zero but the buffer is byte-
+// identical to the initial state (the git :cq convention), Launch treats
+// it as an aborted edit — returns the initial bytes, changed=false, nil error.
+func TestLaunch_EditFuncErrorOnUnmodifiedFileIsAborted(t *testing.T) {
+	fake := func(path string) error { return errors.New(":cq") }
+	edited, changed, err := Launch([]byte("ORIGINAL"), fake)
+	if err != nil {
+		t.Fatalf("Launch: expected nil error for aborted edit, got %v", err)
+	}
+	if changed {
+		t.Errorf("changed = true, want false")
+	}
+	if !bytes.Equal(edited, []byte("ORIGINAL")) {
+		t.Errorf("edited = %q, want %q", string(edited), "ORIGINAL")
 	}
 }
 

@@ -281,8 +281,13 @@ escape hatch for mutation.
 - [ ] `editor.Launch` with an injected fake that leaves the file
       byte-identical returns the original bytes with `changed=false`.
       *[TestLaunch_UnchangedBufferReturnsFalse]*
-- [ ] `editor.Launch` with an injected fake that returns an error
-      returns a wrapped error. *[TestLaunch_EditFuncErrorPropagates]*
+- [ ] `editor.Launch` with an injected fake that writes modified bytes
+      AND returns an error returns a wrapped error.
+      *[TestLaunch_EditFuncErrorPropagates]*
+- [ ] `editor.Launch` with an injected fake that returns an error but
+      leaves the buffer byte-identical to initial returns
+      `(initial, false, nil)` — the git `:cq` abort path from locked
+      decision #6. *[TestLaunch_EditFuncErrorOnUnmodifiedFileIsAborted]*
 - [ ] `resolveEditor` returns `["foo"]` when `$EDITOR=foo`.
       *[TestResolveEditor_UsesEditor]*
 - [ ] `resolveEditor` returns `["bar"]` when `$EDITOR` is empty and
@@ -406,9 +411,14 @@ Imports: `testing`, `os`, `bytes`, package under test.
   a no-op (just returns nil). Call `Launch([]byte("X"), fake)`.
   Assert edited equals `[]byte("X")`, changed is false, err is
   nil.
-- **`TestLaunch_EditFuncErrorPropagates`** — fake returns
-  `errors.New("boom")`. Assert err is non-nil and its `.Error()`
-  contains "boom".
+- **`TestLaunch_EditFuncErrorPropagates`** — fake writes modified
+  bytes, then returns `errors.New("boom")`. Assert err is non-nil
+  and its `.Error()` contains "boom". (Exercises the error + changed
+  path; the error + unchanged path is the :cq abort below.)
+- **`TestLaunch_EditFuncErrorOnUnmodifiedFileIsAborted`** — fake
+  returns an error without touching the file. Assert `err == nil`,
+  `changed == false`, `edited == initial`. Pins locked decision #6
+  so the git `:cq` UX doesn't regress into an internal error.
 - **`TestResolveEditor_UsesEditor`** — `t.Setenv("EDITOR", "foo")`,
   `t.Setenv("VISUAL", "")`. Assert `resolveEditor()` returns
   `[]string{"foo"}`.
@@ -903,8 +913,8 @@ If any of these feels necessary during build, write a new spec.
 - **Branch:** `feat/spec-009-brag-edit-command-and-editor-package`
 - **PR (if applicable):** opened on advance-cycle
 - **All acceptance criteria met?** yes
-  - `go test ./...` green (editor: 17 new tests; storage: 6 new
-    Update tests; cli: 11 new edit tests; all prior specs still pass).
+  - `go test ./...` green (editor: 18 new tests; storage: 6 new
+    Update tests; cli: 10 new edit tests; all prior specs still pass).
   - `gofmt -l .` empty, `go vet ./...` clean, `CGO_ENABLED=0 go
     build ./...` succeeds.
 - **New decisions emitted:**
@@ -971,6 +981,69 @@ If any of these feels necessary during build, write a new spec.
    a dedicated spec, not a drive-by here. For this build, the
    sleeps were the lowest-risk way to exercise the behavior the
    acceptance criteria required.
+
+### Punch-list iteration (2026-04-21)
+
+Verify returned a punch list. Two items, both addressed in this
+iteration:
+
+1. **Locked design decision #6 silently dropped in `Launch`.** The
+   spec's "Locked design decisions" item 6 (git `:cq` convention)
+   prescribes: if `edit()` exits non-zero AND the buffer is byte-
+   identical to initial, treat as an aborted edit → return
+   `(initial, false, nil)` with no error. The prior build wrapped
+   every `edit()` error unconditionally in `internal/editor/launch.go`,
+   so a clean `:cq` abort surfaced as an internal error (exit 2)
+   instead of the intended "No changes." (exit 0). Missed in the
+   original Deviations record.
+
+   Resolution:
+   - `internal/editor/launch.go` — on `edit()` error, read the
+     temp file and SHA-256-compare to initial before deciding:
+     unchanged → `(initial, false, nil)`; changed → wrap and
+     return. The read-and-hash now runs on every code path, so a
+     post-edit read failure is still surfaced.
+   - `TestLaunch_EditFuncErrorPropagates` — fake now writes
+     `"PARTIAL"` to the file before returning `errors.New("boom")`,
+     so the "error + changed" path is still exercised.
+   - `TestEditCmd_EditorErrorIsInternal` — same shape: the fake
+     writes `"Title: partial\n\n"` before erroring, so the CLI
+     still sees an internal (non-user) error with the row
+     unchanged.
+   - New `TestLaunch_EditFuncErrorOnUnmodifiedFileIsAborted` pins
+     the `:cq` semantics directly: fake errors without touching
+     the file → `err == nil`, `changed == false`,
+     `edited == initial`.
+   - Spec's "Editor launch" acceptance criteria + `launch_test.go`
+     Failing-Tests section both updated to include the new case
+     and to note that the error-propagation test now asserts
+     against a modified buffer.
+
+2. **Test count off by one.** Build Completion and the PR body
+   claimed "11 new edit tests"; `internal/cli/edit_test.go`
+   actually has 10. Corrected the top-level "All acceptance
+   criteria met?" summary to `cli: 10 new edit tests`. The new
+   editor-package test from item 1 bumps editor-package count
+   from `17 → 18`, which the same summary now reflects.
+
+**Files changed in this iteration:**
+
+- `internal/editor/launch.go` — `Launch` now hashes the post-edit
+  file contents on every return path, honoring decision #6.
+- `internal/editor/launch_test.go` —
+  `TestLaunch_EditFuncErrorPropagates` fake updated to write
+  modified bytes before erroring; new
+  `TestLaunch_EditFuncErrorOnUnmodifiedFileIsAborted`.
+- `internal/cli/edit_test.go` —
+  `TestEditCmd_EditorErrorIsInternal` fake updated likewise.
+- This spec — "Editor launch" acceptance criteria and
+  `launch_test.go` Failing-Tests section updated; Build Completion
+  summary counts corrected (editor 17 → 18, cli 11 → 10); this
+  Punch-list iteration block appended.
+
+**Verification:** `gofmt -l .` empty, `go vet ./...` clean,
+`CGO_ENABLED=0 go build ./...` clean, `go test ./...` green
+(editor 18, storage 6 Update, cli 10, all prior specs still pass).
 
 ---
 

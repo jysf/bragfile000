@@ -47,15 +47,24 @@ func Launch(initial []byte, edit EditFunc) ([]byte, bool, error) {
 	}
 
 	initialHash := sha256.Sum256(initial)
-	if err := edit(path); err != nil {
-		return nil, false, fmt.Errorf("edit: %w", err)
-	}
-	edited, err := os.ReadFile(path)
-	if err != nil {
-		return nil, false, fmt.Errorf("read edited temp: %w", err)
+	editErr := edit(path)
+	edited, readErr := os.ReadFile(path)
+	if readErr != nil {
+		return nil, false, fmt.Errorf("read edited temp: %w", readErr)
 	}
 	editedHash := sha256.Sum256(edited)
-	return edited, initialHash != editedHash, nil
+	changed := initialHash != editedHash
+	if editErr != nil {
+		// DEC #6 / spec §"Locked design decisions" item 6: if the editor
+		// exits non-zero but the buffer was not modified, treat as aborted
+		// (git's :cq convention). Only propagate the error when the user
+		// actually changed the buffer — those bytes would otherwise be lost.
+		if !changed {
+			return initial, false, nil
+		}
+		return nil, false, fmt.Errorf("edit: %w", editErr)
+	}
+	return edited, changed, nil
 }
 
 // resolveEditor returns the editor command (with any arguments split

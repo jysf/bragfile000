@@ -188,7 +188,14 @@ func TestEditCmd_ParseErrorIsUserError(t *testing.T) {
 }
 
 func TestEditCmd_EditorErrorIsInternal(t *testing.T) {
-	editFn := func(path string) error { return errors.New("editor exited non-zero") }
+	// Fake writes modified bytes before erroring so Launch takes the
+	// "error + changed" path (per DEC #6, error + unchanged is an abort).
+	editFn := func(path string) error {
+		if err := os.WriteFile(path, []byte("Title: partial\n\n"), 0o600); err != nil {
+			return err
+		}
+		return errors.New("editor exited non-zero")
+	}
 	root, dbPath := newRootWithEdit(t, editFn)
 	inserted := seedEditEntry(t, dbPath, storage.Entry{Title: "orig"})
 
