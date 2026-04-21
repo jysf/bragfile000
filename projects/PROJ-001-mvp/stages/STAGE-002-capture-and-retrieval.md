@@ -148,11 +148,14 @@ cleanly to a different stage.
       `internal/storage/storagetest` sub-package. Earned the
       "During design" rule in AGENTS.md §12.
 
-- [ ] SPEC-008 (not yet framed, **S**) — **`brag delete <id>` +
-      `Store.Delete(id)`.** Prompts for confirmation on stdin unless
-      `--yes` is passed. Exit 1 if ID missing or the user declines.
-      Storage method is a one-liner `DELETE FROM entries WHERE id =
-      ?`. Hard delete; no soft-delete column.
+- [ ] SPEC-008 (build, **S**) — **`brag delete <id>` +
+      `Store.Delete(id)`.** Prompts for y/N confirmation on stdin
+      unless `--yes`/`-y` is passed. Hard delete (no soft-delete).
+      Exit 1 via `ErrUser` on invalid/missing/non-existent ID;
+      exit 0 on clean user-aborted decline (amends api-contract.md
+      exit-code clause). Reuses SPEC-006's DEC-007 positional-arg
+      pattern. All feedback to stderr; stdout stays empty. 13
+      failing tests (11 CLI + 2 storage).
 
 - [ ] SPEC-009 (not yet framed, **M**) — **`internal/editor` package
       + `brag edit <id>` + `Store.Update(id, Entry)`.** Introduces the
