@@ -240,6 +240,20 @@ DECs are stable; specs come and go. DECs don't reciprocally list specs.
 
 ## 12. Cycle-Specific Rules
 
+### During **design**
+
+Spec prose cannot relax a blocking constraint. When a spec's "Notes for
+the Implementer" offers multiple implementation approaches ("Either A or
+B is acceptable"), each option must pass the `/guidance/constraints.yaml`
+list independently. Mentally run each option against the blocking
+constraints for the paths it would touch before writing "either is
+acceptable"; if one option would violate a blocking rule, it is not
+actually an option and the spec should prescribe the compliant path
+directly. Lesson earned in SPEC-007 verify punch list (2026-04-20): the
+spec offered a test-helper choice where one option imported `database/sql`
+under `internal/cli/`, violating `no-sql-in-cli-layer` — verify caught
+it, punch-list iteration fixed both the code and the spec.
+
 ### During **build**
 
 Start a **new Claude session**. Do not continue from the design session.

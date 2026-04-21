@@ -2,7 +2,7 @@
 task:
   id: SPEC-007
   type: story
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M
@@ -785,13 +785,38 @@ iteration:
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended 2026-04-20 during the **ship** cycle. Outcome-focused,
+distinct from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   Test every implementation option in a spec's Notes for the
+   Implementer against the blocking constraints, not just the
+   happy-path approach. SPEC-007's Notes said "Either is acceptable"
+   for the backdate helper — a CLI-local `*sql.DB` open, OR a
+   storage-package helper. The first option violates
+   `no-sql-in-cli-layer` (blocking), so it was never actually an
+   option. I offered choice where there was only one valid path.
+   Verify correctly caught this; the punch-list iteration introduced
+   the proper `internal/storage/storagetest` sub-package and fixed
+   the spec's Notes inline. Next design session: when tempted to
+   offer multiple implementation paths in a spec, mentally run each
+   against the constraints list before writing "either is
+   acceptable."
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   Yes — two things, both applied in this ship commit.
+   - Add a new "During design" subsection to `AGENTS.md` §12 with
+     one rule: *spec prose cannot relax a blocking constraint; when
+     a spec's Notes offer multiple implementation approaches, each
+     must pass the constraint list independently*. Promotes the
+     SPEC-007 punch-list lesson from an anecdote to an explicit
+     design-phase discipline.
+   - Minor cosmetic cleanup to `DEC-004`'s Validation section (stray
+     blank line / continuation bullet flagged by verify as a nit).
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   No. SPEC-008 (`brag delete`) is next pending in STAGE-002 and
+   unblocked. SPEC-009 through SPEC-012 (editor package, add-with-
+   editor, FTS5, search) remain queued. The AGENTS.md §12 "During
+   design" discipline applies prospectively to every remaining
+   spec.

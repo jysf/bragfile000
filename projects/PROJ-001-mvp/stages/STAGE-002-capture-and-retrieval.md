@@ -136,16 +136,17 @@ cleanly to a different stage.
       list. DEC-007's References section amended to document the
       extension.
 
-- [ ] SPEC-007 (build, **M**) — **`list` filter flags + Store
-      filtering.** `ListFilter` gains `Tag`/`Project`/`Type`/`Since`/
-      `Limit` fields; `Store.List` builds WHERE clauses + LIMIT from
-      populated fields (preserves `ORDER BY created_at DESC, id DESC`
-      tie-break). `--tag` uses sentinel-comma (`',' || tags || ','
-      LIKE '%,<tag>,%'`) so `"auth"` doesn't match `"authoring"` —
-      answers DEC-004's `tags-storage-model` question in favor of
-      keeping comma-joined. Introduces `cli.ParseSince` helper
-      (DEC-008: YYYY-MM-DD + Nd/Nw/Nm formats). ~24 failing tests
-      across storage/list/since files. No new migration.
+- [x] SPEC-007 (shipped on 2026-04-20, **M**) — **`list` filter
+      flags + Store filtering.** Shipped `--tag / --project / --type
+      / --since / --limit` with AND-combined WHERE clauses and
+      tie-break ordering preserved. `--tag` uses sentinel-comma
+      pattern — `"auth"` doesn't match `"authoring"`. Introduced
+      `cli.ParseSince` + DEC-008 (YYYY-MM-DD + Nd/Nw/Nm). Answered
+      DEC-004's `tags-storage-model` question (stays comma-joined).
+      One verify punch-list loop on a `no-sql-in-cli-layer`
+      violation in a test helper — fixed by introducing
+      `internal/storage/storagetest` sub-package. Earned the
+      "During design" rule in AGENTS.md §12.
 
 - [ ] SPEC-008 (not yet framed, **S**) — **`brag delete <id>` +
       `Store.Delete(id)`.** Prompts for confirmation on stdin unless
@@ -184,7 +185,7 @@ cleanly to a different stage.
       filter flags as `list` if trivial; otherwise they land in a
       later polish spec.
 
-**Count:** 2 shipped / 0 active / 6 pending
+**Count:** 3 shipped / 0 active / 5 pending
 
 **Complexity check:** 5 × S, 3 × M, 0 × L. Stage is at the upper
 bound of the 3–8 spec guideline. No split recommended — each spec

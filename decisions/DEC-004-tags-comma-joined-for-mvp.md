@@ -87,11 +87,11 @@ Right if:
   `"authoring"` edge case).
 - We don't discover a user need for tag rename or listing during
   PROJ-001.
-
-- Validated during SPEC-007 (2026-04-20): sentinel-comma LIKE pattern
-  (`',' || tags || ',' LIKE '%,<tag>,%'`) handles the `"auth"` vs
-  `"authoring"` false-positive correctly; no normalization needed at
-  MVP scale. Answers the `tags-storage-model` question.
+- **Validated during SPEC-007 (2026-04-20):** sentinel-comma LIKE
+  pattern (`',' || tags || ',' LIKE '%,<tag>,%'`) handles the
+  `"auth"` vs `"authoring"` false-positive correctly; no
+  normalization needed at MVP scale. Closes the
+  `tags-storage-model` question.
 
 Revisit if:
 - Tag rename becomes a user ask.
