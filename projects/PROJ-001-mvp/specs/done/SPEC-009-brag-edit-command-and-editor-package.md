@@ -2,7 +2,7 @@
 task:
   id: SPEC-009
   type: story
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M
@@ -1049,13 +1049,40 @@ iteration:
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended 2026-04-21 during the **ship** cycle. Outcome-focused,
+distinct from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   Every locked design decision in a spec's "Locked design
+   decisions" section should have a corresponding failing test.
+   SPEC-009 documented seven numbered design decisions, but
+   decision #6 (the git `:cq` semantics — editor-error +
+   unmodified bytes = clean abort) had no matching test in the
+   original Failing Tests list. The build session correctly
+   implemented the happy-path editor-error-propagation behavior
+   (which HAD a test) but missed the `:cq` nuance (which didn't).
+   Verify caught it. The lesson generalizes: prose-only design
+   decisions are aspirational; enforced decisions need failing
+   tests. Next design session: walk through each locked decision
+   and confirm at least one failing test would fail if the
+   decision weren't implemented.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   Yes — one new AGENTS.md §9 bullet: every locked design decision
+   in a spec's design-decisions (or similar) section must have at
+   least one corresponding entry in Failing Tests that would fail
+   if the decision weren't implemented. Decisions captured in
+   prose without a paired test are aspirational, not enforced —
+   historically they slip during build. Lesson earned in SPEC-009
+   verify punch list (2026-04-21): decision #6 documented git
+   `:cq` semantics in prose, no failing test mapped to it, build
+   missed the behavior, verify caught it, punch-list iteration
+   added the test + implementation. Applied in this ship commit.
 
-3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+3. **Is there a follow-up spec to write now before I forget?**
+   No. SPEC-010 (`brag add` no-args editor, S) is next pending in
+   STAGE-002 and specifically benefits from the `internal/editor`
+   package just shipped — the pattern is cleanest while the
+   design is hot. SPEC-011 (FTS5, M) and SPEC-012 (search, S)
+   remain queued. The new §9 rule about prose-decisions-need-tests
+   applies to SPEC-010's design session and beyond.

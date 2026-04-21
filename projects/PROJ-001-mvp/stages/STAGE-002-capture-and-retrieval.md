@@ -156,16 +156,14 @@ cleanly to a different stage.
       Approved with a yellow-flag note on template field semantics
       (addressed in ship via AGENTS.md §2 note). No new DECs.
 
-- [ ] SPEC-009 (build, **M**) — **`brag edit <id>` + `internal/editor`
-      package + `Store.Update`.** THE update mechanism for PROJ-001
-      (flag-based `brag update` deferred to a future polish spec per
-      user decision). Introduces DEC-009 (editor buffer format:
-      `net/textproto` header + markdown body; no YAML dep).
-      Round-trip: Get → Render → Launch $EDITOR → (SHA-256 change
-      detect) → Parse → Update. "No changes." on unchanged save.
-      ~36 failing tests across editor/editor_test.go + editor/
-      launch_test.go + storage/store_test.go + cli/edit_test.go.
-      Package-level `testEditFunc` var for subprocess-free CLI tests.
+- [x] SPEC-009 (shipped on 2026-04-21, **M**) — **`brag edit <id>`
+      + `internal/editor` package + `Store.Update`.** THE update
+      mechanism for PROJ-001 (flag-based `brag update` deferred).
+      Introduced DEC-009 (editor buffer format: `net/textproto`
+      header + markdown body; no YAML dep). 34 tests green after
+      punch-list iteration added the git `:cq` semantics test.
+      Earned a §9 rule: every locked design decision needs a paired
+      failing test.
 
 - [ ] SPEC-010 (not yet framed, **S**) — **`brag add` no-args editor
       launch.** Reuses `internal/editor` from SPEC-009. `brag add`
@@ -188,7 +186,7 @@ cleanly to a different stage.
       filter flags as `list` if trivial; otherwise they land in a
       later polish spec.
 
-**Count:** 4 shipped / 0 active / 4 pending
+**Count:** 5 shipped / 0 active / 3 pending
 
 **Complexity check:** 5 × S, 3 × M, 0 × L. Stage is at the upper
 bound of the 3–8 spec guideline. No split recommended — each spec
