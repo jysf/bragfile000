@@ -136,18 +136,16 @@ cleanly to a different stage.
       list. DEC-007's References section amended to document the
       extension.
 
-- [ ] SPEC-007 (not yet framed, **M**) — **`list` filter flags + Store
-      filtering.** Populate `ListFilter` with `Tag`, `Project`, `Type`,
-      `Since`, `Limit` fields. Extend `Store.List` to build WHERE
-      clauses and apply `LIMIT`. Wire `--tag / --project / --type /
-      --since / --limit` on the `list` command. `--since` accepts
-      `YYYY-MM-DD` or durations (`7d`, `2w`, `3m`). Tag filter uses
-      sentinel-comma (`",<tag>,"`) to avoid the `"auth"` vs
-      `"authoring"` false-positive flagged in DEC-004. Revisits the
-      `tags-storage-model` question in `/guidance/questions.yaml` —
-      either keeps comma-joined (answer the question with a
-      supersession note on DEC-004) or proposes normalization as a
-      separate spec. Design session decides before build.
+- [ ] SPEC-007 (build, **M**) — **`list` filter flags + Store
+      filtering.** `ListFilter` gains `Tag`/`Project`/`Type`/`Since`/
+      `Limit` fields; `Store.List` builds WHERE clauses + LIMIT from
+      populated fields (preserves `ORDER BY created_at DESC, id DESC`
+      tie-break). `--tag` uses sentinel-comma (`',' || tags || ','
+      LIKE '%,<tag>,%'`) so `"auth"` doesn't match `"authoring"` —
+      answers DEC-004's `tags-storage-model` question in favor of
+      keeping comma-joined. Introduces `cli.ParseSince` helper
+      (DEC-008: YYYY-MM-DD + Nd/Nw/Nm formats). ~24 failing tests
+      across storage/list/since files. No new migration.
 
 - [ ] SPEC-008 (not yet framed, **S**) — **`brag delete <id>` +
       `Store.Delete(id)`.** Prompts for confirmation on stdin unless
