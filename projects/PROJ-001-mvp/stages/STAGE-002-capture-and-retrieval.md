@@ -127,7 +127,15 @@ cleanly to a different stage.
       no punch list. Earned a §9 lesson on assertion specificity
       (distinctive tokens, not generic substrings).
 
-- [ ] SPEC-006 (not yet framed, **M**) — **`list` filter flags + Store
+- [ ] SPEC-006 (build, **S**) — **`brag show <id>` + `Store.Get(id)`.**
+      Thin cobra subcommand + storage method. Prints the entry as
+      markdown: `# <title>`, a metadata table, `## Description` body
+      (sections/rows omitted when empty). Exit 1 via `ErrUser` if ID
+      missing, non-numeric, non-positive, or zero-args/too-many-args.
+      Introduces `storage.ErrNotFound` sentinel. DEC-007 extends to
+      positional-arg validation (no `cobra.ExactArgs`).
+
+- [ ] SPEC-007 (not yet framed, **M**) — **`list` filter flags + Store
       filtering.** Populate `ListFilter` with `Tag`, `Project`, `Type`,
       `Since`, `Limit` fields. Extend `Store.List` to build WHERE
       clauses and apply `LIMIT`. Wire `--tag / --project / --type /
@@ -139,12 +147,6 @@ cleanly to a different stage.
       either keeps comma-joined (answer the question with a
       supersession note on DEC-004) or proposes normalization as a
       separate spec. Design session decides before build.
-
-- [ ] SPEC-007 (not yet framed, **S**) — **`brag show <id>` +
-      `Store.Get(id)`.** Thin cobra subcommand + storage method.
-      Prints the entry as markdown: `# <title>`, a small metadata
-      table, `## Description` body. Exit 1 if the ID does not exist
-      (user error; returns via `ErrUser`).
 
 - [ ] SPEC-008 (not yet framed, **S**) — **`brag delete <id>` +
       `Store.Delete(id)`.** Prompts for confirmation on stdin unless
