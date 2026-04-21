@@ -156,15 +156,16 @@ cleanly to a different stage.
       Approved with a yellow-flag note on template field semantics
       (addressed in ship via AGENTS.md §2 note). No new DECs.
 
-- [ ] SPEC-009 (not yet framed, **M**) — **`internal/editor` package
-      + `brag edit <id>` + `Store.Update(id, Entry)`.** Introduces the
-      editable buffer format (leaning stdlib `net/textproto` header +
-      markdown body — no YAML dep — decided during spec design).
-      Round-trip: `edit <id>` reads the entry via `Store.Get`,
-      renders to the editor format, spawns `$EDITOR`, parses on save,
-      writes via `Store.Update` with an updated `updated_at`.
-      Unsaved / unchanged buffer aborts cleanly. Likely emits a DEC
-      for the chosen buffer format.
+- [ ] SPEC-009 (build, **M**) — **`brag edit <id>` + `internal/editor`
+      package + `Store.Update`.** THE update mechanism for PROJ-001
+      (flag-based `brag update` deferred to a future polish spec per
+      user decision). Introduces DEC-009 (editor buffer format:
+      `net/textproto` header + markdown body; no YAML dep).
+      Round-trip: Get → Render → Launch $EDITOR → (SHA-256 change
+      detect) → Parse → Update. "No changes." on unchanged save.
+      ~36 failing tests across editor/editor_test.go + editor/
+      launch_test.go + storage/store_test.go + cli/edit_test.go.
+      Package-level `testEditFunc` var for subprocess-free CLI tests.
 
 - [ ] SPEC-010 (not yet framed, **S**) — **`brag add` no-args editor
       launch.** Reuses `internal/editor` from SPEC-009. `brag add`
