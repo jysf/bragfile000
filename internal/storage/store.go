@@ -124,6 +124,33 @@ func (s *Store) Get(id int64) (Entry, error) {
 	return e, nil
 }
 
+// Update replaces every user-editable field on the row with id and
+// bumps updated_at. Returns the hydrated Entry (via a follow-up Get)
+// so callers see the final state; id and created_at are preserved.
+// Returns an error wrapping ErrNotFound if no row matches.
+func (s *Store) Update(id int64, e Entry) (Entry, error) {
+	now := time.Now().UTC().Truncate(time.Second)
+	res, err := s.db.ExecContext(context.Background(),
+		`UPDATE entries
+         SET title = ?, description = ?, tags = ?, project = ?,
+             type = ?, impact = ?, updated_at = ?
+         WHERE id = ?`,
+		e.Title, e.Description, e.Tags, e.Project, e.Type, e.Impact,
+		now.Format(time.RFC3339), id,
+	)
+	if err != nil {
+		return Entry{}, fmt.Errorf("update entry %d: %w", id, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return Entry{}, fmt.Errorf("update entry %d: %w", id, err)
+	}
+	if n == 0 {
+		return Entry{}, fmt.Errorf("update entry %d: %w", id, ErrNotFound)
+	}
+	return s.Get(id)
+}
+
 // Delete removes the entry with the given id. Returns an error wrapping
 // ErrNotFound if no row matches.
 func (s *Store) Delete(id int64) error {

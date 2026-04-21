@@ -2,7 +2,7 @@
 task:
   id: SPEC-009
   type: story
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: M
@@ -900,26 +900,77 @@ If any of these feels necessary during build, write a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-009-brag-edit-command-and-editor-package`
+- **PR (if applicable):** opened on advance-cycle
+- **All acceptance criteria met?** yes
+  - `go test ./...` green (editor: 17 new tests; storage: 6 new
+    Update tests; cli: 11 new edit tests; all prior specs still pass).
+  - `gofmt -l .` empty, `go vet ./...` clean, `CGO_ENABLED=0 go
+    build ./...` succeeds.
 - **New decisions emitted:**
-  - (DEC-009 was emitted during design; no in-build DEC expected)
+  - None in build. DEC-009 was emitted during design; no additional
+    non-trivial choices surfaced that warranted a new DEC.
 - **Deviations from spec:**
-  - [list]
+  - **Parse body handling.** The Notes reference implementation
+    included `strings.TrimPrefix(string(remaining), "\n")` after
+    reading the post-header body. I dropped the TrimPrefix: Go's
+    `textproto.Reader.ReadMIMEHeader` already consumes the blank-
+    line terminator, so no leading `\n` remains. Adding TrimPrefix
+    would silently drop a legitimate first-line newline inside a
+    description that happens to start with a blank line. Round-trip
+    + multiline-description tests confirm the simpler form is
+    correct; the spec's snippet was defensive against a non-existent
+    condition.
+  - **`Launch` tempfile close error.** Checked the explicit
+    `f.Close()` error in `Launch` rather than the spec's bare
+    `f.Close()` call — `errors-wrap-with-context` is a warning-
+    severity constraint and the close error is a real failure mode
+    (disk full on last flush, etc.); this keeps parity with the
+    preceding `f.Write` error handling.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - No new backlog items. SPEC-010 (`brag add` no-args editor) is
+    already queued and will reuse `editor.Render` / `editor.Parse` /
+    `editor.Launch` as-is.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Very little. The Notes section included a near-complete
+   implementation, including a self-flagged bug ("Wait — the
+   resolveEditor above iterates EDITOR then VISUAL…") which on
+   re-reading was a false alarm (the iteration order in the snippet
+   is actually correct: EDITOR is tried first, VISUAL second). The
+   one genuine nit was the `strings.TrimPrefix(remaining, "\n")`
+   line — tracing `ReadMIMEHeader`'s behavior made it clear the
+   TrimPrefix was unnecessary and potentially destructive on leading-
+   blank-line descriptions, but that took a careful read rather
+   than being obvious.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. Every constraint that fired (`stdout-is-for-data-stderr-is-
+   for-humans`, `no-sql-in-cli-layer`, `errors-wrap-with-context`,
+   `test-before-implementation`, `timestamps-in-utc-rfc3339`) was
+   already in the spec's front-matter and its Implementation
+   Context's "Constraints that apply" rundown. The one small thing
+   worth noting for future specs: `editor.Default` is a package-
+   level `var` (assignable) rather than a `func`, which is
+   deliberate — it lets tests substitute editors without a new
+   test-hook mechanism. Future specs that extend `editor` should
+   preserve this var-based extensibility.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — One-second `time.Sleep`s in three storage tests
+   (`TestUpdate_PreservesCreatedAt`, `TestUpdate_BumpsUpdatedAt`,
+   `TestUpdate_ReturnsHydratedEntry`) cost ~3.3s of wall-clock in
+   the test suite. The forced sleep is because `Store.Update`
+   truncates to second precision via `time.Now().UTC().Truncate(time.
+   Second)` (matching `Store.Add`'s SPEC-002 discipline). A future
+   refactor could parameterize the clock on `Store` (or add a test-
+   only seam) to make the UpdatedAt comparison deterministic
+   without sleeps — but that's a cross-cutting change belonging to
+   a dedicated spec, not a drive-by here. For this build, the
+   sleeps were the lowest-risk way to exercise the behavior the
+   acceptance criteria required.
 
 ---
 
