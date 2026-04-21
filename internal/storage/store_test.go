@@ -318,6 +318,298 @@ func TestList_ReverseChronological(t *testing.T) {
 	}
 }
 
+// addWithTags is a convenience for filter tests: calls Add with only
+// the fields the filter tests exercise populated.
+func addWithTags(t *testing.T, s *Store, title, tags, project, typ string) Entry {
+	t.Helper()
+	e, err := s.Add(Entry{Title: title, Tags: tags, Project: project, Type: typ})
+	if err != nil {
+		t.Fatalf("Add(%q): %v", title, err)
+	}
+	return e
+}
+
+// backdateCreatedAt opens a second *sql.DB against the same file and
+// runs a direct UPDATE to set an entry's created_at to a specific RFC3339
+// timestamp. This keeps Store.Add's contract unchanged while letting
+// --since tests seed rows in the past.
+func backdateCreatedAt(t *testing.T, path string, id int64, at time.Time) {
+	t.Helper()
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open(%s): %v", path, err)
+	}
+	defer db.Close()
+	ts := at.UTC().Format(time.RFC3339)
+	if _, err := db.Exec("UPDATE entries SET created_at = ? WHERE id = ?", ts, id); err != nil {
+		t.Fatalf("backdate id=%d: %v", id, err)
+	}
+}
+
+func titlesOf(entries []Entry) []string {
+	out := make([]string, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, e.Title)
+	}
+	return out
+}
+
+func containsTitle(entries []Entry, title string) bool {
+	for _, e := range entries {
+		if e.Title == title {
+			return true
+		}
+	}
+	return false
+}
+
+func TestList_FilterByTag(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	addWithTags(t, s, "ap", "auth,perf", "", "")
+	addWithTags(t, s, "pb", "perf,backend", "", "")
+	addWithTags(t, s, "a", "auth", "", "")
+
+	got, err := s.List(ListFilter{Tag: "auth"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 2 {
+		t.Errorf("Tag=auth: len=%d, want 2 (titles=%v)", len(got), titlesOf(got))
+	}
+
+	got, err = s.List(ListFilter{Tag: "perf"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 2 {
+		t.Errorf("Tag=perf: len=%d, want 2 (titles=%v)", len(got), titlesOf(got))
+	}
+
+	got, err = s.List(ListFilter{Tag: "backend"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Errorf("Tag=backend: len=%d, want 1 (titles=%v)", len(got), titlesOf(got))
+	}
+
+	got, err = s.List(ListFilter{Tag: "nonesuch"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if got == nil {
+		t.Error("Tag=nonesuch: got nil slice, want non-nil empty")
+	}
+	if len(got) != 0 {
+		t.Errorf("Tag=nonesuch: len=%d, want 0", len(got))
+	}
+}
+
+func TestList_TagFilterNoFalsePositive(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	addWithTags(t, s, "exact", "auth", "", "")
+	addWithTags(t, s, "superstring", "authoring", "", "")
+
+	got, err := s.List(ListFilter{Tag: "auth"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len=%d, want 1 (titles=%v)", len(got), titlesOf(got))
+	}
+	if got[0].Title != "exact" {
+		t.Errorf("matched %q, want %q", got[0].Title, "exact")
+	}
+}
+
+func TestList_TagFilterNullAndEmpty(t *testing.T) {
+	s, path := newTestStore(t)
+
+	// Empty tags via Add (stored as "").
+	addWithTags(t, s, "empty", "", "", "")
+
+	// NULL tags via direct SQL INSERT (Store.Add always writes "").
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	now := time.Now().UTC().Format(time.RFC3339)
+	if _, err := db.Exec(
+		`INSERT INTO entries (title, description, tags, project, type, impact, created_at, updated_at)
+		 VALUES (?, NULL, NULL, NULL, NULL, NULL, ?, ?)`,
+		"nulltags", now, now,
+	); err != nil {
+		t.Fatalf("INSERT NULL tags: %v", err)
+	}
+
+	got, err := s.List(ListFilter{Tag: "auth"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("len=%d, want 0 (null and empty tags must not match) — titles=%v", len(got), titlesOf(got))
+	}
+}
+
+func TestList_FilterByProject(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	addWithTags(t, s, "p1", "", "platform", "")
+	addWithTags(t, s, "g", "", "growth", "")
+	addWithTags(t, s, "p2", "", "platform", "")
+
+	got, err := s.List(ListFilter{Project: "platform"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 2 {
+		t.Errorf("Project=platform: len=%d, want 2 (titles=%v)", len(got), titlesOf(got))
+	}
+
+	got, err = s.List(ListFilter{Project: "Platform"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("Project=Platform (case-sensitive): len=%d, want 0", len(got))
+	}
+}
+
+func TestList_FilterByType(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	addWithTags(t, s, "a", "", "", "shipped")
+	addWithTags(t, s, "b", "", "", "learned")
+	addWithTags(t, s, "c", "", "", "shipped")
+
+	got, err := s.List(ListFilter{Type: "shipped"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 2 {
+		t.Errorf("Type=shipped: len=%d, want 2 (titles=%v)", len(got), titlesOf(got))
+	}
+
+	got, err = s.List(ListFilter{Type: "Shipped"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("Type=Shipped (case-sensitive): len=%d, want 0", len(got))
+	}
+}
+
+func TestList_FilterBySince(t *testing.T) {
+	s, path := newTestStore(t)
+
+	now := time.Now().UTC()
+	a := addWithTags(t, s, "old", "", "", "")
+	b := addWithTags(t, s, "recent", "", "", "")
+	c := addWithTags(t, s, "newest", "", "", "")
+
+	backdateCreatedAt(t, path, a.ID, now.Add(-3*24*time.Hour))
+	backdateCreatedAt(t, path, b.ID, now.Add(-1*24*time.Hour))
+	backdateCreatedAt(t, path, c.ID, now)
+
+	twoDaysAgo := now.Add(-2 * 24 * time.Hour)
+	got, err := s.List(ListFilter{Since: twoDaysAgo})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("len=%d, want 2 (titles=%v)", len(got), titlesOf(got))
+	}
+	if !containsTitle(got, "recent") || !containsTitle(got, "newest") {
+		t.Errorf("want {recent,newest}; got %v", titlesOf(got))
+	}
+	if containsTitle(got, "old") {
+		t.Errorf("should not include backdated %q; got %v", "old", titlesOf(got))
+	}
+}
+
+func TestList_FilterByLimit(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	for _, title := range []string{"a", "b", "c", "d", "e"} {
+		addWithTags(t, s, title, "", "", "")
+		time.Sleep(1 * time.Millisecond)
+	}
+
+	got, err := s.List(ListFilter{Limit: 2})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("len=%d, want 2 (titles=%v)", len(got), titlesOf(got))
+	}
+	// ORDER BY id DESC — newest IDs first; last-inserted "e" has highest id.
+	if got[0].Title != "e" || got[1].Title != "d" {
+		t.Errorf("titles=%v, want [e d]", titlesOf(got))
+	}
+}
+
+func TestList_FilterCombined(t *testing.T) {
+	s, path := newTestStore(t)
+
+	now := time.Now().UTC()
+	// Hit: project=platform, tag=auth, recent.
+	hit := addWithTags(t, s, "hit", "auth,perf", "platform", "shipped")
+	// Miss: wrong project.
+	missP := addWithTags(t, s, "missP", "auth", "growth", "shipped")
+	// Miss: wrong tag.
+	missT := addWithTags(t, s, "missT", "perf", "platform", "shipped")
+	// Miss: too old.
+	old := addWithTags(t, s, "old", "auth", "platform", "shipped")
+
+	backdateCreatedAt(t, path, hit.ID, now)
+	backdateCreatedAt(t, path, missP.ID, now)
+	backdateCreatedAt(t, path, missT.ID, now)
+	backdateCreatedAt(t, path, old.ID, now.Add(-10*24*time.Hour))
+
+	got, err := s.List(ListFilter{
+		Tag:     "auth",
+		Project: "platform",
+		Since:   now.Add(-7 * 24 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len=%d, want 1 (titles=%v)", len(got), titlesOf(got))
+	}
+	if got[0].Title != "hit" {
+		t.Errorf("got %q, want %q", got[0].Title, "hit")
+	}
+}
+
+func TestList_FilterPreservesOrder(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	// Insert three same-tag rows in rapid succession so created_at may
+	// collide at second-precision; id DESC tie-break must carry.
+	a := addWithTags(t, s, "first", "x", "", "")
+	b := addWithTags(t, s, "second", "x", "", "")
+	c := addWithTags(t, s, "third", "x", "", "")
+
+	got, err := s.List(ListFilter{Tag: "x"})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("len=%d, want 3 (titles=%v)", len(got), titlesOf(got))
+	}
+	// Expect id DESC: c, b, a.
+	wantIDs := []int64{c.ID, b.ID, a.ID}
+	for i, e := range got {
+		if e.ID != wantIDs[i] {
+			t.Errorf("pos %d: id=%d, want %d (titles=%v)", i, e.ID, wantIDs[i], titlesOf(got))
+		}
+	}
+}
+
 func TestStore_CloseNoError(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "db.sqlite")

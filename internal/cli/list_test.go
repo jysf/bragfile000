@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"database/sql"
 	"errors"
 	"path/filepath"
 	"strconv"
@@ -250,6 +251,367 @@ func TestListCmd_StorageOpenErrorIsInternal(t *testing.T) {
 		t.Fatalf("expected empty stdout, got %q", outBuf.String())
 	}
 	_ = errBuf // stderr may carry cobra/main prefixing, not asserted here
+}
+
+// seedListEntry inserts one entry with only the fields the filter tests
+// need populated. Returns the inserted entry.
+func seedListEntry(t *testing.T, dbPath, title, tags, project, typ string) storage.Entry {
+	t.Helper()
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("storage.Open: %v", err)
+	}
+	defer s.Close()
+	e, err := s.Add(storage.Entry{Title: title, Tags: tags, Project: project, Type: typ})
+	if err != nil {
+		t.Fatalf("Add(%q): %v", title, err)
+	}
+	return e
+}
+
+// backdateCLI sets created_at on an entry via direct SQL. Parallel of
+// backdateCreatedAt in the storage test package; CLI tests live in a
+// different package so we keep a local copy.
+func backdateCLI(t *testing.T, dbPath string, id int64, at time.Time) {
+	t.Helper()
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	ts := at.UTC().Format(time.RFC3339)
+	if _, err := db.Exec("UPDATE entries SET created_at = ? WHERE id = ?", ts, id); err != nil {
+		t.Fatalf("backdate id=%d: %v", id, err)
+	}
+}
+
+func runListCmd(t *testing.T, dbPath string, args ...string) (stdout, stderr string, runErr error) {
+	t.Helper()
+	root, outBuf, errBuf := newListTestRoot(t, dbPath)
+	full := append([]string{"--db", dbPath, "list"}, args...)
+	root.SetArgs(full)
+	runErr = root.Execute()
+	return outBuf.String(), errBuf.String(), runErr
+}
+
+func TestListCmd_FilterByTag(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "alpha-auth", "auth", "", "")
+	seedListEntry(t, dbPath, "bravo-other", "backend", "", "")
+
+	out, errOut, err := runListCmd(t, dbPath, "--tag", "auth")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "alpha-auth") {
+		t.Errorf("expected %q in stdout, got %q", "alpha-auth", out)
+	}
+	if strings.Contains(out, "bravo-other") {
+		t.Errorf("expected %q NOT in stdout, got %q", "bravo-other", out)
+	}
+}
+
+func TestListCmd_TagFilterNoFalsePositive(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "exact-match", "auth", "", "")
+	seedListEntry(t, dbPath, "looks-like", "authoring", "", "")
+
+	out, errOut, err := runListCmd(t, dbPath, "--tag", "auth")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "exact-match") {
+		t.Errorf("expected %q in stdout, got %q", "exact-match", out)
+	}
+	if strings.Contains(out, "looks-like") {
+		t.Errorf("expected %q NOT in stdout (substring false-positive), got %q", "looks-like", out)
+	}
+}
+
+func TestListCmd_FilterByProject(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "hit-platform", "", "platform", "")
+	seedListEntry(t, dbPath, "miss-growth", "", "growth", "")
+
+	out, errOut, err := runListCmd(t, dbPath, "--project", "platform")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "hit-platform") {
+		t.Errorf("expected %q in stdout, got %q", "hit-platform", out)
+	}
+	if strings.Contains(out, "miss-growth") {
+		t.Errorf("expected %q NOT in stdout, got %q", "miss-growth", out)
+	}
+}
+
+func TestListCmd_FilterByType(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "hit-shipped", "", "", "shipped")
+	seedListEntry(t, dbPath, "miss-learned", "", "", "learned")
+
+	out, errOut, err := runListCmd(t, dbPath, "--type", "shipped")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "hit-shipped") {
+		t.Errorf("expected %q in stdout, got %q", "hit-shipped", out)
+	}
+	if strings.Contains(out, "miss-learned") {
+		t.Errorf("expected %q NOT in stdout, got %q", "miss-learned", out)
+	}
+}
+
+func TestListCmd_FilterBySince_ISODate(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	old := seedListEntry(t, dbPath, "old-entry", "", "", "")
+	newEntry := seedListEntry(t, dbPath, "new-entry", "", "", "")
+
+	backdateCLI(t, dbPath, old.ID, time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
+	backdateCLI(t, dbPath, newEntry.ID, time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC))
+
+	out, errOut, err := runListCmd(t, dbPath, "--since", "2026-01-01")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "new-entry") {
+		t.Errorf("expected %q in stdout, got %q", "new-entry", out)
+	}
+	if strings.Contains(out, "old-entry") {
+		t.Errorf("expected %q NOT in stdout, got %q", "old-entry", out)
+	}
+}
+
+func TestListCmd_FilterBySince_Days(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	old := seedListEntry(t, dbPath, "ten-days-ago", "", "", "")
+	newEntry := seedListEntry(t, dbPath, "two-days-ago", "", "", "")
+
+	now := time.Now().UTC()
+	backdateCLI(t, dbPath, old.ID, now.Add(-10*24*time.Hour))
+	backdateCLI(t, dbPath, newEntry.ID, now.Add(-2*24*time.Hour))
+
+	out, errOut, err := runListCmd(t, dbPath, "--since", "7d")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "two-days-ago") {
+		t.Errorf("expected %q in stdout, got %q", "two-days-ago", out)
+	}
+	if strings.Contains(out, "ten-days-ago") {
+		t.Errorf("expected %q NOT in stdout, got %q", "ten-days-ago", out)
+	}
+}
+
+func TestListCmd_FilterBySince_Weeks(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	old := seedListEntry(t, dbPath, "thirty-days-ago", "", "", "")
+	newEntry := seedListEntry(t, dbPath, "ten-days-ago", "", "", "")
+
+	now := time.Now().UTC()
+	backdateCLI(t, dbPath, old.ID, now.Add(-30*24*time.Hour))
+	backdateCLI(t, dbPath, newEntry.ID, now.Add(-10*24*time.Hour))
+
+	out, errOut, err := runListCmd(t, dbPath, "--since", "2w")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "ten-days-ago") {
+		t.Errorf("expected %q in stdout, got %q", "ten-days-ago", out)
+	}
+	if strings.Contains(out, "thirty-days-ago") {
+		t.Errorf("expected %q NOT in stdout, got %q", "thirty-days-ago", out)
+	}
+}
+
+func TestListCmd_FilterBySince_Months(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	old := seedListEntry(t, dbPath, "one-hundred-days", "", "", "")
+	newEntry := seedListEntry(t, dbPath, "sixty-days", "", "", "")
+
+	now := time.Now().UTC()
+	backdateCLI(t, dbPath, old.ID, now.Add(-100*24*time.Hour))
+	backdateCLI(t, dbPath, newEntry.ID, now.Add(-60*24*time.Hour))
+
+	// 3m = 90 days per DEC-008 approximation.
+	out, errOut, err := runListCmd(t, dbPath, "--since", "3m")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "sixty-days") {
+		t.Errorf("expected %q in stdout, got %q", "sixty-days", out)
+	}
+	if strings.Contains(out, "one-hundred-days") {
+		t.Errorf("expected %q NOT in stdout, got %q", "one-hundred-days", out)
+	}
+}
+
+func TestListCmd_FilterByLimit(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	for _, title := range []string{"one", "two", "three", "four"} {
+		seedListEntry(t, dbPath, title, "", "", "")
+	}
+
+	out, errOut, err := runListCmd(t, dbPath, "--limit", "2")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("want 2 lines, got %d: %q", len(lines), out)
+	}
+}
+
+func TestListCmd_CombinedFilters(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	hit := seedListEntry(t, dbPath, "combined-hit", "", "platform", "")
+	missP := seedListEntry(t, dbPath, "combined-missP", "", "growth", "")
+	old := seedListEntry(t, dbPath, "combined-old", "", "platform", "")
+
+	now := time.Now().UTC()
+	backdateCLI(t, dbPath, hit.ID, now.Add(-2*24*time.Hour))
+	backdateCLI(t, dbPath, missP.ID, now.Add(-2*24*time.Hour))
+	backdateCLI(t, dbPath, old.ID, now.Add(-20*24*time.Hour))
+
+	out, errOut, err := runListCmd(t, dbPath,
+		"--project", "platform",
+		"--since", "7d",
+		"--limit", "5",
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "combined-hit") {
+		t.Errorf("expected %q in stdout, got %q", "combined-hit", out)
+	}
+	if strings.Contains(out, "combined-missP") {
+		t.Errorf("expected %q NOT in stdout, got %q", "combined-missP", out)
+	}
+	if strings.Contains(out, "combined-old") {
+		t.Errorf("expected %q NOT in stdout, got %q", "combined-old", out)
+	}
+}
+
+func TestListCmd_FilterPreservesOrder(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	a := seedListEntry(t, dbPath, "first-x", "x", "", "")
+	b := seedListEntry(t, dbPath, "second-x", "x", "", "")
+	c := seedListEntry(t, dbPath, "third-x", "x", "", "")
+
+	out, errOut, err := runListCmd(t, dbPath, "--tag", "x")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("want 3 lines, got %d: %q", len(lines), out)
+	}
+	wantIDs := []int64{c.ID, b.ID, a.ID}
+	for i, line := range lines {
+		gotID := strings.Split(line, "\t")[0]
+		if gotID != strconv.FormatInt(wantIDs[i], 10) {
+			t.Errorf("line %d: id=%s, want %d", i, gotID, wantIDs[i])
+		}
+	}
+}
+
+func TestListCmd_InvalidSinceIsUserError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	// Need the DB to exist so runList doesn't fail earlier; but the
+	// since validation happens before storage open anyway. Still safe.
+	out, _, err := runListCmd(t, dbPath, "--since", "notadate")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrUser) {
+		t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+}
+
+func TestListCmd_InvalidLimitIsUserError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	for _, arg := range []string{"0", "-5"} {
+		t.Run("limit="+arg, func(t *testing.T) {
+			out, _, err := runListCmd(t, dbPath, "--limit", arg)
+			if err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			if !errors.Is(err, ErrUser) {
+				t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+			}
+			if out != "" {
+				t.Errorf("expected empty stdout, got %q", out)
+			}
+		})
+	}
+}
+
+func TestListCmd_EmptyFilterValueIsUserError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	out, _, err := runListCmd(t, dbPath, "--tag", "")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrUser) {
+		t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+}
+
+func TestListCmd_HelpShowsFilters(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	root, outBuf, errBuf := newListTestRoot(t, dbPath)
+	root.SetArgs([]string{"list", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("expected empty stderr, got %q", errBuf.String())
+	}
+	out := outBuf.String()
+	for _, needle := range []string{"--tag", "--project", "--type", "--since", "--limit", "Examples:"} {
+		if !strings.Contains(out, needle) {
+			t.Errorf("expected help to contain %q, got:\n%s", needle, out)
+		}
+	}
 }
 
 func TestListCmd_HelpShape(t *testing.T) {

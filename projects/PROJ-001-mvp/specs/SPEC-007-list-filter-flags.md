@@ -2,7 +2,7 @@
 task:
   id: SPEC-007
   type: story
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: M
@@ -636,26 +636,57 @@ If any of these feels necessary during build, write a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-007-list-filter-flags`
+- **PR (if applicable):** opened after `just advance-cycle`.
+- **All acceptance criteria met?** yes. `go test ./...`, `gofmt -l .`,
+  `go vet ./...`, `CGO_ENABLED=0 go build ./...` all clean. All 25 new
+  tests green alongside every prior SPEC-001…006 test.
 - **New decisions emitted:**
-  - (none expected; DEC-008 was written during design)
+  - None. DEC-008 was written during design; no non-trivial build-
+    time choice warranted a new DEC.
 - **Deviations from spec:**
-  - [list]
+  - Renamed the CLI test helper to `seedListEntry` to avoid a
+    package-level collision with `seedEntry` in SPEC-006's
+    `show_test.go` (same `cli` package). The spec suggested
+    "`seed…`/`newRootWithList`"; this is a mechanical rename, not a
+    semantic change.
+  - Added a small `backdateCLI` helper inside `list_test.go` (mirrors
+    the storage package's `backdateCreatedAt`). The spec's
+    implementer notes mentioned the second-`*sql.DB` technique; I
+    inlined the three-line helper rather than exporting anything
+    from `Store`.
+  - `brag list`'s `Short` string changed from "List all brag entries"
+    to "List brag entries" — one-word edit, reads cleaner now that
+    the command takes filters. Noted because it's a user-visible
+    string change.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - No new specs required for STAGE-002. Backlog unchanged.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing substantive. The `Implementation Context` spelled out
+   the WHERE-clause builder, the `Changed()` pattern, and the
+   backdating approach; each mapped 1:1 to a block of code. The
+   only blip was the helper-name collision with `show_test.go`'s
+   `seedEntry`, which the spec couldn't have known about without
+   asking me to grep — a two-minute fix.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No new one. DEC-008 arriving alongside the spec meant the
+   `--since` contract was locked; DEC-007's extension to positional
+   args didn't apply here but the flag-validation half did. Every
+   blocking constraint I hit (stdout-vs-stderr, timestamps-UTC-RFC3339,
+   no-SQL-in-CLI) was already listed.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Run `grep -rn seedEntry internal/cli` before naming a new test
+   helper in the same package. It's not a tools-problem — the spec
+   even listed `show_test.go` as a prior-art file — I just didn't
+   cross-check helper names before writing the file. Cheap lesson.
+   Also: the `_ = dbPath` line in `newListTestRoot` is dead (the
+   spec's helper kept it from a prior iteration). I left it alone to
+   keep the diff minimal but a future spec could drop it.
 
 ---
 
