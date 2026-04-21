@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -76,6 +77,49 @@ func (s *Store) Add(e Entry) (Entry, error) {
 	e.ID = id
 	e.CreatedAt = now
 	e.UpdatedAt = now
+	return e, nil
+}
+
+// Get returns the entry with the given id. Returns an error wrapping
+// ErrNotFound if no row matches.
+func (s *Store) Get(id int64) (Entry, error) {
+	var (
+		e                                       Entry
+		description, tags, project, typ, impact sql.NullString
+		createdAtRaw, updatedAtRaw              string
+	)
+	row := s.db.QueryRowContext(context.Background(),
+		`SELECT id, title, description, tags, project, type, impact, created_at, updated_at
+         FROM entries
+         WHERE id = ?`,
+		id,
+	)
+	if err := row.Scan(
+		&e.ID, &e.Title, &description, &tags, &project, &typ, &impact,
+		&createdAtRaw, &updatedAtRaw,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Entry{}, fmt.Errorf("get entry %d: %w", id, ErrNotFound)
+		}
+		return Entry{}, fmt.Errorf("get entry %d: %w", id, err)
+	}
+	e.Description = description.String
+	e.Tags = tags.String
+	e.Project = project.String
+	e.Type = typ.String
+	e.Impact = impact.String
+
+	created, err := time.Parse(time.RFC3339, createdAtRaw)
+	if err != nil {
+		return Entry{}, fmt.Errorf("get entry %d: parse created_at %q: %w", id, createdAtRaw, err)
+	}
+	updated, err := time.Parse(time.RFC3339, updatedAtRaw)
+	if err != nil {
+		return Entry{}, fmt.Errorf("get entry %d: parse updated_at %q: %w", id, updatedAtRaw, err)
+	}
+	e.CreatedAt = created.UTC()
+	e.UpdatedAt = updated.UTC()
+
 	return e, nil
 }
 

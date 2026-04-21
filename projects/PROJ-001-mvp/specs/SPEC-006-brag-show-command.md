@@ -2,7 +2,7 @@
 task:
   id: SPEC-006
   type: story
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: S
@@ -463,27 +463,65 @@ If any of these feels necessary during build, write a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-006-brag-show-command`
+- **PR (if applicable):** <opened after advance-cycle>
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - (none expected; DEC-007 extension to positional args is noted
-    in Implementation Context but not re-decided)
+  - None. DEC-007's positional-arg extension was handled inline per
+    the spec's Implementation Context guidance — the principle is
+    identical to the flag case, so a new DEC would just duplicate
+    DEC-007's reasoning. Verify can push back if it disagrees.
 - **Deviations from spec:**
-  - [list]
+  - None of substance. `storage.ErrNotFound` landed in the new
+    `internal/storage/errors.go` file as the spec preferred. Used
+    `errors.Is(err, sql.ErrNoRows)` (imported `errors`) in
+    `store.go` to map the not-found path; this matches the
+    Implementation Context pseudocode verbatim.
+  - Smoke-tested `brag show 1` end-to-end against a real temp DB
+    before advancing. Output matches the documented shape; the
+    `ErrUser` path surfaces `brag: user error: no entry with id 999`
+    on stderr with exit 1 (`main.go` does the formatting, as
+    required by `stdout-is-for-data-stderr-is-for-humans`). The
+    `user error:` prefix falls out of `UserErrorf`'s `%w`
+    wrapping — consistent with how `add` already surfaces its user
+    errors, so no deviation from prior behavior.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None new. SPEC-007 (`list` filter flags) remains the next
+    pending item in STAGE-002's backlog and is unblocked by this
+    ship.
+- **Cobra `show -5` behavior note (acceptance criterion clause):**
+  cobra's pflag parser consumes a leading `-5` as an unknown short
+  flag and returns its own error from argv parsing, not from
+  `runShow`. That surface (unknown-flag error, not `ErrUser`) is
+  cobra's domain; the spec explicitly flagged this and the test
+  suite intentionally only covers `show 0`, not `show -5`. No
+  change required.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing material. The Implementation Context was unusually
+   thorough: it listed the exact scan-path, the exact `runShow`
+   skeleton, and the exact `renderEntry` layout, so the only
+   decisions left to me were trivial (import grouping, where to
+   place `errors.Is` imports, what to name the test helper).
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. The seven referenced constraints plus DEC-005/006/007
+   covered every real decision. The one thing worth capturing as
+   a stage-level pattern (not a new constraint): the fail-first
+   run really did earn its keep here — it surfaced the three
+   missing-symbol errors before I wrote any implementation code,
+   which is exactly what §9 promises. Worth leaving in AGENTS.md
+   as-is.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Reach for `strconv.FormatInt` at the call site from the
+   start. I briefly wrote a one-line `itoa` wrapper in
+   `show_test.go`, then immediately deleted it before the first
+   commit — a wrapper that costs a reader more than the inline
+   call it replaces is just noise. Noted for future test-helper
+   instincts.
 
 ---
 
