@@ -100,8 +100,10 @@ real entries.
       markdown export, sqlite-file export, rule-based `summary`,
       JSON export (for AI/programmatic consumers), emoji decoration
       on stderr feedback + `show`/`list` output (with `NO_COLOR` +
-      TTY-detection escape hatch). Framing pending user's full
-      additional-ideas list — scope will be finalized then.
+      TTY-detection escape hatch), `brag list` project-column
+      display option (likely part of `--pretty` mode). Framing
+      pending user's full additional-ideas list — scope will be
+      finalized then.
 - [ ] STAGE-004 (not yet framed) — Distribution: goreleaser, homebrew
       tap, README, release notes.
 
@@ -257,6 +259,41 @@ Output to stdout by default; `--out file.json` to write to a file.
 Use stdlib `encoding/json` — no new dep needed. Pretty-printed by
 default (indent=2) for human readability; `--compact` flag to
 disable indentation for pipe consumers if anyone asks.
+
+### `brag list` display options — show project column (accumulated 2026-04-22)
+
+**Motivation.** Today `brag list` prints 3 columns tab-separated:
+`<id>\t<created_at>\t<title>`. The `project` field is populated
+per-entry but invisible at scan time — users can't see "what
+projects have I been working on lately?" without `brag show <id>`
+or filtering by a specific `--project`. Adding project to the
+list output makes daily scanning more useful.
+
+**Design options for the framer to pick between:**
+
+1. **Part of `--pretty` mode** (leans composable with emoji pass 3).
+   `brag list` stays 3-column plain for backwards-compat with
+   scripts. `brag list --pretty` adds emoji + project column
+   (e.g., `🚀  12  2026-04-22  [bragfile]  shipped FTS5 search`).
+   One new flag, one coherent pretty-mode feature bundle.
+2. **Dedicated `--show-project` / `-P` flag.** Opts in just the
+   project column without emoji. Clean separation from the emoji
+   concern; combines freely with `--pretty`.
+3. **`--columns <list>` flag.** User picks which columns to show,
+   e.g., `--columns id,created_at,project,title`. Most flexible;
+   most complex. Probably overkill for MVP.
+4. **Change default** to always include project. Breaks existing
+   scripts that parse 3 tab-separated columns. Rejected — breaking
+   stable contract for a UX nicety isn't worth it.
+
+**Author's lean: option 1 (bundle into `--pretty`)** — simplest
+composition with the emoji work, keeps plain mode byte-stable.
+Framer can decide otherwise if dogfooding reveals that project-
+in-plain-output is a strong standalone ask.
+
+**Visibility of empty project.** When an entry has no `project`
+set, the column should render as `-` or `(none)` rather than an
+empty field, so the tab-separated shape stays consistent.
 
 ### User's pending additional-ideas list
 
