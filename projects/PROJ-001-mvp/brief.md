@@ -90,10 +90,12 @@ real entries.
       Cobra scaffold, SQLite schema + migrations, `add` + `list`.
       4 specs shipped (SPEC-001/002/003/004), 1 new DEC (DEC-007),
       4 lessons landed in AGENTS.md §9/§10.
-- [ ] STAGE-002 (active) — Capture & retrieval: `add` shorthand flags,
-      `list` filter flags, `show`/`edit`/`delete`, editor-launch for
-      `add` and `edit`, FTS5 `search`. 8-spec backlog (SPEC-005–012);
-      target 2026-05-04.
+- [x] STAGE-002 (shipped on 2026-04-22) — Capture & retrieval: `add`
+      shorthand flags, `list` filter flags, `show`/`edit`/`delete`,
+      editor-launch for `add` and `edit`, FTS5 `search`. All 8 specs
+      shipped (SPEC-005–012). 4 new DECs (DEC-007/008/009/010),
+      5 new AGENTS.md §9/§12 lessons including the full premise-
+      audit family. Target was 2026-05-04; shipped 12 days ahead.
 - [ ] STAGE-003 (not yet framed) — Export, summary, and UX polish:
       markdown export, sqlite-file export, rule-based `summary`,
       JSON export (for AI/programmatic consumers), emoji decoration
@@ -103,7 +105,7 @@ real entries.
 - [ ] STAGE-004 (not yet framed) — Distribution: goreleaser, homebrew
       tap, README, release notes.
 
-**Count:** 1 shipped / 0 active / 3 pending
+**Count:** 2 shipped / 0 active / 2 pending
 
 ## Dependencies
 

@@ -1,7 +1,7 @@
 ---
 stage:
   id: STAGE-002
-  status: active
+  status: shipped
   priority: high
   target_complete: 2026-05-04
 
@@ -11,7 +11,7 @@ repo:
   id: bragfile
 
 created_at: 2026-04-20
-shipped_at: null
+shipped_at: 2026-04-22
 ---
 
 # STAGE-002: Capture & Retrieval
@@ -297,12 +297,81 @@ unchanged.
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped. Run Prompt 1d.*
+*Filled in 2026-04-22 at stage ship. Ran Prompt 1d after SPEC-012
+(the stage's last spec) shipped on main as commit e7571a4.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <not yet>
-- **How many specs did it actually take?** <not yet>
-- **What changed between starting and shipping?** <not yet>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes.
+  Every success criterion verified empirically against the real
+  DB. Users can capture via flag mode OR editor mode, scan with
+  filtered list (`--tag` / `--project` / `--type` / `--since` /
+  `--limit`), drill into any entry (`brag show <id>`), edit via
+  `$EDITOR` round-trip (`brag edit <id>`), delete with
+  confirmation (`brag delete <id> [-y]`), and full-text search
+  across all indexed fields (`brag search "query"`).
+  `sqlite3 ~/.bragfile/db.sqlite` is no longer needed as an
+  escape hatch for anything in the MVP feature set.
+
+- **How many specs did it actually take?** 8 specs (SPEC-005
+  through SPEC-012), exactly matching the backlog framed at
+  stage-open. No splits, no additions, no cancellations.
+  Complexity mix held: 5 × S, 3 × M, 0 × L as planned.
+
+- **What changed between starting and shipping?** Two meaningful
+  shifts. **First**, the quality discipline deepened: 4 of 8
+  specs hit punch-list iterations during verify (vs 1 of 4 in
+  STAGE-001), and each punch list earned a new AGENTS.md §9 rule
+  that made subsequent specs progressively cleaner — the §9
+  premise-audit family grew from nothing at stage-open to three
+  symmetric cases (inversion/removal + addition + status-change)
+  by stage-close. **Second**, STAGE-003 scope expanded during
+  this stage's execution: JSON export (for AI/programmatic
+  consumers) and emoji decoration (4-pass plan with `NO_COLOR` +
+  TTY-detection escape hatch) were both captured into the
+  brief's pre-framing notes based on user requests mid-stage.
+
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <not yet>
-- **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <not yet>
+  All applied inline during their originating ships; nothing new
+  to apply at stage close. Earned this stage:
+  - §9 assertion specificity on help output (SPEC-005 ship).
+  - §9 locked-decisions-need-tests (SPEC-009 ship).
+  - §9 premise-audit: inversion/removal → planned test deletion
+    (SPEC-010 ship).
+  - §9 premise-audit: addition → planned count-bump (SPEC-011
+    ship).
+  - §9 premise-audit: status change → planned doc references
+    update (SPEC-012 ship).
+  - §12 "During design" discipline (SPEC-007 ship).
+
+  The §9 premise-audit family (3 symmetric cases) is the stage's
+  most significant framework contribution — a concrete, symmetric
+  pattern that future specs will follow and future stages will
+  extend.
+
+- **Should any spec-level reflections be promoted to stage-level
+  lessons?** Yes — one meta-observation: **punch-list iterations
+  earning new rules is the framework working correctly, not a
+  failure mode.** Four verify-caught defects in STAGE-002 each
+  surfaced something a same-session review would have missed and
+  each produced a durable rule rather than a one-off fix. The
+  claude-only variant's fresh-session discipline is exactly what
+  makes this trackable. Rate doesn't need to trend down for the
+  framework to be healthy; what matters is each iteration earning
+  structural value, which it has.
+
+**Follow-up work identified at stage close:**
+
+1. **Doc sweep** — `README.md:52` + `docs/data-model.md:67` carry
+   SPEC-006-era staleness (search/show/edit/delete listed as
+   "future work"). Recommend: handle inline during STAGE-003
+   framing rather than as a dedicated spec.
+2. **Filter flags on `brag search`** (`--tag`/`--project`/`--type`
+   /`--since`) — deferred from SPEC-012 for scope discipline.
+   Polish-layer candidate (STAGE-003 or future polish pass).
+3. **Shorthand flags on `list` filters** — deferred from SPEC-007.
+   Polish-layer candidate.
+4. **Flag-based `brag update`** — deferred from SPEC-009.
+   Polish-layer candidate.
+5. **JSON export + emoji decoration** — captured in brief's
+   STAGE-003 pre-framing notes; will land in STAGE-003.
+6. **Power-user FTS5 syntax (`--raw` flag)** — deferred from
+   DEC-010. Revisit only if users request it.
