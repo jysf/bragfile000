@@ -188,20 +188,19 @@ cleanly to a different stage.
       user queries need phrase-quoting — `brag search` design
       session must decide auto-quote vs raw syntax.
 
-- [ ] SPEC-012 (build, **S**) — **`brag search "query"` +
-      `Store.Search(query, limit)`.** Thin wrapper over FTS5
-      `MATCH` with a new `buildFTS5Query` helper implementing
-      DEC-010 (tokenize + phrase-quote + AND-join). Output mirrors
-      `brag list` (tab-separated `<id>\t<created_at>\t<title>`).
-      Relevance-sorted (FTS5 `rank` asc) with `id DESC` tie-break.
-      `--limit N` flag; other filter flags deferred to polish.
-      8 locked decisions / ~15 failing tests across new
-      `internal/cli/search_test.go` + append to
-      `internal/storage/fts_test.go`. **DEC-010 emitted during
-      design** resolving the FTS5-hyphen-as-NOT concern flagged
-      by SPEC-011.
+- [x] SPEC-012 (shipped on 2026-04-22, **S**) — **`brag search
+      "query"` + `Store.Search`.** Shipped FTS5-backed search
+      with DEC-010 query semantics (tokenize + phrase-quote +
+      AND-join). Handles hyphen-as-NOT, asterisks, parens
+      transparently. 22 tests (18 CLI + 3 storage + 1 pure-fn).
+      One doc-consistency punch-list loop during verify caught a
+      Scope-blurb inconsistency (tutorial line 3 still listed
+      search as "later stage"). Earned the third premise-audit
+      case in AGENTS.md §9: status-change → planned doc
+      references update. Completes the CRUD + filter + editor-
+      launch + search loop that motivated the stage.
 
-**Count:** 7 shipped / 0 active / 1 pending
+**Count:** 8 shipped / 0 active / 0 pending
 
 **Complexity check:** 5 × S, 3 × M, 0 × L. Stage is at the upper
 bound of the 3–8 spec guideline. No split recommended — each spec

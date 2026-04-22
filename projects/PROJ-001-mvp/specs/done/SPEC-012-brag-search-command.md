@@ -2,7 +2,7 @@
 task:
   id: SPEC-012
   type: story
-  cycle: build
+  cycle: ship
   blocked: false
   priority: high
   complexity: S
@@ -732,13 +732,42 @@ missing the other produced visible contradiction in the same file.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended 2026-04-22 during the **ship** cycle. Outcome-focused,
+distinct from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   The punch-list iteration's Q2 lesson generalizes across specs:
+   "grep the whole doc for every mention of the feature's status,
+   not just the primary status table." SPEC-012 correctly updated
+   tutorial.md's §9 "What's NOT there yet" table (the *primary*
+   status claim) but missed the Scope blurb at line 3 (a
+   *secondary* status claim in the same document). Verify caught
+   it cleanly. The existing premise-audit rule in AGENTS.md §9
+   covers test-level premise inversion and additive-count
+   invalidation — this is the *documentation-consistency*
+   corollary. Next design session that changes a feature's
+   shipping status should enumerate every doc mention of the
+   feature, not just the primary status table.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   Yes — extend the AGENTS.md §9 premise-audit family with a
+   third case: **status-change audits.** When a spec changes a
+   feature's shipping status (e.g., strikes it from "What's NOT
+   there yet"), grep all docs for mentions of the feature name
+   and enumerate them as planned updates under spec Outputs.
+   Complements the existing two cases (inversion/removal →
+   planned deletion; addition → planned count-bump) with a
+   third: **status change → planned doc references update.**
+   Applied in this ship commit.
 
-3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+3. **Is there a follow-up spec to write now before I forget?**
+   Yes — verify flagged stale references to search/show/edit/
+   delete in `README.md:52` and `docs/data-model.md:67`. Both
+   predate SPEC-012 (SPEC-006 era), so they're not strictly this
+   spec's mess, but they're real doc drift. Naming the follow-up
+   here as **"Doc sweep: align README + data-model with
+   STAGE-002 shipped surface."** Candidate for the polish layer
+   between STAGE-002 ship and STAGE-003 framing, or an
+   interstitial chore commit. Decision on placement happens
+   during STAGE-002 stage-ship reflection (Prompt 1d,
+   immediately after this ship).
