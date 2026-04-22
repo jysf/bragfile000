@@ -144,11 +144,30 @@ deliberate choice, not an error.
 
 ```
 brag search "auth refactor"
+brag search "auth-refactor"
 brag search "latency" --limit 10
 ```
 
-FTS5 query against `entries_fts`. Same output shape as `list`. Match
-ranking: default FTS5 relevance.
+FTS5 query against `entries_fts`. Query semantics are locked by
+[DEC-010](../decisions/DEC-010-search-query-syntax.md): the CLI
+tokenizes the argument on whitespace, phrase-quotes each token, and
+joins with spaces so multi-word queries get AND semantics and
+hyphens / other FTS5 operators inside a token are treated as
+literal text. Power-user FTS5 operators are not exposed.
+
+- Takes a single positional query argument. Zero or multiple args
+  exit 1.
+- Empty / whitespace-only / quote-containing queries exit 1.
+- Same output shape as `list`: tab-separated
+  `<id>\t<created_at>\t<title>` to stdout, newline-terminated.
+- Order: FTS5 `rank` ascending (most relevant first), with `id DESC`
+  as the tie-break for determinism when ranks are equal (DEC-005).
+- `--limit N` caps the result count; `0` (the default) means
+  unlimited. Negative values exit 1.
+- Zero results is not an error: stdout empty, stderr empty, exit 0.
+- Exit codes: `0` on success OR zero results; `1` on user-facing
+  input problems (empty/quote/arg count/bad `--limit`); `2` on
+  storage failure.
 
 ### `brag export` — export entries (STAGE-003)
 
@@ -199,3 +218,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - Data model: [./data-model.md](./data-model.md)
 - `DEC-003` — config resolution order
 - `DEC-009` — editor buffer format (`brag edit <id>`)
+- `DEC-010` — `brag search` query syntax (auto-tokenize + phrase-quote)

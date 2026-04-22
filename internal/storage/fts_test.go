@@ -464,3 +464,127 @@ func TestFTS_UnicodeTokenizerSplitsOnPunctuation(t *testing.T) {
 		t.Fatalf("MATCH xxx_missing_tag: rowid=%d err=%v, want ErrNoRows", missing, err)
 	}
 }
+
+// --- SPEC-012: Store.Search ----------------------------------------
+
+// TestSearch_OrdersByRelevanceThenIdDesc seeds three rows that match
+// a single query token exactly once in the same indexed field, so the
+// FTS5 rank is identical across rows. The `id DESC` tie-break must
+// then yield highest-id first.
+func TestSearch_OrdersByRelevanceThenIdDesc(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	// Three otherwise-identical entries, each with the token "rankword"
+	// once in title. rank will be the same across all three, forcing
+	// the id-desc tie-break to determine ordering.
+	a, err := s.Add(Entry{Title: "rankword"})
+	if err != nil {
+		t.Fatalf("Add a: %v", err)
+	}
+	b, err := s.Add(Entry{Title: "rankword"})
+	if err != nil {
+		t.Fatalf("Add b: %v", err)
+	}
+	c, err := s.Add(Entry{Title: "rankword"})
+	if err != nil {
+		t.Fatalf("Add c: %v", err)
+	}
+
+	got, err := s.Search(`"rankword"`, 0)
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("len(got) = %d, want 3", len(got))
+	}
+	wantIDs := []int64{c.ID, b.ID, a.ID}
+	for i, e := range got {
+		if e.ID != wantIDs[i] {
+			t.Errorf("position %d: id=%d, want %d (full order: got=%v want=%v)",
+				i, e.ID, wantIDs[i],
+				[]int64{got[0].ID, got[1].ID, got[2].ID}, wantIDs)
+		}
+	}
+}
+
+// TestSearch_ReturnsHydratedEntries asserts Search populates every
+// field on the Entry, not just id/title/created_at.
+func TestSearch_ReturnsHydratedEntries(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	inserted, err := s.Add(Entry{
+		Title:       "uniquetitle",
+		Description: "full description text",
+		Tags:        "auth,perf",
+		Project:     "platform",
+		Type:        "shipped",
+		Impact:      "notable impact",
+	})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+
+	got, err := s.Search(`"uniquetitle"`, 0)
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len(got) = %d, want 1", len(got))
+	}
+	e := got[0]
+	if e.ID != inserted.ID {
+		t.Errorf("ID = %d, want %d", e.ID, inserted.ID)
+	}
+	if e.Title != "uniquetitle" {
+		t.Errorf("Title = %q", e.Title)
+	}
+	if e.Description != "full description text" {
+		t.Errorf("Description = %q", e.Description)
+	}
+	if e.Tags != "auth,perf" {
+		t.Errorf("Tags = %q", e.Tags)
+	}
+	if e.Project != "platform" {
+		t.Errorf("Project = %q", e.Project)
+	}
+	if e.Type != "shipped" {
+		t.Errorf("Type = %q", e.Type)
+	}
+	if e.Impact != "notable impact" {
+		t.Errorf("Impact = %q", e.Impact)
+	}
+	if e.CreatedAt.IsZero() {
+		t.Errorf("CreatedAt is zero")
+	}
+	if e.UpdatedAt.IsZero() {
+		t.Errorf("UpdatedAt is zero")
+	}
+}
+
+// TestSearch_ZeroLimitMeansUnlimited asserts limit<=0 applies no LIMIT
+// clause, matching Store.List's zero/negative-as-unset convention.
+func TestSearch_ZeroLimitMeansUnlimited(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	for i := 0; i < 7; i++ {
+		if _, err := s.Add(Entry{Title: "limitword row"}); err != nil {
+			t.Fatalf("Add %d: %v", i, err)
+		}
+	}
+
+	zero, err := s.Search(`"limitword"`, 0)
+	if err != nil {
+		t.Fatalf("Search(0): %v", err)
+	}
+	if len(zero) != 7 {
+		t.Errorf("Search(.., 0) len = %d, want 7", len(zero))
+	}
+
+	neg, err := s.Search(`"limitword"`, -1)
+	if err != nil {
+		t.Fatalf("Search(-1): %v", err)
+	}
+	if len(neg) != 7 {
+		t.Errorf("Search(.., -1) len = %d, want 7", len(neg))
+	}
+}

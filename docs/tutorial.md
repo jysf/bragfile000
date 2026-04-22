@@ -1,7 +1,7 @@
 # Using `brag` — tutorial
 
-> **Scope:** what you can do with `brag` today. `search`, `export`, and
-> `summary` arrive in later stages. See
+> **Scope:** what you can do with `brag` today. `export` and `summary`
+> arrive in later stages. See
 > [`projects/PROJ-001-mvp/brief.md`](../projects/PROJ-001-mvp/brief.md)
 > for the full plan.
 
@@ -165,6 +165,34 @@ brag list --since 2026-01-01                    # since a specific date
 - `--limit N` caps the row count.
 - Multiple filters combine via AND.
 
+### Search your entries
+
+`brag search "query"` runs a full-text search over every indexed
+field (title, description, tags, project, impact):
+
+```bash
+brag search "latency"                    # rows mentioning "latency" anywhere
+brag search "cut latency"                # rows with BOTH "cut" and "latency"
+brag search "auth-refactor"              # literal match; hyphens are fine
+brag search "redis" --limit 5            # cap to 5 most relevant
+```
+
+Output format matches `brag list` (tab-separated
+`<id>\t<created_at>\t<title>`), so the same pipe tricks apply:
+
+```bash
+brag search "latency" | cut -f3          # just the titles
+brag search "auth" | head -3             # top 3 most relevant
+```
+
+Multi-word queries combine with AND — a row with only `cut` or only
+`latency` will not match `brag search "cut latency"`. Hyphens,
+asterisks, and other FTS5 operators inside the query are treated as
+literal characters (see
+[DEC-010](../decisions/DEC-010-search-query-syntax.md)), so
+`brag search "SPEC-011"` finds the entries you expect. Results are
+ordered by relevance.
+
 ### Edit an entry
 
 Fix a typo, flesh out a description, or revise metadata after the fact:
@@ -301,7 +329,6 @@ So you don't ask the tool for things it can't do:
 
 | Want | Status |
 |---|---|
-| `brag search "query"` (FTS5 full-text search) | STAGE-002 |
 | `brag export --format markdown` | STAGE-003 |
 | `brag export --format sqlite` | STAGE-003 |
 | `brag summary --range week\|month` | STAGE-003 |
