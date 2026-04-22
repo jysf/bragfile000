@@ -188,18 +188,18 @@ cleanly to a different stage.
       user queries need phrase-quoting — `brag search` design
       session must decide auto-quote vs raw syntax.
 
-- [ ] SPEC-012 (not yet framed, **S**) — **`brag search "query"` +
-      `Store.Search(query)`.** Thin wrapper over FTS5's `MATCH`
-      operator. Output format mirrors `list` (tab-separated). Same
-      filter flags as `list` if trivial; otherwise they land in a
-      later polish spec. **Open design question flagged by
-      SPEC-011**: FTS5's `-` operator is binary NOT, so a user
-      query like `"auth-refactor"` parses as `auth NOT refactor`
-      and returns nothing. SPEC-012 design session must decide
-      whether to auto-quote user input (`MATCH '"auth-refactor"'`),
-      expose raw FTS5 syntax (power but surprise), or a hybrid.
-      Recommend auto-quote for MVP; document the trade-off in the
-      spec's Notes and add a DEC if it's non-obvious.
+- [ ] SPEC-012 (build, **S**) — **`brag search "query"` +
+      `Store.Search(query, limit)`.** Thin wrapper over FTS5
+      `MATCH` with a new `buildFTS5Query` helper implementing
+      DEC-010 (tokenize + phrase-quote + AND-join). Output mirrors
+      `brag list` (tab-separated `<id>\t<created_at>\t<title>`).
+      Relevance-sorted (FTS5 `rank` asc) with `id DESC` tie-break.
+      `--limit N` flag; other filter flags deferred to polish.
+      8 locked decisions / ~15 failing tests across new
+      `internal/cli/search_test.go` + append to
+      `internal/storage/fts_test.go`. **DEC-010 emitted during
+      design** resolving the FTS5-hyphen-as-NOT concern flagged
+      by SPEC-011.
 
 **Count:** 7 shipped / 0 active / 1 pending
 
