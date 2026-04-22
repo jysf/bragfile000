@@ -40,7 +40,7 @@ graph TD
 | `cmd/brag` | Process entrypoint. Constructs the root `*cobra.Command`, wires subcommands, handles top-level flags (`--db`, `--version`), calls `os.Exit` with the right code. Contains no business logic. |
 | `internal/config` | Resolves the DB path from `--db` flag → `BRAGFILE_DB` env → `~/.bragfile/db.sqlite`. Creates parent directory on first use. Single source of truth for path resolution. |
 | `internal/cli` | One file per subcommand. Each exports a `func New<Name>Cmd(deps) *cobra.Command`. Depends on `storage.Store` (an interface or concrete type) for all persistence. Does no SQL. |
-| `internal/storage` | `Store` struct wrapping `*sql.DB`. Embeds migration SQL files and applies them on `Open`. Exposes typed methods (`Add`, `List`, `Get`, `Update`, `Delete`, `Search`) — no SQL leaks upward. Owns the `Entry` type. |
+| `internal/storage` | `Store` struct wrapping `*sql.DB`. Embeds migration SQL files and applies them on `Open`. Exposes typed methods (`Add`, `List`, `Get`, `Update`, `Delete`, `Search`) — no SQL leaks upward. Owns the `Entry` type. Plus an FTS5 ride-along table `entries_fts` that indexes title, description, tags, project, impact and stays in sync via SQL triggers (SPEC-011). |
 | `internal/editor` | (STAGE-002) Launches `$EDITOR` against a templated markdown buffer; parses front-matter on save. |
 | `internal/export` | (STAGE-003) Markdown-report and sqlite-file-copy exporters. |
 

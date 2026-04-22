@@ -3,7 +3,8 @@
 The entire bragfile schema lives in a single SQLite database file,
 default path `~/.bragfile/db.sqlite`. Two tables ship in v0.1: `entries`
 (the user's brags) and `schema_migrations` (applied-version tracking).
-STAGE-002 adds a third virtual table for FTS5 search.
+STAGE-002 adds a third virtual table (`entries_fts`, SPEC-011) for
+FTS5 search.
 
 ## Entities
 
@@ -36,11 +37,36 @@ Tracks which migration files have been applied.
 | `version` | TEXT PRIMARY KEY | no | — | Filename stem of the applied migration (e.g. `0001_initial`). |
 | `applied_at` | TEXT NOT NULL | no | — | RFC3339 UTC timestamp of application. |
 
-### Virtual: `entries_fts` (arrives in STAGE-002)
+### Virtual: `entries_fts` (shipped in SPEC-011)
 
-SQLite FTS5 virtual table mirroring `entries(title, description, tags,
-project, impact)`. Populated via triggers on `entries` insert/update/
-delete. Used by `brag search`.
+External-content FTS5 virtual table indexing `title`, `description`,
+`tags`, `project`, `impact` from `entries`. Does not store the content
+itself — only an inverted index referencing `entries` by `id` via
+`content_rowid='id'`. Kept in sync by AFTER INSERT / UPDATE / DELETE
+triggers on `entries` (`entries_ai`, `entries_au`, `entries_ad`), so
+`Store.Add`, `Update`, and `Delete` stay unchanged. Uses the default
+unicode61 tokenizer, which splits on punctuation — comma-joined tags
+(DEC-004) tokenize one-tag-per-token for free.
+
+Backfill: the `0002_add_fts.sql` migration issues an
+`INSERT INTO entries_fts ... SELECT ... FROM entries` inside its
+transaction, so users upgrading with an existing DB get their rows
+indexed on the next `storage.Open`. On a fresh DB the SELECT returns
+zero rows and the backfill is a no-op.
+
+Shipped in `internal/storage/migrations/0002_add_fts.sql`:
+
+```sql
+CREATE VIRTUAL TABLE entries_fts USING fts5(
+    title, description, tags, project, impact,
+    content='entries',
+    content_rowid='id'
+);
+```
+
+Consumed by `brag search` (SPEC-012, pending) via a `Store.Search`
+method wrapping `SELECT rowid FROM entries_fts WHERE entries_fts
+MATCH ?`.
 
 ## Schema Evolution
 
@@ -66,9 +92,10 @@ Planned for STAGE-001 (ship with the initial migration):
 - `CREATE INDEX idx_entries_project ON entries(project);`
   — supports `list --project=...` filter (flags land in STAGE-002).
 
-Planned for STAGE-002:
-- Triggers maintaining `entries_fts` on `INSERT/UPDATE/DELETE` of
-  `entries`.
+Shipped in STAGE-002 (SPEC-011):
+- `entries_fts` FTS5 virtual table (see above).
+- AFTER INSERT / UPDATE / DELETE triggers on `entries`
+  (`entries_ai`, `entries_au`, `entries_ad`) maintaining `entries_fts`.
 
 No index on `tags` — the comma-joined format doesn't benefit from one.
 If tag filtering becomes a hot path, the migration to a

@@ -2,7 +2,7 @@
 task:
   id: SPEC-011
   type: story
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: M
@@ -580,26 +580,84 @@ If any of these feels necessary during build, write a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-011-fts5-virtual-table-and-triggers`
+- **PR (if applicable):** opened after `just advance-cycle SPEC-011 verify`
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - (none expected; design decisions are inline)
+  - None. All seven design decisions are inline per the spec's "Locked
+    design decisions" section; each mapped to at least one paired
+    failing test.
 - **Deviations from spec:**
-  - [list]
+  - **Existing tests updated (premise-audit miss in design).** The
+    spec claimed "No existing test is modified" under Acceptance
+    Criteria, but `TestOpen_MigrationsTracked` and `TestOpen_Idempotent`
+    in `internal/storage/store_test.go` encoded "exactly 1 migration
+    applied" (`[0001_initial]`, `count == 1`). Adding `0002_add_fts`
+    invalidates those premises; both tests were updated to assert
+    both versions are recorded (`[0001_initial, 0002_add_fts]`,
+    `count == 2`). This is the inverse-premise-audit lesson from
+    AGENTS.md §9 (SPEC-010): additive SQL migrations still invalidate
+    existing tests that encode the current migration count. Design
+    treated the spec as "purely additive" and explicitly said so
+    under Context — that was correct at the schema layer, but the
+    test-layer premise audit missed two count assertions. Should
+    have been listed under `## Outputs` as planned rewrites.
+  - **FTS5 MATCH expression wrapped in phrase-quotes in
+    `TestFTS_TriggerUpdateReplacesIndexedRow`.** Spec pseudo-SQL used
+    `MATCH 'old-trigger-phrase'` as a bare token; FTS5's query
+    grammar parses `-` as the unary NOT operator, so the string
+    parsed as `old NOT trigger NOT phrase` and failed with
+    `no such column: trigger` (FTS5 then tried to treat `trigger` as
+    a column-scoped predicate). Fixed by wrapping the hyphenated
+    titles in FTS5 phrase double-quotes (`'"old-trigger-phrase"'`).
+    Same assertion, same semantics — just the MATCH expression is
+    well-formed now. Documented inline in the test with a one-line
+    comment.
+  - **Backfill test reads 0001 from `migrationsFS` rather than
+    duplicating CREATE TABLE statements inline.** The spec flagged
+    both options as acceptable (read-from-embed "cleaner",
+    duplication "simpler") and asked the choice to be documented
+    inline; the test comment explains the chosen approach.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None. SPEC-012 (`brag search` + `Store.Search`) is already on
+    the stage backlog and depends on this spec's table being in
+    place — which it now is.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — The spec's "Acceptance Criteria / Existing tests remain green"
+   line plus the premise-audit claim of "purely additive, no
+   existing test deletion" read as a no-modifications-needed
+   guarantee. In practice, the second migration inevitably
+   invalidates the two tests that counted migrations. A line under
+   `## Outputs` listing those two tests as planned rewrites (per
+   AGENTS.md §9 SPEC-010 inverse rule) would have let me make the
+   change without having to stop and decide whether it was a
+   constraint break vs. a design miss. Similarly, the spec's
+   pseudo-SQL `MATCH 'old-trigger-phrase'` needed quoting to survive
+   FTS5's grammar — not a huge delay, but a noisy fail-first
+   result.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — Nothing missing from `/guidance/constraints.yaml`. The
+   implementation did not need any constraint the spec's list
+   didn't name. One small addition to a future FTS5 template: when
+   tests use `WHERE fts5 MATCH ?` with user-supplied tokens that
+   may contain `-`, they must be wrapped in FTS5 phrase-quotes —
+   this would have been useful as a note under "Notes for the
+   Implementer" alongside the tokenizer guidance.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — During design's premise audit, grep for every literal value
+   that encodes the current migration count (`0001_initial`,
+   `count != 1`, `len(versions) != 1`) — not just "tests that
+   assert behavior the spec changes". Additive schema work has a
+   predictable ripple through migration-count assertions that is
+   cheap to enumerate up front. The two tests updated here were
+   both obvious in retrospect; neither required new thought at
+   build time, only mechanical edits. That's the signature of a
+   missed Outputs entry.
 
 ---
 
