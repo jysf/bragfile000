@@ -174,14 +174,18 @@ cleanly to a different stage.
       locked-decisions-need-tests rule: removed behavior ↔
       planned test deletion, not a build-time discovery.
 
-- [ ] SPEC-011 (not yet framed, **M**) — **FTS5 virtual table +
-      triggers.** New migration `0002_add_fts.sql` creates
-      `entries_fts` mirroring `title, description, tags, project,
-      impact`; adds AFTER INSERT / UPDATE / DELETE triggers on
-      `entries` that keep `entries_fts` in sync. No CLI change in
-      this spec — isolates the schema move. Tests: migration runs on
-      a DB that has existing rows (backfill path); triggers keep FTS
-      synchronized across CRUD.
+- [ ] SPEC-011 (build, **M**) — **FTS5 virtual table + triggers.**
+      `0002_add_fts.sql` creates `entries_fts` as external-content
+      FTS5 over `entries` (title/description/tags/project/impact),
+      backfills existing rows inside the migration transaction,
+      and installs AFTER INSERT/UPDATE/DELETE triggers for
+      auto-sync. Pure SQL — zero Go code changes. 7 locked design
+      decisions, 10 paired failing tests in new
+      `internal/storage/fts_test.go` (smoke, shape, triggers,
+      migration-on-non-empty-DB backfill, MATCH-query, tokenizer).
+      Default unicode61 tokenizer splits on commas so `--tag auth`
+      semantics carry into `brag search auth`. Premise audit:
+      purely additive, no existing test deletion.
 
 - [ ] SPEC-012 (not yet framed, **S**) — **`brag search "query"` +
       `Store.Search(query)`.** Thin wrapper over FTS5's `MATCH`
