@@ -165,17 +165,14 @@ cleanly to a different stage.
       Earned a §9 rule: every locked design decision needs a paired
       failing test.
 
-- [ ] SPEC-010 (build, **S**) — **`brag add` no-args editor launch.**
-      Dispatches `runAdd` into flag-mode or editor-mode based on
-      whether any of the six entry-field flags (`-t/-d/-T/-p/-k/-i`)
-      is `Changed()`. Editor mode renders `editor.EmptyTemplate()`
-      (new helper, all 5 headers pre-listed empty), spawns `$EDITOR`,
-      parses + `Store.Add`s. Unchanged save → exit 0 `Aborted.`;
-      parse error (empty Title) → ErrUser; editor exec failure →
-      internal error. Reuses SPEC-009's `testEditFunc` hook (same
-      package-level var). 10 locked decisions, 10 failing tests (8
-      CLI + 3 editor-package). Flag mode byte-identical to SPEC-003/
-      SPEC-005. No new DECs.
+- [x] SPEC-010 (shipped on 2026-04-21, **S**) — **`brag add` no-args
+      editor launch.** Shipped runAdd dispatcher + runAddEditor +
+      `editor.EmptyTemplate()`. Flag mode byte-identical. 10
+      locked decisions / 10 paired tests. Deleted
+      `TestAdd_MissingTitleIsUserError` (premise inverted by
+      decision #1) — earned the inverse of the §9
+      locked-decisions-need-tests rule: removed behavior ↔
+      planned test deletion, not a build-time discovery.
 
 - [ ] SPEC-011 (not yet framed, **M**) — **FTS5 virtual table +
       triggers.** New migration `0002_add_fts.sql` creates
@@ -192,7 +189,7 @@ cleanly to a different stage.
       filter flags as `list` if trivial; otherwise they land in a
       later polish spec.
 
-**Count:** 5 shipped / 0 active / 3 pending
+**Count:** 6 shipped / 0 active / 2 pending
 
 **Complexity check:** 5 × S, 3 × M, 0 × L. Stage is at the upper
 bound of the 3–8 spec guideline. No split recommended — each spec

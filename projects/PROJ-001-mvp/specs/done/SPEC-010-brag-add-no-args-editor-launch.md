@@ -2,7 +2,7 @@
 task:
   id: SPEC-010
   type: story
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: S
@@ -659,13 +659,39 @@ If any of these feels necessary during build, write a new spec.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended 2026-04-21 during the **ship** cycle. Outcome-focused,
+distinct from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   When a locked design decision inverts or removes existing
+   behavior, explicitly enumerate the existing tests whose
+   premise is invalidated by the change. SPEC-010's decision #1
+   (no-flags → editor mode) inverted
+   `TestAdd_MissingTitleIsUserError`'s entire premise — that test
+   previously asserted "no-args is a user error" because Title
+   was required; after this spec, no-args opens the editor
+   instead. Build correctly deleted the test, but the deletion
+   was a build-time *discovery*, not a planned spec action. A
+   two-minute "premise audit" during design — walk each locked
+   decision against existing tests in the affected files — would
+   have made the deletion a planned output listed under Outputs
+   alongside the files modified.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   Yes — extend the AGENTS.md §9 "locked-decisions-need-tests"
+   rule (earned in SPEC-009 ship) with its inverse: when a locked
+   decision inverts or removes existing behavior, enumerate the
+   tests whose premise becomes invalid so their deletion is a
+   planned action listed in spec Outputs, not a build-time
+   discovery disclosed under Deviations. Both halves of the rule
+   (new behavior ↔ new test; removed behavior ↔ removed test)
+   make design-to-test traceability symmetric. Applied in this
+   ship commit.
 
-3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+3. **Is there a follow-up spec to write now before I forget?**
+   No. SPEC-011 (FTS5 virtual table + triggers, M) is the last
+   M-sized spec in STAGE-002 and the next pending item. SPEC-012
+   (`brag search`, S) follows it as the final STAGE-002 spec.
+   After SPEC-012 ships, STAGE-002 closes and the project moves
+   to STAGE-003 (export + summary) framing — or a dogfooding
+   pause, user's call then.
