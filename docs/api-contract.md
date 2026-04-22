@@ -50,14 +50,30 @@ brag add --title "shipped the auth refactor" \
 **STAGE-002 (editor-launch form):**
 
 ```
-brag add            # no args → opens $EDITOR on a template buffer
+brag add            # no entry-field flags → opens $EDITOR on a template buffer
 ```
 
-- Template is a markdown file with YAML front-matter holding the
-  optional fields (tags/project/type/impact) and a `## Description`
-  body section. On save+exit, `brag` parses the buffer, validates
-  required fields, and inserts. If the user saves an empty buffer
-  (template unchanged), the command aborts with exit 0 and no write.
+Dispatch rule: if any of `--title/-t`, `--description/-d`, `--tags/-T`,
+`--project/-p`, `--type/-k`, `--impact/-i` is set, `brag add` runs in
+flag mode (above). Otherwise it runs in editor mode. The persistent
+`--db` flag is a path override, not an entry field — `brag add --db
+/tmp/x.db` still opens the editor.
+
+`brag` resolves the editor as `$EDITOR` → `$VISUAL` → `vi`, writes a
+template (a `net/textproto`-style header block plus blank-line
+separator plus empty body — see DEC-009 for the format) to a temp `.md`
+file, and spawns the editor against it. On save:
+
+- Successful save with a valid `Title:` header → row inserted; the
+  inserted ID is printed to stdout (mirrors flag-mode contract so
+  `id=$(brag add)` works); stderr empty; exit 0.
+- Saving byte-identical content (SHA-256 comparison — i.e. the
+  template was not modified) aborts cleanly: stderr prints
+  `Aborted.`, exit 0, DB untouched.
+- Saving a buffer that fails parse (missing or empty `Title:` header)
+  exits 1 (user error); the DB is unchanged.
+- Editor exec failure (e.g. `:cq` in vim with a modified buffer)
+  exits 2 (internal error); the DB is unchanged.
 
 ### `brag list` — list entries
 

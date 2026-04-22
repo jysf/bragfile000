@@ -57,6 +57,15 @@ func Render(f Fields) []byte {
 	return b.Bytes()
 }
 
+// EmptyTemplate returns a buffer shaped per DEC-009 with all five
+// editable headers pre-listed but empty. Distinct from Render(Fields{}),
+// which omits empty-valued headers — the template is a UX hint shown
+// to users in editor-launch mode (e.g. `brag add` with no flags), not
+// a renderer output.
+func EmptyTemplate() []byte {
+	return []byte("Title: \nTags: \nProject: \nType: \nImpact: \n\n")
+}
+
 // Parse reads the header block and body out of buf and returns the
 // populated Fields. Header keys are case-insensitive (canonicalized by
 // net/textproto). Unknown headers are silently ignored. A missing or

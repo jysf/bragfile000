@@ -151,6 +151,40 @@ func TestParse_MultilineDescription(t *testing.T) {
 	}
 }
 
+func TestEmptyTemplate_ContainsAllHeaders(t *testing.T) {
+	tpl := string(EmptyTemplate())
+	wanted := []string{"Title: \n", "Tags: \n", "Project: \n", "Type: \n", "Impact: \n"}
+	prev := -1
+	for _, s := range wanted {
+		idx := strings.Index(tpl, s)
+		if idx < 0 {
+			t.Errorf("EmptyTemplate missing header substring %q; got %q", s, tpl)
+			continue
+		}
+		if idx <= prev {
+			t.Errorf("header %q must appear after the previous one (idx=%d, prev=%d) in %q", s, idx, prev, tpl)
+		}
+		prev = idx
+	}
+}
+
+func TestEmptyTemplate_EndsWithBlankLine(t *testing.T) {
+	tpl := string(EmptyTemplate())
+	if !strings.HasSuffix(tpl, "Impact: \n\n") {
+		t.Errorf("EmptyTemplate must end with %q (header block + blank line); got %q", "Impact: \\n\\n", tpl)
+	}
+}
+
+func TestEmptyTemplate_ParsesToMissingTitleError(t *testing.T) {
+	_, err := Parse(EmptyTemplate())
+	if err == nil {
+		t.Fatalf("Parse(EmptyTemplate()): expected error, got nil")
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "title") {
+		t.Errorf("error must mention 'title'; got %q", err.Error())
+	}
+}
+
 func TestRoundTrip_AllFields(t *testing.T) {
 	f := Fields{
 		Title:       "shipped auth refactor",

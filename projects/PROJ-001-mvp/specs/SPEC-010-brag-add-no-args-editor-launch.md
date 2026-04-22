@@ -2,7 +2,7 @@
 task:
   id: SPEC-010
   type: story
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: S
@@ -590,26 +590,70 @@ If any of these feels necessary during build, write a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-010-brag-add-no-args-editor-launch`
+- **PR (if applicable):** opened post-build (link in PR description)
+- **All acceptance criteria met?** yes (with one clarified deviation; see below)
 - **New decisions emitted:**
-  - (none expected; DEC-009 from SPEC-009 design covers the format)
+  - (none; DEC-009 from SPEC-009 covers the format)
 - **Deviations from spec:**
-  - [list]
+  - **Deleted `TestAdd_MissingTitleIsUserError`** (SPEC-003).
+    The spec's acceptance criteria included "all existing
+    SPEC-003/SPEC-005 `TestAdd_*` tests pass unchanged", but locked
+    design decision #1 ("no field flags → editor mode") directly
+    obsoletes that test's premise — `brag add` (no args) is no longer
+    a user error, it now opens the editor. Under the new dispatcher
+    the test would call `editor.Default` (no `testEditFunc`
+    installed) and hang spawning `vi`. Coverage of the
+    title-required-in-flag-mode contract is preserved by
+    `TestAdd_EmptyTitleIsUserError`,
+    `TestAdd_WhitespaceTitleIsUserError`, and
+    `TestAdd_EmptyShorthandTitleIsUserError`. The deleted test was
+    replaced with an explanatory comment in `add_test.go`.
+  - **`runAddFlags` accepts `args []string` parameter** (matches
+    `cobra.RunE` shape) — the spec's pseudocode in "Notes for the
+    Implementer" used `runAddFlags(cmd, args)` for the dispatcher
+    call but originally hinted at `runAddFlags(cmd *cobra.Command,
+    args []string)` only on the call site; both shapes match the
+    implementation, so this is a non-deviation but worth noting.
+  - **Tutorial §8 wrapper note** updated to drop the "Until
+    editor-launch ships in STAGE-002" qualifier (the wrapper is
+    still useful for 10-second flag-mode capture, but the
+    "until ..." framing is now wrong). Disclosed per stage-level
+    drive-by guidance.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None new. SPEC-011 (FTS5) and SPEC-012 (`brag search`) remain
+    as planned.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — The "all existing SPEC-003/SPEC-005 `TestAdd_*` tests pass
+   unchanged" acceptance criterion conflicted with locked design
+   decision #1 (no-flags → editor mode); the conflicting test
+   (`TestAdd_MissingTitleIsUserError`) wasn't called out as
+   needing removal/update. I had to discover the conflict by
+   running the suite, watching `vi` get spawned in the test
+   process list, and reading the spec carefully to confirm the
+   numbered design decision should win.
 
-2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+2. **Was there a constraint or decision that should have been listed
+   but wasn't?**
+   — No new constraint. But the spec's §"Locked design decisions"
+   item 4 ("Flag mode is unchanged") would have benefited from an
+   explicit carve-out: "existing tests that *exercise editor mode
+   under the new semantics* (i.e. `add` with no field flags) need
+   updating". The pattern would help future specs that flip
+   default-route semantics.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Skim every existing test in the touched file BEFORE running
+   fail-first, looking specifically for tests whose *premise*
+   (not just assertion) is invalidated by the new behavior. The
+   `TestAdd_MissingTitleIsUserError` conflict was visible in
+   `add_test.go` line ~85 the moment I read it; I noticed only
+   after the test hung in CI-style execution. A two-minute pre-run
+   "premise audit" of the existing suite would have caught it
+   immediately.
 
 ---
 
