@@ -165,11 +165,17 @@ cleanly to a different stage.
       Earned a §9 rule: every locked design decision needs a paired
       failing test.
 
-- [ ] SPEC-010 (not yet framed, **S**) — **`brag add` no-args editor
-      launch.** Reuses `internal/editor` from SPEC-009. `brag add`
-      with no flags opens `$EDITOR` on an empty template; save writes
-      via `Store.Add`. If the buffer is unchanged/empty, the command
-      aborts with exit 0 and no write.
+- [ ] SPEC-010 (build, **S**) — **`brag add` no-args editor launch.**
+      Dispatches `runAdd` into flag-mode or editor-mode based on
+      whether any of the six entry-field flags (`-t/-d/-T/-p/-k/-i`)
+      is `Changed()`. Editor mode renders `editor.EmptyTemplate()`
+      (new helper, all 5 headers pre-listed empty), spawns `$EDITOR`,
+      parses + `Store.Add`s. Unchanged save → exit 0 `Aborted.`;
+      parse error (empty Title) → ErrUser; editor exec failure →
+      internal error. Reuses SPEC-009's `testEditFunc` hook (same
+      package-level var). 10 locked decisions, 10 failing tests (8
+      CLI + 3 editor-package). Flag mode byte-identical to SPEC-003/
+      SPEC-005. No new DECs.
 
 - [ ] SPEC-011 (not yet framed, **M**) — **FTS5 virtual table +
       triggers.** New migration `0002_add_fts.sql` creates
