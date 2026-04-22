@@ -249,3 +249,69 @@ func (s *Store) List(f ListFilter) ([]Entry, error) {
 	}
 	return out, nil
 }
+
+// Search returns entries whose entries_fts row matches the given FTS5
+// query, ordered by FTS5 rank ascending (most relevant first) with
+// entries.id DESC as the tie-break. The caller (CLI layer) is
+// responsible for validating and transforming user input into a valid
+// MATCH expression per DEC-010; Store.Search passes query to MATCH
+// verbatim and assumes it is non-empty.
+//
+// limit <= 0 means no LIMIT is applied (matches Store.List's zero-is-
+// no-limit convention).
+func (s *Store) Search(query string, limit int) ([]Entry, error) {
+	q := `SELECT e.id, e.title, e.description, e.tags, e.project,
+	             e.type, e.impact, e.created_at, e.updated_at
+	      FROM entries_fts
+	      JOIN entries e ON e.id = entries_fts.rowid
+	      WHERE entries_fts MATCH ?
+	      ORDER BY rank, e.id DESC`
+	args := []interface{}{query}
+	if limit > 0 {
+		q += " LIMIT ?"
+		args = append(args, limit)
+	}
+
+	rows, err := s.db.QueryContext(context.Background(), q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("search entries: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]Entry, 0)
+	for rows.Next() {
+		var (
+			e                                       Entry
+			description, tags, project, typ, impact sql.NullString
+			createdAtRaw, updatedAtRaw              string
+		)
+		if err := rows.Scan(
+			&e.ID, &e.Title, &description, &tags, &project, &typ, &impact,
+			&createdAtRaw, &updatedAtRaw,
+		); err != nil {
+			return nil, fmt.Errorf("search entries: %w", err)
+		}
+		e.Description = description.String
+		e.Tags = tags.String
+		e.Project = project.String
+		e.Type = typ.String
+		e.Impact = impact.String
+
+		created, err := time.Parse(time.RFC3339, createdAtRaw)
+		if err != nil {
+			return nil, fmt.Errorf("search entries: parse created_at %q: %w", createdAtRaw, err)
+		}
+		updated, err := time.Parse(time.RFC3339, updatedAtRaw)
+		if err != nil {
+			return nil, fmt.Errorf("search entries: parse updated_at %q: %w", updatedAtRaw, err)
+		}
+		e.CreatedAt = created.UTC()
+		e.UpdatedAt = updated.UTC()
+
+		out = append(out, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("search entries: %w", err)
+	}
+	return out, nil
+}

@@ -2,7 +2,7 @@
 task:
   id: SPEC-012
   type: story
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: S
@@ -648,26 +648,65 @@ pull.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-012-brag-search-command`
+- **PR (if applicable):** _opened after advance-cycle_
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - (none expected; DEC-010 was emitted during this spec's design)
+  - None. DEC-010 was emitted during this spec's design; no build-
+    time decisions required a new DEC.
 - **Deviations from spec:**
-  - [list]
+  - `TestSearchCmd_HappyPath`: the spec narrative hinted at an
+    ordering assertion ("id 2 then id 1 by rank"), but since both
+    rows have the matching phrase in different fields the bm25
+    rank difference is driver-dependent. I relaxed the assertion
+    to set-membership plus the deterministic exclusion of row 3.
+    Ordering is still locked by the dedicated
+    `TestSearch_OrdersByRelevanceThenIdDesc` storage test, which
+    uses genuinely identical ranks (same token in the same field)
+    to exercise the `id DESC` tie-break unambiguously.
+  - Did not introduce the optional `storage.ErrEmptyQuery`
+    sentinel. `buildFTS5Query` validates at the CLI layer per
+    locked decision #8 ("storage stays dumb"), so `Store.Search`
+    never sees an empty query in practice. The sentinel would
+    have been unused code.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None new. The spec's "Out of scope" list (filter flags,
+    `--raw`, snippet highlighting, column-specific search, fuzzy,
+    JSON output) already enumerates the obvious polish candidates.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — The `TestSearchCmd_HappyPath` description asserted "id 2 then
+   id 1 by rank" in a three-row seed where the same phrase appears
+   in title vs. description — bm25 ordering between those cases
+   isn't obvious without running the query, and the spec didn't
+   justify the expected order. I left ordering to the dedicated
+   tie-break test (which uses a seed explicitly engineered for
+   identical ranks) and only asserted set-membership + exclusion
+   in the happy-path test. Minor rather than blocking; closer
+   attention during design to "can I actually predict this rank
+   order?" would have avoided the ambiguity.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. DEC-005/006/007/010 cover every non-trivial decision the
+   build touched. Constraints were exhaustive: `no-sql-in-cli-layer`
+   kept `search.go` free of DB imports, `errors-wrap-with-context`
+   applied to every fmt.Errorf in `runSearch` / `Store.Search`,
+   `stdout-is-for-data-stderr-is-for-humans` drove the
+   both-streams-empty assertion on zero-result queries. Tests
+   under `internal/cli/**` don't touch `database/sql`; storage
+   tests use `t.TempDir()` via `newTestStore`.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Run `gofmt -w` on new test files as soon as I write them —
+   the first `gofmt -l .` listed `search_test.go` as unformatted
+   because of struct-literal comment alignment (cosmetic). Saved
+   me one round-trip but would have been cheaper to do
+   preemptively. Also: the spec's fail-first checklist was spot
+   on — running `go test ./...` before writing any implementation
+   caught nothing (as hoped) but confirmed the symbol-missing
+   failures were the only failures, giving a clean floor.
 
 ---
 
