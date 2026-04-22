@@ -174,26 +174,34 @@ cleanly to a different stage.
       locked-decisions-need-tests rule: removed behavior ↔
       planned test deletion, not a build-time discovery.
 
-- [ ] SPEC-011 (build, **M**) — **FTS5 virtual table + triggers.**
-      `0002_add_fts.sql` creates `entries_fts` as external-content
-      FTS5 over `entries` (title/description/tags/project/impact),
-      backfills existing rows inside the migration transaction,
-      and installs AFTER INSERT/UPDATE/DELETE triggers for
-      auto-sync. Pure SQL — zero Go code changes. 7 locked design
-      decisions, 10 paired failing tests in new
-      `internal/storage/fts_test.go` (smoke, shape, triggers,
-      migration-on-non-empty-DB backfill, MATCH-query, tokenizer).
-      Default unicode61 tokenizer splits on commas so `--tag auth`
-      semantics carry into `brag search auth`. Premise audit:
-      purely additive, no existing test deletion.
+- [x] SPEC-011 (shipped on 2026-04-22, **M**) — **FTS5 virtual
+      table + triggers.** Shipped `0002_add_fts.sql` with
+      external-content FTS5, backfill-in-transaction, and three
+      sync triggers. 10 tests green; 7 locked decisions honored.
+      One punch-list-adjacent deviation honestly disclosed: the
+      premise audit missed `TestOpen_MigrationsTracked`'s literal
+      count-of-1 assertion. Earned the additive-invalidation
+      corollary to the §9 premise-audit rule (SPEC-010's rule
+      handled inversion/removal; SPEC-011's extends it to
+      addition). Second deviation flagged as SPEC-012 design
+      input: FTS5's `-` operator is binary NOT, so hyphenated
+      user queries need phrase-quoting — `brag search` design
+      session must decide auto-quote vs raw syntax.
 
 - [ ] SPEC-012 (not yet framed, **S**) — **`brag search "query"` +
       `Store.Search(query)`.** Thin wrapper over FTS5's `MATCH`
       operator. Output format mirrors `list` (tab-separated). Same
       filter flags as `list` if trivial; otherwise they land in a
-      later polish spec.
+      later polish spec. **Open design question flagged by
+      SPEC-011**: FTS5's `-` operator is binary NOT, so a user
+      query like `"auth-refactor"` parses as `auth NOT refactor`
+      and returns nothing. SPEC-012 design session must decide
+      whether to auto-quote user input (`MATCH '"auth-refactor"'`),
+      expose raw FTS5 syntax (power but surprise), or a hybrid.
+      Recommend auto-quote for MVP; document the trade-off in the
+      spec's Notes and add a DEC if it's non-obvious.
 
-**Count:** 6 shipped / 0 active / 2 pending
+**Count:** 7 shipped / 0 active / 1 pending
 
 **Complexity check:** 5 × S, 3 × M, 0 × L. Stage is at the upper
 bound of the 3–8 spec guideline. No split recommended — each spec

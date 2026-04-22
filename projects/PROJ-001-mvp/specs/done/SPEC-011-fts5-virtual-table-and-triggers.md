@@ -2,7 +2,7 @@
 task:
   id: SPEC-011
   type: story
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M
@@ -663,13 +663,52 @@ If any of these feels necessary during build, write a new spec.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended 2026-04-22 during the **ship** cycle. Outcome-focused,
+distinct from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   Two distinct lessons surfaced.
+
+   **First**, the §9 "premise audit" rule earned in SPEC-010 was
+   scoped too narrowly. It said: "when a locked decision inverts
+   or removes existing behavior, enumerate the invalidated tests."
+   SPEC-011 showed that *additive* changes can also invalidate
+   assertions — `TestOpen_MigrationsTracked` asserted "exactly 1
+   row in `schema_migrations`," which a new migration naturally
+   breaks without inverting any behavior. The rule needs to cover
+   any assertion whose literal value is coupled to a spec-level
+   count or magic number. Build session's concrete heuristic
+   (Q3 of build reflection): grep for literal counts in existing
+   tests when adding anything to a tracked collection (migrations,
+   DECs, constraints). Applied in Q2 below.
+
+   **Second**, FTS5's `-` operator is binary NOT, so a query like
+   `"SPEC-011"` parses as `SPEC NOT 011` unless phrase-quoted.
+   Build discovered this during test authoring; one test's MATCH
+   expression needed wrapping in phrase-quotes. This is a real
+   design concern for SPEC-012's `brag search` — user queries
+   with hyphens would silently return no matches without auto-
+   quoting. SPEC-012 design needs to make a call: auto-quote user
+   input, expose raw FTS5 syntax, or hybrid. Flagged as an open
+   design question for SPEC-012.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   Yes — extend the AGENTS.md §9 "premise audit" rule to cover
+   additive-but-invalidating changes, not just inversions/
+   removals. Concrete language: "when a spec adds to a tracked
+   collection (migrations, DECs, constraints, entries of a fixed-
+   shape structure), grep for literal-count assertions in existing
+   tests and enumerate them as planned updates under Outputs." The
+   two halves of the rule now match: **inversion/removal** →
+   planned test deletion (SPEC-010's rule); **addition** → planned
+   count-bump (this spec's rule). Symmetric design-time
+   traceability. Applied in this ship commit.
 
-3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+3. **Is there a follow-up spec to write now before I forget?**
+   No. SPEC-012 (`brag search`, S) is next pending and will
+   inherit the FTS5-query-quoting concern as part of its design —
+   the SPEC-012 design session must decide how user input maps to
+   FTS5 MATCH syntax. STAGE-002 closes after SPEC-012 ships.
+   STAGE-003 framing (scoped to include JSON export + emoji
+   decoration, pending the user's full additional-ideas list) is
+   the next major work.

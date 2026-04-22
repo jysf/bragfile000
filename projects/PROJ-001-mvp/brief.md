@@ -57,8 +57,14 @@ real entries.
 - Editor-launch capture: `brag add` with no args opens `$EDITOR` against
   a templated markdown buffer; fields parsed on save (STAGE-002).
 - Export: Markdown report and raw SQLite file copy (STAGE-003).
+  JSON export added to STAGE-003 scope (2026-04-21) — useful for
+  AI/programmatic consumers.
 - Rule-based `summary --range=week|month` (group by tag/project, counts,
   rendered as markdown). No AI (STAGE-003).
+- UX polish: emoji decoration on stderr feedback messages and the
+  `brag show` / `brag list --pretty` output, with `NO_COLOR` +
+  TTY-detection escape hatch following industry conventions
+  (STAGE-003, added 2026-04-21).
 - Distribution: goreleaser build, GitHub release, homebrew tap
   (STAGE-004).
 - Data model designed so a future `brag ai-summary` command can read rows
@@ -88,8 +94,12 @@ real entries.
       `list` filter flags, `show`/`edit`/`delete`, editor-launch for
       `add` and `edit`, FTS5 `search`. 8-spec backlog (SPEC-005–012);
       target 2026-05-04.
-- [ ] STAGE-003 (not yet framed) — Export & summary: markdown export,
-      sqlite-file export, rule-based `summary`.
+- [ ] STAGE-003 (not yet framed) — Export, summary, and UX polish:
+      markdown export, sqlite-file export, rule-based `summary`,
+      JSON export (for AI/programmatic consumers), emoji decoration
+      on stderr feedback + `show`/`list` output (with `NO_COLOR` +
+      TTY-detection escape hatch). Framing pending user's full
+      additional-ideas list — scope will be finalized then.
 - [ ] STAGE-004 (not yet framed) — Distribution: goreleaser, homebrew
       tap, README, release notes.
 
