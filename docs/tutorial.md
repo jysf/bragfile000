@@ -1,7 +1,7 @@
 # Using `brag` — tutorial
 
-> **Scope:** what you can do with `brag` today. `search`, `export`, and
-> `summary` arrive in later stages. See
+> **Scope:** what you can do with `brag` today. `export` and `summary`
+> arrive in later stages. See
 > [`projects/PROJ-001-mvp/brief.md`](../projects/PROJ-001-mvp/brief.md)
 > for the full plan.
 

@@ -2,7 +2,7 @@
 task:
   id: SPEC-012
   type: story
-  cycle: verify
+  cycle: build
   blocked: false
   priority: high
   complexity: S
@@ -707,6 +707,26 @@ pull.
    on — running `go test ./...` before writing any implementation
    caught nothing (as hoped) but confirmed the symbol-missing
    failures were the only failures, giving a clean floor.
+
+### Punch-list iteration (2026-04-22)
+
+Verify flagged a single doc-only inconsistency: `docs/tutorial.md`
+line 3's Scope blurb still listed `search` alongside `export` and
+`summary` as arriving "in later stages," contradicting the new
+§4.5 "Search your entries" subsection and the removal of `brag
+search` from the §9 "What's NOT there yet" table — both of which
+this PR already added.
+
+Fix: struck `search` from the line 3 list; left `export` and
+`summary` in place (still accurate — STAGE-003). One-line edit,
+no Go code touched, no test touched. `gofmt -l .`, `go vet ./...`,
+and `go test ./...` remained clean (doc-only change).
+
+Lesson: when updating scope/status documentation, grep the whole
+doc for *every* mention of the feature's status — not just the
+primary status table. The line-3 Scope blurb and the §9 table
+were two coordinated claims about the same fact; updating one and
+missing the other produced visible contradiction in the same file.
 
 ---
 
