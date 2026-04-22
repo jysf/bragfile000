@@ -122,6 +122,150 @@ real entries.
 - Future project: TUI / Bubble Tea polish layer over the same data.
 - Future project: sync or export-to-cloud if that ever becomes desired.
 
+## STAGE-003 pre-framing notes
+
+*Seed notes for the STAGE-003 framing session (Prompt 1c). This
+section gets consumed into the stage file's Design Notes + Spec
+Backlog when STAGE-003 is framed, and trimmed from the brief at
+that point. Keep content here accurate; it's the handoff.*
+
+### Emoji decoration (accumulated 2026-04-21)
+
+**Four-pass plan, each pass a separate candidate spec.** The
+framer can decide how many to include in STAGE-003 vs. defer.
+
+**Pass 1 — stderr feedback (S, low risk, recommended for STAGE-003).**
+Prefix emoji on the four existing stderr feedback lines produced
+by `brag edit` and `brag delete`:
+- `Updated.` → `✏️ Updated.`
+- `Deleted.` → `🗑 Deleted.`
+- `No changes.` → `— No changes.`
+- `Aborted.` → `✗ Aborted.`
+- `Delete entry N ("title")? [y/N]` → `⚠️ Delete entry N (...)? [y/N]`
+
+Zero risk to stdout scripting (stderr-for-humans constraint
+already protects this). Existing tests assert on substrings
+(`"Updated."`, `"Deleted."`) which remain intact — the emoji is
+prefix-only. ~5 line code changes. No TTY detection needed for
+Pass 1; stderr is always human-facing.
+
+**Pass 2 — type-based emoji in `brag show` (S).**
+`brag show <id>` produces markdown; emoji in markdown renders
+fine everywhere. Decorate the `type` row of the metadata table:
+- `shipped` → 🚀
+- `fixed` → 🔧
+- `learned` → 🎓
+- `documented` → 📝
+- `mentored` → 🤝
+- `unblocked` → 🔓
+- `reviewed` → 👀
+- (unknown types) → `•` or no icon
+
+Example:
+```
+| type        | 🚀 shipped                    |
+```
+Still valid markdown, still pipeable, still parseable. Copy-paste
+into review docs preserves the emoji.
+
+**Pass 3 — `brag list --pretty` (S or S+).**
+A new `--pretty` flag that opts into emoji + formatting. Default
+`brag list` stays plain for scripting. `--pretty` prefixes each
+row with the type's emoji (Pass 2's mapping). Tab-separated
+columns stay stable.
+
+Example:
+```
+🚀  42  2026-04-21  shipped the SPEC-011 FTS5 layer
+🔧  41  2026-04-20  fixed the stale .gitignore rule
+🎓  40  2026-04-19  learned SQLite's external-content FTS5 pattern
+```
+
+**Pass 4 — TTY auto-detection + `NO_COLOR` (S).**
+Industry conventions for colored / decorated CLI output:
+- If stdout is a terminal (via
+  `golang.org/x/term.IsTerminal(int(os.Stdout.Fd()))`), pretty mode
+  on by default for `list` and `show`.
+- If stdout is piped (redirected to file, `grep`, `cut`), plain
+  mode automatically — prevents polluting pipes with emoji that
+  downstream tools can't parse.
+- Respect `NO_COLOR` env var (see https://no-color.org) — any
+  non-empty value forces plain mode. Industry standard; also what
+  accessibility-tool users set.
+- Optional `BRAG_PLAIN=1` env var as brag-specific override.
+
+Implementation: ~10 lines in a small helper; used by `list`,
+`show`, and any future decorated output.
+
+### Emoji caveats worth naming in the spec(s)
+
+- **Cross-platform rendering.** Modern terminals (GNOME Terminal,
+  Konsole, Alacritty, Kitty, WezTerm, iTerm2, Windows Terminal,
+  st) + any modern Linux/macOS distro with Noto Color Emoji
+  handle these fine. Bare Linux TTY, legacy cmd.exe on Windows 10,
+  and some enterprise-locked-down terminals don't. `NO_COLOR`
+  + `--plain` is the escape hatch for those 2–5% of users.
+- **Column width.** Emoji are typically 2 cells wide but some
+  terminals compute this as 1, causing subtle misalignment in
+  markdown tables. Cosmetic only.
+- **Variation selectors + ZWJ sequences.** Avoid complex emoji
+  like 👨‍💻 (combined codepoints); prefer single-codepoint
+  emoji (🚀, 🔧, 📝) which render consistently.
+- **Screen readers.** `"🚀 shipped"` reads as "rocket shipped."
+  Slightly noisy; screen-reader users typically set `NO_COLOR=1`
+  in their shell rc already.
+
+### JSON export (accumulated 2026-04-21)
+
+**Sibling of markdown / sqlite exports. Primary motivation: AI/
+programmatic consumers.** Example flow: a user's downstream AI
+agent reads `brag export --format json --since 90d` to produce a
+quarterly summary or resume bullet. Also useful for piping into
+`jq`, backup tooling, or cross-tool integration.
+
+Shape: an array of entry objects, one per entry. Field names
+match the SQL column names (`id`, `title`, `description`, `tags`,
+`project`, `type`, `impact`, `created_at`, `updated_at`). RFC3339
+timestamps as strings (matches storage layer). `tags` stays as a
+comma-joined string (matches DEC-004 — don't normalize to array
+here unless the design session has a reason).
+
+Example output:
+```json
+[
+  {
+    "id": 11,
+    "title": "Shipped FTS5 full-text search index layer...",
+    "description": "Shipped SPEC-011 — new 0002_add_fts.sql migration...",
+    "tags": "sqlite,fts5,migrations,search",
+    "project": "bragfile",
+    "type": "shipped",
+    "impact": "Prepared the data layer for brag search...",
+    "created_at": "2026-04-22T06:30:00Z",
+    "updated_at": "2026-04-22T06:30:00Z"
+  },
+  ...
+]
+```
+
+Same filter flags as `brag list` (so
+`brag export --format json --project bragfile --since 7d` works).
+Output to stdout by default; `--out file.json` to write to a file.
+
+Use stdlib `encoding/json` — no new dep needed. Pretty-printed by
+default (indent=2) for human readability; `--compact` flag to
+disable indentation for pipe consumers if anyone asks.
+
+### User's pending additional-ideas list
+
+*Placeholder — user is formatting a list of additional
+suggestions. When the list arrives, triage each into:*
+*(a) STAGE-003 inclusion, (b) a new polish-pass stage between
+STAGE-003 and STAGE-004, or (c) deferred to a future PROJ-00N.*
+*Then remove this placeholder.*
+
+---
+
 ## Project-Level Reflection
 
 *Filled in when status moves to shipped.*
