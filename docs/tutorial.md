@@ -90,6 +90,33 @@ Notes on the fields:
   business result). This is what you'll copy-paste into review
   self-assessments later — spend a few extra seconds on it.
 
+### Capture in `$EDITOR` (multi-paragraph descriptions)
+
+When you want to write a multi-paragraph description without fighting
+shell quoting, run `brag add` with no flags:
+
+```bash
+brag add
+# opens $EDITOR on a template that looks like:
+#
+#   Title:
+#   Tags:
+#   Project:
+#   Type:
+#   Impact:
+#
+#   <body / description goes here>
+#
+# fill in Title (required) and any other fields, save + quit → prints
+# the inserted ID on stdout. Save unchanged (or quit without writing) →
+# prints "Aborted." on stderr, exit 0, no row inserted.
+```
+
+The editor is resolved as `$EDITOR` → `$VISUAL` → `vi`, same as `brag
+edit`. Setting any single entry-field flag (e.g. `-t`, `-d`, …) flips
+back to flag mode and bypasses the editor; the persistent `--db` flag
+does not (`brag add --db /tmp/work.db` still opens the editor).
+
 ---
 
 ## 4. Read them back
@@ -250,7 +277,7 @@ brag add --title "today's best thing" \
          --impact "why it mattered"
 ```
 
-Until editor-launch ships in STAGE-002, a tiny wrapper saves typing:
+For 10-second flag-mode capture, a tiny wrapper saves typing:
 
 ```bash
 # add to ~/.zshrc
@@ -263,6 +290,9 @@ Then:
 bragit untangled a gnarly CORS bug
 ```
 
+For longer narrative entries, `brag add` (no args) opens `$EDITOR` —
+see §3 above.
+
 ---
 
 ## 9. What's NOT there yet
@@ -271,7 +301,6 @@ So you don't ask the tool for things it can't do:
 
 | Want | Status |
 |---|---|
-| `brag add` with no args (editor-launch on `$EDITOR`) | STAGE-002 |
 | `brag search "query"` (FTS5 full-text search) | STAGE-002 |
 | `brag export --format markdown` | STAGE-003 |
 | `brag export --format sqlite` | STAGE-003 |
