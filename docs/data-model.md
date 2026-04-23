@@ -64,9 +64,10 @@ CREATE VIRTUAL TABLE entries_fts USING fts5(
 );
 ```
 
-Consumed by `brag search` (SPEC-012, pending) via a `Store.Search`
-method wrapping `SELECT rowid FROM entries_fts WHERE entries_fts
-MATCH ?`.
+Consumed by `brag search` (SPEC-012, shipped 2026-04-22) via the
+`Store.Search(query, limit)` method. Query syntax is locked by
+DEC-010 (tokenize + phrase-quote + AND-join); see the DEC for the
+auto-quoting rationale and the rejected alternatives.
 
 ## Schema Evolution
 

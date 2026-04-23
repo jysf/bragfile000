@@ -143,8 +143,8 @@ brag list | awk -F'\t' '{print $1, $3}'    # id + title, space-separated
 ```
 
 `list` shows only the one-line summary. Description, tags, project,
-type, and impact are stored but not printed. `brag show <id>` arrives
-in STAGE-002 to dump a single entry in full.
+type, and impact are stored but not printed — use `brag show <id>`
+(below) to dump a single entry in full.
 
 ### Filter flags
 
