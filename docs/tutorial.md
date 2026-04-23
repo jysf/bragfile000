@@ -165,6 +165,25 @@ brag list --since 2026-01-01                    # since a specific date
 - `--limit N` caps the row count.
 - Multiple filters combine via AND.
 
+### See project at scan time
+
+Add `-P` (or `--show-project`) to slot a `project` column between
+`created_at` and `title`:
+
+```bash
+brag list -P
+# 4	2026-04-20T21:34:12Z	platform	cut p99 login latency from 600ms to 120ms
+# 3	2026-04-20T21:33:05Z	-	untangled the auth flake
+# 2	2026-04-20T21:32:41Z	platform	shipped STAGE-001 end-to-end in a day
+```
+
+Entries with no project render as `-` so the tab-separated shape
+stays consistent. Plain `brag list` (without `-P`) keeps the
+three-column output unchanged, so existing `cut -f3` scripts that
+pull titles from plain output keep working — under `-P`, titles
+shift to field 4 (`cut -f4`) and the project lands at field 3
+(`cut -f3`).
+
 ### Search your entries
 
 `brag search "query"` runs a full-text search over every indexed

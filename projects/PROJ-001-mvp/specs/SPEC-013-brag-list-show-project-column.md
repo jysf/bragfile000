@@ -7,7 +7,7 @@
 task:
   id: SPEC-013
   type: story                      # epic | story | task | bug | chore
-  cycle: build
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -582,28 +582,89 @@ If any of these feels necessary during build, write a new spec.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-013-brag-list-show-project-column`
+- **PR (if applicable):** (opened after `just advance-cycle`)
+- **All acceptance criteria met?** yes
+  - Fail-first confirmed: 6 of 7 new tests failed on unknown `-P` /
+    missing `--show-project` substrings; `TestListCmd_PlainOutput
+    ByteIdenticalToSTAGE002` passed immediately as the spec
+    anticipated (regression lock on the already-correct default
+    shape).
+  - After implementation all 7 new tests pass, every prior
+    `TestListCmd_*` is still green, `gofmt -l .` empty, `go vet
+    ./...` clean, `CGO_ENABLED=0 go build ./...` succeeds,
+    `go test ./...` and `just test` both green.
+  - `docs/api-contract.md`, `docs/tutorial.md`, and `README.md` all
+    mention `-P` / `--show-project`. Premise-audit grep
+    (`grep -rn 'brag list' docs/ README.md`) verified: every
+    default-mode mention correctly describes flag-off behavior that
+    `-P` preserves; no stale "three columns" claims anywhere in the
+    repo.
+  - `SPEC-014-brag-list-show-project-column.md` duplicate template
+    deleted; the slot is clear for the real SPEC-014 (JSON/TSV
+    formats + DEC-011) to scaffold when STAGE-003 reaches it.
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+  - None. Spec anticipated no DEC and none proved necessary.
+    Implementation is a pure cobra flag declaration
+    (DEC-006 pattern) plus a two-branch `Fprintf` in `runList`;
+    DEC-007 doesn't fire for a bool flag with a default, and the
+    spec explicitly said the pattern carries forward as a negative
+    (no `MarkFlagRequired`).
 - **Deviations from spec:**
-  - [list]
+  - None. Followed the spec's literal code sketch for the flag
+    declaration and the two-branch conditional. Usage string
+    matches the spec's prescribed wording verbatim
+    (`"include project in output (adds column between created_at
+    and title)"`). No helper extracted. Doc edits match the three
+    prescribed locations exactly. SPEC-014 template deletion
+    handled as the spec instructed; noted here (not as a
+    surprise) per the spec's "mention it under Deviations if it
+    surprises verify" conditional.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None. Out-of-scope items (`-P` on `brag search`, `--pretty`
+    bundle, `--columns`, default-on, helper extraction) are
+    already captured in the spec's Locked design decisions and
+    Out-of-scope sections.
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing, honestly. The spec handed over a literal code
+   sketch for both the `BoolP` declaration and the two-branch
+   `Fprintf`, named the exact usage-string substring the help
+   test asserts on, listed the file-by-file doc edits in order,
+   and called out the fail-first expectation that
+   `PlainOutputByteIdenticalToSTAGE002` would pass immediately
+   (with an explicit "this is NOT a SPEC-003 §9 silently-passing
+   violation" note so I wouldn't misclassify it under
+   Deviations). The premise audit under "status-change case" was
+   pre-walked, so the doc sweep was a three-edit exercise rather
+   than a grep-then-deliberate exercise. Zero build-time
+   ambiguity.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. The five constraints (no-sql-in-cli-layer, stdout-is-
+   for-data, errors-wrap-with-context, test-before-
+   implementation, one-spec-per-pr) and two decisions (DEC-006
+   cobra, DEC-007 validation pattern carried forward as a
+   negative) were the exact levers this implementation needed.
+   DEC-004 was cited as informational (tags unrelated to render)
+   and that framing was correct.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing substantive. One tiny observation: when I wrote
+   `TestListCmd_ShowProject_ComposedWithAllFilters`, my assertion
+   `strings.Contains(out, "hit")` technically allows a false
+   positive if a future miss-title happens to contain `hit` as a
+   substring. The spec's seeded titles (`"hit"`, `"miss-tag"`,
+   `"miss-project"`) don't collide, so the assertion is sound
+   given the fixture, and the line-count + field-index asserts
+   already lock the surviving-row shape tightly. Swapping the
+   three Contains asserts for a full-line equality would be
+   marginally stronger but also harder to read without an ID
+   round-trip. I'd keep it as-is on a replay.
 
 ---
 
