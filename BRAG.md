@@ -1,34 +1,39 @@
-# Guide for AI agents: helping the user capture brag-worthy work
+# BRAG.md — AI agent integration guide
 
-*Share this file (or its URL) with any Claude/AI session working on
-the user's projects. It's self-contained and can be dropped into a
-session context at any time.*
+Canonical guide for AI coding agents (Claude Code, Cursor, aider,
+Codex, whichever) working on the user's projects. Tells the agent
+how to propose capturing brag-worthy work moments into `brag`
+without becoming noisy.
+
+Drop this file into any project the user works on, or point the
+agent at `github.com/jysf/bragfile000/blob/main/BRAG.md`. It's
+self-contained and can be read cold.
 
 ---
 
 ## What is `brag`?
 
-`brag` is a local-first CLI tool the user built for tracking
-career-worthy work moments. It stores entries in a SQLite database
-at `~/.bragfile/db.sqlite` on the user's machine. The user
-accumulates these over time and uses them for retrospectives,
-quarterly reviews, promotion packets, and resume updates.
+`brag` is a local-first CLI the user built to track career-worthy
+work moments. It stores entries in a SQLite database at
+`~/.bragfile/db.sqlite` on the user's machine. The user accumulates
+these over time and uses them for retrospectives, quarterly
+reviews, promotion packets, and resume updates.
 
-The user is now using `brag` across multiple projects, and wants AI
-sessions working on those projects to **propose brag entries at
-meaningful moments**. This guide tells you how.
+The user runs `brag` across multiple projects. You (the AI agent)
+are invited to **propose brag entries** at meaningful moments
+during your sessions. This file tells you how.
 
 ---
 
 ## Your role, in one sentence
 
-When significant work ships in a session you're part of, **propose a
-brag entry — don't post unilaterally — and only execute `brag add`
-after the user explicitly approves.**
+When significant work ships in a session you're part of, **propose
+a brag entry — don't post unilaterally — and only execute
+`brag add` after the user explicitly approves.**
 
 The user's trust in the tool depends on not getting spammed with
-low-value entries. Your job is to recognize the significant moments
-and help capture them well.
+low-value entries. Your job is to recognize the significant
+moments and help capture them well.
 
 ---
 
@@ -39,34 +44,34 @@ and help capture them well.
 - **A shipped feature** — real user-facing change, merged and
   deployed (or equivalent — for personal projects, working on the
   user's main branch counts).
-- **A fixed significant bug** — not a typo, a real debug-and-repair
-  effort with a concrete outcome.
-- **An architectural decision** — especially one captured as an ADR
-  or DEC that will bind future work.
+- **A fixed significant bug** — not a typo, a real debug-and-
+  repair effort with a concrete outcome.
+- **An architectural decision** — especially one captured as an
+  ADR or DEC that will bind future work.
 - **A meaningful piece of documentation** — a migration guide, an
   onboarding doc, a postmortem, a process proposal.
 - **Mentoring / unblocking others** — concrete help delivered to a
   named teammate or team, with a specific outcome.
 - **A measurable learning applied** — the user learned something
-  concrete (a new framework, a pattern, a deep-dive) AND applied it
-  to produce something specific.
-- **A delivered artifact** — PR merged, presentation given, proposal
-  adopted, playbook published.
+  concrete (a new framework, a pattern, a deep-dive) AND applied
+  it to produce something specific.
+- **A delivered artifact** — PR merged, presentation given,
+  proposal adopted, playbook published.
 
 ### ❌ NO — skip the brag when the work is:
 
-- **Routine maintenance** — typo fixes, trivial refactors, updating
-  copyright years, bumping a patch-level dep.
-- **Not the user's contribution** — if the user pointed at something
-  and you did it with minimal input, that's probably your work, not
-  theirs. Err toward skipping.
+- **Routine maintenance** — typo fixes, trivial refactors,
+  updating copyright years, bumping a patch-level dep.
+- **Not the user's contribution** — if the user pointed at
+  something and you did it with minimal input, that's probably
+  your work, not theirs. Err toward skipping.
 - **Small and incremental** — every commit isn't brag-worthy. One
   good brag per shipped feature, not per commit.
-- **Time spent without work achieved** — "spent 3 hours debugging"
-  is not a brag. "Root-caused the OAuth latency regression to a
-  missed index" is.
-- **Vague in scope** — if you can't articulate a specific outcome in
-  one sentence, it's not a brag yet. Wait until you can.
+- **Time spent without work achieved** — "spent 3 hours
+  debugging" is not a brag. "Root-caused the OAuth latency
+  regression to a missed index" is.
+- **Vague in scope** — if you can't articulate a specific outcome
+  in one sentence, it's not a brag yet. Wait until you can.
 
 ### Rule of thumb
 
@@ -78,17 +83,17 @@ up some stuff," definitely not.
 
 ## The approval loop (non-negotiable)
 
-1. **You identify** a candidate brag moment during or after a piece
-   of work.
+1. **You identify** a candidate brag moment during or after a
+   piece of work.
 2. **You draft** the full entry with all fields (format below) and
    present it to the user.
 3. **You ask explicitly:** "Want me to record this as a brag?"
 4. **The user responds:** approve, edit, or skip.
 5. **Only then** do you run `brag add`.
 
-**Never post without approval.** If you're unsure whether a moment
-qualifies, describe it and ask. "Is this worth capturing as a brag?"
-is always better than posting noise.
+**Never post without approval.** If you're unsure whether a
+moment qualifies, describe it and ask. "Is this worth capturing
+as a brag?" is always better than posting noise.
 
 ---
 
@@ -99,7 +104,7 @@ is always better than posting noise.
 | Flag | Required? | Purpose |
 |---|---|---|
 | `-t` / `--title` | **Required** | Short, specific, action-verb. The headline. |
-| `-p` / `--project` | Strongly recommended | Work context: repo name, client, team, initiative. Enables future `brag list --project X` filtering. |
+| `-p` / `--project` | Strongly recommended | Work context: repo name, client, team, initiative. Enables `brag list --project X` filtering. |
 | `-k` / `--type` | Recommended | Category: `shipped`, `fixed`, `learned`, `documented`, `mentored`, `unblocked`, `proposed`, `reviewed`, etc. Free-form — pick whatever's useful. |
 | `-T` / `--tags` | Recommended | 2–4 comma-joined topic tags for future filtering. Example: `auth,perf,backend`. |
 | `-i` / `--impact` | **Important** | The concrete outcome: metric, quote, unlock, business result. **This is the most load-bearing field for reviews.** |
@@ -111,8 +116,8 @@ is always better than posting noise.
   months and know what it meant. "Shipped auth refactor cutting
   login latency 80%" beats "Worked on auth."
 - **Impact**: a metric or a named outcome. "Unblocked mobile v3
-  release" beats "improved performance." "Reduced p99 from 600ms to
-  120ms" beats "made it faster."
+  release" beats "improved performance." "Reduced p99 from 600ms
+  to 120ms" beats "made it faster."
 - **Description**: the story. Tell why it mattered, how you
   approached it, what specifically changed. Think 2–5 sentences.
 
@@ -203,8 +208,8 @@ brag add -t "..." -i "Improved things"
 brag add -t "..." -d "worked on stuff"
 ```
 
-The pattern in all of these: **no specific outcome.** A brag entry
-without a specific outcome is a reminder, not an artifact.
+The pattern in all of these: **no specific outcome.** A brag
+entry without a specific outcome is a reminder, not an artifact.
 
 ---
 
@@ -216,9 +221,11 @@ brag list --project platform-backend        # filter by project
 brag list --tag auth --since 30d            # filter by tag + time
 brag list --type shipped --limit 10         # most recent 10 shipped
 brag show <id>                              # full entry as markdown
+brag search "query"                         # full-text search across all fields
+brag search "auth-refactor"                 # hyphens are literal, not operators (DEC-010)
 ```
 
-The user can export a filtered slice to paste into review documents:
+Export a filtered slice for review documents:
 
 ```bash
 brag list --project X --since 90d | while read -r line; do
@@ -233,7 +240,8 @@ done > /tmp/review-draft.md
 ## If anything goes wrong
 
 - `brag --version` fails: the binary may not be installed on PATH.
-  Tell the user; don't try to install it from a non-canonical path.
+  Tell the user; don't try to install it from a non-canonical
+  path.
 - `brag add` returns exit 1: user error (missing title, invalid
   flag). Show the error, let the user decide.
 - `brag add` returns exit 2: internal error (DB issue, disk full).
@@ -252,6 +260,8 @@ done > /tmp/review-draft.md
 
 ## Source
 
-This guide lives in the bragfile project repo:
-`docs/agent-brag-guide.md`. For the canonical up-to-date version,
-see `github.com/jysf/bragfile000/blob/main/docs/agent-brag-guide.md`.
+Canonical location: the `BRAG.md` file at the root of the
+bragfile repo — `github.com/jysf/bragfile000/blob/main/BRAG.md`.
+This file is kept in sync with the CLI's actual behavior; the
+flags, field names, and examples above reflect shipped reality
+and not aspiration.
