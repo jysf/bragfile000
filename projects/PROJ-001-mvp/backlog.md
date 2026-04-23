@@ -171,6 +171,148 @@ nothing is lost but the project stays focused.
   `entry_links(entry_id, url, label)` table only if label
   support or per-link metadata becomes a real need.
 
+## NDJSON / array-batch stdin for `brag add --json`
+
+- **Source:** STAGE-003 framing 2026-04-23 (SPEC-017 design
+  scope).
+- **Reason deferred:** MVP ships single-object stdin only. Batch
+  import is a legitimate future workflow but the shape decision
+  (NDJSON vs. array, transactional vs. best-effort, error
+  reporting per-line) warrants its own spec rather than bolting
+  onto SPEC-017.
+- **Revisit when:** A real bulk-import workflow appears — e.g.
+  importing from a previous tool's export, or a Claude agent
+  batching a session's suggested entries in one call.
+- **Sketch:** `brag add --json --batch` reads NDJSON from
+  stdin, one entry per line; commits transactionally
+  (all-or-nothing) or best-effort (`--continue-on-error`).
+  Prints inserted IDs one per line. Array input (`[{...},
+  {...}]`) as a secondary mode if demand is clear.
+
+## Lenient-accept mode for `brag add --json`
+
+- **Source:** STAGE-003 framing 2026-04-23 (SPEC-017 / DEC-012
+  scope).
+- **Reason deferred:** Strict-reject-unknown-keys is the MVP
+  default because it catches typos (`titl`, `descripton`) before
+  they become silently-missing entries. Lenient mode is the
+  opposite tradeoff — useful when piping from tools that emit
+  extra fields — but only worth adding if strict proves annoying
+  in real use.
+- **Revisit when:** A real pipeline emerges (AI agent, another
+  tool's export) that emits schema-adjacent-but-extra fields,
+  AND the user is willing to accept silent field loss as a
+  tradeoff.
+- **Sketch:** `brag add --json --lenient` ignores unknown keys
+  instead of rejecting. No schema evolution story; just skip
+  unrecognized keys without error.
+
+## JSON output envelope
+
+- **Source:** STAGE-003 framing 2026-04-23 (DEC-011 scope).
+- **Reason deferred:** MVP ships naked JSON array so `jq '.[]'`
+  stays trivial and round-trip through `brag add --json` is
+  clean. An envelope (`{generated_at, count, filters, entries:
+  [...]}`) adds provenance/metadata that a downstream AI
+  consumer might want, but nobody has asked yet.
+- **Revisit when:** An AI consumer (Claude agent, summary tool,
+  analytics pipeline) asks for export-time metadata inside the
+  JSON payload, OR a use case emerges where two exports need to
+  be correlated by timestamp or filter.
+- **Sketch:** `brag export --format json --envelope` (or
+  `--wrap`) flag wraps the array in an object with
+  `generated_at` (RFC3339), `count`, `filters` (object echoing
+  what was passed), `entries` (the array as-is). Consumer can
+  unwrap with `jq .entries`.
+
+## `--compact` / non-pretty JSON output
+
+- **Source:** STAGE-003 framing 2026-04-23 (DEC-011 scope).
+- **Reason deferred:** MVP ships pretty-printed (indent=2) JSON
+  because readability matters more than bytes-on-wire at
+  personal-corpus scale. A compact flag is trivial to add but
+  zero payoff today.
+- **Revisit when:** A pipe consumer is measurably slowed by
+  indentation, OR an export writes to a size-constrained
+  destination (unlikely at personal scale).
+- **Sketch:** `--compact` flag on `brag list --format json` and
+  `brag export --format json` toggles `json.Marshal` vs.
+  `json.MarshalIndent`. One line of Go.
+
+## Filtered SQLite export
+
+- **Source:** STAGE-003 framing 2026-04-23 (SPEC-016 scope).
+- **Reason deferred:** `VACUUM INTO` is one SQLite call and
+  ships the full-DB-portable-backup use case cleanly. Filtered
+  sqlite (e.g. "last 90 days of project X as a portable DB")
+  needs fresh-DB + migration-application + INSERT-SELECT —
+  meaningful new code and a migration-ordering coupling.
+  Downstream consumers of filtered slices are better served by
+  JSON or markdown exports today.
+- **Revisit when:** A concrete user need emerges for a filtered
+  portable SQLite file (e.g. a multi-laptop workflow where only
+  a subset belongs on a machine; a committee that wants
+  queryable data but not the full corpus).
+- **Sketch:** `brag export --format sqlite --since 90d --out
+  slice.db` opens an empty SQLite file, runs the same embedded
+  migrations the main `Store.Open` runs, then `INSERT INTO
+  new.entries SELECT * FROM old WHERE <filters>`. Handle
+  `schema_migrations` table population so the slice opens
+  cleanly with current `brag` binary.
+
+## Table of contents in markdown export
+
+- **Source:** STAGE-003 framing 2026-04-23 (SPEC-015 / DEC-013
+  scope).
+- **Reason deferred:** Markdown headings (`## <project>` + `###
+  <title>`) are already scannable with any markdown viewer's
+  outline pane. A TOC block adds code for modest payoff at
+  typical quarterly-export sizes (~50–100 entries).
+- **Revisit when:** Export sizes grow past ~200 entries, OR a
+  downstream use case needs stable anchor links (e.g. posting
+  exports to a wiki that builds TOCs from headings).
+- **Sketch:** `brag export --format markdown --toc` inserts a
+  "## Table of Contents" block after the provenance/summary with
+  `- [title](#anchor)` lines per entry. Slugify titles for
+  anchors; disambiguate collisions with a numeric suffix.
+
+## `--group-by <field>` in markdown export
+
+- **Source:** STAGE-003 framing 2026-04-23 (SPEC-015 / DEC-013
+  scope).
+- **Reason deferred:** MVP ships group-by-project as the default
+  (user ask) with `--flat` as the escape. Multi-axis grouping
+  (by type, by tag, by month) is polish work that didn't make
+  the must-have cut.
+- **Revisit when:** A real review-doc workflow benefits from
+  grouping by type (e.g. a promo packet organized by "shipped /
+  fixed / learned" buckets) OR by time bucket (a monthly
+  retrospective).
+- **Sketch:** `brag export --format markdown --group-by type`
+  (or `tag`, or `month`). Extends the partition function in
+  `internal/export`; keeps `--flat` as the no-grouping escape;
+  default stays group-by-project. Document the valid values in
+  `--help`.
+
+## `--template <path>` for custom markdown rendering
+
+- **Source:** STAGE-003 framing 2026-04-23 (SPEC-015 scope).
+- **Reason deferred:** The default DEC-013 shape covers the four
+  named use cases (retro, quarterly review, promo packet, resume
+  update). Custom templates introduce stdlib `text/template`
+  surface area and template-distribution questions (ship with
+  built-ins? load from `~/.bragfile/templates/`?). Not justified
+  until a user has a concrete template they can't express via
+  the flag matrix.
+- **Revisit when:** A user wants to render exports for a
+  tool-specific format (e.g. a specific review system's markdown
+  dialect) that the flag matrix can't produce.
+- **Sketch:** `brag export --format markdown --template
+  ~/.bragfile/templates/promo.md.tmpl` parses the file as a Go
+  `text/template` with `{{.Entries}}`, `{{.Summary}}`,
+  `{{.Provenance}}` bindings. Ship two or three built-ins in the
+  binary via `embed.FS` as reference examples.
+
 ## Anything unreleased from STAGE-004 at distribution time
 
 - **Source:** User decision 2026-04-22 — STAGE-004 is provisional;
