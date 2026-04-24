@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-003                     # stable, zero-padded within the project
-  status: proposed                  # proposed | active | shipped | cancelled | on_hold
+  status: shipped                   # proposed | active | shipped | cancelled | on_hold
   priority: high
   target_complete: null
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-04-22
-shipped_at: null
+shipped_at: 2026-04-24
 ---
 
 # STAGE-003: Reports and AI-friendly I/O
@@ -421,13 +421,72 @@ locked-decisions-need-tests, premise-audit trio) apply unchanged.
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped. Run Prompt 1c (Stage Ship) in
-FIRST_SESSION_PROMPTS.md to draft this.*
+*Drafted via Prompt 1d (Stage Ship) in a fresh session on 2026-04-24.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
-- **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
-- **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <one-line items>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes. The
+  review-prep workflow the project was built for — capture → filter
+  → paste-into-review-doc — now runs end-to-end via
+  `brag export --format markdown`. The AI-integration loop
+  (`list --format json`, `export --format json`, `add --json`)
+  round-trips through the binary without schema-aware tooling.
+  `brag list -P` makes corpus scanning answer "what have I been
+  working on" at a glance.
+
+- **How many specs did it actually take?** 4 shipped (SPEC-013, 014,
+  015, 017) + 3 DECs (DEC-011, 012, 013). 1 deferred (SPEC-016,
+  sqlite export). Stage was framed with 5 specs; SPEC-016 deferred
+  2026-04-23 post-SPEC-013 when the `cp ~/.bragfile/db.sqlite`
+  workflow's sufficiency for the portable-backup use case became
+  clear.
+
+- **What changed between starting and shipping?** Two visible
+  shifts: (a) SPEC-016 dropped to backlog mid-stage on scope-
+  tightening grounds rather than because it failed; (b) SPEC-015
+  created its feature branch during the design cycle (vs. SPEC-014
+  and SPEC-017's clean design-commit-before-branch rhythm), one
+  data point against the rhythm — not yet a pattern. No DECs were
+  re-litigated at build time; all three were emitted at design and
+  consumed verbatim.
+
+- **Lessons that should update AGENTS.md, templates, or
+  constraints?**
+  - **Already landed (no action):** §9 substring-trap addendum
+    (line-based markdown heading assertions, SPEC-015 ship); §9
+    freshness-assertion addendum (`new.ID != source.ID`, not
+    `CreatedAt !=`, SPEC-017 ship). Both are in §9 today.
+  - **Promotable now:** `_templates/spec.md` premise-audit
+    sub-template extraction. The same skeleton appeared in
+    SPEC-011/012/014/015 — extracting it would thin every future
+    spec by 50–80 lines without losing signal. Flagged in SPEC-015
+    ship Q1; queued as a lightweight follow-up chore, not part of
+    the STAGE-003 ship commit to keep this commit scoped.
+  - **Watch, not codify:** "either-is-fine in
+    Notes-for-Implementer quietly off-loads decisions to build"
+    surfaced in SPEC-014 build Q3 (TSV-helper placement) and
+    SPEC-017 ship Q1 (1s sleep retained by path-of-least-
+    resistance). Two data points across STAGE-003. If a third
+    spec hits the same pattern, lift to §12 design rules: "decide
+    Notes-for-Implementer choices at design time."
+
+- **Should any spec-level reflections be promoted to stage-level
+  lessons?** One: design-time DEC emission (DEC-011, 012, 013 all
+  emitted alongside their specs) demonstrably keeps build cycles
+  clean — three DECs in a stage, zero re-litigation at build time.
+  Worth recording as the stage-level pattern that earned the §8
+  DEC emission discipline its keep across STAGE-003.
+
+### Stage summary
+
+STAGE-003 shipped 4 of the 5 originally-listed specs
+(SPEC-013/014/015/017 + DECs 011/012/013); SPEC-016 was deferred
+to backlog mid-stage on 2026-04-23 because
+`cp ~/.bragfile/db.sqlite backup.db` already serves the
+portable-backup use case the brief named. Framed 2026-04-22,
+shipped 2026-04-24 — two-day wall-clock for a 4-spec / 3-DEC
+stage with no `target_complete` set; comfortably faster than
+STAGE-002's multi-day cadence. Emergent pattern: every spec ran
+a clean build→verify cycle (no build-time DECs, no verify
+punch-lists, no deviations beyond minor disclosures), and the §9
+premise-audit family that landed during STAGE-002 demonstrably
+paid for itself — doc sweeps were planned in `## Outputs` rather
+than discovered at build time, four specs in a row.

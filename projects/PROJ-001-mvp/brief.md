@@ -100,15 +100,16 @@ real entries.
       shipped (SPEC-005–012). 4 new DECs (DEC-007/008/009/010),
       5 new AGENTS.md §9/§12 lessons including the full premise-
       audit family. Target was 2026-05-04; shipped 12 days ahead.
-- [ ] STAGE-003 (framed 2026-04-23, active) — **Reports + AI-friendly
-      I/O + project visibility.** 5-spec stage (1 shipped, 3 pending,
-      1 deferred). Scope: project visible in `brag list` output
-      (SPEC-013 shipped 2026-04-23), export pair markdown/JSON
-      (SPEC-015 + SPEC-014), machine-readable I/O (SPEC-014 +
-      SPEC-017 `brag add --json`). SPEC-016 (`--format sqlite`)
-      deferred to backlog on 2026-04-23 — `cp ~/.bragfile/db.sqlite`
-      already covers the portable-backup use case. `BRAG.md` shipped
-      as a chore before framing (done 2026-04-22).
+- [x] STAGE-003 (shipped on 2026-04-24) — **Reports + AI-friendly
+      I/O + project visibility.** 4 specs shipped
+      (SPEC-013/014/015/017) + 3 DECs (DEC-011 JSON shape, DEC-012
+      stdin-JSON schema, DEC-013 markdown export shape). SPEC-016
+      (`--format sqlite`) deferred to backlog on 2026-04-23. Two
+      AGENTS.md §9 addenda earned (substring-trap for markdown
+      heading assertions, freshness-assertion for ID-vs-timestamp
+      distinctness). Framed 2026-04-22/23, shipped 2026-04-24 —
+      two-day wall-clock. Zero rework cycles across all four specs.
+      `BRAG.md` shipped as chore pre-framing (2026-04-22).
 - [ ] STAGE-004 (not yet framed, **provisional**) — **UX polish
       pass.** 9 items grouped into: retrospection & summary
       (`brag summary`), emoji decoration (4 passes — stderr
@@ -128,7 +129,7 @@ real entries.
       CHANGELOG + release notes discipline, README polish +
       GIF/demo video.
 
-**Count:** 2 shipped / 0 active / 3 pending
+**Count:** 3 shipped / 0 active / 2 pending (STAGE-004 provisional)
 
 ## Dependencies
 
