@@ -96,18 +96,34 @@ real entries.
       shipped (SPEC-005–012). 4 new DECs (DEC-007/008/009/010),
       5 new AGENTS.md §9/§12 lessons including the full premise-
       audit family. Target was 2026-05-04; shipped 12 days ahead.
-- [ ] STAGE-003 (not yet framed) — Export, summary, and UX polish:
-      markdown export, sqlite-file export, rule-based `summary`,
-      JSON export (for AI/programmatic consumers), emoji decoration
-      on stderr feedback + `show`/`list` output (with `NO_COLOR` +
-      TTY-detection escape hatch), `brag list` project-column
-      display option (likely part of `--pretty` mode). Framing
-      pending user's full additional-ideas list — scope will be
-      finalized then.
-- [ ] STAGE-004 (not yet framed) — Distribution: goreleaser, homebrew
-      tap, README, release notes.
+- [ ] STAGE-003 (not yet framed) — **Reports + AI-friendly I/O +
+      project visibility (ship-blocking scope only).** 3 must-haves:
+      project visible in `brag list` output, export trio
+      (markdown/sqlite/JSON), machine-readable I/O
+      (`brag add --json` + `brag list --format`). No nice-to-have
+      bucket — polish items moved to STAGE-004 on 2026-04-22
+      reshuffle to keep STAGE-003 tight. `BRAG.md` shipped as a
+      chore before framing (done 2026-04-22).
+- [ ] STAGE-004 (not yet framed, **provisional**) — **UX polish
+      pass.** 9 items grouped into: retrospection & summary
+      (`brag summary`), emoji decoration (4 passes — stderr
+      feedback, show/list type icons, NO_COLOR + TTY detection),
+      AI-agent integrations (Claude session-end hook), habit &
+      stats (`brag remind`, `brag stats`), retrospection command
+      (`brag review --week`). **Escape hatch preserved**: if
+      STAGE-003 ships with enough utility, STAGE-004 may dissolve
+      entirely — unreleased items drop to backlog and the project
+      jumps directly to STAGE-005 distribution. Three ex-STAGE-004
+      items were dropped to backlog on 2026-04-22 reshuffle
+      (`--exclude-tag` redaction, git-context auto-capture,
+      `--link/--refs`).
+- [ ] STAGE-005 (not yet framed) — **Distribution.** goreleaser
+      cross-compile, GitHub Actions CI + release workflow,
+      homebrew tap at `github.com/jysf/homebrew-bragfile`,
+      CHANGELOG + release notes discipline, README polish +
+      GIF/demo video.
 
-**Count:** 2 shipped / 0 active / 2 pending
+**Count:** 2 shipped / 0 active / 3 pending
 
 ## Dependencies
 
@@ -132,6 +148,128 @@ real entries.
 section gets consumed into the stage file's Design Notes + Spec
 Backlog when STAGE-003 is framed, and trimmed from the brief at
 that point. Keep content here accurate; it's the handoff.*
+
+### Post-triage scope (2026-04-22) — authoritative priority
+
+Triaged from a full-ideas-dump via external Claude evaluation.
+User filters applied: personal utility first; "nice Go app"
+craftsmanship second; adoption pressure explicitly not a driver.
+Non-STAGE-003 items land in `backlog.md` or are sketched below
+under "STAGE-004 sketch". Detail on individual ideas follows
+below this block — the scope list is the authoritative slice.
+
+**STAGE-003 ship-blocking scope (3 items + 1 trivial pre-spec):**
+
+Reshuffled 2026-04-22 (second pass): the "nice-to-have" bucket
+moved entirely into STAGE-004 to keep STAGE-003 tight. STAGE-003
+is now purely core functionality — must-haves only — with emoji,
+summary, and Claude-hook work grouped into a proper polish stage.
+
+0. **`BRAG.md` at repo root.** Trivial (S). **Shipped as a chore
+   on 2026-04-22** (commit before STAGE-003 framing); counted as
+   pre-spec work rather than a STAGE-003 spec. Delivers the
+   agent-integration guide at a canonical location. Content lives
+   in `/BRAG.md`; former `docs/agent-brag-guide.md` deleted.
+
+1. **Project visible in `brag list` output.** User flagged
+   elevated to must-have ("I want to see quickly what projects
+   I have been working on"). Implementation is a design call —
+   see "Project column" detail below for the four options
+   (default 4-col / `--format` flag / `--pretty` bundle /
+   `--columns` list). Framer picks.
+2. **Report export trio:** `brag export --format markdown`,
+   `--format sqlite`, `--format json`. The original STAGE-003
+   backbone, user-flagged pushed up in priority. JSON shape
+   detailed below. Can be one M spec or split as 3 × S specs —
+   framer decides.
+3. **Machine-readable input/output.** `brag add --json` (stdin
+   JSON → `Store.Add`) plus `brag list --format json|tsv`.
+   Pairs with the export trio to close the I/O loop. Unblocks
+   every downstream AI integration. Can be one M spec or split
+   as 2 × S specs.
+
+No nice-to-have bucket for STAGE-003. If the framing session
+wants additional scope, take it from STAGE-004's list rather than
+adding anew.
+
+### STAGE-004 sketch — polish pass (9 items; provisional)
+
+Reshuffled 2026-04-22 (second pass): the ex-STAGE-003 nice-to-
+haves (summary, emoji 4 passes, Claude session-end hook) moved
+here because they're polish work, not core functionality. Stage
+grows from 3 items to 9. Still provisional — if STAGE-003 ships
+and real usage shows STAGE-004 items aren't missed, the stage
+can dissolve (items drop to `backlog.md`) and the project jumps
+to STAGE-005 distribution.
+
+**Retrospection & summary (1 M):**
+
+- **`brag summary --range week|month`** — rule-based aggregation
+  grouped by project/type, rendered as markdown. Was original
+  STAGE-003 backbone; demoted to polish on 2026-04-22 because
+  `brag export --format markdown` (STAGE-003 must-have) already
+  gives a decent quarterly doc — summary becomes the
+  lighter-weight sibling.
+
+**Emoji decoration (4 passes):**
+
+Four-pass plan carried forward from the earlier pre-framing
+notes; detail section below remains the canonical reference.
+Framer can pick how many passes to include (Pass 1 is trivial
+and should almost certainly ship; Passes 2–4 are opt-in polish).
+
+- Pass 1 — stderr feedback prefixes (`✏️`/`🗑`/`—`/`✗`) on
+  edit/delete/confirmation messages (S, trivial).
+- Pass 2 — type-based emoji in `brag show` markdown table (S).
+- Pass 3 — type-based emoji in `brag list --pretty` (S, bundles
+  naturally with STAGE-003 #1 if that picks the `--pretty` path).
+- Pass 4 — `NO_COLOR` env var + TTY auto-detection (S).
+
+**AI-agent integrations (1 S):**
+
+- **Claude Code session-end hook example.** Ships
+  `scripts/claude-code-post-session.sh` + a `/brag` slash
+  command shape. Pure shell + prompt; requires STAGE-003's
+  `brag add --json` landed. User explicitly tagged as low
+  priority in the 2026-04-22 triage; include only if trivial
+  to bolt on after the JSON input spec.
+
+**Habit & stats (2 S):**
+
+- **`brag remind`** — nudge command that prints a message if no
+  entries in last N days. Habit-reinforcement; tiny command.
+- **`brag stats`** — entries/week, longest streak, most common
+  tags/projects. Aggregations over existing schema.
+
+**Retrospection command (1 S):**
+
+- **`brag review --week`** — print entries grouped by project +
+  three static reflection questions ("what pattern do you see?",
+  "what did you underestimate?", "what's one thing missing?").
+  Human-in-the-loop reflection; distinct from `summary`
+  aggregation.
+
+**Explicitly NOT in STAGE-004 — deferred to `backlog.md` on
+2026-04-22 reshuffle:**
+
+- `brag export --exclude-tag <tag>` redaction filter
+- Git-context auto-capture on `brag add`
+- `--link` / `--refs` multi-valued field
+
+### STAGE-005 sketch — Distribution
+
+Persistent since project start; no triage needed. For reference:
+goreleaser config (cross-compile darwin+linux arm64+x86_64),
+GitHub Actions CI (test + lint on PR) and release (tag →
+binaries → release notes), homebrew tap at
+`github.com/jysf/homebrew-bragfile`, CHANGELOG discipline, README
+one-liner polish + GIF/demo of the Claude-session → brag-entry
+flow (moved from backlog during 2026-04-22 triage).
+
+---
+
+### Detail on individual ideas (reference material — framer reads as needed)
+
 
 ### Emoji decoration (accumulated 2026-04-21)
 
@@ -295,13 +433,13 @@ in-plain-output is a strong standalone ask.
 set, the column should render as `-` or `(none)` rather than an
 empty field, so the tab-separated shape stays consistent.
 
-### User's pending additional-ideas list
+### Triage history — ideas-dump resolved 2026-04-22
 
-*Placeholder — user is formatting a list of additional
-suggestions. When the list arrives, triage each into:*
-*(a) STAGE-003 inclusion, (b) a new polish-pass stage between
-STAGE-003 and STAGE-004, or (c) deferred to a future PROJ-00N.*
-*Then remove this placeholder.*
+Full ideas-dump (external Claude evaluation) was triaged on
+2026-04-22 into the Post-triage scope block above, the
+STAGE-004 sketch above, and `backlog.md` (new file). Nothing
+pending. Items in `backlog.md` have revisit triggers and can be
+promoted into future stages or projects when the trigger fires.
 
 ---
 

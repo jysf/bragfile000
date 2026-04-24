@@ -24,7 +24,8 @@ Examples:
   brag list --tag auth                            # entries tagged "auth"
   brag list --project platform --since 7d         # last week, one project
   brag list --type shipped --limit 5              # 5 most recent shipped
-  brag list --since 2026-01-01                    # since a specific date`,
+  brag list --since 2026-01-01                    # since a specific date
+  brag list -P                                    # include project column`,
 		RunE: runList,
 	}
 	cmd.Flags().String("tag", "", "filter to entries whose tags contain this token (comma-separated match)")
@@ -32,6 +33,7 @@ Examples:
 	cmd.Flags().String("type", "", "filter to entries with this type (exact match)")
 	cmd.Flags().String("since", "", "filter to entries on or after this point (YYYY-MM-DD or Nd/Nw/Nm)")
 	cmd.Flags().Int("limit", 0, "cap the number of rows returned (must be > 0 when set)")
+	cmd.Flags().BoolP("show-project", "P", false, "include project in output (adds column between created_at and title)")
 	return cmd
 }
 
@@ -92,12 +94,26 @@ func runList(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("list entries: %w", err)
 	}
 
+	showProject, _ := cmd.Flags().GetBool("show-project")
+
 	out := cmd.OutOrStdout()
 	for _, e := range entries {
-		fmt.Fprintf(out, "%d\t%s\t%s\n",
-			e.ID,
-			e.CreatedAt.UTC().Format(time.RFC3339),
-			e.Title)
+		if showProject {
+			project := e.Project
+			if project == "" {
+				project = "-"
+			}
+			fmt.Fprintf(out, "%d\t%s\t%s\t%s\n",
+				e.ID,
+				e.CreatedAt.UTC().Format(time.RFC3339),
+				project,
+				e.Title)
+		} else {
+			fmt.Fprintf(out, "%d\t%s\t%s\n",
+				e.ID,
+				e.CreatedAt.UTC().Format(time.RFC3339),
+				e.Title)
+		}
 	}
 	return nil
 }

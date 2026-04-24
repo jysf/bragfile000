@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -634,5 +635,225 @@ func TestListCmd_HelpShape(t *testing.T) {
 	}
 	if !strings.Contains(out, listShort) {
 		t.Errorf("expected help to contain Short %q, got %q", listShort, out)
+	}
+}
+
+// -----------------------------------------------------------------------------
+// SPEC-013: `brag list --show-project` / `-P`
+//
+// Seven tests covering the five locked design decisions in the spec plus the
+// byte-stability regression lock (decision 4 → PlainOutputByteIdenticalToSTAGE002)
+// and the composition-with-all-filters case (decision 5 → ComposedWithAllFilters).
+// -----------------------------------------------------------------------------
+
+func TestListCmd_PlainOutputByteIdenticalToSTAGE002(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	entries := []storage.Entry{
+		seedListEntry(t, dbPath, "first-title", "", "platform", ""),
+		seedListEntry(t, dbPath, "second-title", "", "", ""),
+		seedListEntry(t, dbPath, "third-title", "", "growth", ""),
+	}
+
+	out, errOut, err := runListCmd(t, dbPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+
+	var expected strings.Builder
+	for i := len(entries) - 1; i >= 0; i-- {
+		e := entries[i]
+		fmt.Fprintf(&expected, "%d\t%s\t%s\n",
+			e.ID,
+			e.CreatedAt.UTC().Format(time.RFC3339),
+			e.Title)
+	}
+	if out != expected.String() {
+		t.Fatalf("plain list output not byte-identical to STAGE-002 shape\nwant: %q\ngot:  %q", expected.String(), out)
+	}
+}
+
+func TestListCmd_ShowProject_AddsFourthColumn(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "solo", "", "platform", "")
+
+	out, errOut, err := runListCmd(t, dbPath, "-P")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+
+	line := strings.TrimRight(out, "\n")
+	if strings.Contains(line, "\n") {
+		t.Fatalf("expected a single line, got %q", out)
+	}
+	if got := strings.Count(line, "\t"); got != 3 {
+		t.Fatalf("expected exactly 3 tab characters, got %d: %q", got, line)
+	}
+	fields := strings.Split(line, "\t")
+	if len(fields) != 4 {
+		t.Fatalf("expected 4 fields, got %d: %q", len(fields), line)
+	}
+	if _, err := strconv.ParseInt(fields[0], 10, 64); err != nil {
+		t.Errorf("field 0 (id) %q: %v", fields[0], err)
+	}
+	ts, err := time.Parse(time.RFC3339, fields[1])
+	if err != nil {
+		t.Errorf("field 1 (created_at) %q: %v", fields[1], err)
+	} else if loc := ts.Location().String(); loc != "UTC" {
+		t.Errorf("field 1 (created_at): expected UTC location, got %q", loc)
+	}
+	if fields[2] != "platform" {
+		t.Errorf("field 2 (project): want %q, got %q", "platform", fields[2])
+	}
+	if fields[3] != "solo" {
+		t.Errorf("field 3 (title): want %q, got %q", "solo", fields[3])
+	}
+}
+
+func TestListCmd_ShowProject_EmptyProjectRendersAsDash(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "no-project", "", "", "")
+
+	out, errOut, err := runListCmd(t, dbPath, "-P")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	line := strings.TrimRight(out, "\n")
+	fields := strings.Split(line, "\t")
+	if len(fields) != 4 {
+		t.Fatalf("expected 4 fields, got %d: %q", len(fields), line)
+	}
+	if fields[2] != "-" {
+		t.Errorf("empty project should render as %q, got %q", "-", fields[2])
+	}
+	if fields[3] != "no-project" {
+		t.Errorf("field 3 (title): want %q, got %q", "no-project", fields[3])
+	}
+}
+
+func TestListCmd_ShowProject_ShortFormEquivalent(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "alpha", "", "platform", "")
+	seedListEntry(t, dbPath, "bravo", "", "growth", "")
+
+	outLong, errLong, err := runListCmd(t, dbPath, "--show-project")
+	if err != nil {
+		t.Fatalf("--show-project: unexpected error: %v", err)
+	}
+	if errLong != "" {
+		t.Fatalf("--show-project: expected empty stderr, got %q", errLong)
+	}
+
+	outShort, errShort, err := runListCmd(t, dbPath, "-P")
+	if err != nil {
+		t.Fatalf("-P: unexpected error: %v", err)
+	}
+	if errShort != "" {
+		t.Fatalf("-P: expected empty stderr, got %q", errShort)
+	}
+
+	if outLong != outShort {
+		t.Fatalf("--show-project and -P produced different output\nlong:  %q\nshort: %q", outLong, outShort)
+	}
+}
+
+func TestListCmd_ShowProject_WithProjectFilter(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "hit-platform", "", "platform", "")
+	seedListEntry(t, dbPath, "miss-growth", "", "growth", "")
+
+	out, errOut, err := runListCmd(t, dbPath, "-P", "--project", "platform")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "hit-platform") {
+		t.Errorf("expected %q in stdout, got %q", "hit-platform", out)
+	}
+	if strings.Contains(out, "miss-growth") {
+		t.Errorf("expected %q NOT in stdout, got %q", "miss-growth", out)
+	}
+	line := strings.TrimRight(out, "\n")
+	if strings.Contains(line, "\n") {
+		t.Fatalf("expected a single line, got %q", out)
+	}
+	if got := strings.Count(line, "\t"); got != 3 {
+		t.Fatalf("expected exactly 3 tab characters, got %d: %q", got, line)
+	}
+	fields := strings.Split(line, "\t")
+	if fields[2] != "platform" {
+		t.Errorf("field 2 (project): want %q, got %q", "platform", fields[2])
+	}
+}
+
+func TestListCmd_ShowProject_ComposedWithAllFilters(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "hit", "auth", "platform", "shipped")
+	seedListEntry(t, dbPath, "miss-tag", "backend", "platform", "shipped")
+	seedListEntry(t, dbPath, "miss-project", "auth", "growth", "shipped")
+
+	out, errOut, err := runListCmd(t, dbPath,
+		"-P",
+		"--tag", "auth",
+		"--project", "platform",
+		"--type", "shipped",
+		"--since", "1900-01-01",
+		"--limit", "5",
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "hit") {
+		t.Errorf("expected %q in stdout, got %q", "hit", out)
+	}
+	if strings.Contains(out, "miss-tag") {
+		t.Errorf("expected %q NOT in stdout, got %q", "miss-tag", out)
+	}
+	if strings.Contains(out, "miss-project") {
+		t.Errorf("expected %q NOT in stdout, got %q", "miss-project", out)
+	}
+	line := strings.TrimRight(out, "\n")
+	if strings.Contains(line, "\n") {
+		t.Fatalf("expected exactly one surviving row, got %q", out)
+	}
+	if got := strings.Count(line, "\t"); got != 3 {
+		t.Fatalf("expected exactly 3 tab characters, got %d: %q", got, line)
+	}
+	fields := strings.Split(line, "\t")
+	if fields[2] != "platform" {
+		t.Errorf("field 2 (project): want %q, got %q", "platform", fields[2])
+	}
+	if fields[3] != "hit" {
+		t.Errorf("field 3 (title): want %q, got %q", "hit", fields[3])
+	}
+}
+
+func TestListCmd_ShowProject_HelpShowsFlag(t *testing.T) {
+	root, outBuf, errBuf := newListTestRoot(t)
+	root.SetArgs([]string{"list", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("expected empty stderr, got %q", errBuf.String())
+	}
+	out := outBuf.String()
+	for _, needle := range []string{"--show-project", "-P", "include project in output"} {
+		if !strings.Contains(out, needle) {
+			t.Errorf("expected help to contain %q, got:\n%s", needle, out)
+		}
 	}
 }

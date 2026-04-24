@@ -78,7 +78,7 @@ file, and spawns the editor against it. On save:
 ### `brag list` — list entries
 
 ```
-brag list [--tag T] [--project P] [--type T] [--since 2026-01-01] [--limit N]
+brag list [-P|--show-project] [--tag T] [--project P] [--type T] [--since 2026-01-01] [--limit N]
 ```
 
 - `--tag`, `--project`, `--type` filter on exact field value
@@ -88,6 +88,9 @@ brag list [--tag T] [--project P] [--type T] [--since 2026-01-01] [--limit N]
 - Order: `created_at DESC`.
 - Output: one line per entry, tab-separated columns:
   `<id>\t<created_at>\t<title>`.
+- With `-P` / `--show-project`: output becomes
+  `<id>\t<created_at>\t<project>\t<title>` (four tab-separated
+  columns). Empty project renders as `-`.
 - STAGE-001 ships without filter flags — plumbing exists, flags are
   added in STAGE-002.
 
