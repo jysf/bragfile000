@@ -7,7 +7,7 @@
 task:
   id: SPEC-014
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M                    # borderline; called out below. Single-spec per user direction 2026-04-23.
@@ -1172,10 +1172,45 @@ Implementation Context; these are the "how" details.
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — For a spec this specified, almost nothing. The build was
+   mechanical because the spec did the hard work up front — literal
+   golden strings, code sketches, a premise audit that enumerated
+   every doc site. The honest reflection is that the design session
+   earned this build's cleanliness; the build just executed. If I'd
+   done the design session, I'd have invested the same time. The one
+   small thing: I'd write the byte-identical cross-path test first
+   in the export test file rather than sixth, because its centrality
+   to DEC-011 deserves top billing when someone reads the file cold.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Hold on the dedup question with 1 data point. Looking at the
+   two sections with fresh eyes: Implementation Context answers
+   "what context does the implementer need to load" (decisions,
+   constraints, prior work, out-of-scope). Notes for the Implementer
+   answers "how do I actually write this" (code sketches, gotchas,
+   reuse hints). They overlap in spirit but not in function, and I
+   leaned on both during build — Implementation Context when
+   deciding whether to do something, Notes when deciding how.
+   Collapsing them would force one section to serve two jobs. The
+   design-session self-critique may have been over-worried; revisit
+   after 2–3 more specs with the same template.
+
+   One observation worth logging but not acting on yet: the spec
+   was ~1150 lines for an M-sized story. Three more M-sized specs
+   would tell us whether that's the equilibrium for claude-only
+   variant or whether the over-investment is a design-session habit
+   drift. AGENTS.md §9's premise-audit lessons clearly pull toward
+   longer specs, and the build outcome here argues they're earning
+   their keep. Not a template change — a thing to watch.
+
+   AGENTS.md §8 (DEC emission discipline): no gap surfaced. Design-
+   time DEC emission worked exactly as documented — build had
+   nothing to re-litigate.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — Nothing new rose to spec level during build. Three conditional
+   follow-ups that the spec already itself named (TSV tab-escaping,
+   `-P`-under-`--format` silent no-op, `--out` parent-dir error
+   surface) are all correctly deferred to "if a user reports"
+   triggers — writing specs now would be speculative. Build
+   Completion and verify agreed; nothing changed my mind.

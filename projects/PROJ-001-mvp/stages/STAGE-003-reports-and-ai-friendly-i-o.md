@@ -203,14 +203,22 @@ can run in parallel.
       (squash-merged `7f802a2`). Clean build+verify cycle — no DEC
       emitted, no deviations, no follow-ups.
 
-- [ ] SPEC-014 (design, **S**) — **`brag list --format json|tsv` +
-      `brag export --format json` + DEC-011 (shared JSON shape).**
-      One spec lands DEC-011 (field names = SQL columns, tags as
-      string per DEC-004, RFC3339 timestamps, pretty-printed array,
-      no envelope) and wires two consumers at once:
+- [x] SPEC-014 (shipped 2026-04-23, **M**) — **`brag list
+      --format json|tsv` + `brag export --format json` + DEC-011
+      (shared JSON shape).** DEC-011 locks six choices (naked array,
+      SQL-column field order, comma-joined tags per DEC-004, RFC3339
+      timestamps, empty-string-not-omit, indent=2). Wires two
+      consumers through shared `internal/export.ToJSON`:
       `list --format json|tsv` (default plain unchanged) and
       `export --format json` with filter flags reusing `ListFilter`.
-      Anchors the shape that SPEC-017 reads.
+      Shipped via PR #14 (squash-merged `9c52ad1`). Clean
+      build+verify cycle — no build-time DECs, no deviations, no
+      follow-ups. New `internal/export` package created to host
+      `ToJSON` + `TSVHeader` + `ToTSVRow` (sanctioned per spec's
+      recommendation; SPEC-015's markdown renderEntry lift will be
+      purely additive here). Sized M honestly at design time (stage
+      framed it as S; 14 tests, new package, new command, new DEC
+      pushed it to M).
 
 - [ ] SPEC-015 (design, **M**) — **`brag export --format markdown` +
       DEC-013 (markdown export shape).** Largest spec in the stage.
@@ -241,12 +249,13 @@ can run in parallel.
       what comes out of `list --format json` and what goes into
       `add --json` minus server fields).
 
-**Count:** 1 shipped / 0 active / 3 pending / 1 deferred
+**Count:** 2 shipped / 0 active / 2 pending / 1 deferred
 
-**Complexity check:** 3 × S, 1 × M, 0 × L (SPEC-016 dropped
-2026-04-23). Within the 3–6 guideline. Build sequence:
-SPEC-014 (anchors DEC-011) → SPEC-015 || SPEC-017 (both read
-DEC-011; can run parallel fresh-session if context allows).
+**Complexity check:** 1 × S remaining (SPEC-017), 1 × M
+remaining (SPEC-015). DEC-011 shipped in SPEC-014 — unblocks
+both pending specs. Build sequence: SPEC-015 || SPEC-017 (both
+read DEC-011; can run parallel fresh-session if context
+allows).
 
 ## Design Notes
 
