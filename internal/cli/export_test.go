@@ -258,3 +258,147 @@ func TestExportCmd_HelpShowsFormat(t *testing.T) {
 		}
 	}
 }
+
+// ---------------------------------------------------------------------
+// SPEC-015: brag export --format markdown + --flat
+// ---------------------------------------------------------------------
+
+func TestExportCmd_FormatMarkdown_StdoutEmitsDEC013Shape(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "a", "", "p", "")
+	seedListEntry(t, dbPath, "b", "", "p", "")
+
+	out, errOut, err := runExportCmd(t, dbPath, "--format", "markdown")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.HasPrefix(out, "# Bragfile Export\n\n") {
+		t.Errorf("expected stdout to start with %q, got:\n%s", "# Bragfile Export\n\n", out)
+	}
+	for _, want := range []string{"Entries: 2", "## p", "### a", "### b"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected stdout to contain %q, got:\n%s", want, out)
+		}
+	}
+	if !strings.HasSuffix(out, "\n") {
+		t.Errorf("expected stdout to end with trailing newline, got:\n%s", out)
+	}
+}
+
+func TestExportCmd_FormatMarkdown_OutPathWritesFile(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "first", "", "", "")
+	seedListEntry(t, dbPath, "second", "", "", "")
+
+	outPath := filepath.Join(t.TempDir(), "export.md")
+	if err := os.WriteFile(outPath, []byte("PRE-EXISTING CONTENT\n"), 0o644); err != nil {
+		t.Fatalf("pre-seed file: %v", err)
+	}
+
+	stdout, stderr, err := runExportCmd(t, dbPath, "--format", "markdown", "--out", outPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stdout != "" {
+		t.Errorf("expected empty stdout under --out, got %q", stdout)
+	}
+	if stderr != "" {
+		t.Errorf("expected empty stderr, got %q", stderr)
+	}
+
+	got, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	if n := len(got); n == 0 || got[n-1] != '\n' {
+		t.Errorf("expected file to end with newline, got last byte %q", string(got[n-1]))
+	}
+	if strings.Contains(string(got), "PRE-EXISTING CONTENT") {
+		t.Errorf("expected overwrite; sentinel still present in file")
+	}
+	for _, want := range []string{"# Bragfile Export\n", "### first", "### second"} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("expected file to contain %q, got:\n%s", want, got)
+		}
+	}
+}
+
+func TestExportCmd_FormatMarkdown_FiltersApply(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "platform-hit", "", "platform", "")
+	seedListEntry(t, dbPath, "growth-miss", "", "growth", "")
+	seedListEntry(t, dbPath, "no-project-miss", "", "", "")
+
+	out, errOut, err := runExportCmd(t, dbPath, "--format", "markdown", "--project", "platform")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "platform-hit") {
+		t.Errorf("expected stdout to contain platform-hit, got:\n%s", out)
+	}
+	for _, unwanted := range []string{"growth-miss", "no-project-miss"} {
+		if strings.Contains(out, unwanted) {
+			t.Errorf("expected stdout NOT to contain %q (filter failed), got:\n%s", unwanted, out)
+		}
+	}
+	if !strings.Contains(out, "Entries: 1") {
+		t.Errorf("expected Entries: 1 in filtered output, got:\n%s", out)
+	}
+	if !strings.Contains(out, "- platform: 1") {
+		t.Errorf("expected by-project summary to be `- platform: 1`, got:\n%s", out)
+	}
+	for _, unwanted := range []string{"- growth:", "- (no project):"} {
+		if strings.Contains(out, unwanted) {
+			t.Errorf("expected summary NOT to contain %q (filtered out), got:\n%s", unwanted, out)
+		}
+	}
+	if !strings.Contains(out, "Filters: --project platform\n") {
+		t.Errorf("expected Filters line to echo %q, got:\n%s", "--project platform", out)
+	}
+}
+
+func TestExportCmd_FlatWithJSONIsUserError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "solo", "", "", "")
+
+	out, _, err := runExportCmd(t, dbPath, "--format", "json", "--flat")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrUser) {
+		t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "--flat") {
+		t.Errorf("expected error to mention --flat, got %q", msg)
+	}
+	if !strings.Contains(msg, "--format markdown") {
+		t.Errorf("expected error to mention --format markdown, got %q", msg)
+	}
+}
+
+func TestExportCmd_HelpShowsFormatMarkdownAndFlat(t *testing.T) {
+	root, outBuf, errBuf := newExportTestRoot(t)
+	root.SetArgs([]string{"export", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("expected empty stderr, got %q", errBuf.String())
+	}
+	out := outBuf.String()
+	for _, needle := range []string{"--format", "json", "markdown", "--flat"} {
+		if !strings.Contains(out, needle) {
+			t.Errorf("expected help to contain %q, got:\n%s", needle, out)
+		}
+	}
+}

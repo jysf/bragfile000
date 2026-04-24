@@ -52,11 +52,12 @@ SQLite database at `~/.bragfile/db.sqlite`. Core operations today:
 `add`, `list` (with `--tag`/`--project`/`--type`/`--since`/`--limit`
 filters; add `-P` to include the project in output, or `--format
 json|tsv` for machine-readable output), `show`, `edit`, `delete`,
-`search` (full-text via FTS5), and `export --format json` (for durable
-dumps; shares the DEC-011 shape with `list --format json`). `brag add`
-with no arguments opens `$EDITOR` against a templated markdown buffer;
-fields are parsed on save. `brag export --format markdown` and `brag
-summary` arrive in later STAGE-003 specs.
+`search` (full-text via FTS5), and `export --format json|markdown` (for
+durable dumps or review-ready writeups; JSON shares the DEC-011 shape
+with `list --format json`, markdown shape locked by DEC-013 with
+grouped-by-project default and a `--flat` modifier). `brag add` with no
+arguments opens `$EDITOR` against a templated markdown buffer; fields
+are parsed on save. `brag summary` arrives in a later STAGE-003 spec.
 
 ### Install locally (from source)
 
