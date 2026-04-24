@@ -1,7 +1,7 @@
 # Using `brag` — tutorial
 
-> **Scope:** what you can do with `brag` today. `export` and `summary`
-> arrive in later stages. See
+> **Scope:** what you can do with `brag` today. `brag export --format
+> markdown` and `brag summary` arrive in later stages. See
 > [`projects/PROJ-001-mvp/brief.md`](../projects/PROJ-001-mvp/brief.md)
 > for the full plan.
 
@@ -184,6 +184,34 @@ pull titles from plain output keep working — under `-P`, titles
 shift to field 4 (`cut -f4`) and the project lands at field 3
 (`cut -f3`).
 
+### Machine-readable output: `--format json|tsv`
+
+When you want to pipe entries into `jq`, a spreadsheet, or another
+tool, ask for `json` or `tsv`:
+
+```bash
+brag list --format json                     # pretty-printed JSON array
+brag list --format tsv                      # tab-separated with a header row
+brag export --format json --out b.json      # durable dump to a file
+brag list --format json | jq '.[0]'         # first entry
+brag list --format json | jq '.[] | .title' # just titles
+```
+
+Both JSON and TSV output include the same nine fields in the same
+order as the `entries` table: `id`, `title`, `description`, `tags`,
+`project`, `type`, `impact`, `created_at`, `updated_at`. Tags stay
+a comma-joined string (per
+[DEC-004](../decisions/DEC-004-tags-comma-joined-for-mvp.md));
+timestamps are RFC3339. Empty fields render as `""` in JSON and as
+the empty string between tabs in TSV (no dash filler — that is
+plain-mode `-P` only).
+
+The JSON shape is locked by
+[DEC-011](../decisions/DEC-011-json-output-shape.md) and is
+byte-identical between `brag list --format json` and `brag export
+--format json` on the same rows, so piping one into `brag add --json`
+(SPEC-017) will round-trip without shape transforms.
+
 ### Search your entries
 
 `brag search "query"` runs a full-text search over every indexed
@@ -349,7 +377,6 @@ So you don't ask the tool for things it can't do:
 | Want | Status |
 |---|---|
 | `brag export --format markdown` | STAGE-003 |
-| `brag export --format sqlite` | STAGE-003 |
 | `brag summary --range week\|month` | STAGE-003 |
 | `brew install bragfile` | STAGE-004 |
 
