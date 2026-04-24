@@ -189,12 +189,13 @@ Deferred to STAGE-005 / never:
 Ordered by recommended build sequence; some specs are independent and
 can run in parallel.
 
-- [ ] SPEC-013 (design, **S**) — **`brag list --show-project / -P`.**
-      New flag adds a fourth tab-separated column (`<id>\t<created_at>
-      \t<project>\t<title>`); empty project renders as `-`; plain
-      `brag list` byte-identical to STAGE-002. Updates
-      `api-contract.md` list section. Fully independent of the export
-      trio — can land first or last.
+- [x] SPEC-013 (shipped 2026-04-23, **S**) — **`brag list
+      --show-project / -P`.** New flag adds a fourth tab-separated
+      column (`<id>\t<created_at>\t<project>\t<title>`); empty project
+      renders as `-`; plain `brag list` byte-identical to STAGE-002.
+      Updates `api-contract.md` list section. Shipped via PR #13
+      (squash-merged `7f802a2`). Clean build+verify cycle — no DEC
+      emitted, no deviations, no follow-ups.
 
 - [ ] SPEC-014 (design, **S**) — **`brag list --format json|tsv` +
       `brag export --format json` + DEC-011 (shared JSON shape).**
@@ -233,7 +234,7 @@ can run in parallel.
       what comes out of `list --format json` and what goes into
       `add --json` minus server fields).
 
-**Count:** 0 shipped / 0 active / 5 pending
+**Count:** 1 shipped / 0 active / 4 pending
 
 **Complexity check:** 4 × S, 1 × M, 0 × L. Within the 3–6 guideline.
 No splits recommended at framing time. Build sequence:

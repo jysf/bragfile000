@@ -7,7 +7,7 @@
 task:
   id: SPEC-013
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -674,10 +674,42 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Almost nothing — SPEC-013 is the cleanest build-verify cycle so
+   far. The one process nit: the build commit body claimed "Also
+   removes the duplicate empty SPEC-014 template file…", but the
+   diffstat showed no deletion because that file was never tracked in
+   git (scaffolded and `rm`'d pre-first-commit). The end state is
+   correct and verifiable by `ls`, but the commit message mildly
+   misleads a reader grepping `git log -p` for the deletion. Next
+   time: if you claim a cleanup in a commit body, make sure the
+   cleanup actually appears in the diff — either by committing the
+   scaffolding noise first in a throwaway `chore:` commit and then
+   deleting it in the build commit, or by not mentioning it as a
+   "removal" at all and just noting it under Deviations. Tiny hygiene
+   item; everything else executed verbatim against the spec.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. The spec's premise-audit status-change walk (pre-enumerated
+   doc locations) was the SPEC-012 ship lesson paying off exactly as
+   intended: zero doc discoveries at build time, zero stale-status
+   grep hits at verify. The five-decisions-five-tests pairing worked;
+   the fact that two of the seven tests
+   (`PlainOutputByteIdenticalToSTAGE002`, `ComposedWithAllFilters`)
+   attach to decisions 4/5 as secondary pairs rather than 1:1
+   primaries isn't a template defect — the spec's prose called it out
+   and the decisions are still each covered. `_templates/spec.md`,
+   `constraints.yaml`, and `AGENTS.md` §9 all survived unchanged;
+   nothing new to lift out. If the clean-run streak continues
+   (SPEC-013 makes three-in-a-row: 011 ship-lesson → 012 ship-lesson
+   → 013 applied both), the §9 premise-audit trilogy is probably
+   load-bearing in its current form.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No. The out-of-scope list (`-P` on `brag search`, `--pretty`
+   bundle, `--columns`, default-on project column, `formatListLine`
+   helper extraction) covers every tangent that surfaced. Of those,
+   `--pretty` is already earmarked for STAGE-004 polish and
+   `--columns` / default-on are already rejected by the brief —
+   neither needs a backlog entry. Nothing new surfaced during build
+   or verify that doesn't already have a home. Build Completion said
+   "None" and I concur.
