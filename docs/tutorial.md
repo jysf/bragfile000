@@ -1,7 +1,7 @@
 # Using `brag` — tutorial
 
-> **Scope:** what you can do with `brag` today. `brag export --format
-> markdown` and `brag summary` arrive in later stages. See
+> **Scope:** what you can do with `brag` today. `brag summary` arrives
+> in a later stage. See
 > [`projects/PROJ-001-mvp/brief.md`](../projects/PROJ-001-mvp/brief.md)
 > for the full plan.
 
@@ -212,6 +212,54 @@ byte-identical between `brag list --format json` and `brag export
 --format json` on the same rows, so piping one into `brag add --json`
 (SPEC-017) will round-trip without shape transforms.
 
+### Review-ready export: `--format markdown`
+
+For a document you can paste into a quarterly review, a retro writeup,
+or a promo packet, export as markdown:
+
+```bash
+brag export --format markdown                     # grouped by project
+brag export --format markdown --flat              # flat chronological
+brag export --format markdown --out report.md     # write to file
+brag export --format markdown --project platform  # filter first
+brag export --format markdown --since 90d > q.md  # quarter to stdout
+```
+
+The default shape groups entries under `## <project>` headings in
+alphabetical-ASC order (entries without a project render last under
+`## (no project)`), with within-group ordering chronological-ASC so
+you can read the period forward through time. An executive summary
+at the top breaks down entries `**By type**` and `**By project**`,
+and a provenance block records when the export was taken and what
+filters applied:
+
+```
+# Bragfile Export
+
+Exported: 2026-04-23T12:00:00Z
+Entries: 4
+Filters: --project platform --since 90d
+
+## Summary
+
+**By type**
+- shipped: 3
+- learned: 1
+
+**By project**
+- platform: 4
+
+## platform
+
+### cut p99 latency
+...
+```
+
+`--flat` swaps the project grouping for a single
+`## Entries (chronological)` wrapper — useful when you want a pure
+timeline rather than project-axis buckets. The full shape is locked by
+[DEC-013](../decisions/DEC-013-markdown-export-shape.md).
+
 ### Search your entries
 
 `brag search "query"` runs a full-text search over every indexed
@@ -376,7 +424,6 @@ So you don't ask the tool for things it can't do:
 
 | Want | Status |
 |---|---|
-| `brag export --format markdown` | STAGE-003 |
 | `brag summary --range week\|month` | STAGE-003 |
 | `brew install bragfile` | STAGE-004 |
 

@@ -3,11 +3,10 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
-	"time"
 
 	"github.com/jysf/bragfile000/internal/config"
+	"github.com/jysf/bragfile000/internal/export"
 	"github.com/jysf/bragfile000/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -63,30 +62,6 @@ func runShow(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("get entry: %w", err)
 	}
 
-	renderEntry(cmd.OutOrStdout(), entry)
+	export.RenderEntry(cmd.OutOrStdout(), entry, 1)
 	return nil
-}
-
-func renderEntry(w io.Writer, e storage.Entry) {
-	fmt.Fprintf(w, "# %s\n\n", e.Title)
-	fmt.Fprintln(w, "| field       | value |")
-	fmt.Fprintln(w, "| ----------- | ----- |")
-	fmt.Fprintf(w, "| id          | %d |\n", e.ID)
-	fmt.Fprintf(w, "| created_at  | %s |\n", e.CreatedAt.UTC().Format(time.RFC3339))
-	fmt.Fprintf(w, "| updated_at  | %s |\n", e.UpdatedAt.UTC().Format(time.RFC3339))
-	if e.Tags != "" {
-		fmt.Fprintf(w, "| tags        | %s |\n", e.Tags)
-	}
-	if e.Project != "" {
-		fmt.Fprintf(w, "| project     | %s |\n", e.Project)
-	}
-	if e.Type != "" {
-		fmt.Fprintf(w, "| type        | %s |\n", e.Type)
-	}
-	if e.Impact != "" {
-		fmt.Fprintf(w, "| impact      | %s |\n", e.Impact)
-	}
-	if e.Description != "" {
-		fmt.Fprintf(w, "\n## Description\n\n%s\n", e.Description)
-	}
 }

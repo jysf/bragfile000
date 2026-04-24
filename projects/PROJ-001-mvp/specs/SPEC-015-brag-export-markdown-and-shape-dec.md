@@ -7,7 +7,7 @@
 task:
   id: SPEC-015
   type: story                      # epic | story | task | bug | chore
-  cycle: build
+  cycle: verify
   blocked: false
   priority: medium
   complexity: M                    # Stage framing said M; load-bearing golden pair + renderEntry lift + 14 tests keeps it honest at M.
@@ -1503,28 +1503,69 @@ during design). Commit message prefix: `feat(SPEC-015): ...`.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-015-brag-export-markdown-and-shape-dec`
+- **PR (if applicable):** pending (opened at end of build)
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any; DEC-013 was design-time)
+  - None. DEC-013 was design-time and pre-existed this build cycle.
 - **Deviations from spec:**
-  - [list]
+  - **TDD order slip (self-corrected):** in Step 2 of the build plan I
+    initially wrote the full `ToMarkdown` implementation alongside the
+    `RenderEntry` lift rather than stopping at the lift. On realizing
+    this bypassed the fail-first signal the spec asked for, I reverted
+    `markdown.go` to only `RenderEntry` + `MarkdownOptions` (struct
+    only), wrote all 14 tests, ran them, and confirmed the expected
+    failure modes (`undefined: ToMarkdown`, `unknown flag: --flat`,
+    `unknown --format value "markdown"`, help text missing `markdown`
+    and `--flat`) before re-adding `ToMarkdown` and the CLI changes.
+    Fail-first discipline was ultimately honored; the slip is noted so
+    a future auditor reading the git log sees only the good end-state.
+  - **Assertion shape for `TestRenderEntry_HeadingLevel3`:** the spec's
+    sketch said "Assert it does NOT contain `# alpha-old` or `##
+    alpha-old`"; a naive `strings.Contains` fires on "### alpha-old"
+    which contains "# alpha-old" and "## alpha-old" as substrings. I
+    switched to line-based equality (`ln == "# alpha-old"`) so the
+    assertion is faithful to the intent. Same pattern applied to
+    "## Description" vs "#### Description".
+  - **Assertion shape for `TestToMarkdown_GroupingOrderRules`:** the
+    spec's sketch checked "after the last alpha entry, before `##
+    beta`, NO `---`". I implemented this as "`---` must not appear
+    after `### alpha-new` in the alpha section" (more direct than
+    LastIndex + ordering math).
+  - `echoFilters` extracted to a helper (vs inlined) per the spec's
+    recommendation.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None beyond the already-enumerated backlog entries (`--toc`,
+    `--group-by`, `--template`, DESC-within-group, sqlite export).
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Minor: the "assert NOT contains `# alpha-old`" pattern in the
+   level-3 heading test is a substring-trap under `strings.Contains` —
+   any "### alpha-old" line satisfies that substring. The spec should
+   specify line-based assertions for heading-level tests so
+   implementers don't rediscover the trap. Apart from that, the
+   literal goldens, the lift sequencing, and the `echoFilters` sketch
+   made the build mostly mechanical.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — The implicit "no blank line between `## <project>` section and
+   its first `### <title>` that isn't covered by `RenderEntry`'s own
+   title-prefix newlines" is subtle; I only caught it by tracing the
+   byte sequence against the golden. The Notes for the Implementer's
+   "subtle spacing" paragraph flagged it, so this is more "read that
+   paragraph twice" than a missing constraint. Net: no gap.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Stop at Step 2 exactly — lift `renderEntry`, add the single
+   heading-level-1 test, run it, stop. Do not keep typing into
+   `markdown.go` "while I'm there" because the remaining struct +
+   `ToMarkdown` skeleton belongs to Step 4, not Step 2. Writing tests
+   against an already-implemented function weakens the fail-first
+   signal even when the test content is correct.
 
 ---
 

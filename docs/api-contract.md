@@ -190,18 +190,33 @@ brag export --format json                         # stdout: JSON array
 brag export --format json --out entries.json      # write to file
 brag export --format json --project platform      # filter before exporting
 brag export --format json --tag auth --since 30d
+
+brag export --format markdown                     # stdout: grouped markdown
+brag export --format markdown --flat              # stdout: flat chronological
+brag export --format markdown --out report.md     # write to file
+brag export --format markdown --project platform  # filter before exporting
 ```
 
-- `--format` is required. Accepted values in SPEC-014: `json`.
-  `markdown` arrives in SPEC-015.
+- `--format` is required. Accepted values: `json`, `markdown`.
 - `--out <path>` optional; defaults to stdout. If set, overwrites any
   existing file at the path without prompting.
+- `--flat` optional; markdown-only. Skips the default group-by-project
+  rendering in favor of a single `## Entries (chronological)` section.
+  Rejected with a user error when combined with `--format json`.
 - Accepts the same filter flags as `brag list` (`--tag`, `--project`,
   `--type`, `--since`, `--limit`). `ListFilter` is shared verbatim
   between the two commands.
 - JSON output shape locked by
   [DEC-011](../decisions/DEC-011-json-output-shape.md); byte-identical
   to `brag list --format json` on the same rows.
+- Markdown output shape locked by
+  [DEC-013](../decisions/DEC-013-markdown-export-shape.md): level-1
+  document heading, provenance block (`Exported:`, `Entries:`,
+  `Filters:`), `## Summary` with `**By type**` / `**By project**`
+  counts, then entries grouped under `## <project>` in alphabetical-ASC
+  order (`(no project)` last) with within-group chronological-ASC
+  ordering. `--flat` swaps grouping for a single
+  `## Entries (chronological)` wrapper.
 - Unknown or missing `--format` values exit 1 (user error).
 
 ### `brag summary --range week|month` (STAGE-003)
@@ -241,3 +256,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-009` — editor buffer format (`brag edit <id>`)
 - `DEC-010` — `brag search` query syntax (auto-tokenize + phrase-quote)
 - `DEC-011` — shared JSON output shape for `brag list --format json` and `brag export --format json`
+- `DEC-013` — markdown export shape for `brag export --format markdown` (+`--flat`)
