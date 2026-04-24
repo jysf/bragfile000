@@ -98,10 +98,6 @@ func TestAddCmd_JSON_RoundTripWithListJSON(t *testing.T) {
 	}
 	jsonObj := arr[0]
 
-	// Sleep 1s to force a different RFC3339 second on the inserted row
-	// (sub-second test timing would otherwise tie the timestamps).
-	time.Sleep(1 * time.Second)
-
 	// Step 3 — pipe those bytes into `brag add --json` against same DB.
 	root2 := NewRootCmd("test")
 	root2.AddCommand(NewAddCmd())
@@ -163,12 +159,10 @@ func TestAddCmd_JSON_RoundTripWithListJSON(t *testing.T) {
 	if copyEntry.ID == source.ID {
 		t.Errorf("expected fresh ID, got source's: %d", copyEntry.ID)
 	}
-	// Bonus assertion: timestamps differ (1s sleep above forces this).
-	// If CI flakes here, drop the assertion — the ID-inequality already
-	// proves the server-field-fresh contract.
-	if copyEntry.CreatedAt.Equal(source.CreatedAt) {
-		t.Errorf("expected fresh CreatedAt, got source's: %s", copyEntry.CreatedAt.Format(time.RFC3339))
-	}
+	// Server-field freshness (timestamps) is proven by the stronger
+	// frozen-timestamp assertion in TestAddCmd_JSON_ServerFieldsToleratedAndIgnored
+	// rather than by time-inequality here — see AGENTS.md §9 freshness-assertion
+	// addendum (SPEC-017 ship lesson, 2026-04-24).
 }
 
 func TestAddCmd_JSON_ValidInputInsertsEntryAndEmitsID(t *testing.T) {

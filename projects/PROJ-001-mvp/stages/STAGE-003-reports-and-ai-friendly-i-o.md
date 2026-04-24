@@ -244,21 +244,30 @@ can run in parallel.
       the portable-backup use case. Full entry in `backlog.md` →
       "`brag export --format sqlite` (full-DB VACUUM INTO)".
 
-- [ ] SPEC-017 (design, **S**) — **`brag add --json` + DEC-012
-      (stdin-JSON schema).** Stdin as a single JSON object; DEC-012
-      pins the accepted shape (user-owned fields only; strict-reject
-      unknown keys; server-owned `id`/`created_at`/`updated_at`
-      tolerated-and-ignored so round-trip works). Reuses `Store.Add`.
-      Depends on DEC-011 having landed (shape consistency between
-      what comes out of `list --format json` and what goes into
-      `add --json` minus server fields).
+- [x] SPEC-017 (shipped 2026-04-24, **S**) — **`brag add --json` +
+      DEC-012 (stdin-JSON schema).** Stdin as a single JSON object;
+      DEC-012 locks six choices (single-object only, required title,
+      optional user-owned fields free-form, server fields
+      tolerated-and-ignored, unknown keys strict-rejected naming the
+      offender, inserted-ID stdout). Reuses `Store.Add`. Closed the
+      DEC-011 round-trip loop: `brag list --format json | jq '.[0]'
+      | brag add --json` works without `jq del`. Inline in
+      `internal/cli/add_json.go` (no new `internal/ingest` package;
+      YAGNI until batch spec lands). Three-branch dispatch in
+      `runAdd`: mutual-exclusion → json → flag → editor. Shipped
+      via PR #16 (squash-merged `15b2534`). Clean cycle — no
+      build-time DECs, no deviations, no follow-ups. §9 addendum
+      earned: freshness assertions use `new.ID != source.ID` not
+      `CreatedAt != source.CreatedAt` (the symmetric sibling of
+      SPEC-002's ordering tie-break rule).
 
-**Count:** 3 shipped / 0 active / 1 pending / 1 deferred
+**Count:** 4 shipped / 0 active / 0 pending / 1 deferred
 
-**Complexity check:** 1 × S remaining (SPEC-017). DEC-011 and
-DEC-013 both shipped — SPEC-017 is the last spec in STAGE-003
-and is fully unblocked. After SPEC-017 ships, run Prompt 1d
-(STAGE SHIP) to close STAGE-003.
+**Complexity check:** All specs shipped except deferred SPEC-016
+(sqlite export, moved to backlog 2026-04-23). Three DECs emitted
+across the stage (DEC-011 JSON shape, DEC-012 stdin-JSON schema,
+DEC-013 markdown export shape). STAGE-003 is ready for Prompt 1d
+(STAGE SHIP) to close.
 
 ## Design Notes
 

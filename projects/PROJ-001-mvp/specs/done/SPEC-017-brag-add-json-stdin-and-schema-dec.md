@@ -7,7 +7,7 @@
 task:
   id: SPEC-017
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -1329,10 +1329,46 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing about the Design→Build→Verify rhythm — the pattern holds.
+   The one micro-tighten: when the design session knows the cleaner
+   assertion, prescribe the cleaner assertion rather than offering
+   "take it or leave it." The round-trip test spec flagged the 1s
+   sleep as "bonus; drop without ceremony if it flakes," which
+   transferred the judgment call to build, where path-of-least-
+   resistance kept it. Design should have written "assert
+   ID-inequality; omit timestamp-inequality (proven elsewhere)" and
+   put the sleep in a Rejected-alternative note. Small lesson:
+   "either-is-fine" in Notes-for-Implementer quietly off-loads
+   decisions to build. When the decision is decidable at design
+   time, decide it.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Yes — AGENTS.md §9 addendum, not too narrow. SPEC-002 earned
+   "use `id DESC` tie-break, not timestamp alone" for ordering.
+   SPEC-017 earned the symmetric freshness case: assert `new.ID !=
+   source.ID`, not `new.CreatedAt != source.CreatedAt`. Same
+   underlying rule (RFC3339 is second-precision; `AUTOINCREMENT`
+   is monotonic), two sibling applications. Unified as a one-line
+   addendum under the existing SPEC-002 bullet; applied alongside
+   this ship.
+
+   The ordering and freshness cases are two faces of the same rule:
+   RFC3339 is second-precision, so use the monotonic column for any
+   distinctness assertion.
+
+   No template changes. No DEC revision (DEC-012 shipped clean).
+   No new constraint.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No. Three micro-items, none spec-worthy:
+   - Drop the 1s sleep + `CreatedAt.Equal` line from
+     `TestAddCmd_JSON_RoundTripWithListJSON` — one-line chore.
+     **Applied in this ship commit.**
+   - Add the §9 addendum to AGENTS.md — documentation chore.
+     **Applied in this ship commit.**
+   - Both bundled into this ship chore rather than a follow-up
+     micro-PR.
+
+   Deferred backlog entries (NDJSON `--batch`, `--lenient`,
+   structured success output) have no revisit-trigger fired —
+   leave them dormant. STAGE-003 closes clean.
