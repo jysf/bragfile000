@@ -16,7 +16,10 @@ import (
 // field), so `brag add --db /tmp/x.db` still opens the editor.
 var addFieldFlags = []string{"title", "description", "tags", "project", "type", "impact"}
 
-// NewAddCmd returns the `brag add` subcommand. Two modes:
+// NewAddCmd returns the `brag add` subcommand. Three modes:
+//   - json mode: --json set; reads a single JSON entry from stdin
+//     (DEC-012 schema) and inserts it. Mutually exclusive with the
+//     six entry-field flags.
 //   - flag mode: any of the six entry-field flags set; --title is
 //     required (DEC-007).
 //   - editor mode: no entry-field flag set; opens $EDITOR on a hint
@@ -25,13 +28,16 @@ func NewAddCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
 		Short: "Add a new brag entry",
-		Long: `Add a new brag entry, either via flags or by opening $EDITOR.
+		Long: `Add a new brag entry, either via flags, by opening $EDITOR, or by piping JSON to stdin.
 
 Flag mode (any of -t, -d, -T, -p, -k, -i set): inserts directly from flag
 values. --title is required.
 
 Editor mode (no entry-field flags set): opens $EDITOR on a template buffer.
 Save a valid entry to insert it; save unchanged to abort cleanly.
+
+JSON mode (--json set): reads a single JSON entry from stdin and inserts it.
+Mutually exclusive with field flags. See DEC-012 for the accepted schema.
 
 Examples:
   brag add                                          # editor mode
@@ -40,6 +46,7 @@ Examples:
            -i "unblocked mobile v3 release"
   brag add --title "..." --description "..." --tags "..." \
            --project "..." --type "..." --impact "..."
+  echo '{"title":"shipped"}' | brag add --json
 
 Short forms: -t title, -d description, -T tags, -p project,
 -k type, -i impact.`,
@@ -51,6 +58,7 @@ Short forms: -t title, -d description, -T tags, -p project,
 	cmd.Flags().StringP("project", "p", "", "project / initiative this brag belongs to")
 	cmd.Flags().StringP("type", "k", "", "free-form category (shipped, learned, mentored, ...)")
 	cmd.Flags().StringP("impact", "i", "", "impact statement (metric, quote, outcome)")
+	cmd.Flags().Bool("json", false, "read a single JSON entry from stdin; cannot combine with field flags")
 	// MarkFlagRequired is intentionally omitted: cobra's required-flag
 	// validation returns a plain error that cannot carry our ErrUser
 	// sentinel, and the RunE TrimSpace check below already covers
@@ -58,13 +66,28 @@ Short forms: -t title, -d description, -T tags, -p project,
 	return cmd
 }
 
-// runAdd dispatches to flag mode or editor mode based on whether any
-// of the six entry-field flags was set on the command line.
+// runAdd dispatches to json mode, flag mode, or editor mode. Priority:
+// --json set wins (and is mutually exclusive with the six entry-field
+// flags); else any field flag set routes to flag mode; else editor
+// mode. The persistent --db flag is a path override, not a dispatch
+// signal, so it does not affect routing (SPEC-010 decision #2).
 func runAdd(cmd *cobra.Command, args []string) error {
+	jsonMode := cmd.Flags().Changed("json")
+	var firstFieldFlag string
 	for _, name := range addFieldFlags {
 		if cmd.Flags().Changed(name) {
-			return runAddFlags(cmd, args)
+			firstFieldFlag = name
+			break
 		}
+	}
+	if jsonMode && firstFieldFlag != "" {
+		return UserErrorf("--json cannot be combined with --%s", firstFieldFlag)
+	}
+	if jsonMode {
+		return runAddJSON(cmd, args)
+	}
+	if firstFieldFlag != "" {
+		return runAddFlags(cmd, args)
 	}
 	return runAddEditor(cmd)
 }
