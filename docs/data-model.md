@@ -143,3 +143,4 @@ None of them land in PROJ-001.
 - `DEC-002` — embedded migrations
 - `DEC-004` — comma-joined tags (MVP)
 - `DEC-005` — INTEGER auto-increment primary keys (MVP)
+- `DEC-011` — shared JSON output shape for `brag list --format json` and `brag export --format json`: 9-key naked array mirroring the `entries` column names in order (`id, title, description, tags, project, type, impact, created_at, updated_at`).

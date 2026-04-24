@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jysf/bragfile000/internal/export"
 	"github.com/jysf/bragfile000/internal/storage"
 	"github.com/jysf/bragfile000/internal/storage/storagetest"
 	"github.com/spf13/cobra"
@@ -856,4 +858,187 @@ func TestListCmd_ShowProject_HelpShowsFlag(t *testing.T) {
 			t.Errorf("expected help to contain %q, got:\n%s", needle, out)
 		}
 	}
+}
+
+// -----------------------------------------------------------------------------
+// SPEC-014: `brag list --format json|tsv`
+//
+// Five tests covering the list-side decisions: --format json routes through
+// internal/export.ToJSON, --format tsv emits header + per-row shape, unknown
+// values are user errors, filters still apply, and help advertises accepted
+// values. Plain-mode byte-stability under --format absent is locked by the
+// existing TestListCmd_PlainOutputByteIdenticalToSTAGE002 above.
+// -----------------------------------------------------------------------------
+
+func TestListCmd_FormatJSON_EmitsExportJSON(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	a := seedListEntry(t, dbPath, "first", "auth", "platform", "shipped")
+	b := seedListEntry(t, dbPath, "second", "", "growth", "")
+
+	out, errOut, err := runListCmd(t, dbPath, "--format", "json")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+
+	// Reverse-insertion order per Store.List's created_at DESC, id DESC.
+	expected, err := export.ToJSON([]storage.Entry{b, a})
+	if err != nil {
+		t.Fatalf("export.ToJSON: %v", err)
+	}
+	want := string(expected) + "\n"
+	if out != want {
+		t.Fatalf("--format json stdout mismatch\nwant:\n%s\ngot:\n%s", want, out)
+	}
+}
+
+func TestListCmd_FormatJSON_FiltersApply(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "platform-entry", "", "platform", "")
+	seedListEntry(t, dbPath, "growth-entry", "", "growth", "")
+	seedListEntry(t, dbPath, "no-project-entry", "", "", "")
+
+	out, errOut, err := runListCmd(t, dbPath, "--format", "json", "--project", "platform")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+
+	var arr []map[string]any
+	if err := json.Unmarshal([]byte(strings.TrimRight(out, "\n")), &arr); err != nil {
+		t.Fatalf("parse json: %v\n%s", err, out)
+	}
+	if len(arr) != 1 {
+		t.Fatalf("expected 1 entry after --project platform filter, got %d", len(arr))
+	}
+	if arr[0]["project"] != "platform" {
+		t.Errorf("want project=platform, got %v", arr[0]["project"])
+	}
+	if arr[0]["title"] != "platform-entry" {
+		t.Errorf("want title=platform-entry, got %v", arr[0]["title"])
+	}
+}
+
+func TestListCmd_FormatTSV_HeaderAndDataShape(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	// Seed A first, then B; Store.List reverses so B appears first.
+	seedListEntryFull(t, dbPath, storage.Entry{
+		Title:       "full",
+		Description: "desc-full",
+		Tags:        "t1,t2",
+		Project:     "platform",
+		Type:        "shipped",
+		Impact:      "imp-full",
+	})
+	seedListEntryFull(t, dbPath, storage.Entry{Title: "bare"})
+
+	out, errOut, err := runListCmd(t, dbPath, "--format", "tsv")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+
+	// Trim one trailing newline for the split; expect 3 non-empty lines.
+	body := strings.TrimSuffix(out, "\n")
+	lines := strings.Split(body, "\n")
+	if len(lines) != 3 {
+		t.Fatalf("want 3 lines (header + 2 data), got %d:\n%q", len(lines), out)
+	}
+
+	wantHeader := "id\ttitle\tdescription\ttags\tproject\ttype\timpact\tcreated_at\tupdated_at"
+	if lines[0] != wantHeader {
+		t.Fatalf("header row drift:\nwant: %q\ngot:  %q", wantHeader, lines[0])
+	}
+
+	for i, line := range lines[1:] {
+		if got := strings.Count(line, "\t"); got != 8 {
+			t.Fatalf("data line %d: want 8 tabs, got %d: %q", i+1, got, line)
+		}
+		if got := len(strings.Split(line, "\t")); got != 9 {
+			t.Fatalf("data line %d: want 9 fields, got %d: %q", i+1, got, line)
+		}
+	}
+
+	// Line 1 is the "bare" entry (inserted last, reverse-order first).
+	bareFields := strings.Split(lines[1], "\t")
+	if bareFields[1] != "bare" {
+		t.Errorf("bare title: got %q", bareFields[1])
+	}
+	for _, idx := range []int{2, 3, 4, 5, 6} {
+		if bareFields[idx] != "" {
+			t.Errorf("bare field[%d]: want empty, got %q", idx, bareFields[idx])
+		}
+	}
+
+	// Line 2 is the "full" entry.
+	fullFields := strings.Split(lines[2], "\t")
+	wantFull := []string{"full", "desc-full", "t1,t2", "platform", "shipped", "imp-full"}
+	for i, w := range wantFull {
+		if fullFields[i+1] != w {
+			t.Errorf("full field[%d]: want %q, got %q", i+1, w, fullFields[i+1])
+		}
+	}
+}
+
+func TestListCmd_FormatUnknownValueIsUserError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "solo", "", "", "")
+
+	out, _, err := runListCmd(t, dbPath, "--format", "yaml")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrUser) {
+		t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "yaml") {
+		t.Errorf("expected error to mention the offending value %q, got %q", "yaml", msg)
+	}
+	if !strings.Contains(msg, "json") && !strings.Contains(msg, "tsv") {
+		t.Errorf("expected error to mention accepted values, got %q", msg)
+	}
+}
+
+func TestListCmd_FormatHelpShowsAcceptedValues(t *testing.T) {
+	root, outBuf, errBuf := newListTestRoot(t)
+	root.SetArgs([]string{"list", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("expected empty stderr, got %q", errBuf.String())
+	}
+	out := outBuf.String()
+	for _, needle := range []string{"--format", "json", "tsv"} {
+		if !strings.Contains(out, needle) {
+			t.Errorf("expected help to contain %q, got:\n%s", needle, out)
+		}
+	}
+}
+
+// seedListEntryFull inserts a fully-populated storage.Entry (the narrow
+// seedListEntry above only covers title/tags/project/type). Returns the
+// hydrated entry.
+func seedListEntryFull(t *testing.T, dbPath string, e storage.Entry) storage.Entry {
+	t.Helper()
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("storage.Open: %v", err)
+	}
+	defer s.Close()
+	out, err := s.Add(e)
+	if err != nil {
+		t.Fatalf("Add(%q): %v", e.Title, err)
+	}
+	return out
 }

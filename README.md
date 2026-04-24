@@ -50,11 +50,13 @@ See `AGENTS.md` section 13 for the full discipline.
 `brag` is a terminal CLI that stores brag-worthy work moments in a local
 SQLite database at `~/.bragfile/db.sqlite`. Core operations today:
 `add`, `list` (with `--tag`/`--project`/`--type`/`--since`/`--limit`
-filters; add `-P` to include the project in output), `show`, `edit`,
-`delete`, and `search` (full-text via FTS5).
-`brag add` with no arguments opens `$EDITOR` against a templated
-markdown buffer; fields are parsed on save. `export` and `summary`
-arrive in STAGE-003.
+filters; add `-P` to include the project in output, or `--format
+json|tsv` for machine-readable output), `show`, `edit`, `delete`,
+`search` (full-text via FTS5), and `export --format json` (for durable
+dumps; shares the DEC-011 shape with `list --format json`). `brag add`
+with no arguments opens `$EDITOR` against a templated markdown buffer;
+fields are parsed on save. `brag export --format markdown` and `brag
+summary` arrive in later STAGE-003 specs.
 
 ### Install locally (from source)
 

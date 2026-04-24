@@ -78,7 +78,7 @@ file, and spawns the editor against it. On save:
 ### `brag list` — list entries
 
 ```
-brag list [-P|--show-project] [--tag T] [--project P] [--type T] [--since 2026-01-01] [--limit N]
+brag list [-P|--show-project] [--format json|tsv] [--tag T] [--project P] [--type T] [--since 2026-01-01] [--limit N]
 ```
 
 - `--tag`, `--project`, `--type` filter on exact field value
@@ -86,11 +86,22 @@ brag list [-P|--show-project] [--tag T] [--project P] [--type T] [--since 2026-0
 - `--since` accepts `YYYY-MM-DD` or a duration like `7d`, `2w`, `3m`.
 - `--limit` defaults to unlimited; useful for `brag list --limit 5`.
 - Order: `created_at DESC`.
-- Output: one line per entry, tab-separated columns:
-  `<id>\t<created_at>\t<title>`.
+- Output (default / plain mode): one line per entry, tab-separated
+  columns: `<id>\t<created_at>\t<title>`.
 - With `-P` / `--show-project`: output becomes
   `<id>\t<created_at>\t<project>\t<title>` (four tab-separated
   columns). Empty project renders as `-`.
+- With `--format json`: pretty-printed JSON array, one object per
+  entry, 9 keys per object (`id, title, description, tags, project,
+  type, impact, created_at, updated_at`). Shape locked by
+  [DEC-011](../decisions/DEC-011-json-output-shape.md); same bytes
+  as `brag export --format json` on the same rows.
+- With `--format tsv`: header row
+  (`id\ttitle\tdescription\ttags\tproject\ttype\timpact\tcreated_at\tupdated_at`)
+  followed by one data row per entry. Field order matches `--format
+  json`. Empty fields render as the empty string between tabs (no
+  dash filler — that is plain-mode `-P` behavior only).
+- Unknown `--format` values exit 1 (user error).
 - STAGE-001 ships without filter flags — plumbing exists, flags are
   added in STAGE-002.
 
@@ -175,16 +186,23 @@ literal text. Power-user FTS5 operators are not exposed.
 ### `brag export` — export entries (STAGE-003)
 
 ```
-brag export --format markdown                 # stdout: all entries as a markdown report
-brag export --format markdown --out report.md # write to file
-brag export --format sqlite --out backup.db   # raw DB file copy
+brag export --format json                         # stdout: JSON array
+brag export --format json --out entries.json      # write to file
+brag export --format json --project platform      # filter before exporting
+brag export --format json --tag auth --since 30d
 ```
 
-- `--format` is required. Values: `markdown`, `sqlite`.
-- `--out <path>` optional; defaults to stdout for markdown, required
-  for sqlite.
-- `sqlite` export is a `VACUUM INTO` copy (portable, no WAL-dependent
-  state).
+- `--format` is required. Accepted values in SPEC-014: `json`.
+  `markdown` arrives in SPEC-015.
+- `--out <path>` optional; defaults to stdout. If set, overwrites any
+  existing file at the path without prompting.
+- Accepts the same filter flags as `brag list` (`--tag`, `--project`,
+  `--type`, `--since`, `--limit`). `ListFilter` is shared verbatim
+  between the two commands.
+- JSON output shape locked by
+  [DEC-011](../decisions/DEC-011-json-output-shape.md); byte-identical
+  to `brag list --format json` on the same rows.
+- Unknown or missing `--format` values exit 1 (user error).
 
 ### `brag summary --range week|month` (STAGE-003)
 
@@ -222,3 +240,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-003` — config resolution order
 - `DEC-009` — editor buffer format (`brag edit <id>`)
 - `DEC-010` — `brag search` query syntax (auto-tokenize + phrase-quote)
+- `DEC-011` — shared JSON output shape for `brag list --format json` and `brag export --format json`

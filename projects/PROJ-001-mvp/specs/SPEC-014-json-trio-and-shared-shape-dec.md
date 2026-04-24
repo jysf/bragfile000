@@ -7,7 +7,7 @@
 task:
   id: SPEC-014
   type: story                      # epic | story | task | bug | chore
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: M                    # borderline; called out below. Single-spec per user direction 2026-04-23.
@@ -1113,30 +1113,56 @@ Implementation Context; these are the "how" details.
 
 ## Build Completion
 
-*Filled in at the end of the **build** cycle, before advancing to verify.*
-
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
-- **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+- **Branch:** `feat/spec-014-json-trio-and-shared-shape-dec`
+- **PR (if applicable):** opened — see final PR URL in the build summary.
+- **All acceptance criteria met?** yes. All 14 new failing tests now
+  pass; the load-bearing
+  `TestExportCmd_FormatJSON_ByteIdenticalToListJSON` is green;
+  SPEC-013's `TestListCmd_PlainOutputByteIdenticalToSTAGE002` and
+  SPEC-004's `TestListCmd_TabSeparatedFormat` remain green unchanged,
+  locking plain-mode byte-stability under `--format` absent.
+- **New decisions emitted:** none at build time. DEC-011 was emitted
+  at design time alongside the spec (per Notes for the Implementer).
 - **Deviations from spec:**
-  - [list]
+  - TSV helpers (`TSVHeader` constant + `ToTSVRow`) were placed in
+    the new `internal/export` package rather than inlined in
+    `list.go`. Notes for the Implementer offered both options and
+    recommended the export-package placement for consistency; this
+    build followed the recommendation. Both options passed the tests
+    verbatim; the chosen layout keeps one package owning every
+    output format (payoff for SPEC-015's markdown addition).
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None beyond what the stage backlog already tracks (envelope,
+    `--compact`, NDJSON, lenient-accept, SQLite export, SPEC-015
+    markdown, SPEC-017 `brag add --json`).
 
 ### Build-phase reflection (3 questions, short answers)
 
-Process-focused: how did the build go? What friction did the spec create?
-
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Very little. The spec's `Notes for the Implementer` spelled out
+   the exact code sketches for `ToJSON`, the `runList` dispatch, the
+   `runExport` skeleton, and the doc changes, including the
+   literal-byte golden for `TestToJSON_DEC011ShapeGolden`. The only
+   micro-ambiguity was where to put the TSV helpers (list.go vs
+   internal/export); the spec named both and picked a recommendation,
+   so "ambiguity" is the wrong word — it was a sanctioned choice.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. The constraint set (`no-sql-in-cli-layer`,
+   `stdout-is-for-data-stderr-is-for-humans`,
+   `errors-wrap-with-context`, `test-before-implementation`,
+   `one-spec-per-pr`) covered everything the build touched. The
+   nine locked design decisions plus DEC-011's six sub-choices left
+   no surface to re-litigate.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Write the `TestExportCmd_FormatJSON_ByteIdenticalToListJSON`
+   test *first* in the new export test file, before even the
+   fail-first sanity check for the other tests — it is the
+   load-bearing cross-path contract and putting it first highlights
+   the DEC-011 single-source-of-truth invariant. In this build it
+   was test #6 of 7, but its centrality arguably deserves top
+   billing.
 
 ---
 
