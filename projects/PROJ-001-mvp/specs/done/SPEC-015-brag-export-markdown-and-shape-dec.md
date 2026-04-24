@@ -7,7 +7,7 @@
 task:
   id: SPEC-015
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: M                    # Stage framing said M; load-bearing golden pair + renderEntry lift + 14 tests keeps it honest at M.
@@ -1575,10 +1575,85 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Keep the size; don't apologize for it. SPEC-015 earned its 1400+
+   lines: two byte-exact goldens, a lift with import-path migration,
+   a doc sweep across four files, and a DEC emission. Trimming the
+   literal code sketches in "Notes for the Implementer" would have
+   pushed ambiguity back into build — the builder's Q1 reflection
+   confirmed those sketches made the build "mostly mechanical." The
+   advisory cap is doing its job as a prompt to justify size, not to
+   refuse it.
+
+   The one structural thing worth revisiting is the Premise Audit
+   block. That section has run four times now (SPEC-011, 012, 014,
+   015) with the same skeleton — grep commands, expected-action
+   columns, collection-count audit, doc-name audit. Extracting it
+   into `/projects/_templates/spec.md` as a reusable premise-audit
+   sub-template (the three cases plus the grep pattern) would thin
+   every future spec by 50–80 lines without losing any signal.
+   That's a template edit, not a SPEC, and feeds Q2 below.
+
+   On the lift pattern: it worked. The heading-level parameter kept
+   the lift strictly additive at the call-sites (show.go adds `, 1`
+   and an import; markdown.go receives the body verbatim with two
+   `strings.Repeat`-generated prefixes). I'd reuse this pattern if
+   future render helpers need to relocate — parameterize the one
+   thing that changes between old and new call-sites, lift the rest
+   unmodified, anchor with a byte-exact pre-lift snapshot test (the
+   key that made the lift auditable was
+   `TestRenderEntry_HeadingLevel1`'s embedded `wantSnapshot`
+   constant).
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Two things, only one blocking.
+
+   **Blocking (applied with this ship):** AGENTS.md §9 addendum
+   under the existing SPEC-005 bullet — "for markdown heading-level
+   assertions, split into lines and test `ln == \"# title\"` rather
+   than `strings.Contains(out, \"# title\")` — every deeper heading
+   is a superstring of a shallower one." One-line addition; made
+   alongside this ship.
+
+   **Non-blocking:** the branch-created-during-design slip. With
+   SPEC-014 clean and SPEC-015 slipping, two data points going
+   opposite directions isn't a pattern — it's variance. Writing an
+   explicit "design cycle does not create feat branches" rule in
+   §10 or §12 right now would be a rule ahead of a problem: the
+   branch being named early is harmless in itself (the branch is
+   empty until build; the slug is predetermined by the spec ID).
+   The slip only matters if design-session changes land on the
+   branch before build-session starts, which didn't happen here.
+   Watch for a third data point — specifically, a future spec
+   where a branch created during design accidentally carries a
+   design-scope commit that build then has to untangle. If that
+   happens, write the rule; if it doesn't within the next 3–4
+   specs, the two opposite signals wash out and no rule is
+   warranted.
+
+   **Smaller candidate, noted not acted on:** the premise-audit
+   template extraction mentioned in Q1. It's a template edit
+   (`/projects/_templates/spec.md`), lightweight, could be a chore
+   commit when stage-ship next runs or at weekly-review.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No new spec. I probed against the full candidate list:
+
+   - TOC / `--group-by` / `--template` — already in `backlog.md`
+     with concrete revisit triggers (export size > ~200 entries
+     for TOC; specific workflow for group-by; real tool-specific
+     rendering need for template). No current trigger.
+   - DESC-within-group ordering flag — DEC-013 locked ASC; revisit
+     criterion is "a user reports DESC reads better for their
+     workflow." No report.
+   - `brag export --format sqlite` — deferred to backlog
+     2026-04-23; `cp ~/.bragfile/db.sqlite` already serves the
+     portability use case.
+   - `brag summary` — STAGE-004 polish item; already tracked.
+   - `echoFilters` shared across commands — only one current
+     caller (`export.go`); extracting now would be premature.
+     Revisit when a second caller materializes.
+
+   The only surviving action items are the AGENTS.md §9 addendum
+   (applied with this ship) and the optional
+   `/projects/_templates/spec.md` premise-audit extraction
+   (nice-to-have, not a spec).

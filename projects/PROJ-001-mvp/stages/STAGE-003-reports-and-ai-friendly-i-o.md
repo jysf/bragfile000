@@ -220,17 +220,21 @@ can run in parallel.
       framed it as S; 14 tests, new package, new command, new DEC
       pushed it to M).
 
-- [ ] SPEC-015 (design, **M**) — **`brag export --format markdown` +
-      DEC-013 (markdown export shape).** Largest spec in the stage.
-      Lifts `renderEntry` into a shared helper (drive-by, disclosed),
-      adds provenance header, executive summary block, default
-      grouping by project (groups ordered alphabetically, entries
-      within a group chrono-ASC), `--flat` escape, `---` separator
-      between entries, `--out file.md` writer. Filter-aware via
-      `ListFilter` reuse. Sized M because five distinct rendering
-      components compose into one output; if design-session discovers
-      the grouping + summary work is heavier than expected, split
-      grouping into a follow-up S rather than stretching to L.
+- [x] SPEC-015 (shipped 2026-04-24, **M**) — **`brag export --format
+      markdown` + DEC-013 (markdown export shape).** Largest spec in
+      the stage. Lifted `renderEntry` from `internal/cli/show.go` to
+      `internal/export/markdown.go` with heading-level parameterization
+      (level 1 for `brag show`, level 3 for grouped markdown export).
+      DEC-013 locks document structure (provenance + summary +
+      grouped-by-project), within-group chronological ASC ordering,
+      `--flat` escape, `---` separator placement, `--out` semantics
+      mirroring SPEC-014. Shipped via PR #15 (squash-merged
+      `4574ef5`). Clean build+verify cycle — two byte-exact goldens
+      (grouped + flat) lock the DEC-013 contract, no build-time
+      DECs, self-caught TDD order slip correctly disclosed and
+      reverted. §9 addendum earned: line-based markdown heading
+      assertions (the substring-trap lesson) landed alongside this
+      ship.
 
 - [~] SPEC-016 — **Deferred to backlog on 2026-04-23** (post-
       SPEC-013 scope-tightening). Slot number preserved for
@@ -249,13 +253,12 @@ can run in parallel.
       what comes out of `list --format json` and what goes into
       `add --json` minus server fields).
 
-**Count:** 2 shipped / 0 active / 2 pending / 1 deferred
+**Count:** 3 shipped / 0 active / 1 pending / 1 deferred
 
-**Complexity check:** 1 × S remaining (SPEC-017), 1 × M
-remaining (SPEC-015). DEC-011 shipped in SPEC-014 — unblocks
-both pending specs. Build sequence: SPEC-015 || SPEC-017 (both
-read DEC-011; can run parallel fresh-session if context
-allows).
+**Complexity check:** 1 × S remaining (SPEC-017). DEC-011 and
+DEC-013 both shipped — SPEC-017 is the last spec in STAGE-003
+and is fully unblocked. After SPEC-017 ships, run Prompt 1d
+(STAGE SHIP) to close STAGE-003.
 
 ## Design Notes
 
