@@ -239,20 +239,54 @@ nothing is lost but the project stays focused.
   `brag export --format json` toggles `json.Marshal` vs.
   `json.MarshalIndent`. One line of Go.
 
+## `brag export --format sqlite` (full-DB VACUUM INTO)
+
+- **Source:** STAGE-003 scope-tightening decision 2026-04-23
+  (post-SPEC-013). Originally framed as SPEC-016; the SPEC-016
+  slot number is preserved in the stage file as a deferral
+  marker (not renumbered).
+- **Reason deferred:** The portable-backup use case the brief
+  named is already handled by `cp ~/.bragfile/db.sqlite
+  backup.db` — documented in the tutorial and works today with
+  zero new code. `VACUUM INTO`'s marginal wins over `cp` are
+  (a) defragmentation on export (cosmetic) and (b) WAL-flushed
+  consistency when another `brag` process is writing
+  concurrently (real but narrow — in a single-user personal CLI,
+  concurrent writers are effectively never). Not worth a spec
+  until one of those marginal wins turns into a real need.
+- **Revisit when:** A concrete workflow emerges where `cp`'s
+  consistency guarantees are insufficient (a daemon variant of
+  `brag`; a multi-process write pattern; a shared-filesystem
+  backup pipeline), OR the defragmentation angle becomes user-
+  visible (DB file grows pathologically large from churn). Neither
+  is imminent for a personal CLI at current usage.
+- **Sketch:** `brag export --format sqlite --out backup.db`
+  executes `VACUUM INTO '<path>'` via the existing `Store`
+  connection. `--out` required (binary output to stdout is
+  hostile). Filter flags rejected with a `UserErrorf` pointing
+  at `--format markdown` / `--format json` for filtered slices.
+  Round-trip smoke: `brag --db backup.db list` returns the same
+  entries as the source. One `VACUUM INTO` call, no schema
+  duplication, no migration ordering concerns.
+
 ## Filtered SQLite export
 
-- **Source:** STAGE-003 framing 2026-04-23 (SPEC-016 scope).
-- **Reason deferred:** `VACUUM INTO` is one SQLite call and
-  ships the full-DB-portable-backup use case cleanly. Filtered
-  sqlite (e.g. "last 90 days of project X as a portable DB")
-  needs fresh-DB + migration-application + INSERT-SELECT —
-  meaningful new code and a migration-ordering coupling.
-  Downstream consumers of filtered slices are better served by
-  JSON or markdown exports today.
+- **Source:** STAGE-003 framing 2026-04-23 (originally SPEC-016
+  scope); reason-for-deferral shape overlaps with the full-DB
+  entry above, which was itself deferred later the same day.
+- **Reason deferred:** Filtered sqlite (e.g. "last 90 days of
+  project X as a portable DB") needs fresh-DB + migration-
+  application + INSERT-SELECT — meaningful new code and a
+  migration-ordering coupling. Downstream consumers of filtered
+  slices are better served by JSON or markdown exports today.
+  Now that the full-DB variant is also deferred (see above),
+  both would revive together if sqlite export becomes real.
 - **Revisit when:** A concrete user need emerges for a filtered
   portable SQLite file (e.g. a multi-laptop workflow where only
   a subset belongs on a machine; a committee that wants
-  queryable data but not the full corpus).
+  queryable data but not the full corpus). If the full-DB
+  variant revives first, this entry likely follows as the
+  filter-aware upgrade.
 - **Sketch:** `brag export --format sqlite --since 90d --out
   slice.db` opens an empty SQLite file, runs the same embedded
   migrations the main `Store.Open` runs, then `INSERT INTO

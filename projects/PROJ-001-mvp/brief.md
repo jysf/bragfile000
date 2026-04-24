@@ -40,9 +40,11 @@ real entries.
   (either `brag add "..."` one-shot or `brag add` → `$EDITOR` template).
 - Past entries can be listed, filtered (tag / project / type / since),
   searched (full-text), shown, edited, and deleted from the CLI.
-- `brag export` produces either (a) a readable Markdown report or
-  (b) a portable copy of the SQLite file suitable for backup or another
-  machine.
+- `brag export` produces a readable Markdown report. (Portable-copy
+  use case handled today by `cp ~/.bragfile/db.sqlite backup.db`;
+  `--format sqlite` was scoped out to backlog post-SPEC-013 because
+  `cp` already covers it — revisit if VACUUM INTO's defragmentation
+  or cross-process-consistency wins ever matter.)
 - `brew install bragfile` installs a working binary on macOS (at minimum)
   via a public homebrew tap.
 - Author has logged ≥1 entry per working day for two consecutive weeks
@@ -77,8 +79,10 @@ real entries.
   — deferred to a future project (PROJ-00N — AI assist).
 - Bubble Tea / interactive TUI — deferred. v0.1 is plain cobra CLI.
 - Multi-device sync, cloud backup, encrypted-at-rest storage — deferred.
-- Rich export targets (JSON, HTML, PDF, resume-bullet format). Markdown
-  + sqlite-file only.
+- Rich export targets (HTML, PDF, resume-bullet format). Markdown +
+  JSON only for PROJ-001. (SQLite-file export was in scope until
+  2026-04-23, then moved to backlog — `cp` already handles the
+  portable-backup use case.)
 - Non-macOS homebrew (Linuxbrew), apt/yum packages, Windows support.
   macOS-first; Linux is a nice-to-have that falls out of goreleaser if
   it's free, but is not a success criterion.
@@ -96,14 +100,15 @@ real entries.
       shipped (SPEC-005–012). 4 new DECs (DEC-007/008/009/010),
       5 new AGENTS.md §9/§12 lessons including the full premise-
       audit family. Target was 2026-05-04; shipped 12 days ahead.
-- [ ] STAGE-003 (not yet framed) — **Reports + AI-friendly I/O +
-      project visibility (ship-blocking scope only).** 3 must-haves:
-      project visible in `brag list` output, export trio
-      (markdown/sqlite/JSON), machine-readable I/O
-      (`brag add --json` + `brag list --format`). No nice-to-have
-      bucket — polish items moved to STAGE-004 on 2026-04-22
-      reshuffle to keep STAGE-003 tight. `BRAG.md` shipped as a
-      chore before framing (done 2026-04-22).
+- [ ] STAGE-003 (framed 2026-04-23, active) — **Reports + AI-friendly
+      I/O + project visibility.** 5-spec stage (1 shipped, 3 pending,
+      1 deferred). Scope: project visible in `brag list` output
+      (SPEC-013 shipped 2026-04-23), export pair markdown/JSON
+      (SPEC-015 + SPEC-014), machine-readable I/O (SPEC-014 +
+      SPEC-017 `brag add --json`). SPEC-016 (`--format sqlite`)
+      deferred to backlog on 2026-04-23 — `cp ~/.bragfile/db.sqlite`
+      already covers the portable-backup use case. `BRAG.md` shipped
+      as a chore before framing (done 2026-04-22).
 - [ ] STAGE-004 (not yet framed, **provisional**) — **UX polish
       pass.** 9 items grouped into: retrospection & summary
       (`brag summary`), emoji decoration (4 passes — stderr
@@ -177,11 +182,12 @@ summary, and Claude-hook work grouped into a proper polish stage.
    see "Project column" detail below for the four options
    (default 4-col / `--format` flag / `--pretty` bundle /
    `--columns` list). Framer picks.
-2. **Report export trio:** `brag export --format markdown`,
-   `--format sqlite`, `--format json`. The original STAGE-003
-   backbone, user-flagged pushed up in priority. JSON shape
-   detailed below. Can be one M spec or split as 3 × S specs —
-   framer decides.
+2. **Report export pair:** `brag export --format markdown` and
+   `--format json`. Originally a trio including `--format sqlite`;
+   sqlite dropped to backlog on 2026-04-23 post-SPEC-013 because
+   `cp ~/.bragfile/db.sqlite backup.db` already covers the
+   portable-backup use case. JSON shape detailed below. Framed
+   as SPEC-014 (JSON) + SPEC-015 (markdown).
 3. **Machine-readable input/output.** `brag add --json` (stdin
    JSON → `Store.Add`) plus `brag list --format json|tsv`.
    Pairs with the export trio to close the I/O loop. Unblocks

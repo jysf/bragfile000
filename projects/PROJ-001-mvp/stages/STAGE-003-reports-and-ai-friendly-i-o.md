@@ -28,12 +28,14 @@ agent can read and write through a stable, documented interface. When
 this stage ships, `brag export --format markdown` produces a
 review-ready document (provenance + executive summary + grouped by
 project) that replaces the `brag list | while read | brag show` shell
-workaround users currently type by hand; `brag export --format sqlite`
-writes a portable DB copy for backup or a new laptop;
-`brag export --format json` / `brag list --format json|tsv` emit
-structured output on a shape shared with `brag add --json`'s stdin
-contract, so a downstream agent can round-trip entries through the
-binary without touching SQL. Plus `brag list -P` surfaces the
+workaround users currently type by hand; `brag export --format json` /
+`brag list --format json|tsv` emit structured output on a shape shared
+with `brag add --json`'s stdin contract, so a downstream agent can
+round-trip entries through the binary without touching SQL.
+(SQLite-file export was scoped out to backlog on 2026-04-23 — `cp
+~/.bragfile/db.sqlite backup.db` already covers the portable-backup
+use case with zero new code; revisit if VACUUM INTO's defragmentation
+or cross-process consistency ever becomes a real need.) Plus `brag list -P` surfaces the
 `project` field inline so daily scanning answers "what have I been
 working on" at a glance.
 
@@ -81,11 +83,6 @@ No external blockers. All work layers cleanly on STAGE-002's
   (title heading + metadata table + description), separated by `---`.
   Writes to stdout by default; `--out report.md` writes to a file.
   `--flat` flag produces un-grouped chronological output.
-- **SQLite export**: `brag export --format sqlite --out backup.db`
-  writes a portable DB file (via `VACUUM INTO`) that is itself
-  openable by `brag --db backup.db list` and returns the same entries
-  as the source. Filter flags combined with `--format sqlite` exit 1
-  with a pointer message to use markdown or json for filtered exports.
 - **JSON I/O shape is unified**: `brag export --format json [filters]`
   and `brag list --format json [filters]` emit a pretty-printed JSON
   array with identical per-entry structure (field names = SQL columns,
@@ -108,9 +105,10 @@ No external blockers. All work layers cleanly on STAGE-002's
 - **`brag list -P` / `--show-project`** — new flag adding project
   column to list output; empty project renders as `-`; flag off
   preserves existing three-column byte-for-byte.
-- **`brag export --format markdown|sqlite|json`** — new command.
-  Markdown + JSON reuse `ListFilter`; SQLite is full-copy only.
-  Markdown groups by project by default (`--flat` escape).
+- **`brag export --format markdown|json`** — new command.
+  Both formats reuse `ListFilter`. Markdown groups by project by
+  default (`--flat` escape). `--format sqlite` deferred to backlog
+  on 2026-04-23 (see Explicitly out of scope below).
 - **`brag list --format json|tsv`** — augments existing `brag list`
   with machine-readable output formats. Plain (default) stays
   byte-stable.
@@ -154,8 +152,16 @@ triggers):
 - **JSON envelope** (`{generated_at, count, filters, entries: [...]}`).
   Naked array ships; wrap behind `--envelope` if a consumer asks.
 - **`--compact` / non-pretty JSON**. Pretty-printed (indent=2) only.
-- **Filtered SQLite export** (fresh-DB + INSERT-SELECT path). Full-DB
-  `VACUUM INTO` only. Filtered exports route to markdown/json.
+- **`brag export --format sqlite` (full-DB `VACUUM INTO`).** Moved
+  to backlog on 2026-04-23 (post-SPEC-013 scope-tightening). `cp
+  ~/.bragfile/db.sqlite backup.db` already handles the
+  portable-backup use case the brief named; `VACUUM INTO`'s
+  marginal wins (defragmentation, WAL-flushed consistency) aren't
+  urgent for a personal-CLI workflow. Revisit if real demand
+  emerges.
+- **Filtered SQLite export** (fresh-DB + INSERT-SELECT path).
+  Deferred alongside the full-DB variant above; same revisit
+  trigger shape.
 - **TOC in markdown export**. Headings are scannable enough for the
   MVP use cases.
 - **`--group-by type` or `--group-by <field>`**. Group-by project is
@@ -218,12 +224,13 @@ can run in parallel.
       the grouping + summary work is heavier than expected, split
       grouping into a follow-up S rather than stretching to L.
 
-- [ ] SPEC-016 (design, **S**) — **`brag export --format sqlite`.**
-      Thinnest spec in the stage. One `VACUUM INTO` call wrapped in
-      `--out backup.db` handling. Filter flags combined with
-      `--format sqlite` exit 1 with a pointer to markdown/json.
-      Round-trip smoke test: `brag --db backup.db list` returns the
-      same entries. Fully independent of SPEC-014/015.
+- [~] SPEC-016 — **Deferred to backlog on 2026-04-23** (post-
+      SPEC-013 scope-tightening). Slot number preserved for
+      traceability; SPEC-017 is not renumbered. Original scope:
+      `brag export --format sqlite` via `VACUUM INTO`. Deferred
+      because `cp ~/.bragfile/db.sqlite backup.db` already covers
+      the portable-backup use case. Full entry in `backlog.md` →
+      "`brag export --format sqlite` (full-DB VACUUM INTO)".
 
 - [ ] SPEC-017 (design, **S**) — **`brag add --json` + DEC-012
       (stdin-JSON schema).** Stdin as a single JSON object; DEC-012
@@ -234,13 +241,12 @@ can run in parallel.
       what comes out of `list --format json` and what goes into
       `add --json` minus server fields).
 
-**Count:** 1 shipped / 0 active / 4 pending
+**Count:** 1 shipped / 0 active / 3 pending / 1 deferred
 
-**Complexity check:** 4 × S, 1 × M, 0 × L. Within the 3–6 guideline.
-No splits recommended at framing time. Build sequence:
-SPEC-013 || SPEC-016 (either can land first, both standalone) →
-SPEC-014 (anchors DEC-011) → SPEC-015 || SPEC-017 (both read DEC-011;
-can run parallel fresh-session if context allows).
+**Complexity check:** 3 × S, 1 × M, 0 × L (SPEC-016 dropped
+2026-04-23). Within the 3–6 guideline. Build sequence:
+SPEC-014 (anchors DEC-011) → SPEC-015 || SPEC-017 (both read
+DEC-011; can run parallel fresh-session if context allows).
 
 ## Design Notes
 
@@ -309,28 +315,23 @@ locked-decisions-need-tests, premise-audit trio) apply unchanged.
   STAGE-004 as the emoji+project bundle and can default `-P` on
   inside its bundle.
 
-- **SQLite export mechanism (SPEC-016).** `VACUUM INTO <path>` is
-  the entire implementation. Produces a defragmented full copy of
-  the DB. No schema duplication, no migration ordering coupling.
-  `--out` required (binary output to stdout is hostile). Filter
-  flags combined with `--format sqlite` exit 1 (`ErrUser`) with a
-  clear pointer: "sqlite export is full-DB only; use --format
-  markdown or --format json for filtered exports." Filtered sqlite
-  export (fresh-DB + INSERT-SELECT path) goes to backlog with a
-  revisit trigger tied to real user demand.
+- **SQLite export mechanism — DEFERRED 2026-04-23.** Originally
+  SPEC-016; the `VACUUM INTO <path>` design is preserved in
+  `backlog.md` under the full-DB entry for when/if the work is
+  pulled back in. Left here as a historical marker so the stage
+  file reads straight for future maintainers.
 
 - **Filter flag reuse.** `brag export --format markdown|json` accepts
   the same `--tag / --project / --type / --since / --limit` flags as
   `brag list` (SPEC-007). `ListFilter` is the shared input struct.
   No new filter logic is written in this stage — all of it exists
-  in `Store.List` already. `--format sqlite` is the one exception
-  (rejects filter flags per above).
+  in `Store.List` already.
 
 - **`--out <path>` semantics.** Markdown + JSON default to stdout
-  when `--out` absent; sqlite requires `--out`. If `--out` points
-  to an existing file: overwrite (match `goreleaser` / `jq -o`
-  conventions; no prompt). Directory or unwritable path: exit 2
-  (internal error, not user error — disk state issue).
+  when `--out` absent. If `--out` points to an existing file:
+  overwrite (match `goreleaser` / `jq -o` conventions; no prompt).
+  Directory or unwritable path: exit 2 (internal error, not user
+  error — disk state issue).
 
 - **Premise audit discipline (AGENTS.md §9 three cases) applies to
   every spec in this stage.** Specific hot spots to audit in design:
@@ -349,8 +350,8 @@ locked-decisions-need-tests, premise-audit trio) apply unchanged.
     stub and the shipped behavior. Lifting `renderEntry` changes its
     import path — audit every test that imports from
     `internal/cli`.
-  - **SPEC-016 (addition)**: adds the sqlite format to `brag export`
-    — audit the api-contract.md `--format` table for the new row.
+  - ~~**SPEC-016**~~: deferred 2026-04-23 — no premise-audit
+    scope; the work moved to `backlog.md`.
   - **SPEC-017 (addition + status-change)**: adds `--json` flag to
     `brag add`; the dispatch rule in the existing `add` command
     (flag mode vs editor mode, established by SPEC-010's DEC) needs
@@ -358,9 +359,8 @@ locked-decisions-need-tests, premise-audit trio) apply unchanged.
     the dispatch rule change.
 
 - **DEC-007 carries forward.** All new flag validation (empty
-  `--format`, invalid `--format` value, filter + sqlite combination,
-  `--out` missing for sqlite, bad JSON on stdin) goes through
-  `UserErrorf` in `RunE`, never `MarkFlagRequired`.
+  `--format`, invalid `--format` value, bad JSON on stdin) goes
+  through `UserErrorf` in `RunE`, never `MarkFlagRequired`.
 
 - **CLI test harness.** Separate `outBuf` / `errBuf` per §9;
   `id DESC` tie-break on any ordering test; `fail-first` run before
@@ -379,10 +379,9 @@ locked-decisions-need-tests, premise-audit trio) apply unchanged.
   and the schema as currently shipped (`entries` + `schema_migrations`
   + `entries_fts`).
 - **DEC-001 through DEC-010** — all apply forward unchanged.
-- **External:** none. stdlib `encoding/json` covers JSON. SQLite's
-  `VACUUM INTO` covers sqlite export. No new Go module dependencies
-  expected; if a spec proposes one it needs its own DEC per
-  `no-new-top-level-deps-without-decision`.
+- **External:** none. stdlib `encoding/json` covers JSON. No new Go
+  module dependencies expected; if a spec proposes one it needs its
+  own DEC per `no-new-top-level-deps-without-decision`.
 
 ### Enables
 
