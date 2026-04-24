@@ -7,7 +7,7 @@
 task:
   id: SPEC-017
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -1275,28 +1275,51 @@ Implementation Context.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
-- **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
-- **Deviations from spec:**
-  - [list]
-- **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+- **Branch:** `feat/spec-017-brag-add-json-stdin-and-schema-dec`
+- **PR (if applicable):** (filled after `gh pr create`)
+- **All acceptance criteria met?** yes
+- **New decisions emitted (build-time):** none. DEC-012 was emitted
+  during the design cycle and is consumed verbatim here.
+- **Deviations from spec:** none. The literal sketches in "Notes for
+  the Implementer" applied with one trivial trim — the example sketch
+  carried an unused `errors`/`_ = errors.Is` crutch line that the
+  spec already flagged as droppable, so it's gone. All six DEC-012
+  choices, the mutual-exclusion semantics, and the dispatch priority
+  match the spec verbatim.
+- **Follow-up work identified:** none beyond the entries already on
+  `backlog.md` (NDJSON / array-batch stdin; lenient-accept mode);
+  both remain deferred and untouched by this build.
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing slowed the build. The spec's literal code sketches plus
+   the round-trip-test-first ordering plus the explicit error-substring
+   wordings made the build essentially a transcription job. One minor
+   inconsistency to flag for verify: the "Failing Tests" section
+   header text said "Eleven tests total" while the body listed twelve
+   and the build prompt confirmed twelve — minor typo, no impact.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. `no-sql-in-cli-layer`, `stdout-is-for-data-stderr-is-for-humans`,
+   `errors-wrap-with-context`, `test-before-implementation`,
+   `one-spec-per-pr` were all listed and applied. DEC-004/006/007/011
+   covered the design space; DEC-012 (design-time emission) covered
+   the schema lock. Nothing surprised the build.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — One thing: I added a `time.Sleep(1 * time.Second)` to the
+   round-trip test to force a different RFC3339 second between source
+   and copy timestamps. The spec flagged this as a brittle bonus
+   assertion that could be dropped without ceremony if CI flakes; a
+   more disciplined build would have skipped the sleep entirely and
+   relied on the ID-inequality assertion alone (which is what proves
+   the server-field-fresh contract). Net cost is one wall-clock
+   second per test run — small enough that the bonus assertion earns
+   its keep, but a future-me who cares about test latency should
+   remove it.
 
 ---
 

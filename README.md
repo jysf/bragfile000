@@ -57,7 +57,9 @@ durable dumps or review-ready writeups; JSON shares the DEC-011 shape
 with `list --format json`, markdown shape locked by DEC-013 with
 grouped-by-project default and a `--flat` modifier). `brag add` with no
 arguments opens `$EDITOR` against a templated markdown buffer; fields
-are parsed on save. `brag summary` arrives in a later STAGE-003 spec.
+are parsed on save. `brag add --json` reads a single JSON entry from
+stdin (DEC-012 schema) for programmatic capture. `brag summary`
+arrives in a later STAGE-003 spec.
 
 ### Install locally (from source)
 

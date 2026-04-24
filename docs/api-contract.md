@@ -53,11 +53,13 @@ brag add --title "shipped the auth refactor" \
 brag add            # no entry-field flags → opens $EDITOR on a template buffer
 ```
 
-Dispatch rule: if any of `--title/-t`, `--description/-d`, `--tags/-T`,
-`--project/-p`, `--type/-k`, `--impact/-i` is set, `brag add` runs in
-flag mode (above). Otherwise it runs in editor mode. The persistent
-`--db` flag is a path override, not an entry field — `brag add --db
-/tmp/x.db` still opens the editor.
+Dispatch rule: if `--json` is set, runs in json mode (reads stdin).
+Else if any of `--title/-t`, `--description/-d`, `--tags/-T`,
+`--project/-p`, `--type/-k`, `--impact/-i` is set, runs in flag mode.
+Otherwise runs in editor mode. The persistent `--db` flag is a path
+override, not an entry field, so `brag add --db /tmp/x.db` still opens
+the editor. `--json` combined with any field flag exits 1 (user
+error).
 
 `brag` resolves the editor as `$EDITOR` → `$VISUAL` → `vi`, writes a
 template (a `net/textproto`-style header block plus blank-line
@@ -74,6 +76,33 @@ file, and spawns the editor against it. On save:
   exits 1 (user error); the DB is unchanged.
 - Editor exec failure (e.g. `:cq` in vim with a modified buffer)
   exits 2 (internal error); the DB is unchanged.
+
+**STAGE-003 (JSON stdin form):**
+
+```
+echo '{"title":"shipped"}' | brag add --json
+brag list --format json | jq '.[0]' | brag add --json
+```
+
+- `--json` reads a single JSON object from stdin and inserts it.
+  Required: `title` (non-empty). Optional: `description`, `tags`,
+  `project`, `type`, `impact` — all free-form text. Server-owned
+  fields (`id`, `created_at`, `updated_at`) are tolerated-and-ignored
+  if present, so `brag list --format json | jq '.[0]' | brag add
+  --json` round-trips without `jq del`.
+- Unknown keys are strict-rejected with the offending key named in
+  the error (catches typos like `"titl"` before they become silently-
+  missing entries).
+- `tags` stays a comma-joined string per
+  [DEC-004](../decisions/DEC-004-tags-comma-joined-for-mvp.md); array
+  form (`["a","b"]`) is rejected with an error naming DEC-004.
+- `--json` is mutually exclusive with field flags (`--title`,
+  `--description`, `--tags`, `--project`, `--type`, `--impact`).
+  Combining them exits 1.
+- Stdout on success: the inserted ID, one line, no prefix (same as
+  flag-mode contract).
+- Schema lock:
+  [DEC-012](../decisions/DEC-012-brag-add-json-stdin-schema.md).
 
 ### `brag list` — list entries
 
@@ -257,3 +286,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-010` — `brag search` query syntax (auto-tokenize + phrase-quote)
 - `DEC-011` — shared JSON output shape for `brag list --format json` and `brag export --format json`
 - `DEC-013` — markdown export shape for `brag export --format markdown` (+`--flat`)
+- `DEC-012` — stdin-JSON schema for `brag add --json` (single object, title required, server-owned fields tolerated-and-ignored)

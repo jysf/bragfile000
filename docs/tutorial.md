@@ -117,6 +117,30 @@ edit`. Setting any single entry-field flag (e.g. `-t`, `-d`, …) flips
 back to flag mode and bypasses the editor; the persistent `--db` flag
 does not (`brag add --db /tmp/work.db` still opens the editor).
 
+### Capture from a script: `--json`
+
+For programmatic capture — a Claude session-end hook, an import
+script, piping from another tool — `brag add --json` reads a single
+JSON object from stdin:
+
+```bash
+echo '{"title":"shipped FTS5 search"}' | brag add --json
+# prints the inserted ID on stdout, same as flag mode
+
+brag list --format json | jq '.[0]' | brag add --json
+# round-trips an entry (without jq del — server fields are
+# tolerated-and-ignored)
+```
+
+Required: `title` (non-empty). Optional: `description`, `tags`,
+`project`, `type`, `impact` — all free-form text. `tags` stays a
+comma-joined string (per
+[DEC-004](../decisions/DEC-004-tags-comma-joined-for-mvp.md)); array
+form is rejected. Unknown keys are rejected with the offending key
+named — catches `"titl"` typos before they become silently-missing
+entries. Mutually exclusive with flag-mode field flags. Schema locked
+by [DEC-012](../decisions/DEC-012-brag-add-json-stdin-schema.md).
+
 ---
 
 ## 4. Read them back
@@ -210,7 +234,9 @@ The JSON shape is locked by
 [DEC-011](../decisions/DEC-011-json-output-shape.md) and is
 byte-identical between `brag list --format json` and `brag export
 --format json` on the same rows, so piping one into `brag add --json`
-(SPEC-017) will round-trip without shape transforms.
+round-trips an entry without shape transforms (see
+[DEC-012](../decisions/DEC-012-brag-add-json-stdin-schema.md) for the
+stdin schema).
 
 ### Review-ready export: `--format markdown`
 
