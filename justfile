@@ -87,6 +87,13 @@ archive-spec SPEC_ID:
 weekly-review:
     @./scripts/weekly-review.sh
 
+# Snapshot `just status` to docs/reports/daily/YYYY-MM-DD.md (overwrites if run twice in one day)
+daily-status-report:
+    @mkdir -p docs/reports/daily
+    @D="$(date +%Y-%m-%d)"; \
+        { echo "# Daily status - $D"; echo; ./scripts/status.sh; } > "docs/reports/daily/$D.md"; \
+        echo "✓ Wrote docs/reports/daily/$D.md"
+
 # ----------------------------------------------------------------------------
 # APP COMMANDS — bragfile itself
 # ----------------------------------------------------------------------------
