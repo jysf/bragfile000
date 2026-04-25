@@ -347,19 +347,64 @@ nothing is lost but the project stays focused.
   `{{.Provenance}}` bindings. Ship two or three built-ins in the
   binary via `embed.FS` as reference examples.
 
+## Emoji decoration passes 1–4
+
+- **Source:** STAGE-003 pre-framing notes (2026-04-21); kept on
+  STAGE-004 list through 2026-04-23; cherry-picked OUT on
+  2026-04-24 post-STAGE-003 review.
+- **Reason deferred:** User wants emoji somewhere in the tool but
+  doesn't love this specific palette/scope. The four-pass plan
+  (Pass 1 stderr feedback prefixes ✏️/🗑/—/✗; Pass 2 type icons
+  in `brag show`; Pass 3 type icons in `brag list --pretty`;
+  Pass 4 NO_COLOR + TTY auto-detection) was framed before the
+  user had real-usage signal of what would feel right. Shipping
+  blind is rule-ahead-of-problem.
+- **Revisit when:** User picks a palette + shape they actually
+  want. Could be triggered by a specific moment of "I wish this
+  output had X icon here," or by a deliberate sit-down to design
+  the palette. Likely a 1–2 day pickup once the design is set.
+- **Sketch:** Pass 1 is ~5 lines (prefix `fmt.Fprintln(stderr,
+  …)` calls in edit/delete/confirmation paths). Pass 2 adds an
+  `emojiForType()` helper consumed by `internal/export.RenderEntry`.
+  Pass 3 adds a `--pretty` flag on `brag list` that bundles `-P`
+  + emoji. Pass 4 adds a TTY/NO_COLOR check that gates the other
+  three. Each pass is independent; user can cherry-pick one or
+  two without the rest.
+
+## `brag remind` nudge command
+
+- **Source:** STAGE-003 pre-framing notes (2026-04-21); kept on
+  STAGE-004 through 2026-04-23; cherry-picked OUT on 2026-04-24.
+- **Reason deferred:** User has been logging consistently without
+  one (~20 entries across two weeks, no missed days). Habit
+  enforcement is a problem the user doesn't currently have.
+- **Revisit when:** First week with zero entries — that's the
+  signal that habit reinforcement would have helped.
+- **Sketch:** Pull-shape: `brag remind` checks last entry's
+  `created_at`; if older than N days (configurable via
+  `~/.bragfile/config.yaml` or `--days N`, default 3), prints
+  `"⏰ no entries in 4 days — last was: '<title>' on <date>"` to
+  stderr; otherwise silent (exit 0). User adds to shell prompt
+  hook (`zsh precmd`) or daily cron. Push-shape (launchd / cron
+  with system notification) is a heavier follow-on if the pull
+  shape isn't enough.
+
 ## Anything unreleased from STAGE-004 at distribution time
 
-- **Source:** User decision 2026-04-22 — STAGE-004 is provisional;
-  if STAGE-003 delivers sufficient utility, STAGE-004 items drop
-  to backlog in favor of going directly to STAGE-005 distribution.
-- **Reason deferred (placeholder):** To be filled in when STAGE-004
-  dissolves.
-- **Revisit when:** After initial release — real usage reveals
-  which STAGE-004 items are actually missed.
-- **Sketch:** Populate this section when the decision is made.
-  Candidates from the STAGE-004 sketch in `brief.md`:
-  `brag summary`, emoji passes 1–4, Claude session-end hook,
-  `brag remind`, `brag stats`, `brag review --week`.
+- **Source:** User decision 2026-04-22; updated 2026-04-24 after
+  cherry-pick. STAGE-004 was provisional; per the
+  2026-04-22 escape hatch, items not chosen for STAGE-004 land
+  here.
+- **Reason deferred:** User-filtered through "will I actually use
+  this?" 2026-04-24. Three items (summary, review --week, stats)
+  promoted to STAGE-004; six items moved here (emoji 1–4, remind
+  — both with their own dedicated entries above; Claude
+  session-end hook moved to STAGE-005 as a distribution asset).
+- **Revisit when:** Each entry above has its own concrete
+  trigger. This umbrella entry exists for traceability —
+  individual items live in their own backlog entries.
+- **Sketch:** N/A — this is a pointer, not a deferred item.
+  See the dedicated entries above for the actual deferred work.
 
 ---
 

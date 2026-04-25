@@ -39,6 +39,103 @@ disappear otherwise, and any soft decisions that need revisiting>
 
 ---
 
+## 2026-04-24 (continued) — STAGE-003 closed, STAGE-004/005 cherry-picked
+
+**Session duration (approx):** continued same-day after the
+SPEC-017 ship + STAGE-003 close. STAGE-004 plan refinement
+session, no code work.
+**Branches / PRs landed:** none in this segment (planning only).
+**brag entries:** none new (this segment was triage, not ship).
+
+### What shipped
+
+- **STAGE-003 closed** (commit `8120f69`): stage-level reflection
+  written, `status: shipped`, `shipped_at: 2026-04-24` in
+  frontmatter, brief stage plan updated, brag #20 captured.
+- **STAGE-004 cherry-picked** (commit pending — this commit):
+  3 specs (`brag summary --range`, `brag review --week`, `brag
+  stats`) survived the user filter "will I actually use this?";
+  6 items dropped to backlog (emoji 1–4, `brag remind`, Claude
+  session-end hook moved to STAGE-005). `brief.md` and
+  `backlog.md` updated with full reasoning.
+- **STAGE-005 expanded** (same commit): added README rewrite
+  (current README documents dev-process not user-facing tool
+  use — caught by an external Claude review the user shared),
+  `docs/brag-entry.schema.json` (mirrors DEC-012; AI-agent
+  validation contract), Claude session-end hook example (moved
+  from STAGE-004 as distribution asset), shell completions,
+  blog post artifact. Goreleaser + brew tap + CI persist from
+  earlier sketches.
+
+### Framework / AGENTS.md lessons earned
+
+None new in this segment. The "either-is-fine in Notes-for-
+Implementer off-loads decisions to build" pattern remains at 2
+data points (SPEC-014 + SPEC-017); watch for a third before
+codifying.
+
+### Stage state at session end
+
+```
+STAGE-001 — foundations              shipped 2026-04-20
+STAGE-002 — capture & retrieval      shipped 2026-04-22
+STAGE-003 — reports + AI-friendly I/O shipped 2026-04-24
+STAGE-004 — rule-based polish (3 specs) NOT YET FRAMED
+STAGE-005 — distribution + cleanup       NOT YET FRAMED
+```
+
+PROJ-001 status: 3 shipped / 0 active / 2 pending.
+
+### Pick up here next session
+
+**Next concrete action:** frame STAGE-004 via Prompt 1c. Stage
+sketch in `brief.md` is the authoritative scope (3 specs:
+`brag summary --range`, `brag review --week`, `brag stats`).
+All three emit clean markdown/JSON; user pipes into external
+AI manually when wanted (no LLM in PROJ-001 — that's PROJ-002).
+
+```bash
+just new-stage "rule-based polish summary review stats" PROJ-001
+```
+
+Then paste a fresh-session Prompt 1c. Framing should produce a
+3-spec stage file; spec sizing likely 1×M + 2×S; design sequence
+probably independent (all three read existing schema, none depend
+on each other).
+
+**Soft decision still open at framing time:** whether to add
+`brag add --at <date>` (backdating) as SPEC-021 in STAGE-004.
+External Claude review flagged it as "real Friday-recapping-
+Tuesday value, ~30 lines." Framer can pull it from backlog
+discussion at framing time, or leave it backlogged. User
+hasn't strongly committed either way.
+
+**STAGE-005 readiness:** the stage-005 sketch in `brief.md` now
+has 5 workstreams enumerated (README rewrite, JSON schema file,
+Claude hook, distribution proper, shell completions). Don't
+frame STAGE-005 until STAGE-004 ships — keeps focus.
+
+**Untracked files still in working tree:** `framework-feedback/`
+and `status-after-nine-specs.md` at repo root. Low-priority
+cleanup whenever convenient (the latter is obsoleted by this
+session log; the former has legitimate content from earlier
+sessions but should probably move out of repo or be added to
+`.gitignore`).
+
+**External Claude review absorbed:** an external session
+reviewed PROJ-001's current state and surfaced several ideas;
+most overlapped with existing backlog entries. The genuinely
+new contributions captured: (a) `docs/brag-entry.schema.json`
+file (now in STAGE-005); (b) `--at` backdating (open question
+for STAGE-004 framing); (c) pressure-tests on DEC-004 tags-as-
+string, edit-history, soft-delete (user decision: accept the
+v0.1 debt). Several other ideas (`brag last`, `brag tags`,
+`brag projects`, `--meta`, `--quiet`, default config file,
+auto-tag Claude sessions) are nice-but-not-must, kept out of
+scope to preserve STAGE-004's tight 3-spec shape.
+
+---
+
 ## 2026-04-24 — STAGE-003 at 3 of 4, only SPEC-017 left
 
 **Session duration (approx):** ~6 hours (resumed from 2026-04-23

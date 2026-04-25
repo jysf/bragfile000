@@ -111,23 +111,35 @@ real entries.
       two-day wall-clock. Zero rework cycles across all four specs.
       `BRAG.md` shipped as chore pre-framing (2026-04-22).
 - [ ] STAGE-004 (not yet framed, **provisional**) — **UX polish
-      pass.** 9 items grouped into: retrospection & summary
-      (`brag summary`), emoji decoration (4 passes — stderr
-      feedback, show/list type icons, NO_COLOR + TTY detection),
-      AI-agent integrations (Claude session-end hook), habit &
-      stats (`brag remind`, `brag stats`), retrospection command
-      (`brag review --week`). **Escape hatch preserved**: if
-      STAGE-003 ships with enough utility, STAGE-004 may dissolve
-      entirely — unreleased items drop to backlog and the project
-      jumps directly to STAGE-005 distribution. Three ex-STAGE-004
-      items were dropped to backlog on 2026-04-22 reshuffle
-      (`--exclude-tag` redaction, git-context auto-capture,
-      `--link/--refs`).
-- [ ] STAGE-005 (not yet framed) — **Distribution.** goreleaser
-      cross-compile, GitHub Actions CI + release workflow,
-      homebrew tap at `github.com/jysf/homebrew-bragfile`,
-      CHANGELOG + release notes discipline, README polish +
-      GIF/demo video.
+      pass — cherry-picked 2026-04-24 post-STAGE-003 ship.** 3
+      specs: `brag summary --range week|month` (M, rule-based
+      aggregation rendered as markdown), `brag review --week` (S,
+      static reflection questions), `brag stats` (S, entries/week
+      + streak + most-common). All three emit clean markdown/JSON
+      that the user manually pipes into external AI when wanted —
+      no LLM integration in PROJ-001 (PROJ-002 territory). Six
+      ex-STAGE-004 items dropped to backlog on 2026-04-24
+      cherry-pick: emoji passes 1–4 (user wants emoji but not
+      this specific palette), `brag remind` (user has been
+      logging consistently without one), Claude session-end hook
+      (moved to STAGE-005 as a distribution-asset, not polish).
+- [ ] STAGE-005 (not yet framed) — **Distribution + cleanup.**
+      Five workstreams: (1) README rewrite — current README
+      describes the spec-driven *development process*, not the
+      `brag` tool; rewrite as user-facing, move dev-process
+      content to `docs/development.md` or `CONTRIBUTING.md`; (2)
+      `docs/brag-entry.schema.json` mirroring DEC-012 + BRAG.md
+      reference, so AI agents producing entries have a contract
+      to validate against; (3) Claude Code session-end hook
+      example — `scripts/claude-code-post-session.sh` + a `/brag`
+      slash command shape, demonstrates DEC-011/012 round-trip;
+      (4) goreleaser cross-compile + GitHub Actions release
+      workflow + homebrew tap at
+      `github.com/jysf/homebrew-bragfile` + CHANGELOG discipline;
+      (5) shell completions (cobra-free). Plus a blog post
+      (artifact, not a spec). User explicitly wants the `brew
+      install bragfile` milestone for the learning value, not
+      adoption — no marketing push.
 
 **Count:** 3 shipped / 0 active / 2 pending (STAGE-004 provisional)
 
@@ -199,79 +211,109 @@ No nice-to-have bucket for STAGE-003. If the framing session
 wants additional scope, take it from STAGE-004's list rather than
 adding anew.
 
-### STAGE-004 sketch — polish pass (9 items; provisional)
+### STAGE-004 sketch — Rule-based polish (3 specs)
 
-Reshuffled 2026-04-22 (second pass): the ex-STAGE-003 nice-to-
-haves (summary, emoji 4 passes, Claude session-end hook) moved
-here because they're polish work, not core functionality. Stage
-grows from 3 items to 9. Still provisional — if STAGE-003 ships
-and real usage shows STAGE-004 items aren't missed, the stage
-can dissolve (items drop to `backlog.md`) and the project jumps
-to STAGE-005 distribution.
+Cherry-picked 2026-04-24 post-STAGE-003-ship. Original 9-item
+list re-triaged through the user filter "will I actually use
+this?" Three specs survived; six dropped to backlog (see below).
 
-**Retrospection & summary (1 M):**
+**The three:**
 
-- **`brag summary --range week|month`** — rule-based aggregation
-  grouped by project/type, rendered as markdown. Was original
-  STAGE-003 backbone; demoted to polish on 2026-04-22 because
-  `brag export --format markdown` (STAGE-003 must-have) already
-  gives a decent quarterly doc — summary becomes the
-  lighter-weight sibling.
+- **`brag summary --range week|month`** (M) — rule-based
+  aggregation grouped by project/type, rendered as markdown.
+  Lighter-weight sibling to `brag export --format markdown`.
+  Output is markdown that the user can copy-paste into an
+  external AI session for deeper reflection — no LLM in the
+  tool.
 
-**Emoji decoration (4 passes):**
+- **`brag review --week`** (S) — print entries from the last 7
+  days grouped by project + three static reflection questions
+  ("what pattern do you see?", "what did you underestimate?",
+  "what's missing that should be here?"). Human-in-the-loop
+  reflection; distinct from `summary`'s aggregation. Same AI-
+  pipe-out workflow when wanted.
 
-Four-pass plan carried forward from the earlier pre-framing
-notes; detail section below remains the canonical reference.
-Framer can pick how many passes to include (Pass 1 is trivial
-and should almost certainly ship; Passes 2–4 are opt-in polish).
+- **`brag stats`** (S) — entries/week, longest streak, most
+  common tags/projects. Aggregations over existing schema. Run
+  monthly-ish for the chart-of-yourself satisfaction.
 
-- Pass 1 — stderr feedback prefixes (`✏️`/`🗑`/`—`/`✗`) on
-  edit/delete/confirmation messages (S, trivial).
-- Pass 2 — type-based emoji in `brag show` markdown table (S).
-- Pass 3 — type-based emoji in `brag list --pretty` (S, bundles
-  naturally with STAGE-003 #1 if that picks the `--pretty` path).
-- Pass 4 — `NO_COLOR` env var + TTY auto-detection (S).
+**Explicitly dropped to `backlog.md` on 2026-04-24 cherry-pick:**
 
-**AI-agent integrations (1 S):**
+- Emoji decoration passes 1–4 — user wants emoji but doesn't
+  love this specific palette/scope. Backlog with revisit
+  trigger "user picks a palette and shape they actually want."
+- `brag remind` — user has been logging consistently without
+  one. Backlog with revisit trigger "first week with zero
+  entries."
+- Claude Code session-end hook — moved to STAGE-005 as a
+  distribution-asset (demonstrates the AI-integration story for
+  the README/blog), not STAGE-004 polish.
 
-- **Claude Code session-end hook example.** Ships
-  `scripts/claude-code-post-session.sh` + a `/brag` slash
-  command shape. Pure shell + prompt; requires STAGE-003's
-  `brag add --json` landed. User explicitly tagged as low
-  priority in the 2026-04-22 triage; include only if trivial
-  to bolt on after the JSON input spec.
-
-**Habit & stats (2 S):**
-
-- **`brag remind`** — nudge command that prints a message if no
-  entries in last N days. Habit-reinforcement; tiny command.
-- **`brag stats`** — entries/week, longest streak, most common
-  tags/projects. Aggregations over existing schema.
-
-**Retrospection command (1 S):**
-
-- **`brag review --week`** — print entries grouped by project +
-  three static reflection questions ("what pattern do you see?",
-  "what did you underestimate?", "what's one thing missing?").
-  Human-in-the-loop reflection; distinct from `summary`
-  aggregation.
-
-**Explicitly NOT in STAGE-004 — deferred to `backlog.md` on
-2026-04-22 reshuffle:**
+**Already on `backlog.md` from prior reshuffles (2026-04-22):**
 
 - `brag export --exclude-tag <tag>` redaction filter
 - Git-context auto-capture on `brag add`
 - `--link` / `--refs` multi-valued field
 
-### STAGE-005 sketch — Distribution
+**Out of scope for PROJ-001 entirely — PROJ-002 territory:**
 
-Persistent since project start; no triage needed. For reference:
-goreleaser config (cross-compile darwin+linux arm64+x86_64),
-GitHub Actions CI (test + lint on PR) and release (tag →
-binaries → release notes), homebrew tap at
-`github.com/jysf/homebrew-bragfile`, CHANGELOG discipline, README
-one-liner polish + GIF/demo of the Claude-session → brag-entry
-flow (moved from backlog during 2026-04-22 triage).
+- LLM-piping built into the tool (PROJ-002 "AI assist" project
+  consumes STAGE-004's rule-based outputs externally).
+
+### STAGE-005 sketch — Distribution + cleanup
+
+Refined 2026-04-24 post-STAGE-003-ship to include three items
+that surfaced during real usage of the shipped tool:
+
+**Cleanup (was missing from earlier sketches):**
+
+- **README rewrite.** Current README at repo root describes the
+  spec-driven *development process* (frame/design/build/verify/
+  ship cycles) rather than the `brag` tool itself. Rewrite as
+  user-facing: install, capture, list/search, export. Move
+  process-oriented content to `docs/development.md` (or
+  `CONTRIBUTING.md`). Brought up by external Claude review
+  2026-04-24; user agrees this is the right shape.
+
+- **`docs/brag-entry.schema.json`.** Checked-in JSON schema
+  mirroring DEC-012's stdin shape. Reference from BRAG.md as
+  the contract AI agents must produce against. Pairs with the
+  Claude session-end hook below to make the AI-integration
+  story concrete and validatable.
+
+**AI-integration distribution asset (moved from STAGE-004):**
+
+- **Claude Code session-end hook example.** Ships
+  `scripts/claude-code-post-session.sh` + a `/brag` slash
+  command template. Pure shell + prompt; consumes the JSON
+  schema above. Demonstrates the DEC-011/012 round-trip in
+  practice — value as a README/blog artifact, not as
+  personal-workflow polish.
+
+**Distribution proper (persistent since project start):**
+
+- goreleaser config (cross-compile darwin + linux, arm64 +
+  x86_64).
+- GitHub Actions: CI (test + lint on PR), release (tag →
+  binaries → release notes).
+- Homebrew tap at `github.com/jysf/homebrew-bragfile`.
+- CHANGELOG discipline.
+- Shell completions (`brag completion zsh|bash|fish` —
+  cobra-free).
+
+**Plus a blog post** (artifact, not a spec) — write-up of the
+spec-driven development process applied to a real project.
+
+**Explicit non-goals for STAGE-005:**
+
+- No marketing push. User wants `brew install bragfile` for the
+  learning value, not adoption.
+- No pre-1.0 backward-compat promise beyond what's already
+  documented in api-contract.md.
+- No tags-normalization / soft-delete / edit-history work
+  (external review 2026-04-24 raised these as v0.1 migration-
+  cost concerns; user decision: accept the debt; revisit if/
+  when they bite).
 
 ---
 
