@@ -450,7 +450,7 @@ So you don't ask the tool for things it can't do:
 
 | Want | Status |
 |---|---|
-| `brew install bragfile` | STAGE-004 |
+| `brew install bragfile` | STAGE-005 |
 
 For now, `sqlite3 ~/.bragfile/db.sqlite` is your escape hatch for
 anything `list` doesn't surface.

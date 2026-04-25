@@ -64,8 +64,8 @@ binds PROJ-002 as well.
 - **Testing:** Go stdlib `testing` package. Storage tests use `t.TempDir()` (enforced by `storage-tests-use-tempdir` constraint).
 - **Linter / Formatter:** `gofmt` (enforced) + `go vet`. `golangci-lint` welcome but not required in CI yet.
 - **Hosting:** None. Local CLI only.
-- **Distribution:** `goreleaser` → GitHub Releases → homebrew tap at `github.com/jysf/homebrew-bragfile` (arriving in STAGE-004).
-- **CI:** GitHub Actions (to be set up in STAGE-004). Must run `go test ./...` and `gofmt -l .` and fail on any diff.
+- **Distribution:** `goreleaser` → GitHub Releases → homebrew tap at `github.com/jysf/homebrew-bragfile` (arriving in STAGE-005).
+- **CI:** GitHub Actions (to be set up in STAGE-005). Must run `go test ./...` and `gofmt -l .` and fail on any diff.
 
 ---
 
