@@ -222,6 +222,7 @@ DECs are stable; specs come and go. DECs don't reciprocally list specs.
 - The inverse also holds: when a locked decision **inverts or removes** existing behavior, enumerate the existing tests whose premise is invalidated by the change. List them under the spec's `## Outputs` as planned deletions (or planned rewrites), not build-time discoveries disclosed under Deviations. SPEC-010's decision #1 (no-flags → editor mode) inverted `TestAdd_MissingTitleIsUserError`'s premise; build correctly deleted the test, but the deletion was a discovery rather than a plan. A two-minute "premise audit" during design — walk each locked decision against existing tests in the affected files — makes the symmetric design-to-test traceability explicit. Lesson earned in SPEC-010 ship reflection (2026-04-21).
 - The additive case also counts: when a spec **adds to a tracked collection** (migrations, DECs, constraints, queued entries, or any fixed-shape structure whose count is asserted in existing tests), grep for literal-count assertions in existing tests and enumerate them as planned updates under `## Outputs`. Example: SPEC-011 added `0002_add_fts.sql` as a second migration; `TestOpen_MigrationsTracked` asserted "exactly 1 row in `schema_migrations`" and was broken by the addition without any behavior being inverted. Concrete heuristic: when adding anything to `schema_migrations`, the DECs list, or `constraints.yaml`, run `grep -rn "<collection>" internal/**/*_test.go` and audit each hit for literal count coupling. Lesson earned in SPEC-011 ship reflection (2026-04-22).
 - The documentation-consistency case also counts: when a spec **changes a feature's shipping status** (e.g., strikes a row from a "not yet shipped" table, introduces a new command, removes a deprecated one), grep all docs for mentions of the feature name and enumerate every hit as a planned update under `## Outputs` — not just the primary status claim. Example: SPEC-012 struck `search` from `docs/tutorial.md` §9's "What's NOT there yet" table (the *primary* status claim) but missed the Scope blurb at line 3 of the same file (a *secondary* status claim). Verify caught the inconsistency. Concrete heuristic: when changing a feature's status, run `grep -rn "<feature-name>" docs/ README.md` and audit each hit for status claims. Lesson earned in SPEC-012 ship reflection (2026-04-22). Completes the three-case premise audit: **inversion/removal → planned test deletion; addition → planned count-bump; status change → planned doc references update.**
+- **Audit-grep cross-check (both sides) — enumeration without execution is aspirational.** *Design-side:* when you write a premise-audit grep in the spec, RUN it against the repo and reconcile actual hits against the spec's enumerated `## Outputs` list. If the grep surfaces hits the enumeration missed, add them to Outputs before locking the spec. *Build-side:* before doing the doc-sweep, re-run the spec's audit greps yourself; treat any delta between actual hits and the spec's enumerated Outputs as a question for the spec author (raise in build-cycle reflection or a quick clarifying check), not as a unilateral expansion of scope. SPEC-018 spec enumerated two greps (`tap.*STAGE-004` scoped to `AGENTS.md`; `STAGE-003.*summary` scoped to `docs/` + `README.md` + `AGENTS.md`) with expected-hit lists, but neither was executed at design — the first against the whole repo would have caught `AGENTS.md:67` (and adjacent `:68`); the second would have caught `docs/architecture.md:24` and `docs/tutorial.md:453`. Build held the line ("if the spec doesn't say it, don't do it") and flagged in reflection; verify caught the gap and recommended the cross-check both ways. Completes the premise-audit family: **design enumerates → design verifies its enumeration → build re-verifies and questions deltas.** Lesson earned in SPEC-018 ship reflection (2026-04-25).
 
 ---
 
@@ -271,6 +272,26 @@ directly. Lesson earned in SPEC-007 verify punch list (2026-04-20): the
 spec offered a test-helper choice where one option imported `database/sql`
 under `internal/cli/`, violating `no-sql-in-cli-layer` — verify caught
 it, punch-list iteration fixed both the code and the spec.
+
+**Decide at design time when decidable.** When a "multiple paths" choice
+is decidable at design time — meaning one path violates a blocking
+constraint, encodes a structural anti-pattern, or duplicates a known
+lesson — lock the prescribed path AND list the rejected alternatives
+explicitly under `## Locked design decisions` (a "Rejected alternatives
+(build-time)" subsection works well). "Either-is-fine" is the off-load
+that 90% of the time slips into Deviations later. Three confirming data
+points: SPEC-007 verify (test-helper either-A-or-B that violated a
+blocking constraint under one branch); SPEC-014 build (TSV-helper
+placement decision off-loaded to build); SPEC-017 ship reflection
+("either-is-fine off-loads to build" pattern named, with the 1s sleep
++ `CreatedAt.Equal` retained-by-path-of-least-resistance as the
+example). SPEC-018 was the first spec to apply this discipline
+proactively: a Rejected-alternatives-build-time section enumerated three
+paths (`Store.SetCreatedAtForTesting` rejected as test-only public API
+in production; inline `--range` parsing rejected in favor of named
+`rangeCutoff` helper for cleaner locked-decisions-need-tests pairing;
+`echoFilters` reuse rejected pre-third-caller-threshold), and build
+held all three. Lesson earned in SPEC-018 ship reflection (2026-04-25).
 
 ### During **build**
 
