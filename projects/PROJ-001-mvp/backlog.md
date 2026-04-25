@@ -389,6 +389,33 @@ nothing is lost but the project stays focused.
   with system notification) is a heavier follow-on if the pull
   shape isn't enough.
 
+## `brag add --at <date>` backdating flag
+
+- **Source:** External Claude review 2026-04-24 surfaced as
+  high-value-low-cost during STAGE-004 planning; user-deferred
+  to backlog 2026-04-24 to keep STAGE-004 at 3 specs.
+- **Reason deferred:** S-sized spec (~25-40 LoC + 5-7 tests +
+  small doc updates), genuinely useful, but user has been
+  logging at end-of-day reliably for 2+ weeks — no
+  Friday-recapping-Tuesday pain has surfaced yet. Adding now
+  would push STAGE-004 from 3 specs to 4 (~30% timeline bump)
+  for a feature whose value is invisible until needed.
+- **Revisit when:** First time the user catches themselves
+  wanting to log a brag from a previous day and finds it
+  awkward to do via SQL or `--json` with a constructed
+  `created_at` (which is currently tolerated-and-ignored per
+  DEC-012 anyway, so backdating via stdin doesn't work today
+  either — this would be the only path).
+- **Sketch:** `brag add --at 2d` (2 days ago) or
+  `brag add --at 2026-04-22` (specific date). Reuses the
+  existing date parser SPEC-007 built for `--since`. Touches
+  `Store.Add` to respect non-zero `CreatedAt` (defaults to
+  `time.Now()` when zero, current behavior). One small design
+  decision required: if `brag add --json --at 2d` runs AND
+  stdin JSON has a `created_at` field, `--at` flag wins
+  (more explicit). Document in DEC-012 follow-up note. ~0.75
+  day end-to-end.
+
 ## Anything unreleased from STAGE-004 at distribution time
 
 - **Source:** User decision 2026-04-22; updated 2026-04-24 after
