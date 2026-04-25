@@ -7,7 +7,7 @@
 task:
   id: SPEC-018
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: M                    # M honestly: DEC emission + new package + new command + four-things-in-one. Stage Design Notes called this the load-bearing spec of STAGE-004.
@@ -2447,28 +2447,33 @@ Implementation Context; these are the "how" details.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-018-brag-summary-aggregate-package-and-shape-dec`
+- **PR (if applicable):** opened post-build (URL in commit footer / final assistant message)
+- **All acceptance criteria met?** yes — 15/15 new tests green; existing suite unchanged; `gofmt -l .` empty; `go vet ./...` clean; `CGO_ENABLED=0 go build ./...` succeeds; `go test ./...` green; both load-bearing goldens (markdown + JSON) byte-match DEC-014.
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+  - none from build (DEC-014 was design-time, emitted by the design cycle alongside this spec; build did not introduce any new build-time DEC).
 - **Deviations from spec:**
-  - [list]
+  - **None to the prescribed code path.** All locked decisions implemented as specified; both rejected build-time alternatives stayed rejected (no `Store.SetCreatedAtForTesting`, no `echoFilters` reuse).
+  - **Two doc-sweep audit misses surfaced during build (NOT corrected — out-of-spec scope, flagged for verify):**
+    - `AGENTS.md` line 67 (§3 Tech Stack → Distribution) still reads "homebrew tap … (arriving in STAGE-004)" — symmetric to the §11 line 251 fix the spec did enumerate. The spec's `tap.*STAGE-004` premise-audit grep would have hit both, but only §11 was prescribed under Outputs. Left untouched per "if the spec doesn't say it, don't do it."
+    - `docs/architecture.md` line 24 still reads "export / summary STAGE-003" inside the mermaid diagram. The spec's `STAGE-003.*summary` audit grep was scoped to `docs/ README.md AGENTS.md` and would have hit this; the Outputs-side enumeration listed only `docs/api-contract.md`, `docs/tutorial.md`, `docs/data-model.md`, `README.md`, `AGENTS.md`. Left untouched for the same reason.
+  - **One observed simplification vs. the spec's predicted importer set:** the spec's `internal/aggregate` audit predicted importers in `internal/export/summary.go` AND `internal/cli/summary.go`. The actual build only needs the export-side importer — the CLI talks to renderers (`export.ToSummaryMarkdown`, `export.ToSummaryJSON`) and never names `aggregate` itself. Cleaner seam than predicted; no behavior change.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - **Two-line follow-up doc fix (verify or a small chore PR):** sync the AGENTS.md §3 line 67 tap reference and the `docs/architecture.md` mermaid summary node to match the §11 / api-contract.md / tutorial.md / README.md updates from this spec. Either is below DEC threshold; both are pure status-text edits.
+  - SPEC-019 / SPEC-020 already enumerated in the stage backlog; nothing new added by this build.
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing material. The spec's literal code sketches for the aggregate sort logic, the renderer envelope, and the `rangeCutoff` helper meant build was almost transcription — including the load-bearing goldens, which made fail-first the most informative signal. The only minor friction was the spec's Notes-for-the-Implementer suggesting the test plumbing for the JSON key-order assertion in pseudo-form; I implemented a small `skipValue` helper in `summary_test.go` to walk the decoder properly, which the spec didn't fully sketch.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — The status-change premise audit (§9 SPEC-012 lesson) was correctly applied to the four enumerated docs but missed two adjacent hits the audit greps would have caught: `AGENTS.md` line 67 (§3 distribution mention of `tap STAGE-004`) and `docs/architecture.md` line 24 (mermaid label `summary STAGE-003`). Both are in files the audit greps targeted, but neither was enumerated in Outputs as a planned edit. The audit's "expected hits" list correctly named the §11 glossary entry as the tap hot spot but did not predict the §3 line 67 hit; similarly the `STAGE-003.*summary` audit's "expected hits" enumerated 5 files but missed `docs/architecture.md`. Both are spec defects (audit incomplete), not build defects. Build flagged them rather than silently expanding scope.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Run the audit greps myself before the doc sweep — not just trust the spec's enumeration. The spec's audit blocks include the actual grep commands; running them in build would have surfaced both audit misses immediately and let me ask "is this in scope or out of scope?" up front instead of mid-sweep. The lesson generalizes: when a spec lists "expected hits" for a premise-audit grep, the build should re-run the grep and reconcile the actual hits against the enumeration, treating any delta as a question for the spec author rather than a unilateral expansion.
 
 ---
 

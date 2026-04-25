@@ -242,13 +242,17 @@ DECs are stable; specs come and go. DECs don't reciprocally list specs.
 
 ## 11. Domain Glossary
 
+- **aggregate** — the Go package `internal/aggregate/` (introduced in STAGE-004 by SPEC-018). Pure data layer that maps `[]storage.Entry → structured stats` (`ByType`, `ByProject`, `GroupForHighlights`, plus SPEC-019's grouping helpers and SPEC-020's `Streak` / `MostCommon` / `Span`). Rendering is the responsibility of `internal/export`; aggregate stays SQL-free and dependency-free.
 - **brag / entry** — one captured moment worth remembering for a retro, review, or resume. Single row in the `entries` table.
 - **capture** — the act of creating an entry, either via `brag add --title ...` (flags form) or `brag add` with no args opening `$EDITOR` on a templated markdown buffer (STAGE-002).
+- **digest** — collective name for the rule-based commands (`brag summary`, `brag review`, `brag stats`) that emit a single-document aggregation per DEC-014's envelope shape. Distinct from `brag export`, which emits a multi-entry document. STAGE-004.
 - **Store** — the `*storage.Store` Go type that owns the `*sql.DB` and all typed methods. The only package that imports a SQL driver.
 - **migration** — a single `NNNN_*.sql` file under `internal/storage/migrations/`, embedded into the binary, applied automatically in lexical order on `storage.Open`.
 - **export** — a one-shot dump of entries, either as a Markdown report (stdout or `--out file.md`) or as a portable SQLite file copy (via `VACUUM INTO`).
-- **summary** — a rule-based (non-LLM) aggregation of entries grouped by project/type over a time range. STAGE-003.
-- **tap** — a homebrew tap repo (`github.com/jysf/homebrew-bragfile`) hosting the `bragfile.rb` formula. Created in STAGE-004.
+- **review** — `brag review --week | --month`: prints recent entries grouped by project followed by three hard-coded reflection questions. Designed to be pasted into an external AI session for guided self-reflection. STAGE-004 (SPEC-019).
+- **summary** — a rule-based (non-LLM) aggregation of entries grouped by project/type over a rolling 7- or 30-day time window (`brag summary --range week|month`). STAGE-004.
+- **stats** — `brag stats`: six lifetime aggregations (total entries, entries/week rolling average, current streak, longest streak, top-5 most-common tags, top-5 most-common projects, corpus span). STAGE-004 (SPEC-020).
+- **tap** — a homebrew tap repo (`github.com/jysf/homebrew-bragfile`) hosting the `bragfile.rb` formula. Created in STAGE-005.
 
 ---
 

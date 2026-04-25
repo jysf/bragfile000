@@ -1,7 +1,7 @@
 # Using `brag` — tutorial
 
-> **Scope:** what you can do with `brag` today. `brag summary` arrives
-> in a later stage. See
+> **Scope:** what you can do with `brag` today. `brag review` and
+> `brag stats` arrive in later STAGE-004 specs. See
 > [`projects/PROJ-001-mvp/brief.md`](../projects/PROJ-001-mvp/brief.md)
 > for the full plan.
 
@@ -450,7 +450,6 @@ So you don't ask the tool for things it can't do:
 
 | Want | Status |
 |---|---|
-| `brag summary --range week\|month` | STAGE-003 |
 | `brew install bragfile` | STAGE-004 |
 
 For now, `sqlite3 ~/.bragfile/db.sqlite` is your escape hatch for

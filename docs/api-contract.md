@@ -248,16 +248,41 @@ brag export --format markdown --project platform  # filter before exporting
   `## Entries (chronological)` wrapper.
 - Unknown or missing `--format` values exit 1 (user error).
 
-### `brag summary --range week|month` (STAGE-003)
+### `brag summary --range week|month` (STAGE-004)
 
 ```
-brag summary --range week
-brag summary --range month --project platform
+brag summary --range week                          # last 7 UTC days, markdown
+brag summary --range month --format json           # last 30 UTC days, JSON envelope
+brag summary --range week --tag auth --project p   # compose filters
 ```
 
-Rule-based aggregation. Output: a markdown block grouped by `project`,
-then `type`, with counts and entry titles. No LLM. Optional
-`--project` filter narrows the set first.
+Rule-based digest of the rolling time window. Output is a markdown
+document (default) or single-object JSON envelope (`--format json`)
+carrying:
+
+- **Provenance:** `Generated:` (RFC3339), `Scope:` (week|month),
+  `Filters:` (echoed flags or `(none)`).
+- **Summary block:** counts by type and by project (DESC by count,
+  alphabetical-ASC tiebreak; `(no project)` last in the by-project
+  list).
+- **Highlights:** entry titles + IDs grouped by project,
+  chronological-ASC within group; descriptions are intentionally
+  elided for the "skim before pasting" goal.
+
+Flags:
+- `--range week|month` REQUIRED. `week` = last 7 UTC days from
+  `time.Now()`; `month` = last 30 UTC days. Rolling window, NOT
+  calendar week/month.
+- `--format markdown|json` defaults to `markdown`. JSON is a
+  single-object envelope (NOT an array — diverges from DEC-011's
+  list shape because aggregations carry metadata). Shape locked by
+  [DEC-014](../decisions/DEC-014-rule-based-output-shape.md).
+- `--tag <token>`, `--project <name>`, `--type <name>` reuse `brag
+  list`'s `ListFilter` semantics. No `--since`/`--limit`/`--out` on
+  summary in MVP.
+- Output goes to stdout. Redirect with `>` if you want a file.
+
+Unknown or missing `--range` or `--format` values exit 1 (user error).
 
 ## Error output
 
@@ -287,3 +312,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-011` — shared JSON output shape for `brag list --format json` and `brag export --format json`
 - `DEC-013` — markdown export shape for `brag export --format markdown` (+`--flat`)
 - `DEC-012` — stdin-JSON schema for `brag add --json` (single object, title required, server-owned fields tolerated-and-ignored)
+- `DEC-014` — rule-based output shape for `brag summary` (and `brag review` / `brag stats` arriving later in STAGE-004): single-object JSON envelope with `generated_at` / `scope` / `filters` provenance + per-spec payload keys; markdown convention reuses DEC-013's provenance + summary-block style.
