@@ -21,7 +21,7 @@ graph TD
     User[User shell] -->|argv| Main[cmd/brag/main.go<br/>cobra root]
     Main --> AddCmd[internal/cli/add.go]
     Main --> ListCmd[internal/cli/list.go]
-    Main --> OtherCmds[show / edit / delete / search<br/>shipped in STAGE-002<br/><br/>export / summary<br/>STAGE-003]
+    Main --> OtherCmds[show / edit / delete / search<br/>shipped in STAGE-002<br/><br/>export shipped in STAGE-003<br/>summary STAGE-004]
     AddCmd --> Store[internal/storage.Store]
     ListCmd --> Store
     OtherCmds --> Store

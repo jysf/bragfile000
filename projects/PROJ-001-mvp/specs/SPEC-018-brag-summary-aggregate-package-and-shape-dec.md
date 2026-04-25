@@ -7,7 +7,7 @@
 task:
   id: SPEC-018
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: M                    # M honestly: DEC emission + new package + new command + four-things-in-one. Stage Design Notes called this the load-bearing spec of STAGE-004.
@@ -2447,28 +2447,33 @@ Implementation Context; these are the "how" details.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-018-brag-summary-aggregate-package-and-shape-dec`
+- **PR (if applicable):** opened post-build (URL in commit footer / final assistant message)
+- **All acceptance criteria met?** yes — 15/15 new tests green; existing suite unchanged; `gofmt -l .` empty; `go vet ./...` clean; `CGO_ENABLED=0 go build ./...` succeeds; `go test ./...` green; both load-bearing goldens (markdown + JSON) byte-match DEC-014.
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+  - none from build (DEC-014 was design-time, emitted by the design cycle alongside this spec; build did not introduce any new build-time DEC).
 - **Deviations from spec:**
-  - [list]
+  - **None to the prescribed code path.** All locked decisions implemented as specified; both rejected build-time alternatives stayed rejected (no `Store.SetCreatedAtForTesting`, no `echoFilters` reuse).
+  - **Two doc-sweep audit misses surfaced during build (NOT corrected — out-of-spec scope, flagged for verify):**
+    - `AGENTS.md` line 67 (§3 Tech Stack → Distribution) still reads "homebrew tap … (arriving in STAGE-004)" — symmetric to the §11 line 251 fix the spec did enumerate. The spec's `tap.*STAGE-004` premise-audit grep would have hit both, but only §11 was prescribed under Outputs. Left untouched per "if the spec doesn't say it, don't do it."
+    - `docs/architecture.md` line 24 still reads "export / summary STAGE-003" inside the mermaid diagram. The spec's `STAGE-003.*summary` audit grep was scoped to `docs/ README.md AGENTS.md` and would have hit this; the Outputs-side enumeration listed only `docs/api-contract.md`, `docs/tutorial.md`, `docs/data-model.md`, `README.md`, `AGENTS.md`. Left untouched for the same reason.
+  - **One observed simplification vs. the spec's predicted importer set:** the spec's `internal/aggregate` audit predicted importers in `internal/export/summary.go` AND `internal/cli/summary.go`. The actual build only needs the export-side importer — the CLI talks to renderers (`export.ToSummaryMarkdown`, `export.ToSummaryJSON`) and never names `aggregate` itself. Cleaner seam than predicted; no behavior change.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - **Two-line follow-up doc fix (verify or a small chore PR):** sync the AGENTS.md §3 line 67 tap reference and the `docs/architecture.md` mermaid summary node to match the §11 / api-contract.md / tutorial.md / README.md updates from this spec. Either is below DEC threshold; both are pure status-text edits.
+  - SPEC-019 / SPEC-020 already enumerated in the stage backlog; nothing new added by this build.
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing material. The spec's literal code sketches for the aggregate sort logic, the renderer envelope, and the `rangeCutoff` helper meant build was almost transcription — including the load-bearing goldens, which made fail-first the most informative signal. The only minor friction was the spec's Notes-for-the-Implementer suggesting the test plumbing for the JSON key-order assertion in pseudo-form; I implemented a small `skipValue` helper in `summary_test.go` to walk the decoder properly, which the spec didn't fully sketch.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — The status-change premise audit (§9 SPEC-012 lesson) was correctly applied to the four enumerated docs but missed two adjacent hits the audit greps would have caught: `AGENTS.md` line 67 (§3 distribution mention of `tap STAGE-004`) and `docs/architecture.md` line 24 (mermaid label `summary STAGE-003`). Both are in files the audit greps targeted, but neither was enumerated in Outputs as a planned edit. The audit's "expected hits" list correctly named the §11 glossary entry as the tap hot spot but did not predict the §3 line 67 hit; similarly the `STAGE-003.*summary` audit's "expected hits" enumerated 5 files but missed `docs/architecture.md`. Both are spec defects (audit incomplete), not build defects. Build flagged them rather than silently expanding scope.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Run the audit greps myself before the doc sweep — not just trust the spec's enumeration. The spec's audit blocks include the actual grep commands; running them in build would have surfaced both audit misses immediately and let me ask "is this in scope or out of scope?" up front instead of mid-sweep. The lesson generalizes: when a spec lists "expected hits" for a premise-audit grep, the build should re-run the grep and reconcile the actual hits against the enumeration, treating any delta as a question for the spec author rather than a unilateral expansion.
 
 ---
 
@@ -2478,10 +2483,12 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Run the audit greps during design, not just write them down. The spec enumerated two greps with expected-hit lists (`tap.*STAGE-004` scoped to AGENTS.md; `STAGE-003.*summary` scoped to docs/ + README.md + AGENTS.md) but did not actually execute them. Executing the first against the whole repo would have caught `AGENTS.md:67`; executing the second would have caught `docs/architecture.md:24`. Both would have landed in `## Outputs`, neither would have surfaced as a build-flagged miss. The discipline mirrors SPEC-012's ship lesson one level up: SPEC-012 said "grep when status changes"; SPEC-018 says "actually run the greps you enumerate." Spec size (2487 lines) was justified — investment paid back as zero build-time drift on locked decisions and three rejected build-time alternatives held firm. Size was not the problem; trusting the enumeration without verifying it was.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Yes, two refinements at the three-data-point threshold that historically codified prior §9 lessons. Both land in this ship cycle as a separate `chore(AGENTS)` commit on this branch.
+   (a) **§9 audit-grep cross-check, both sides.** One bullet, two clauses. *Design-side:* when you write a premise-audit grep, run it and reconcile actual hits against Outputs — enumeration without execution is aspirational. *Build-side:* before doc-sweep, re-run the spec's audit greps and treat any delta from Outputs as a question for the spec author, not a unilateral expansion of scope. SPEC-010/011/012 established the design-side premise-audit family (inversion / addition / status-change); SPEC-018 verify (2026-04-25) surfaced the symmetric build-side mirror that closes the loop.
+   (b) **§12 (During design): decide at design time when decidable.** SPEC-018 was the first spec to enumerate a "Rejected alternatives (build-time)" subsection within Locked design decisions, and the build held all three (`Store.SetCreatedAtForTesting`, inline `--range` parsing, `echoFilters` reuse). With SPEC-007 verify (test-helper either-A-or-B that violated `no-sql-in-cli-layer` under one branch) and SPEC-017 ship reflection ("either-is-fine off-loads to build" pattern named) as the prior data points, that is three confirming cases. Codify: "When a 'multiple paths' choice is decidable at design time — meaning one path violates a blocking constraint, encodes a structural anti-pattern, or duplicates a known lesson — lock the prescribed path AND list the rejected alternatives explicitly. 'Either-is-fine' is the off-load that 90% of the time slips into Deviations later."
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No. Build and verify both said no. SPEC-019 (`brag review`) and SPEC-020 (`brag stats`) are framed in the stage backlog and inherit DEC-014 + `internal/aggregate` directly — no preconditions SPEC-018 left undone. The two §9/§12 refinements above are AGENTS.md chores, not specs, landing in this ship cycle as `chore(AGENTS)`. The cosmetic doc-sync (`AGENTS.md:67`/`:68` tap+CI distribution, `docs/architecture.md:24` mermaid label, `docs/tutorial.md:453` `brew install bragfile` row — all stale STAGE-004 references for assets that moved to STAGE-005, plus the architecture mermaid's STAGE-003 grouping that conflated export with summary) was folded into PR #18 as commit `baca793` (`chore(SPEC-018): doc-sync 4 stale stage references caught at verify`) — fixing the three verify-flagged misses plus an adjacent fourth (line 68's CI mention, same shape as line 67) caught while the file was open.
