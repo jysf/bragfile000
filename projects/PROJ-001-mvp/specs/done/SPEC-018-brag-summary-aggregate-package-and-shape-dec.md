@@ -7,7 +7,7 @@
 task:
   id: SPEC-018
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: M                    # M honestly: DEC emission + new package + new command + four-things-in-one. Stage Design Notes called this the load-bearing spec of STAGE-004.

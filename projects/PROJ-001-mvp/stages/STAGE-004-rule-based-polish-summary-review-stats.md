@@ -187,18 +187,22 @@ seeds `internal/aggregate` and emits DEC-014; SPEC-019 and SPEC-020
 both reuse those and could run in parallel after SPEC-018 ships, but
 sequencing them is fine too.
 
-- [ ] SPEC-018 (pending, **M**) — **`brag summary --range
-      week|month` + DEC-014 (rule-based-output shape) + seeds
-      `internal/aggregate`.** Largest spec in the stage. Lights up the
-      "what happened this week/month?" digest with provenance +
-      counts-by-type + counts-by-project + grouped highlights
-      (titles + IDs only, no descriptions). DEC-014 locks the
-      cross-cutting markdown shape (provenance/summary block reuse
-      convention) and the JSON envelope for the three rule-based
-      digests (single-object, `generated_at` + `scope` + `filters` +
-      payload keys). Seeds `internal/aggregate` with `ByType`,
-      `ByProject`, helpers used by SPEC-019/020. Filter flags reuse
-      `ListFilter` per STAGE-003 pattern.
+- [x] SPEC-018 (shipped 2026-04-25, **M**) — **`brag summary
+      --range week|month` + DEC-014 (rule-based-output shape) +
+      seeds `internal/aggregate`.** Largest spec in project history
+      (2487 lines). Lights up the "what happened this week/month?"
+      digest with provenance + counts-by-type + counts-by-project +
+      grouped highlights. DEC-014 locks the cross-cutting markdown +
+      JSON shape (single-object envelope diverging from DEC-011's
+      naked array; consumed verbatim by SPEC-019/020). Seeded
+      `internal/aggregate` with `ByType`, `ByProject`, `rangeCutoff`
+      helpers. Shipped via PR #18 (squash-merged `2d6d37f`). Two
+      AGENTS.md lessons earned in lockstep: §9 audit-grep
+      cross-check (both sides — design enumerates → design verifies
+      → build re-verifies and questions deltas) and §12 "decide at
+      design time when decidable" (locked the prescribed path AND
+      enumerated three rejected alternatives — Store.SetCreatedAtForTesting,
+      inline range parsing, echoFilters reuse — all held by build).
 
 - [ ] SPEC-019 (pending, **S**) — **`brag review --week | --month`.**
       Static reflection workflow. Prints recent entries grouped by
@@ -221,7 +225,7 @@ sequencing them is fine too.
       Extends `internal/aggregate` with `Streak`, `MostCommon`,
       `Span` helpers.
 
-**Count:** 0 shipped / 0 active / 3 pending
+**Count:** 1 shipped / 0 active / 2 pending
 
 **Complexity check:** 1×M + 2×S, total ~3 specs. Within the
 "3–4 specs" healthy-stage band. SPEC-018 is the load-bearing one
