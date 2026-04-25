@@ -210,3 +210,74 @@ func TestAggregate_EmptyInputReturnsNonNilEmptySlice(t *testing.T) {
 		})
 	}
 }
+
+// TestGroupEntriesByProject_OrderingAndIDTiebreak locks the SPEC-019
+// helper: alpha-ASC group order with NoProjectKey forced last; chrono-
+// ASC within group with ID as tie-break (AGENTS.md §9 SPEC-002 rule).
+// Each Entries slice carries the FULL storage.Entry, not the EntryRef
+// projection.
+func TestGroupEntriesByProject_OrderingAndIDTiebreak(t *testing.T) {
+	t.Run("shared_fixture", func(t *testing.T) {
+		want := []ProjectEntryGroup{
+			{Project: "alpha", Entries: []storage.Entry{
+				sharedFixture[0], // ID 1
+				sharedFixture[3], // ID 4
+			}},
+			{Project: "beta", Entries: []storage.Entry{
+				sharedFixture[1], // ID 2
+			}},
+			{Project: "gamma", Entries: []storage.Entry{
+				sharedFixture[4], // ID 5
+			}},
+			{Project: NoProjectKey, Entries: []storage.Entry{
+				sharedFixture[2], // ID 3
+			}},
+		}
+		got := GroupEntriesByProject(sharedFixture)
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("GroupEntriesByProject shared_fixture mismatch\nwant: %#v\ngot:  %#v", want, got)
+		}
+	})
+
+	t.Run("id_tiebreak", func(t *testing.T) {
+		ts := time.Date(2026, 4, 20, 10, 0, 0, 0, time.UTC)
+		tieFixture := []storage.Entry{
+			{ID: 99, Title: "later-id-same-time", Project: "alpha", CreatedAt: ts},
+			{ID: 7, Title: "earlier-id-same-time", Project: "alpha", CreatedAt: ts},
+		}
+		want := []ProjectEntryGroup{
+			{Project: "alpha", Entries: []storage.Entry{
+				{ID: 7, Title: "earlier-id-same-time", Project: "alpha", CreatedAt: ts},
+				{ID: 99, Title: "later-id-same-time", Project: "alpha", CreatedAt: ts},
+			}},
+		}
+		got := GroupEntriesByProject(tieFixture)
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("GroupEntriesByProject id_tiebreak mismatch\nwant: %#v\ngot:  %#v", want, got)
+		}
+	})
+}
+
+// TestGroupEntriesByProject_EmptyInputReturnsNonNilEmptySlice locks the
+// empty-state contract on the SPEC-019 helper: nil or empty input must
+// return a non-nil empty slice so JSON marshaling renders [] not null.
+func TestGroupEntriesByProject_EmptyInputReturnsNonNilEmptySlice(t *testing.T) {
+	t.Run("nil_input", func(t *testing.T) {
+		got := GroupEntriesByProject(nil)
+		if got == nil {
+			t.Fatalf("expected non-nil empty slice, got nil")
+		}
+		if len(got) != 0 {
+			t.Fatalf("expected len 0, got %d", len(got))
+		}
+	})
+	t.Run("empty_slice_input", func(t *testing.T) {
+		got := GroupEntriesByProject([]storage.Entry{})
+		if got == nil {
+			t.Fatalf("expected non-nil empty slice, got nil")
+		}
+		if len(got) != 0 {
+			t.Fatalf("expected len 0, got %d", len(got))
+		}
+	})
+}

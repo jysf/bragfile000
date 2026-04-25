@@ -22,6 +22,7 @@ func main() {
 	root.AddCommand(cli.NewSearchCmd())
 	root.AddCommand(cli.NewExportCmd())
 	root.AddCommand(cli.NewSummaryCmd())
+	root.AddCommand(cli.NewReviewCmd())
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "brag: %s\n", err.Error())

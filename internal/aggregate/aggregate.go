@@ -95,6 +95,55 @@ func ByProject(entries []storage.Entry) []ProjectCount {
 	return out
 }
 
+// ProjectEntryGroup carries one project's full entries, used by brag
+// review (SPEC-019). Mirrors ProjectHighlights's shape but retains the
+// full storage.Entry instead of the EntryRef projection — JSON
+// consumers (DEC-011 9-key per-entry shape) need descriptions and
+// metadata that highlights elides.
+type ProjectEntryGroup struct {
+	Project string
+	Entries []storage.Entry
+}
+
+// GroupEntriesByProject mirrors GroupForHighlights's grouping + sort
+// logic exactly: alpha-ASC by project name with NoProjectKey last;
+// chrono-ASC within group with ID as tiebreak. Differs only in
+// carrying full storage.Entry (not EntryRef). Used by review's
+// markdown path (renders id+title only at render time) and review's
+// JSON path (serializes full DEC-011 shape).
+func GroupEntriesByProject(entries []storage.Entry) []ProjectEntryGroup {
+	buckets := make(map[string][]storage.Entry)
+	for _, e := range entries {
+		key := e.Project
+		if key == "" {
+			key = NoProjectKey
+		}
+		buckets[key] = append(buckets[key], e)
+	}
+	out := make([]ProjectEntryGroup, 0, len(buckets))
+	for proj, group := range buckets {
+		sorted := make([]storage.Entry, len(group))
+		copy(sorted, group)
+		sort.SliceStable(sorted, func(i, j int) bool {
+			if !sorted[i].CreatedAt.Equal(sorted[j].CreatedAt) {
+				return sorted[i].CreatedAt.Before(sorted[j].CreatedAt)
+			}
+			return sorted[i].ID < sorted[j].ID
+		})
+		out = append(out, ProjectEntryGroup{Project: proj, Entries: sorted})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Project == NoProjectKey {
+			return false
+		}
+		if out[j].Project == NoProjectKey {
+			return true
+		}
+		return out[i].Project < out[j].Project
+	})
+	return out
+}
+
 // GroupForHighlights returns project groups in alpha-ASC order with
 // NoProjectKey forced last; within each group, entries are sorted
 // ASC by CreatedAt with ID as tie-break (AGENTS.md §9 SPEC-002

@@ -1,7 +1,7 @@
 # Using `brag` — tutorial
 
-> **Scope:** what you can do with `brag` today. `brag review` and
-> `brag stats` arrive in later STAGE-004 specs. See
+> **Scope:** what you can do with `brag` today. `brag stats` arrives
+> in a later STAGE-004 spec. See
 > [`projects/PROJ-001-mvp/brief.md`](../projects/PROJ-001-mvp/brief.md)
 > for the full plan.
 
@@ -357,6 +357,26 @@ brag delete 42 -y    # skip the prompt (scripting / muscle memory)
 Declining at the prompt exits 0 (no harm done). The delete is a hard
 delete — there is no undo, no trash bin. The `.sqlite` file is your
 backup.
+
+### Weekly reflection: `brag review`
+
+Run `brag review --week` (or just `brag review`) to see your last 7
+days of entries grouped by project, followed by three reflection
+questions designed to seed deeper self-review:
+
+1. What pattern do you see in this period?
+2. What did you underestimate?
+3. What's missing here that should be?
+
+Pipe the JSON form into your favorite LLM for guided reflection:
+
+```bash
+brag review --week --format json | claude "use the entries and questions above to reflect on my week"
+```
+
+Use `brag review --month` for a 30-day window. Filter flags are not
+accepted — the digest is the unfiltered window. (`brag summary` is
+the right command if you want filter composition.)
 
 ---
 

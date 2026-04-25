@@ -28,6 +28,26 @@ type entryRecord struct {
 	UpdatedAt   string `json:"updated_at"`
 }
 
+// toEntryRecord projects a storage.Entry to the DEC-011 9-key
+// serialization shape. Both ToJSON (list/export consumer) and
+// internal/export/review.go's ToReviewJSON (review consumer) use this
+// helper — sharing the field map keeps drift impossible. Stays
+// package-private; consumers outside internal/export should not
+// depend on the shape of a serialization detail.
+func toEntryRecord(e storage.Entry) entryRecord {
+	return entryRecord{
+		ID:          e.ID,
+		Title:       e.Title,
+		Description: e.Description,
+		Tags:        e.Tags,
+		Project:     e.Project,
+		Type:        e.Type,
+		Impact:      e.Impact,
+		CreatedAt:   e.CreatedAt.UTC().Format(time.RFC3339),
+		UpdatedAt:   e.UpdatedAt.UTC().Format(time.RFC3339),
+	}
+}
+
 // ToJSON marshals entries per DEC-011: naked array, 9 keys in SQL-
 // column order, tags comma-joined string, timestamps RFC3339, empty
 // fields as "", pretty-printed with 2-space indent. Empty/nil input
@@ -38,17 +58,7 @@ func ToJSON(entries []storage.Entry) ([]byte, error) {
 	}
 	records := make([]entryRecord, 0, len(entries))
 	for _, e := range entries {
-		records = append(records, entryRecord{
-			ID:          e.ID,
-			Title:       e.Title,
-			Description: e.Description,
-			Tags:        e.Tags,
-			Project:     e.Project,
-			Type:        e.Type,
-			Impact:      e.Impact,
-			CreatedAt:   e.CreatedAt.UTC().Format(time.RFC3339),
-			UpdatedAt:   e.UpdatedAt.UTC().Format(time.RFC3339),
-		})
+		records = append(records, toEntryRecord(e))
 	}
 	return json.MarshalIndent(records, "", "  ")
 }

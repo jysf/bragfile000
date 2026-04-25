@@ -284,6 +284,53 @@ Flags:
 
 Unknown or missing `--range` or `--format` values exit 1 (user error).
 
+### `brag review --week | --month` (STAGE-004)
+
+```
+brag review                                  # last 7 UTC days, markdown (silent default)
+brag review --week                           # explicit; same as bare
+brag review --month --format json            # last 30 UTC days, JSON envelope
+```
+
+Reflection digest: recent entries grouped by project, followed by
+three hard-coded reflection questions designed to be pasted into an
+external AI session for guided self-review. No LLM ships in the
+binary.
+
+Document structure:
+
+- **Provenance:** `Generated:` (RFC3339), `Scope:` (week|month),
+  `Filters: (none)` (review never accepts filter flags; the value is
+  constant).
+- **Entries:** under `## Entries`, per-project `### <project>` groups
+  with bulleted `- <id>: <title>` per entry. Group order alpha-ASC
+  with `(no project)` last; within-group entries chrono-ASC. Markdown
+  elides descriptions for compactness; the JSON form includes the
+  full per-entry shape.
+- **Reflection questions:** under `## Reflection questions`, three
+  hard-coded numbered questions. The questions ALWAYS render — even
+  when zero entries match — because the questions are the point of
+  the command.
+
+Flags:
+- `--week` and `--month` are mutually exclusive boolean flags. Bare
+  `brag review` silently defaults to `--week` (no stderr notice).
+  Rolling-window semantics: `--week` = last 7 UTC days; `--month` =
+  last 30 UTC days.
+- `--format markdown|json` defaults to `markdown`. JSON is the
+  single-object envelope locked by
+  [DEC-014](../decisions/DEC-014-rule-based-output-shape.md), with
+  top-level keys `generated_at`, `scope`, `filters`,
+  `entries_grouped`, `reflection_questions`. Each item inside
+  `entries_grouped[].entries` is the DEC-011 9-key per-entry shape
+  ([DEC-011](../decisions/DEC-011-json-output-shape.md)).
+- Filter flags `--tag` / `--project` / `--type` are NOT accepted on
+  review — the digest is "the last 7/30 days, period." No `--out`
+  flag; output goes to stdout (redirect with `>` for a file).
+
+Unknown `--format` values, or `--week` and `--month` together, exit 1
+(user error).
+
 ## Error output
 
 All human-readable errors go to stderr with the prefix `brag: `. Example:
@@ -312,4 +359,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-011` — shared JSON output shape for `brag list --format json` and `brag export --format json`
 - `DEC-013` — markdown export shape for `brag export --format markdown` (+`--flat`)
 - `DEC-012` — stdin-JSON schema for `brag add --json` (single object, title required, server-owned fields tolerated-and-ignored)
-- `DEC-014` — rule-based output shape for `brag summary` (and `brag review` / `brag stats` arriving later in STAGE-004): single-object JSON envelope with `generated_at` / `scope` / `filters` provenance + per-spec payload keys; markdown convention reuses DEC-013's provenance + summary-block style.
+- `DEC-014` — rule-based output shape for `brag summary`, `brag review`, and `brag stats` (arriving later in STAGE-004): single-object JSON envelope with `generated_at` / `scope` / `filters` provenance + per-spec payload keys; markdown convention reuses DEC-013's provenance + summary-block style.
