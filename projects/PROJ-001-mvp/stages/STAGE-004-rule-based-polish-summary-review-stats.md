@@ -204,17 +204,23 @@ sequencing them is fine too.
       enumerated three rejected alternatives — Store.SetCreatedAtForTesting,
       inline range parsing, echoFilters reuse — all held by build).
 
-- [ ] SPEC-019 (pending, **S**) — **`brag review --week | --month`.**
-      Static reflection workflow. Prints recent entries grouped by
-      project (titles + IDs; descriptions elided for compactness in
-      markdown, included in JSON), followed by three hard-coded
-      reflection questions ("What pattern do you see?", "What did you
-      underestimate?", "What's missing that should be here?").
-      `--week` / `--month` mutually exclusive; bare `brag review`
-      defaults to `--week`. `--format markdown|json` honored. Reuses
-      `internal/aggregate.ByProject` and DEC-014's shape conventions.
-      JSON shape: single-object envelope per DEC-014, payload includes
-      `entries_grouped` + `reflection_questions` array.
+- [x] SPEC-019 (shipped 2026-04-25, **S**) — **`brag review
+      --week | --month`.** Static reflection workflow. Prints
+      entries grouped by project + three hard-coded reflection
+      questions (locked verbatim from stage Design Notes). `--week`
+      / `--month` mutually exclusive; bare `brag review` defaults
+      to `--week`. `--format markdown|json` honored; markdown elides
+      descriptions, JSON includes them. Reuses
+      `internal/aggregate.ByProject` and adds one helper
+      (`GroupEntriesByProject`); refactors `internal/export/json.go`'s
+      entryRecord into a package-private `toEntryRecord` helper for
+      review.go's reuse. Shipped via PR #19 (squash-merged
+      `5c6e268`). Clean cycle — no build-time DECs, all 4 rejected-
+      alternatives held, one self-caught deviation (Long-vs-help
+      contradiction in spec; build resolved by dropping `--` prefixes
+      from prose). Second design-time + second build-side validation
+      case for the SPEC-018 §9 audit-grep cross-check addendum
+      (zero deltas both times).
 
 - [ ] SPEC-020 (pending, **S**) — **`brag stats`.** Six lifetime
       aggregations: total count, entries/week (rolling average),
@@ -225,7 +231,7 @@ sequencing them is fine too.
       Extends `internal/aggregate` with `Streak`, `MostCommon`,
       `Span` helpers.
 
-**Count:** 1 shipped / 0 active / 2 pending
+**Count:** 2 shipped / 0 active / 1 pending
 
 **Complexity check:** 1×M + 2×S, total ~3 specs. Within the
 "3–4 specs" healthy-stage band. SPEC-018 is the load-bearing one
