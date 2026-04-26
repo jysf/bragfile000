@@ -214,15 +214,29 @@ isolated and small.
       SPEC-023 punch list (deferred stale STAGE-NNN refs across
       docs/api-contract.md / architecture.md / data-model.md /
       tutorial.md:493).
-- [ ] SPEC-022 (not yet designed, **M**) — **AI-integration
-      distribution asset.** `docs/brag-entry.schema.json` mirroring
-      DEC-012; `scripts/claude-code-post-session.sh` consuming the
-      schema; `/brag` slash-command markdown template under
-      `examples/`; install-instructions section in `BRAG.md` (or
-      `scripts/README.md`) explaining how to copy each artifact into
-      `~/.claude/`. Examples + docs only, **no new `brag` CLI
-      surface**. Cross-references the schema from BRAG.md as the
-      contract AI agents must validate against.
+- [x] SPEC-022 (shipped 2026-04-26, **M**) — **AI-integration
+      distribution asset.** Three new artifacts shipped via the
+      §12 literal-artifact-as-spec pattern (third application,
+      first cross-format): `docs/brag-entry.schema.json` (50
+      lines, JSON Schema draft 2020-12 mirroring DEC-012);
+      `scripts/claude-code-post-session.sh` (67 lines, pure-stdin
+      bash hook with chmod +x); `examples/brag-slash-command.md`
+      (14 lines, tight slash-command template). Plus BRAG.md
+      insertion (50 lines, "## JSON contract for programmatic
+      capture" section) and scripts/test-docs.sh extension (161
+      lines, 23 new asserts in groups H/I/J/K). Shipped via
+      PR #22 (squash-merged `079bb89`). Clean cycle — 30/30 AC,
+      63/63 test-docs (40 SPEC-021 + 23 new), all 10 rejected-
+      alternatives held, no DEC. Cross-format literal-artifact
+      pattern validated (JSON + bash + markdown + in-place
+      markdown + shell extension all clean on first transcription
+      with zero drift). Both watch-patterns no-op'd at build for
+      the second consecutive spec; §10 push-discipline held on
+      its second proactive application; bfa1474 archive-spec
+      precondition exercised second time on a real ship and
+      passed. One Q3 cosmetic observation (BRAG.md HR-separator
+      asymmetry) WATCHED at N=1, not codified. STAGE-005 at
+      2/4.
 - [ ] SPEC-023 (not yet designed, **M**) — **Distribution proper:
       goreleaser + GitHub Actions + CHANGELOG + tap-formula
       auto-publish.** `.goreleaser.yaml` (cross-compile darwin+linux
@@ -239,7 +253,7 @@ isolated and small.
       help text; tutorial.md install-section addendum showing how to
       source the script.
 
-**Count:** 1 shipped / 0 active / 3 pending
+**Count:** 2 shipped / 0 active / 2 pending
 
 **Complexity check:** 1 × S/M + 2 × M + 1 × S; no L-complexity entries
 (none expected per framing prompt). Total ~4 specs, within the 3–5
