@@ -237,16 +237,31 @@ isolated and small.
       passed. One Q3 cosmetic observation (BRAG.md HR-separator
       asymmetry) WATCHED at N=1, not codified. STAGE-005 at
       2/4.
-- [ ] SPEC-023 (not yet designed, **M**) — **Distribution proper:
-      goreleaser + GitHub Actions + CHANGELOG + tap-formula
-      auto-publish.** `.goreleaser.yaml` (cross-compile darwin+linux
-      × arm64+x86_64), `.github/workflows/ci.yml` (test + lint + vet
-      matrix), `.github/workflows/release.yml` (tag → release →
-      brews-push to pre-existing
-      `github.com/jysf/homebrew-bragfile`), `CHANGELOG.md` populated
-      retroactively for v0.1.0. End-to-end smoke: `git tag v0.1.0 &&
-      git push --tags` produces a working `brew install
-      jysf/bragfile/bragfile`.
+- [ ] SPEC-023 (designed 2026-04-26, build pending, **M**) —
+      **Distribution proper: goreleaser + GitHub Actions + CHANGELOG
+      + tap-formula auto-publish.** `.goreleaser.yaml` (cross-compile
+      darwin+linux × arm64+amd64), `.github/workflows/ci.yml` (test +
+      gofmt + vet matrix on macos-latest + ubuntu-latest),
+      `.github/workflows/release.yml` (tag-`v*` → goreleaser release
+      → brews-push to pre-existing `github.com/jysf/homebrew-bragfile`
+      with `skip_upload: auto` for prereleases), `CHANGELOG.md`
+      populated retroactively for v0.1.0 in Keep-A-Changelog 1.1.0
+      shape (literal-artifact-as-spec, fourth confirming application).
+      Plus six-line const→var rewiring of `cmd/brag/main.go` for
+      ldflags injection, plus six-file doc sweep folding in the
+      inherited SPEC-021 punch-list (architecture.md:45 sqlite-file-
+      copy fix + architecture.md:103 STAGE-004→STAGE-005 +
+      tutorial.md:493 §9 collapse) and SPEC-023's own forward-
+      reference flips (README.md status banner + AGENTS.md §3 line 67
+      + §4 lines 97/106 + cmd/brag/main.go:12 STAGE-004→STAGE-005),
+      verified by 33 new test-docs.sh asserts in groups L–P (running
+      total: 96 asserts after build). Bundle-vs-split decision
+      explicit at top of spec — KEEP BUNDLED (single ship narrative;
+      doc sweep activates as a unit; size lands at solid M not L; no
+      operational gain from splitting). Zero new DECs expected.
+      End-to-end smoke (AC-37/38/39/40): local `goreleaser build
+      --snapshot --clean` + RC-tag pre-flight + `v0.1.0` tag-cut +
+      `brew install jysf/bragfile/bragfile` from clean shell.
 - [ ] SPEC-024 (not yet designed, **S**) — **Shell completions.**
       `brag completion zsh|bash|fish` subcommand wrapping cobra's
       built-in completion API. Smoke tests on at least zsh and bash;
