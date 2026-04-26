@@ -194,15 +194,26 @@ of each other and could run in parallel after SPEC-021 ships, but
 sequencing them serially is cleaner. SPEC-024 ships last because it's
 isolated and small.
 
-- [ ] SPEC-021 (not yet designed, **S–M**) — **README user-facing
-      rewrite + dev-process migration to `CONTRIBUTING.md` (or
-      `docs/development.md`).** Top-of-`README.md` becomes the
-      tool-introducing surface (what is `brag`, install, capture, list,
-      digests, where data lives, links to tutorial); spec-driven
-      development conventions move to a separate doc for contributors.
-      Internal-link audit. Highest premise-audit hot spot in the stage —
-      every doc that references the README's old structure needs a
-      sweep.
+- [x] SPEC-021 (shipped 2026-04-25, **M**) — **README user-facing
+      rewrite + dev-process migration to `CONTRIBUTING.md` AND
+      `docs/development.md`.** README rewritten as user-facing
+      (install / capture / list / search / export / digests / where-
+      data-lives / where-to-go-next / license). New CONTRIBUTING.md
+      (thin GitHub-conventional pointer). New docs/development.md
+      (spec-driven framework details). New scripts/test-docs.sh
+      (40 grep-based shell asserts) exposed via new `just test-docs`
+      recipe (NOT wired into `just test`). Shipped via PR #21
+      (squash-merged `9abdeb6`). Clean cycle — 39/39 AC, 40/40
+      scripted asserts, 8/8 byte-identity checks; both watch-patterns
+      (§9 audit-grep cross-check + §12 NOT-contains self-audit)
+      no-op'd at build (second consecutive spec); §10 push-discipline
+      held on its first proactive application post-codification.
+      Two AGENTS.md addenda earned + codified at this ship: §9
+      BSD-grep `--exclude-dir` warning + §12 literal-artifact-as-spec
+      pattern (three confirming cases SPEC-018/020/021). Inherits
+      SPEC-023 punch list (deferred stale STAGE-NNN refs across
+      docs/api-contract.md / architecture.md / data-model.md /
+      tutorial.md:493).
 - [ ] SPEC-022 (not yet designed, **M**) — **AI-integration
       distribution asset.** `docs/brag-entry.schema.json` mirroring
       DEC-012; `scripts/claude-code-post-session.sh` consuming the
@@ -228,7 +239,7 @@ isolated and small.
       help text; tutorial.md install-section addendum showing how to
       source the script.
 
-**Count:** 0 shipped / 0 active / 4 pending
+**Count:** 1 shipped / 0 active / 3 pending
 
 **Complexity check:** 1 × S/M + 2 × M + 1 × S; no L-complexity entries
 (none expected per framing prompt). Total ~4 specs, within the 3–5
