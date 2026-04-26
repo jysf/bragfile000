@@ -238,6 +238,7 @@ DECs are stable; specs come and go. DECs don't reciprocally list specs.
   - Decisions referenced, constraints checked, new `DEC-*` files
 - Do not force-push to `main`. Branch protection on `main` should require PR + passing CI.
 - **`.gitignore` for compiled binaries must be anchored.** Write `/brag`, not `brag` — an unanchored pattern matches every `brag` path at any depth and will silently shadow a directory of the same name (e.g., `cmd/brag/`). Lesson earned in SPEC-003 build reflection (2026-04-20, when SPEC-001's unanchored `brag` pattern hid `cmd/brag/main.go`).
+- **Push between local commits and merge.** Any commit added to a feat branch just before `gh pr merge --squash --delete-branch` MUST be pushed to `origin/<feat-branch>` before the merge. GitHub squashes what's on the remote branch, not what's on local; `--delete-branch` then orphans the unpushed commit (recoverable only via `git reflog` / `git cat-file`). Three confirming cases: SPEC-013 push-after-design slip; SPEC-018 unpushed chore-bundle slip; SPEC-019 orphaned reflection commit recovered at STAGE-004 ship. Heuristic: after any `git commit` on a feat branch in the same shell session as the PR merge, run `git push origin HEAD` before `gh pr merge`. Codified at STAGE-005 framing (2026-04-25).
 
 ---
 
