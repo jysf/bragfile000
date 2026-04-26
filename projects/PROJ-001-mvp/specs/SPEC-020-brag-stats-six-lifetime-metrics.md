@@ -7,7 +7,7 @@
 task:
   id: SPEC-020
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S — consumes DEC-014 verbatim, three new helpers, one new command, one new render file. No DEC emission, no new package.
@@ -2224,31 +2224,82 @@ pattern, the same shape as the SPEC-018/019 subsections.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-020-brag-stats-six-lifetime-metrics`
+- **PR (if applicable):** opened post-`just advance-cycle SPEC-020 verify`
+- **All acceptance criteria met?** yes — 16/16. Aggregate, export
+  goldens (markdown + JSON byte-exact), empty-corpus contract, top-5
+  cap with alpha-ASC tiebreak, decimal-weeks formula, CLI defaults,
+  `--format json` envelope, unknown-format ErrUser, help shows
+  `--format` only, eight undeclared flags rejected as cobra unknown
+  flags, `brag --help` lists `stats`, all gates green, doc sweep
+  complete.
 - **New decisions emitted:**
-  - none expected — DEC-014 consumed verbatim per Locked design
-    decisions §1.
+  - none — DEC-014 consumed verbatim per Locked design decisions §1.
+    SPEC-020 is the third (and last) DEC-014 consumer.
 - **Deviations from spec:**
-  - [list]
+  - none. Six rejected-alternative paths held: (1) array-of-objects
+    for `top_tags`/`top_projects` (not map-keyed); (2) decimal-weeks
+    `entries_per_week` (not integer); (3) strict cap at 5 with
+    alpha-ASC tiebreak (not include-all-ties); (4) `MostCommon`
+    operating on `[]string` (not `[]storage.Entry`); (5) three
+    aggregate helpers added (not inlined in renderer); (6) `Span.Days`
+    inclusive on both endpoints. Both load-bearing goldens passed
+    byte-exact on the first build run; existing SPEC-014/018/019
+    goldens stayed byte-identical.
 - **Follow-up work identified:**
-  - STAGE-004 ships when SPEC-020 ships (the last spec in the
-    backlog); stage-level reflection should run before the stage
-    is closed.
+  - STAGE-004 ships when SPEC-020 ships (last spec in the backlog).
+    Stage-level reflection runs before the stage is closed.
+  - `revew1.md`, `status-after-nine-specs.md`, and the
+    `framework-feedback/` directory are tracked-as-untracked in the
+    git status; left untouched (out of scope for SPEC-020).
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing material. The 17%-trim experiment (signatures +
+   invariants instead of full skeletons) was sufficient. Three
+   places where the spec leaned on precedent rather than full code:
+   (a) the `Streak` longest-run loop was implementable directly from
+   the invariant ("longest consecutive UTC-date run anywhere in the
+   corpus") + the implementation hint about UTC-truncation; (b) the
+   `corpusSpanRecord.*string` pattern for nullable JSON dates was
+   stated explicitly enough; (c) the `extractTags`/`extractProjects`
+   adapter design was stated explicitly. The shared fixture's
+   pre-computed expected values (top-5 ordering, span days, streak
+   counts, entries/week) made the goldens trivial to reproduce
+   byte-exact on the first try. Net: signatures + invariants were
+   enough; no missing sketch slowed the build.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. The SPEC-019-earned Long-vs-help negative-substring self-
+   audit watch-pattern caught nothing in the locked Long (design-time
+   audit clean; build-time re-grep of the rendered `--help` clean —
+   second proactive validation case). The §9 audit-grep cross-check
+   addendum (SPEC-018-earned) ran clean both times — design-side
+   enumeration matched the actual `grep "brag stats" docs/ README.md
+   AGENTS.md` output verbatim; build-side re-run before doc-sweep
+   surfaced no deltas. Both addenda earned their second confirming
+   case here; ship reflection should propose §12 codification for
+   both together.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Almost nothing. The fail-first run produced exactly the
+   expected `undefined: Streak / NameCount / StatsOptions /
+   ToStatsMarkdown / ToStatsJSON / NewStatsCmd` symbol errors before
+   any implementation; the goldens passed byte-exact on first run
+   for both markdown and JSON; the eight-flag undeclared-flag
+   subtests passed without prose adjustment. The only minor friction:
+   I added a Go-comment-line `// No filter flags, no --range, no
+   --out.` above `NewStatsCmd` that contained two of the forbidden
+   tokens — harmless because comments don't reach `--help`, but if
+   future iterations of the watch-pattern grep narrow scope to "any
+   line in the CLI source file naming the forbidden tokens" rather
+   than "the rendered Long string only," that comment would surface
+   as a false positive. The watch-pattern's scope (spec→binary→test
+   path, NOT spec-prose→reader path) is correctly stated in the
+   spec's Premise audit; build held to that scope.
 
 ---
 
