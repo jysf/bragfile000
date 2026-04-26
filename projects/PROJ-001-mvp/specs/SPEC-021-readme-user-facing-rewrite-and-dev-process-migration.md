@@ -1902,10 +1902,59 @@ distinct from the process-focused build reflection above. NOTE:
 answers at ship time or `just archive-spec SPEC-021` will fail.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing about SPEC-021 itself; the bigger lesson is about
+   spec authoring going forward. SPEC-021 was the strongest
+   validation yet of the **literal-artifact-as-spec pattern**:
+   292 lines of markdown across three files, byte-transcribed
+   from the Notes-for-the-Implementer sketches, byte-identical
+   at verify. Combined with SPEC-018 (Go test fixtures embedded
+   verbatim) and SPEC-020 (cobra Long string locked literally),
+   this is now three confirming cases — the codification bar.
+   Carry-forward: when a future spec ships any fixed-shape
+   artifact decidable at design time (markdown, JSON schema,
+   YAML workflow, shell template, slash-command body, completion
+   script), embed the literal artifact under Notes for the
+   Implementer rather than describing it in prose. Build
+   transcribes; verify diffs; both become mechanical and fast.
+   Directly applicable to SPEC-022 (3 fixed-shape artifacts:
+   BRAG.md schema section, slash-command template, Claude hook
+   script) and SPEC-024 (shell completion files). Less applicable
+   where the artifact must be synthesised from constraints (most
+   Go code) — there, prose-with-failing-tests stays the right
+   shape.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Yes, two AGENTS.md addenda land alongside this ship as a
+   separate `chore(AGENTS)` commit on the feat branch.
+
+   **(a) §9 testing conventions — BSD grep `--exclude-dir`
+   addendum.** Earned in SPEC-021 build reflection Q3 (BSD grep
+   --exclude-dir matches basenames not path fragments — silent
+   no-op on macOS). Verify recommended codify-now-vs-watch
+   because the lesson is concrete (specific BSD behavior),
+   the rule is mechanical (whitelist via case post-filter),
+   and codifying now saves SPEC-022 + SPEC-024 (both likely to
+   add shell-asserted content) from re-deriving the lesson.
+
+   **(b) §12 design-cycle rules — literal-artifact-as-spec
+   addendum.** Sibling to "decide at design time when decidable"
+   (SPEC-018 ship) and "NOT-contains self-audit" (SPEC-020 ship).
+   Three confirming cases now exist (SPEC-018 / SPEC-020 /
+   SPEC-021); meets the bar from those prior addenda's own
+   framing. The pattern: when a spec ships a fixed-shape
+   artifact decidable at design time, embed the literal artifact
+   under Notes for the Implementer rather than describing it
+   in prose. Build transcribes verbatim; verify diffs against
+   the embedded literal. Both cycles become mechanical and fast,
+   and design carries the cost of getting the artifact right at
+   the moment alternatives are still cheap.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No. SPEC-022 (schema + Claude hook + slash command) is
+   already framed in STAGE-005's backlog and inherits SPEC-021's
+   punch list (deferred stale STAGE-NNN refs in
+   docs/api-contract.md / architecture.md / data-model.md /
+   tutorial.md:493) for SPEC-023's doc-sweep. The two AGENTS.md
+   addenda above are part of this ship cycle, not a new spec.
+   The PR-body line-count cosmetic (says 144, actual is 146)
+   is sub-spec and irrelevant once squashed. No new follow-up.
