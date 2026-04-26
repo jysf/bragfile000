@@ -42,7 +42,7 @@ graph TD
 | `internal/cli` | One file per subcommand. Each exports a `func New<Name>Cmd(deps) *cobra.Command`. Depends on `storage.Store` (an interface or concrete type) for all persistence. Does no SQL. |
 | `internal/storage` | `Store` struct wrapping `*sql.DB`. Embeds migration SQL files and applies them on `Open`. Exposes typed methods (`Add`, `List`, `Get`, `Update`, `Delete`, `Search`) — no SQL leaks upward. Owns the `Entry` type. Plus an FTS5 ride-along table `entries_fts` that indexes title, description, tags, project, impact and stays in sync via SQL triggers (SPEC-011). |
 | `internal/editor` | (STAGE-002) Launches `$EDITOR` against a templated markdown buffer; parses front-matter on save. |
-| `internal/export` | (STAGE-003) Markdown-report and sqlite-file-copy exporters. |
+| `internal/export` | (STAGE-003) Markdown-report and JSON exporters (`brag export --format markdown\|json`). |
 
 ## Key Design Principles
 
@@ -100,10 +100,10 @@ iterate rows → format → print.
 ## Deployment Topology
 
 There is none. `brag` is a single static binary that runs on the user's
-machine. Distribution (STAGE-004) uses goreleaser to produce macOS
-(arm64, x86_64) and Linux (arm64, x86_64) binaries; a homebrew tap at
+machine. Distribution (STAGE-005) uses goreleaser to produce macOS
+(arm64, amd64) and Linux (arm64, amd64) binaries; a homebrew tap at
 `github.com/jysf/homebrew-bragfile` ships the macOS ones via
-`brew install bragfile`.
+`brew install jysf/bragfile/bragfile`.
 
 ## References
 

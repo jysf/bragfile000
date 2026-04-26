@@ -13,7 +13,7 @@ task:
                                    # version-injection wiring change in
                                    # cmd/brag/main.go and a doc sweep
                                    # over previously-deferred references.
-  cycle: build
+  cycle: verify
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -2373,28 +2373,27 @@ framing" to "load-bearing across the stage."
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:** <branch-name>
-- **PR (if applicable):** <#NN>
-- **All acceptance criteria met?** <yes/no>
-- **New decisions emitted:**
-  - <DEC-NNN — title, if any. Expected: NONE per stage notes.>
+- **Branch:** `feat/spec-023-distribution-proper`
+- **PR (if applicable):** not yet opened
+- **All acceptance criteria met?** yes (AC-1 through AC-36; AC-37–AC-40 are smoke-tests performed at ship time)
+- **New decisions emitted:** NONE (per stage notes)
 - **Deviations from spec:**
-  - <list>
-- **Follow-up work identified:**
-  - <any new specs for the stage's backlog>
+  1. **L2 / `.goreleaser.yaml` ordering** — spec's `.goreleaser.yaml` literal places four comment lines before `version: 2` (putting it on line 6), but test L2 asserts `version: 2` appears within the first 5 lines (`head -n 5`). These two spec literals contradict each other. Resolution: moved `version: 2` to line 1 (standard goreleaser convention; consistent with the assertion's stated intent "opens with `version: 2`"). The comments follow on lines 2–5. No functional change.
+  2. **O4 / CHANGELOG three command entries** — spec's CHANGELOG literal formats three commands as `` `brag show <id>` ``, `` `brag delete <id>` ``, `` `brag export --format markdown|json` ``, but test O4 checks for the plain verb forms `` `brag show` ``, `` `brag delete` ``, `` `brag export` ``. These are not substrings of the argument forms. Resolution: changed the three bullets to use the plain verb in backticks (consistent with how `` `brag add` ``, `` `brag list` ``, `` `brag stats` `` are formatted) and moved arguments/flags into the description text. No functional change to meaning.
+- **Follow-up work identified:** none beyond the existing SPEC-024 (shell completions)
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing genuinely unclear. The two literal-vs-literal conflicts (L2 and O4) were caught quickly by the test harness on first run. The spec's structure and §12 pattern made the work mechanical and fast. The mandatory audit-grep cross-check was the most deliberate step and reconciled cleanly.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No missing constraints. The note about `version: 2` placement would be worth a single-sentence clarification in the spec's goreleaser literal header (e.g. "version: 2 must be within the first 5 lines to satisfy assertion L2"), but it's a minor improvement.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Run `just test-docs` after transcribing the test-docs.sh extension but BEFORE transcribing the artifact files, to confirm the extension itself is well-formed. In this build the extension ran correctly, but isolating that failure mode would be useful. Also: for CHANGELOG literals, standardize bullet format to verb-only backtick (no arguments) across all commands — the mixed format (verb-only for some, verb+args for others) is what triggered O4.
 
 ---
 

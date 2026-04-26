@@ -64,7 +64,7 @@ binds PROJ-002 as well.
 - **Testing:** Go stdlib `testing` package. Storage tests use `t.TempDir()` (enforced by `storage-tests-use-tempdir` constraint).
 - **Linter / Formatter:** `gofmt` (enforced) + `go vet`. `golangci-lint` welcome but not required in CI yet.
 - **Hosting:** None. Local CLI only.
-- **Distribution:** `goreleaser` → GitHub Releases → homebrew tap at `github.com/jysf/homebrew-bragfile` (arriving in STAGE-005).
+- **Distribution:** `goreleaser` → GitHub Releases → homebrew tap at `github.com/jysf/homebrew-bragfile`. Install via `brew install jysf/bragfile/bragfile`.
 - **CI:** GitHub Actions (to be set up in STAGE-005). Must run `go test ./...` and `gofmt -l .` and fail on any diff.
 
 ---
@@ -93,7 +93,7 @@ gofmt -w .                                   # format (write in place)
 gofmt -l .                                   # lint (list unformatted files; CI fails if non-empty)
 go vet ./...                                 # static checks
 
-# --- release (STAGE-004) ---
+# --- release (STAGE-005) ---
 goreleaser release --clean                   # full release (tag triggers this in CI)
 goreleaser build --snapshot --clean          # local cross-compile smoke test
 
@@ -103,7 +103,7 @@ goreleaser build --snapshot --clean          # local cross-compile smoke test
 ./brag list
 ```
 
-macOS note: `brew upgrade go` to move to the latest Go. `brew install goreleaser` once we hit STAGE-004.
+macOS note: `brew upgrade go` to move to the latest Go. `brew install goreleaser` before tagging a release locally.
 
 ---
 

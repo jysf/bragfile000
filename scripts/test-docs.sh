@@ -584,6 +584,229 @@ else
     fail "K4" "no '## … JSON …' heading in BRAG.md"
 fi
 
+# ===== Group L — .goreleaser.yaml shape =====
+
+GORELEASER="${REPO_ROOT}/.goreleaser.yaml"
+
+# L1 — config file exists
+assert_file_exists "L1" "$GORELEASER"
+
+# L2 — opens with `version: 2`
+if [ ! -f "$GORELEASER" ]; then
+    fail "L2" "$GORELEASER does not exist"
+elif head -n 5 "$GORELEASER" | grep -E -q '^version:[[:space:]]+2[[:space:]]*$'; then
+    ok "L2"
+else
+    fail "L2" "$GORELEASER does not declare 'version: 2' in first 5 lines"
+fi
+
+# L3 — declares CGO_ENABLED=0
+assert_contains_literal "L3" "$GORELEASER" "CGO_ENABLED=0"
+
+# L4 — declares both darwin and linux goos values
+assert_contains_literal "L4a" "$GORELEASER" "- darwin"
+assert_contains_literal "L4b" "$GORELEASER" "- linux"
+
+# L5 — declares both amd64 and arm64 goarch values
+assert_contains_literal "L5a" "$GORELEASER" "- amd64"
+assert_contains_literal "L5b" "$GORELEASER" "- arm64"
+
+# L6 — declares a top-level `brews:` block
+if [ ! -f "$GORELEASER" ]; then
+    fail "L6" "$GORELEASER does not exist"
+elif grep -E -q '^brews:[[:space:]]*$' "$GORELEASER"; then
+    ok "L6"
+else
+    fail "L6" "$GORELEASER does not declare a top-level 'brews:' block"
+fi
+
+# L7 — brews block points at homebrew-bragfile
+assert_contains_literal "L7" "$GORELEASER" "name: homebrew-bragfile"
+
+# L8 — brews block has `skip_upload: auto`
+assert_contains_literal "L8" "$GORELEASER" "skip_upload: auto"
+
+# L9 — declares `-X main.version=` ldflag
+assert_contains_literal "L9" "$GORELEASER" "-X main.version="
+
+# L10 — archive format is `tar.gz`
+assert_contains_literal "L10" "$GORELEASER" "format: tar.gz"
+
+# L11 — brews block declares license: MIT
+assert_contains_literal "L11" "$GORELEASER" 'license: "MIT"'
+
+# ===== Group M — .github/workflows/ci.yml shape =====
+
+CI_WORKFLOW=".github/workflows/ci.yml"
+
+# M1 — file exists
+assert_file_exists "M1" "$CI_WORKFLOW"
+
+# M2 — triggers on pull_request
+assert_contains_literal "M2" "$CI_WORKFLOW" "pull_request:"
+
+# M3 — triggers on push to main (push: stanza followed by branches: + main)
+if [ ! -f "$CI_WORKFLOW" ]; then
+    fail "M3" "$CI_WORKFLOW does not exist"
+elif awk '
+        /^on:/ { in_on=1; next }
+        in_on && /^[a-zA-Z]/ { in_on=0 }
+        in_on && /push:/ { in_push=1; next }
+        in_push && /branches:/ { in_branches=1; next }
+        in_branches && /- main/ { print "ok"; exit }
+    ' "$CI_WORKFLOW" | grep -q ok; then
+    ok "M3"
+else
+    fail "M3" "$CI_WORKFLOW does not trigger on push to main"
+fi
+
+# M4 — matrix includes macos-latest
+assert_contains_literal "M4" "$CI_WORKFLOW" "macos-latest"
+
+# M5 — matrix includes ubuntu-latest
+assert_contains_literal "M5" "$CI_WORKFLOW" "ubuntu-latest"
+
+# M6 — runs `go test ./...`
+assert_contains_literal "M6" "$CI_WORKFLOW" "go test ./..."
+
+# M7 — runs `gofmt -l .`
+assert_contains_literal "M7" "$CI_WORKFLOW" "gofmt -l ."
+
+# M8 — runs `go vet ./...`
+assert_contains_literal "M8" "$CI_WORKFLOW" "go vet ./..."
+
+# M9 — uses actions/setup-go@v5
+assert_contains_literal "M9" "$CI_WORKFLOW" "actions/setup-go@v5"
+
+# ===== Group N — .github/workflows/release.yml shape =====
+
+RELEASE_WORKFLOW=".github/workflows/release.yml"
+
+# N1 — file exists
+assert_file_exists "N1" "$RELEASE_WORKFLOW"
+
+# N2 — triggers on tag push pattern v*
+if [ ! -f "$RELEASE_WORKFLOW" ]; then
+    fail "N2" "$RELEASE_WORKFLOW does not exist"
+elif grep -E -q "^[[:space:]]+- 'v\\*'" "$RELEASE_WORKFLOW"; then
+    ok "N2"
+else
+    fail "N2" "$RELEASE_WORKFLOW does not trigger on tag pattern 'v*'"
+fi
+
+# N3 — uses goreleaser/goreleaser-action@v6
+assert_contains_literal "N3" "$RELEASE_WORKFLOW" "goreleaser/goreleaser-action@v6"
+
+# N4 — passes HOMEBREW_TAP_GITHUB_TOKEN env
+assert_contains_literal "N4" "$RELEASE_WORKFLOW" "HOMEBREW_TAP_GITHUB_TOKEN"
+
+# N5 — checkout uses fetch-depth: 0
+assert_contains_literal "N5" "$RELEASE_WORKFLOW" "fetch-depth: 0"
+
+# ===== Group O — CHANGELOG.md shape =====
+
+# O1 — file exists
+assert_file_exists "O1" "CHANGELOG.md"
+
+# O2 — references Keep-A-Changelog
+assert_contains_literal "O2" "CHANGELOG.md" "keepachangelog.com"
+
+# O3 — has `## [0.1.0]` heading (line-based equality avoids substring trap)
+if [ ! -f CHANGELOG.md ]; then
+    fail "O3" "CHANGELOG.md does not exist"
+elif grep -E -q '^## \[0\.1\.0\]' CHANGELOG.md; then
+    ok "O3"
+else
+    fail "O3" "CHANGELOG.md missing '## [0.1.0]' heading"
+fi
+
+# O4 — lists each shipped command verb under Added (single named
+# assertion that iterates internally over the ten verbs)
+o4_failed=""
+for verb in "brag add" "brag list" "brag show" "brag edit" "brag delete" \
+            "brag search" "brag export" "brag summary" "brag review" "brag stats"; do
+    if ! grep -F -q -- "\`${verb}\`" CHANGELOG.md; then
+        o4_failed="${o4_failed} ${verb}"
+    fi
+done
+if [ -z "$o4_failed" ]; then
+    ok "O4"
+else
+    fail "O4" "CHANGELOG.md missing command refs:$o4_failed"
+fi
+
+# O5 — has [Unreleased] and [0.1.0] link reference definitions
+o5_failed=""
+for ref in "[Unreleased]:" "[0.1.0]:"; do
+    if ! grep -F -q -- "$ref" CHANGELOG.md; then
+        o5_failed="${o5_failed} ${ref}"
+    fi
+done
+if [ -z "$o5_failed" ]; then
+    ok "O5"
+else
+    fail "O5" "CHANGELOG.md missing link refs:$o5_failed"
+fi
+
+# ===== Group P — Doc sweep + tense flips =====
+
+# P1 — README.md status banner does NOT contain "in progress"
+assert_not_contains_iregex "P1" "README.md" "in progress"
+
+# P2 — README.md does NOT contain "in active development"
+assert_not_contains_iregex "P2" "README.md" "in active development"
+
+# P3 — AGENTS.md does NOT contain "arriving in STAGE"
+assert_not_contains_iregex "P3" "AGENTS.md" "arriving in STAGE"
+
+# P4 — AGENTS.md does NOT contain literal `(STAGE-004)`
+assert_not_contains_iregex "P4" "AGENTS.md" "\\(STAGE-004\\)"
+
+# P5 — docs/architecture.md does NOT contain "sqlite-file-copy"
+assert_not_contains_iregex "P5" "docs/architecture.md" "sqlite-file-copy"
+
+# P6 — docs/architecture.md does NOT contain "Distribution (STAGE-004)"
+assert_not_contains_iregex "P6" "docs/architecture.md" "Distribution \\(STAGE-004\\)"
+
+# P7 — docs/tutorial.md §9 body does NOT contain `brew install`
+# (sectioned slice from the §9 heading to the next ## or --- divider)
+if [ ! -f docs/tutorial.md ]; then
+    fail "P7" "docs/tutorial.md does not exist"
+else
+    section_body=$(awk '
+        /^## 9\./ { in_section=1; next }
+        in_section && /^## / { in_section=0 }
+        in_section && /^---[[:space:]]*$/ { in_section=0 }
+        in_section { print }
+    ' docs/tutorial.md)
+    if printf '%s' "$section_body" | grep -F -q "brew install"; then
+        fail "P7" "docs/tutorial.md §9 body contains 'brew install'"
+    else
+        ok "P7"
+    fi
+fi
+
+# P8 — cmd/brag/main.go does NOT contain literal STAGE-004
+assert_not_contains_iregex "P8" "cmd/brag/main.go" "STAGE-004"
+
+# P9 — BRAG.md still references SPEC-022 artifacts (regression check)
+p9_failed=""
+for art in "docs/brag-entry.schema.json" \
+           "scripts/claude-code-post-session.sh" \
+           "examples/brag-slash-command.md"; do
+    if ! grep -F -q -- "$art" BRAG.md; then
+        p9_failed="${p9_failed} ${art}"
+    fi
+done
+if [ -z "$p9_failed" ]; then
+    ok "P9"
+else
+    fail "P9" "BRAG.md missing SPEC-022 artifact refs:$p9_failed"
+fi
+
+# P10 — README.md does NOT contain "(recommended once available)"
+assert_not_contains_iregex "P10" "README.md" "recommended once available"
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

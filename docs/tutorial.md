@@ -484,16 +484,11 @@ see §3 above.
 
 ---
 
-## 9. What's NOT there yet
+## 9. Power-user escape hatch
 
-So you don't ask the tool for things it can't do:
-
-| Want | Status |
-|---|---|
-| `brew install bragfile` | STAGE-005 |
-
-For now, `sqlite3 ~/.bragfile/db.sqlite` is your escape hatch for
-anything `list` doesn't surface.
+Everything in this tutorial is shipped in v0.1.0. For corner cases
+`brag list` doesn't surface, `sqlite3 ~/.bragfile/db.sqlite` is your
+escape hatch.
 
 ---
 
