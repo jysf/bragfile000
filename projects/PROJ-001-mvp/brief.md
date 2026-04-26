@@ -110,19 +110,24 @@ real entries.
       distinctness). Framed 2026-04-22/23, shipped 2026-04-24 —
       two-day wall-clock. Zero rework cycles across all four specs.
       `BRAG.md` shipped as chore pre-framing (2026-04-22).
-- [ ] STAGE-004 (not yet framed, **provisional**) — **UX polish
-      pass — cherry-picked 2026-04-24 post-STAGE-003 ship.** 3
-      specs: `brag summary --range week|month` (M, rule-based
-      aggregation rendered as markdown), `brag review --week` (S,
-      static reflection questions), `brag stats` (S, entries/week
-      + streak + most-common). All three emit clean markdown/JSON
-      that the user manually pipes into external AI when wanted —
-      no LLM integration in PROJ-001 (PROJ-002 territory). Six
-      ex-STAGE-004 items dropped to backlog on 2026-04-24
-      cherry-pick: emoji passes 1–4 (user wants emoji but not
-      this specific palette), `brag remind` (user has been
-      logging consistently without one), Claude session-end hook
-      (moved to STAGE-005 as a distribution-asset, not polish).
+- [x] STAGE-004 (shipped on 2026-04-25) — **Rule-based polish.**
+      3 specs cherry-picked 2026-04-24 from a 9-item provisional
+      pool, all shipped 2026-04-25 (one wall-clock day, fastest
+      stage cadence so far): `brag summary --range week|month`
+      (SPEC-018, M; emitted DEC-014 + seeded `internal/aggregate`),
+      `brag review --week|--month` (SPEC-019, S; consumed DEC-014,
+      added `GroupEntriesByProject`), `brag stats` (SPEC-020, S;
+      consumed DEC-014, added Streak/MostCommon/Span). DEC-014
+      locks the rule-based-output envelope across all three. All
+      three commands emit clean markdown/JSON the user manually
+      pipes into external AI — no LLM integration in PROJ-001 per
+      PROJ-002 boundary. Two AGENTS.md addenda earned + codified:
+      §9 audit-grep cross-check (SPEC-018 ship) and §12 negative-
+      substring self-audit (SPEC-020 ship). Trim experiment
+      validated at SPEC-020 (signatures + invariants sufficient
+      when in-stage precedents exist as construction reference).
+      Zero rework cycles, zero deferrals mid-stage, zero build-
+      time DECs.
 - [ ] STAGE-005 (not yet framed) — **Distribution + cleanup.**
       Five workstreams: (1) README rewrite — current README
       describes the spec-driven *development process*, not the
@@ -141,7 +146,7 @@ real entries.
       install bragfile` milestone for the learning value, not
       adoption — no marketing push.
 
-**Count:** 3 shipped / 0 active / 2 pending (STAGE-004 provisional)
+**Count:** 4 shipped / 0 active / 1 pending (STAGE-005 distribution)
 
 ## Dependencies
 

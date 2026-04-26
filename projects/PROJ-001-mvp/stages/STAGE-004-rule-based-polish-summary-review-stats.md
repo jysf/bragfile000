@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-004                     # stable, zero-padded within the project
-  status: proposed                  # proposed | active | shipped | cancelled | on_hold
+  status: shipped                   # proposed | active | shipped | cancelled | on_hold
   priority: medium                  # critical | high | medium | low
   target_complete: null             # optional: YYYY-MM-DD
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-04-25
-shipped_at: null
+shipped_at: 2026-04-25
 ---
 
 # STAGE-004: Rule-based polish (summary + review + stats)
@@ -454,13 +454,91 @@ specificity, locked-decisions-need-tests, premise-audit family).
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped. Run Prompt 1c (Stage Ship) in
-FIRST_SESSION_PROMPTS.md to draft this.*
+*Drafted via Prompt 1d (Stage Ship) in a fresh session on 2026-04-25.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
-- **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
-- **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <one-line items>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes. All
+  three commands ship with `--format markdown|json`, DEC-014's
+  envelope is the shared shape, `internal/aggregate` is the shared
+  data layer, and every "AI-pipeable reflection material without
+  putting any LLM inside the binary" promise is testable. Two
+  cosmetic doc-sweep misses from SPEC-018 build were folded into
+  PR #18's ship commit (`baca793`), not carried as debt.
+
+- **How many specs did it actually take?** 3 shipped / 3 framed —
+  exactly as planned. The 2026-04-24 cherry-pick from a 9-item
+  provisional pool held: zero items begged to come back mid-stage,
+  zero items deferred mid-stage to backlog, zero specs added.
+  Complexity was 1 × M + 2 × S as planned. SPEC-018's 2487-line
+  size was justified (load-bearing — seeded the package + emitted
+  DEC-014); SPEC-019 and SPEC-020 sat naturally at S because they
+  inherited.
+
+- **What changed between starting and shipping?** Nothing dropped
+  or pivoted. Two watch-patterns earned their codification
+  threshold along the way (§9 audit-grep cross-check at SPEC-018
+  ship; §12 negative-substring self-audit at SPEC-020 ship — both
+  already landed in `AGENTS.md`).
+
+- **Lessons that should update AGENTS.md, templates, or
+  constraints?**
+  - **Already landed (this stage):** §9 audit-grep cross-check
+    addendum and §12 negative-substring self-audit. Both have ≥2
+    confirming cases inside STAGE-004 and were codified at the
+    spec ships that surfaced them.
+  - **Promotable now (N=1, soft):** trim-when-structural-analogy
+    heuristic from SPEC-020 ship — "first spec in a new stage
+    keeps a fuller Notes-for-the-Implementer skeleton; specs 2+
+    can compress to signatures + invariants only when the first
+    spec's shape is the construction precedent." Carry into
+    STAGE-005's first spec design as guidance to apply, not yet
+    a rule to codify (one more confirming case wanted; STAGE-005's
+    distribution shape may not transfer cleanly).
+  - **Push-discipline lesson surfaced at stage close:** SPEC-019's
+    Reflection (Ship) shipped with empty `<answer>` placeholders
+    because the local `bef84b1` reflection commit was never pushed
+    to `origin/feat` before `gh pr merge --squash --delete-branch`
+    ran. STAGE-004 ship caught it; content recovered from
+    `git show bef84b1` and bundled into stage-ship commit. Same
+    shape as SPEC-013/SPEC-018 push-discipline gaps. Worth
+    formalizing in AGENTS.md ship-cycle rules: "any commit added
+    to a feat branch just before merge MUST `git push origin
+    <feat-branch>` before `gh pr merge`." Soft codify-now
+    candidate; final call deferred to STAGE-005.
+  - **Still nice-to-have, still not done:** premise-audit sub-
+    template extraction flagged at SPEC-015 ship. Skeleton repeated
+    again in SPEC-018/019/020 (~150 lines each). Cumulative ROI
+    now justifies the ~30-minute extraction. Recommend acting on
+    it before SPEC-021 design so STAGE-005's first spec gets the
+    lighter template.
+
+- **Should any spec-level reflections be promoted to stage-level
+  lessons?**
+  - **Yes:** the trim-experiment lesson (above) belongs at stage
+    level, not buried in SPEC-020.
+  - **Yes (process):** the SPEC-019 reflection-empty bug (above)
+    is genuinely a stage-ship-time discovery — the kind of thing
+    only stage close catches because it's about
+    spec-archive integrity, not in-spec build/verify quality.
+    Worth a `just archive-spec` precondition that fails if
+    `<answer>` strings remain in the Reflection (Ship) section
+    (small justfile script change, prevents the class).
+  - **No:** everything else (§9/§12 addenda) is already at
+    AGENTS.md scope.
+
+### Stage summary
+
+STAGE-004 built exactly what was planned (3 specs cherry-picked
+from the 9-item provisional pool, all shipped in 1 wall-clock day,
+zero deferrals mid-stage, zero build-time DECs) and the cherry-
+pick rationale held — every survivor is load-bearing for the
+AI-pipe story, no item begged to come back from backlog. Speed
+was the highest of any stage so far: ship-cadence was effectively
+one spec per day (SPEC-018 + SPEC-019 + SPEC-020 all shipped
+2026-04-25) versus STAGE-003's multi-day spec cadence, driven by
+tight scope + reused construction shape (DEC-014 + aggregate
+seam locked at SPEC-018 made SPEC-019/020 near-mechanical). The
+emergent surprise was how cleanly structural analogy between
+siblings collapsed spec effort — SPEC-020 trimmed Notes-for-the-
+Implementer to signatures + invariants only and goldens still
+passed byte-exact on the first build run, suggesting precedent
+within a stage is worth more than skeleton volume.

@@ -2298,10 +2298,66 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — The lesson is broader than "dry-run cobra `--help` during
+   design." The deeper shape: **negative-substring assertions need
+   self-audit against the spec's own prose.** SPEC-019 had a test
+   asserting `help DOES NOT contain "--tag"` and a Long sketch
+   literally containing `--tag` — both written by the same author in
+   the same design pass. The same audit-grep cross-check discipline
+   that catches positive-collection drift (§9 SPEC-018-earned
+   addendum) applies, just turned inward: when locking a "must NOT
+   contain X" assertion, grep the spec's own `## Outputs` / Long
+   sketches / Notes-for-Implementer code blocks for X before lock.
+   Cobra `--help` dry-run is one concrete tool; static substring
+   grep against spec text is the cheaper one and catches the same
+   class. Concrete change: add one walk during the failing-tests-
+   first pass — "for each `NOT contains` assertion in `## Failing
+   Tests`, grep the spec text for the forbidden token; if found,
+   decide whether to fix the prose or the test before lock."
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — **HOLD on §12 codification of cobra `--help` dry-run.** One
+   data point is too thin to codify. SPEC-020 also adds a cobra
+   command + help-surface test; that's the natural second case. If
+   SPEC-020 reproduces the class (a `NOT contains` assertion in
+   tension with the same spec's own Long/example), codify then —
+   and the codified rule should probably be the broader form
+   ("design must self-audit negative-substring assertions against
+   own prose") rather than the narrower cobra-specific form, since
+   the underlying pattern is general. Watch-pattern for now.
+
+   **Minor doc-sweep carry-over:** `docs/api-contract.md:362`
+   reads "for `brag summary`, `brag review`, and `brag stats`
+   (arriving later in STAGE-004)" — the parenthetical now applies
+   only to stats. Not blocking; threaded into SPEC-020's `##
+   Outputs` doc-sweep list (when `brag stats` ships, the
+   parenthetical loses its last referent and the line becomes
+   unconditional).
+
+   Nothing else surfaced.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — **None.** SPEC-020 (`brag stats`) is already the obvious next
+   and on the stage backlog. The deferred `GroupForHighlights` /
+   `GroupEntriesByProject` parameterized refactor stays deferred —
+   SPEC-020 emits aggregations (counts, streaks, span), not entry
+   lists, so it won't be a third consumer of the grouping logic.
+   The third-caller threshold won't fire here; refactor pressure
+   has to wait for PROJ-002 (or whatever introduces a third
+   grouping consumer with a different per-row projection).
+
+   The Long-vs-help codification, if it earns itself in SPEC-020,
+   is a text-only AGENTS.md §12 edit — that's a chore, not a spec.
+
+> **Recovery note (added 2026-04-25 at STAGE-004 ship):** the
+> original SPEC-019 ship reflection was committed locally as
+> `bef84b1` but never pushed to `origin/feat` before
+> `gh pr merge --squash --delete-branch` ran; GitHub's squash
+> captured the pre-reflection state and the `--delete-branch`
+> deleted the remote branch, orphaning the local commit. STAGE-004
+> ship session caught the empty `<answer>` placeholders; content
+> recovered from `git show bef84b1` and bundled into the STAGE-004
+> ship commit. Process lesson worth formalizing: any commit added
+> to a feat branch just before merge MUST `git push origin
+> <feat-branch>` before `gh pr merge`. Same shape as SPEC-013 /
+> SPEC-018 push-discipline lessons.
