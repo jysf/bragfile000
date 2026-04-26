@@ -1,0 +1,46 @@
+# .github/workflows/ci.yml — PR + main-push gating
+# Runs gofmt, go vet, go test on macOS-latest + ubuntu-latest with
+# the Go version declared in go.mod.
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+
+      - name: Verify gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            printf 'gofmt -l reports unformatted files:\n%s\n' "$unformatted" >&2
+            exit 1
+          fi
+
+      - name: Run go vet ./...
+        run: go vet ./...
+
+      - name: Run go test ./...
+        run: go test ./...

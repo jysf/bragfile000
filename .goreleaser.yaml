@@ -1,0 +1,84 @@
+version: 2
+
+# .goreleaser.yaml — see https://goreleaser.com/customization/
+# Goreleaser v2 schema. Cross-compiles darwin+linux × amd64+arm64.
+# CGO_ENABLED=0 is the visible expression of the no-cgo constraint
+# (DEC-001 — pure-Go modernc.org/sqlite driver).
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: brag
+    main: ./cmd/brag
+    binary: brag
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .Commit }}
+      - -X main.date={{ .Date }}
+
+archives:
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    format: tar.gz
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+?\))??!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\(.+?\))??!?:.+$'
+      order: 1
+    - title: Build / CI
+      regexp: '^.*?(build|ci|chore)(\(.+?\))??!?:.+$'
+      order: 2
+    - title: Documentation
+      regexp: '^.*?docs(\(.+?\))??!?:.+$'
+      order: 3
+    - title: Other
+      order: 999
+
+brews:
+  - name: bragfile
+    repository:
+      owner: jysf
+      name: homebrew-bragfile
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: "https://github.com/jysf/bragfile000"
+    description: "Local-first Go CLI to capture and retrieve career-worthy moments."
+    license: "MIT"
+    skip_upload: auto
+    test: |
+      system "#{bin}/brag", "--version"
+    install: |
+      bin.install "brag"
+
+release:
+  github:
+    owner: jysf
+    name: bragfile000
+  prerelease: auto
+  draft: false

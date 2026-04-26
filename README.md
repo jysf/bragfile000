@@ -7,13 +7,13 @@ for retros, reviews, and resumes. Entries live in an embedded SQLite
 database at `~/.bragfile/db.sqlite` on your machine. No cloud, no
 sync, no account.
 
-> **Status:** in active development. Capture, retrieve, search,
-> export, and weekly/monthly digests are shipped. Distribution via
-> Homebrew is in progress.
+> **Status:** v0.1.0 shipped. Capture, retrieve, search, export, and
+> weekly/monthly digests are all available, and `brew install
+> jysf/bragfile/bragfile` installs the binary on macOS.
 
 ## Install
 
-Homebrew (recommended once available):
+Homebrew (recommended):
 
 ```bash
 brew install jysf/bragfile/bragfile
@@ -29,8 +29,8 @@ just install                 # or: go install ./cmd/brag
 brag --version               # confirm ~/go/bin is on $PATH
 ```
 
-Requires Go 1.26+ from source. The Homebrew install pulls a
-prebuilt binary — no Go required.
+The Homebrew install pulls a prebuilt binary — no Go required.
+Requires Go 1.26+ if you build from source instead.
 
 ## Capture an entry
 

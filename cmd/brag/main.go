@@ -8,12 +8,17 @@ import (
 	"github.com/jysf/bragfile000/internal/cli"
 )
 
-// Version is set to "dev" for local builds. goreleaser injects the real
-// version via ldflags in STAGE-004.
-const Version = "dev"
+// version is set to "dev" for local builds. goreleaser injects the
+// real values via ldflags (-X main.version=... -X main.commit=...
+// -X main.date=...) at release-build time. See .goreleaser.yaml.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
 
 func main() {
-	root := cli.NewRootCmd(Version)
+	root := cli.NewRootCmd(version)
 	root.AddCommand(cli.NewAddCmd())
 	root.AddCommand(cli.NewListCmd())
 	root.AddCommand(cli.NewShowCmd())
