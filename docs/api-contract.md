@@ -331,6 +331,61 @@ Flags:
 Unknown `--format` values, or `--week` and `--month` together, exit 1
 (user error).
 
+### `brag stats` (STAGE-004)
+
+```
+brag stats                        # lifetime corpus, markdown
+brag stats --format json          # lifetime corpus, JSON envelope
+```
+
+Lifetime panorama: six aggregations over the entire corpus — total
+entries, entries/week (rolling average over the corpus span), current
+and longest streak (consecutive UTC days with entries), top-5
+most-common tags, top-5 most-common projects, plus the corpus span
+(first entry, last entry, days). No LLM ships in the binary.
+
+Document structure:
+
+- **Provenance:** `Generated:` (RFC3339), `Scope: lifetime`
+  (hard-coded — stats has no time window),
+  `Filters: (none)` (hard-coded — stats accepts no filter flags).
+- **Stats body** (markdown only; omitted on empty corpus per
+  [DEC-014](../decisions/DEC-014-rule-based-output-shape.md)): under
+  `## Stats`, five bold sub-headers (`**Activity**`, `**Streaks**`,
+  `**Top tags**`, `**Top projects**`, `**Corpus span**`) with bulleted
+  metric content under each.
+
+Flags:
+
+- `--format markdown|json` defaults to `markdown`. JSON is the
+  single-object envelope locked by
+  [DEC-014](../decisions/DEC-014-rule-based-output-shape.md). Top-level
+  keys: `generated_at`, `scope` (always `"lifetime"`), `filters`
+  (always `{}`), `total_count`, `entries_per_week` (decimal weeks
+  rolling average rounded to 2 decimals; sub-1-week corpus → `0`),
+  `current_streak`, `longest_streak`, `top_tags`, `top_projects`,
+  `corpus_span`.
+- `top_tags` and `top_projects` are arrays of `{tag, count}` /
+  `{project, count}` objects in DESC-by-count order with alpha-ASC
+  tiebreak. Strict cap at 5 (alpha-ASC determines which 5 when the
+  boundary count ties); array shape (rather than map keyed by name)
+  preserves the DESC-by-count ordering, which a map encoding would
+  lose under `encoding/json`'s alpha-sort.
+- `corpus_span` is a sub-object with `first_entry_date`,
+  `last_entry_date` (`"YYYY-MM-DD"` UTC, or `null` on empty corpus),
+  and `days` (int, inclusive on both endpoints; single-day corpus
+  → `1`).
+- Lifetime corpus only — no `--range`, no `--week`/`--month`. Use
+  `brag summary --range week|month` for windowed digests; `brag
+  review --week|--month` for reflection over recent windows.
+- Filter flags `--tag` / `--project` / `--type` are NOT accepted on
+  stats — the value of stats is the unfiltered lifetime view. No
+  `--out` flag; output goes to stdout (redirect with `>` for a file).
+
+Unknown `--format` values exit 1 (user error). Undeclared flags
+(`--tag`, `--project`, `--type`, `--out`, `--range`, `--since`,
+`--week`, `--month`) surface as cobra `unknown flag` errors.
+
 ## Error output
 
 All human-readable errors go to stderr with the prefix `brag: `. Example:
@@ -359,4 +414,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-011` — shared JSON output shape for `brag list --format json` and `brag export --format json`
 - `DEC-013` — markdown export shape for `brag export --format markdown` (+`--flat`)
 - `DEC-012` — stdin-JSON schema for `brag add --json` (single object, title required, server-owned fields tolerated-and-ignored)
-- `DEC-014` — rule-based output shape for `brag summary`, `brag review`, and `brag stats` (arriving later in STAGE-004): single-object JSON envelope with `generated_at` / `scope` / `filters` provenance + per-spec payload keys; markdown convention reuses DEC-013's provenance + summary-block style.
+- `DEC-014` — rule-based output shape for `brag summary`, `brag review`, and `brag stats`: single-object JSON envelope with `generated_at` / `scope` / `filters` provenance + per-spec payload keys; markdown convention reuses DEC-013's provenance + summary-block style.

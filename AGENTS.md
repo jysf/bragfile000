@@ -293,6 +293,22 @@ in production; inline `--range` parsing rejected in favor of named
 `echoFilters` reuse rejected pre-third-caller-threshold), and build
 held all three. Lesson earned in SPEC-018 ship reflection (2026-04-25).
 
+**NOT-contains assertions need a self-audit grep against load-bearing prose.**
+When a Failing Test asserts output DOES NOT contain `"X"`, grep the spec's
+load-bearing text (the Long / help-rendering / doc-rendering prose that the
+implementer types into the binary) for `X` at design time. Hits in load-bearing
+prose are bugs to fix BEFORE locking. Hits in commentary or design-justification
+prose are fine — those don't reach the binary. Two confirming cases: SPEC-019
+build self-caught its own Long string containing `--tag` while the same spec's
+help-test asserted `--tag` absent (resolved at build by dropping `--` prefixes
+from the prose); SPEC-020 design pre-empted the same class proactively
+(eight forbidden tokens grep'd against locked Long, zero hits at design,
+zero false-positive hits at build). The scope clause is load-bearing: a Go
+comment in the CLI source containing forbidden tokens is fine because comments
+don't render to `--help`; a sentence in the cobra `Long` string is not. Lesson
+earned across SPEC-019 ship reflection (2026-04-25) and SPEC-020 design
+(2026-04-25); codified at SPEC-020 ship.
+
 ### During **build**
 
 Start a **new Claude session**. Do not continue from the design session.

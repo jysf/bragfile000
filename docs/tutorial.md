@@ -1,7 +1,6 @@
 # Using `brag` — tutorial
 
-> **Scope:** what you can do with `brag` today. `brag stats` arrives
-> in a later STAGE-004 spec. See
+> **Scope:** what you can do with `brag` today. See
 > [`projects/PROJ-001-mvp/brief.md`](../projects/PROJ-001-mvp/brief.md)
 > for the full plan.
 
@@ -377,6 +376,27 @@ brag review --week --format json | claude "use the entries and questions above t
 Use `brag review --month` for a 30-day window. Filter flags are not
 accepted — the digest is the unfiltered window. (`brag summary` is
 the right command if you want filter composition.)
+
+### Lifetime stats: `brag stats`
+
+Run `brag stats` for the lifetime panorama: total entries,
+entries-per-week rolling average, current and longest streak, top-5
+most-common tags and projects, plus your corpus span:
+
+```bash
+brag stats
+```
+
+Or pipe the JSON form into your favorite LLM for a "what does my
+year look like?" prompt:
+
+```bash
+brag stats --format json | claude "summarize my brag history"
+```
+
+Stats is corpus-wide — there are no filter or range flags. Use `brag
+summary` for windowed digests, or `brag review` for reflection over
+the last 7 or 30 days.
 
 ---
 
