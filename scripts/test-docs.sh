@@ -12,6 +12,12 @@ cd "$REPO_ROOT"
 
 FAIL_COUNT=0
 
+# Group H asserts require jq for JSON-shape parsing.
+if ! command -v jq >/dev/null 2>&1; then
+    printf 'test-docs: jq is required but not installed (see https://stedolan.github.io/jq/)\n' >&2
+    exit 2
+fi
+
 ok() {
     printf 'OK:   %s\n' "$1"
 }
@@ -422,6 +428,161 @@ fi
 
 # G2 — Exit-code contract is built-in (FAIL_COUNT-driven exit at the bottom)
 ok "G2"
+
+# ===== Group H — JSON Schema shape =====
+
+SCHEMA_PATH="docs/brag-entry.schema.json"
+
+# H1 — Schema file exists
+assert_file_exists "H1" "$SCHEMA_PATH"
+
+# H2 — Schema is valid JSON
+if [ -f "$SCHEMA_PATH" ]; then
+    if jq -e . "$SCHEMA_PATH" >/dev/null 2>&1; then
+        ok "H2"
+    else
+        fail "H2" "$SCHEMA_PATH is not valid JSON"
+    fi
+else
+    fail "H2" "$SCHEMA_PATH does not exist"
+fi
+
+# Helper for jq-based equality checks against the schema. Compares
+# the jq-extracted value against an expected literal string.
+assert_jq_eq() {
+    name="$1"; expr="$2"; expected="$3"
+    if [ ! -f "$SCHEMA_PATH" ]; then
+        fail "$name" "$SCHEMA_PATH does not exist"
+        return 0
+    fi
+    actual=$(jq -r "$expr" "$SCHEMA_PATH" 2>/dev/null || echo "<jq-error>")
+    if [ "$actual" = "$expected" ]; then
+        ok "$name"
+    else
+        fail "$name" "$expr returned \"$actual\" (expected \"$expected\")"
+    fi
+}
+
+# H3 — Schema declares draft 2020-12
+assert_jq_eq "H3" '."$schema"' "https://json-schema.org/draft/2020-12/schema"
+
+# H4 — Schema declares object type at root
+assert_jq_eq "H4" '.type' "object"
+
+# H5 — Schema requires title
+if [ -f "$SCHEMA_PATH" ]; then
+    if jq -e '.required | index("title")' "$SCHEMA_PATH" >/dev/null 2>&1; then
+        ok "H5"
+    else
+        fail "H5" '"title" not found in .required array'
+    fi
+else
+    fail "H5" "$SCHEMA_PATH does not exist"
+fi
+
+# H6 — Schema disallows additional properties
+assert_jq_eq "H6" '.additionalProperties' "false"
+
+# H7 — Title is non-empty string
+if [ -f "$SCHEMA_PATH" ]; then
+    title_type=$(jq -r '.properties.title.type' "$SCHEMA_PATH" 2>/dev/null || echo "")
+    title_min=$(jq -r '.properties.title.minLength' "$SCHEMA_PATH" 2>/dev/null || echo "")
+    if [ "$title_type" = "string" ] && [ "$title_min" = "1" ]; then
+        ok "H7"
+    else
+        fail "H7" "properties.title.type=\"$title_type\" minLength=\"$title_min\" (want type=\"string\" minLength=\"1\")"
+    fi
+else
+    fail "H7" "$SCHEMA_PATH does not exist"
+fi
+
+# H8 — Tags is string (NOT array) — DEC-004 alignment, load-bearing
+assert_jq_eq "H8" '.properties.tags.type' "string"
+
+# H9 — All nine DEC-011 keys present in properties
+if [ -f "$SCHEMA_PATH" ]; then
+    h9_missing=""
+    for key in title description tags project type impact id created_at updated_at; do
+        if ! jq -e ".properties.$key" "$SCHEMA_PATH" >/dev/null 2>&1; then
+            h9_missing="$h9_missing $key"
+        fi
+    done
+    if [ -z "$h9_missing" ]; then
+        ok "H9"
+    else
+        fail "H9" "missing properties:$h9_missing"
+    fi
+else
+    fail "H9" "$SCHEMA_PATH does not exist"
+fi
+
+# H10 — Schema declares canonical $id URL
+assert_jq_eq "H10" '."$id"' "https://github.com/jysf/bragfile000/blob/main/docs/brag-entry.schema.json"
+
+# ===== Group I — Hook script shape =====
+
+HOOK_PATH="scripts/claude-code-post-session.sh"
+
+# I1 — Hook script exists
+assert_file_exists "I1" "$HOOK_PATH"
+
+# I2 — Hook script is executable
+if [ -x "$HOOK_PATH" ]; then
+    ok "I2"
+else
+    fail "I2" "$HOOK_PATH is not executable (chmod +x)"
+fi
+
+# I3 — Hook script has POSIX shebang on line 1
+if [ ! -f "$HOOK_PATH" ]; then
+    fail "I3" "$HOOK_PATH does not exist"
+elif head -n 1 "$HOOK_PATH" | grep -E -q '^#!(/usr/bin/env (sh|bash)|/bin/sh)'; then
+    ok "I3"
+else
+    fail "I3" "$HOOK_PATH missing POSIX shebang on line 1"
+fi
+
+# I4 — Hook script references `brag add --json`
+assert_contains_literal "I4" "$HOOK_PATH" "brag add --json"
+
+# I5 — Hook script references `jq`
+assert_contains_literal "I5" "$HOOK_PATH" "jq"
+
+# ===== Group J — Slash-command template shape =====
+
+SLASH_PATH="examples/brag-slash-command.md"
+
+# J1 — Template file exists
+assert_file_exists "J1" "$SLASH_PATH"
+
+# J2 — Template is tight (5–30 lines)
+assert_line_count_band "J2" "$SLASH_PATH" 5 30
+
+# J3 — Template references the schema
+assert_contains_literal "J3" "$SLASH_PATH" "docs/brag-entry.schema.json"
+
+# J4 — Template references `brag add --json`
+assert_contains_literal "J4" "$SLASH_PATH" "brag add --json"
+
+# ===== Group K — BRAG.md cross-reference =====
+
+# K1 — BRAG.md references the schema
+assert_contains_literal "K1" "BRAG.md" "docs/brag-entry.schema.json"
+
+# K2 — BRAG.md references the hook script
+assert_contains_literal "K2" "BRAG.md" "scripts/claude-code-post-session.sh"
+
+# K3 — BRAG.md references the slash-command template
+assert_contains_literal "K3" "BRAG.md" "examples/brag-slash-command.md"
+
+# K4 — BRAG.md has a JSON-contract section heading
+if [ ! -f BRAG.md ]; then
+    fail "K4" "BRAG.md does not exist"
+elif grep -E -q '^## .*JSON' BRAG.md; then
+    ok "K4"
+else
+    fail "K4" "no '## … JSON …' heading in BRAG.md"
+fi
 
 # ===== finalise =====
 

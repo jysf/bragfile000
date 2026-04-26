@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jysf/bragfile000/blob/main/docs/brag-entry.schema.json",
+  "title": "Brag entry — `brag add --json` stdin contract",
+  "description": "Single-object stdin payload accepted by `brag add --json`. Mirrors DEC-012's six locked choices in JSON Schema vocabulary; mirrors DEC-011's nine-key per-entry shape on the input side. The binary's runtime parser is the authoritative validator; this schema is the documented contract for AI agents and other external consumers to validate candidate payloads against before piping. See BRAG.md (https://github.com/jysf/bragfile000/blob/main/BRAG.md) for the integration guide.",
+  "type": "object",
+  "required": ["title"],
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Required, non-empty after whitespace trim. Short, action-verb headline. Per DEC-012 choice 2."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional free-form narrative. Per DEC-012 choice 3."
+    },
+    "tags": {
+      "type": "string",
+      "description": "Optional comma-joined string of tags (e.g. \"auth,perf,backend\"). Per DEC-004, tags are stored as a single TEXT column inside the binary; per DEC-012 choice 3, the input contract mirrors this shape. Array form (e.g. [\"auth\",\"perf\"]) is rejected at the type check below. To migrate to array-shaped tags, DEC-004 + DEC-011 + DEC-012 + this schema migrate in lockstep."
+    },
+    "project": {
+      "type": "string",
+      "description": "Optional work-context label (repo, client, team, initiative). Per DEC-012 choice 3."
+    },
+    "type": {
+      "type": "string",
+      "description": "Optional category (e.g. \"shipped\", \"fixed\", \"learned\", \"documented\", \"mentored\", \"unblocked\", \"reviewed\"). Free-form; the binary does not enumerate. Per DEC-012 choice 3."
+    },
+    "impact": {
+      "type": "string",
+      "description": "Optional concrete-outcome statement: a metric, an unlock, a named result. The most load-bearing field for review writeups. Per DEC-012 choice 3."
+    },
+    "id": {
+      "type": "integer",
+      "description": "Server-owned. Permitted on input but silently dropped per DEC-012 choice 4 (the new row receives a fresh autoincrement ID from the storage layer). Listed here so additionalProperties=false does not reject the round-trip pattern `brag list --format json | jq '.[0]' | brag add --json`."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Server-owned. Permitted on input but silently dropped per DEC-012 choice 4 (the storage layer sets the timestamp at insert time, RFC3339 UTC per DEC-002 / timestamps-in-utc-rfc3339 constraint)."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Server-owned. Permitted on input but silently dropped per DEC-012 choice 4 (the storage layer sets the timestamp at insert time, RFC3339 UTC per the same constraint as created_at)."
+    }
+  }
+}

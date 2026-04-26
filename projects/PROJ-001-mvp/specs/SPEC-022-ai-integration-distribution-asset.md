@@ -7,7 +7,7 @@
 task:
   id: SPEC-022
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -2008,16 +2008,46 @@ design time so they don't slip into Deviations later:
 *Filled in at the end of the **build** cycle, before advancing to
 verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
-- **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any; expected: NONE — DEC-011/012/004
-    referenced, not new)
-- **Deviations from spec:**
-  - [list]
+- **Branch:** `feat/spec-022-ai-integration-distribution-asset`
+- **PR (if applicable):** opened post-`just advance-cycle` (URL
+  added at PR-create time; see ship session).
+- **All acceptance criteria met?** yes — 23/23 scripted asserts
+  (groups H/I/J/K) pass; 7/7 group L byte-identity invariants
+  hold (only modified files: BRAG.md, scripts/test-docs.sh; only
+  new files: docs/brag-entry.schema.json,
+  scripts/claude-code-post-session.sh,
+  examples/brag-slash-command.md); 4/4 group M Go-sanity gates
+  green (`go test ./...` cached pass, `gofmt -l .` empty, `go vet
+  ./...` empty, `just test-docs` exits 0 with 63 OK lines).
+  Pre-existing 40 asserts from groups A–G all still pass — zero
+  regression on SPEC-021's harness.
+- **New decisions emitted:** NONE — DEC-011 / DEC-012 / DEC-004
+  referenced, not new (as expected per consume-only spec).
+- **Deviations from spec:** none. All five literal artifacts
+  (JSON schema + shell hook + slash-command markdown + BRAG.md
+  insertion + test-docs.sh extension) byte-transcribed verbatim
+  from the spec's § Notes for the Implementer. The BRAG.md
+  insertion went between the existing `---` separator after
+  "## The command" and the existing "## Three good examples"
+  header, exactly as the spec specified. No deviation from any
+  of the 10 locked rejections (no `brag install-claude-hook`
+  CLI; no env-var introspection; no `~/.claude/` path lookups;
+  no Go schema validator; no draft-07; no doc-sweep; no
+  `examples/README.md`; no auto-execute; no verbose prompt; no
+  sibling test script). Build-side premise audit greps 1–4
+  reconciled to expected `## Outputs` deltas with zero stray
+  references in production surface.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - SPEC-023 (distribution proper) inherits the deferred
+    doc-sweep punch list: cross-link the schema from
+    `docs/api-contract.md:416` and `docs/data-model.md:148`;
+    point `docs/tutorial.md:121`'s "Claude session-end hook"
+    example at the new `scripts/claude-code-post-session.sh`.
+    Already enumerated in this spec's § Out of scope.
+  - SPEC-024 (shell completions) is the third application of
+    the §12 literal-artifact-as-spec pattern — completions
+    output is fixed-shape per shell flavor and a strong
+    candidate.
 
 ### Build-phase reflection (3 questions, short answers)
 
@@ -2025,14 +2055,46 @@ Process-focused: how did the build go? What friction did the spec
 create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing slowed the build. The five literal artifacts were
+   complete enough that build was pure byte-transcription
+   followed by harness-driven verification. One micro-friction:
+   the spec literal for the BRAG.md insertion did not include
+   the surrounding `---` HR separator that BRAG.md uses between
+   sections, so I had to decide whether to add one. The right
+   call was to follow byte-transcription discipline (no `---`
+   added; the new section directly precedes "## Three good
+   examples" without an intervening `---`). The result is one
+   tiny stylistic asymmetry vs. the rest of BRAG.md, but the
+   spec's locked literal is the source of truth — exactly the
+   trade-off the §12 pattern asks for.
 
 2. **Was there a constraint or decision that should have been
    listed but wasn't?**
-   — <answer>
+   — No. The Q1–Q5 lock set + 10 rejected alternatives covered
+   every decision the build encountered. The §10
+   push-discipline reminder was already explicit. The §9
+   BSD-grep `--exclude-dir` warning was a no-op (the new groups
+   H/I/J/K use `assert_contains_literal` and inline `grep -E
+   -q` — no `-r` calls, no `--exclude-dir` use). The
+   NOT-contains self-audit was a no-op (zero negative-shape
+   asserts in groups H–K, matching the spec's § NOT-contains
+   self-audit n/a result).
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing structurally. The build went linearly through the
+   spec's 14-step build-cycle order with no surprises and no
+   backtracking. **Q1 cross-format verdict:** the §12
+   literal-artifact-as-spec pattern transferred cleanly across
+   THREE formats simultaneously (JSON schema + bash script +
+   markdown template) plus a sub-format insertion (markdown
+   into existing markdown) plus a script extension (shell into
+   existing shell). All five literals byte-transcribed cleanly
+   on first pass; the harness's fail-first → write-artifact →
+   pass-confirm rhythm worked identically for each format. The
+   pattern is not markdown-specific; it generalizes to any
+   fixed-shape artifact whose content is decidable at design
+   time. SPEC-024 should adopt it for shell completions
+   without hesitation.
 
 ---
 
@@ -2045,10 +2107,61 @@ distinct from the process-focused build reflection above. NOTE:
 answers at ship time or `just archive-spec SPEC-022` will fail.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing structurally. SPEC-022 ran the cleanest cycle of
+   PROJ-001 by design-time-effort margin: every Q1–Q5 lock
+   pre-empted a build decision; every literal artifact
+   byte-transcribed on first pass; the harness's fail-first →
+   write → pass-confirm rhythm worked identically across JSON,
+   bash, and markdown. The biggest empirical data point is that
+   the §12 literal-artifact-as-spec pattern is **format-agnostic**:
+   a JSON schema (50 lines), a bash hook (69 lines), a markdown
+   slash-command (14 lines), an in-place markdown insertion
+   (~50 lines), and a shell-script extension (~155 lines) all
+   transcribed and verified independently with zero drift on the
+   same cycle. The pattern's value compounds with the number of
+   artifacts in a spec — verify becomes a mechanical diff
+   regardless of language, and the design-time investment pays
+   back at exactly the moment alternatives would otherwise
+   re-litigate during build. Carry the lesson explicitly to
+   SPEC-024 framing (shell completions output is per-shell
+   fixed-shape and a textbook fit) and to PROJ-002 framing (any
+   future `brag` integration assets — webhook templates, IDE
+   snippets, TextExpander stubs, additional slash-command
+   templates — should default to literal-artifact-embed whenever
+   shape is design-decidable).
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. Concur with verify's WATCH call on the BRAG.md
+   HR-separator asymmetry: N=1, cosmetic (markdown viewers handle
+   `##` as a strong section break with or without a preceding
+   `---`), and SPEC-024's completions are mostly new files so
+   unlikely to produce a second in-place-insertion data point;
+   §12's existing enumeration already covers markdown/JSON/shell,
+   so SPEC-022 is empirical confirmation not extension; pattern
+   bloat from a single observation outweighs the marginal signal.
+   No §12 addendum, no §9 addendum, no constraint change. One
+   quiet positive worth naming: §10 push-discipline held cleanly
+   on its second proactive application (SPEC-021 first, SPEC-022
+   second); a third confirming case from SPEC-023 or SPEC-024
+   would take the rule from "codified at framing" to "load-bearing
+   across the stage" without any rewording. The `bfa1474`
+   reflection-placeholder rejection regime is about to get its
+   own runtime exercise at `just archive-spec SPEC-022` — if it
+   accepts these answers, it's the first proof the regime works
+   post-codification.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No. SPEC-023 (distribution proper — homebrew tap + GitHub
+   Actions + goreleaser + CHANGELOG) and SPEC-024 (shell
+   completions — `brag completion {bash,zsh,fish}`) are both
+   framed in STAGE-005's spec backlog with explicit scope notes;
+   the doc-sweep punch list deferred from SPEC-021 (cross-link
+   the new schema from `docs/api-contract.md:416`,
+   `docs/data-model.md:148`, and `docs/tutorial.md:121`) is
+   enumerated under SPEC-023's inherited scope and does not
+   warrant a separate spec. The BRAG.md HR-separator asymmetry
+   is sub-spec — verify confirmed cosmetic, no user-visible
+   breakage. PROJ-001 closes when STAGE-005 ships; SPEC-022 was
+   workstream 2 of 4 (SPEC-021 ✓, SPEC-022 ✓, SPEC-023 +
+   SPEC-024 remaining). No surprise scope surfaced during build
+   or verify warrants a new spec.

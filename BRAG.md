@@ -152,6 +152,56 @@ brag show <id>
 
 ---
 
+## JSON contract for programmatic capture
+
+For programmatic capture (you're a script, an AI agent, or a piped
+session — not a human typing flags), `brag add --json` accepts a
+single JSON object on stdin. The object's shape is documented in a
+checked-in JSON Schema at
+[`docs/brag-entry.schema.json`](docs/brag-entry.schema.json).
+Validate your payload against the schema before piping; the binary
+will reject malformed input but the schema lets your tooling catch
+mistakes earlier.
+
+The schema mirrors this guide's field table:
+
+- **Required:** `title` (non-empty string).
+- **Optional:** `description`, `tags`, `project`, `type`, `impact`
+  (all strings; `tags` is a comma-joined string per DEC-004, NOT a
+  JSON array).
+- **Server-owned:** `id`, `created_at`, `updated_at` are tolerated
+  on input and silently dropped — the new row gets fresh values.
+  This makes `brag list --format json | jq '.[0]' | brag add
+  --json` round-trip without `jq del(.id, .created_at, .updated_at)`.
+- **Unknown keys are strict-rejected.** A typo like `{"titl": "x"}`
+  surfaces as `unknown field "titl"` rather than silently losing
+  your title.
+
+Minimal valid payload:
+
+```bash
+echo '{"title":"shipped FTS5 search end-to-end","project":"bragfile","type":"shipped","tags":"sqlite,fts5,search","impact":"unblocked brag search"}' \
+  | brag add --json
+# → prints the new entry's ID on stdout
+```
+
+Two reference assets in this repo demonstrate AI-agent integration:
+
+- [`scripts/claude-code-post-session.sh`](scripts/claude-code-post-session.sh)
+  — example shell hook that reads a session summary from stdin,
+  structures it as a schema-conforming JSON object via `jq`, and
+  emits a candidate `brag add --json` invocation. Pure shell + `jq`;
+  no Go dependency. Copy to wherever your Claude Code config
+  expects hook scripts.
+- [`examples/brag-slash-command.md`](examples/brag-slash-command.md)
+  — example `~/.claude/commands/brag.md` slash-command template.
+  Copy to your own `~/.claude/commands/` to expose `/brag` in
+  Claude Code sessions.
+
+Both assets honour the approval loop above: they help you draft a
+brag entry, but you still review and approve before `brag add
+--json` executes.
+
 ## Three good examples
 
 ### Example 1 — shipped
