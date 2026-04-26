@@ -121,6 +121,10 @@ uninstall:
 test:
     @go test ./...
 
+# Run documentation-content assertions (separate from `just test`, which is Go-only).
+test-docs:
+    @./scripts/test-docs.sh
+
 # Run brag without installing. Usage: just run list   |   just run add --title "x"
 run *ARGS:
     @go run ./cmd/brag {{ARGS}}

@@ -1,116 +1,146 @@
 # Bragfile
 
-A local-first CLI for engineers to capture and retrieve career
-accomplishments ("brags") for retros, reviews, and resumes. Go + embedded
-SQLite; installs via `brew install bragfile`; binary is `brag`.
+`brag` is a local-first command-line tool that captures your
+brag-worthy work moments — shipped features, fixed bugs, things you
+learned, mentoring you delivered — and lets you retrieve them later
+for retros, reviews, and resumes. Entries live in an embedded SQLite
+database at `~/.bragfile/db.sqlite` on your machine. No cloud, no
+sync, no account.
 
-> **Status:** in development. See `projects/PROJ-001-mvp/brief.md` for
-> what's being built in this wave of work.
+> **Status:** in active development. Capture, retrieve, search,
+> export, and weekly/monthly digests are shipped. Distribution via
+> Homebrew is in progress.
 
-This repo uses a spec-driven workflow where Claude plays every role (architect, implementer, reviewer) across different sessions.
+## Install
 
-## Hierarchy
+Homebrew (recommended once available):
 
-```
-Repo (this app)
- └─ Project (a wave of work: "MVP", "v2 improvements")
-     └─ Stage (a coherent chunk within a project)
-         └─ Spec (an individual task)
-              └─ Cycle (Frame → Design → Build → Verify → Ship)
-```
-
-## Getting started
-
-**First time?** Read `GETTING_STARTED.md` — it walks you through your first project end-to-end.
-
-**Daily work?** Run `just --list` to see available commands.
-
-**Common commands:**
 ```bash
-just status                        # See active project, stage, specs by cycle
-just new-spec "title" STAGE-001    # Scaffold a new spec
-just advance-cycle SPEC-001 verify # Update a spec's cycle
-just archive-spec SPEC-001         # Move a shipped spec to done/
-just weekly-review                 # Print the weekly review prompt
+brew install jysf/bragfile/bragfile
+brag --version
 ```
 
-## Key discipline in this variant
-
-Because Claude plays every role, context contamination is the biggest risk. Four habits keep it at bay:
-
-1. **New Claude session per cycle** (especially design → build and build → verify)
-2. **The spec file is the source of truth** between sessions — no "as I said earlier"
-3. **Weekly review is non-optional** (`just weekly-review`)
-4. **Honest confidence values** on decisions
-
-See `AGENTS.md` section 13 for the full discipline.
-
-## The app itself
-
-`brag` is a terminal CLI that stores brag-worthy work moments in a local
-SQLite database at `~/.bragfile/db.sqlite`. Core operations today:
-`add`, `list` (with `--tag`/`--project`/`--type`/`--since`/`--limit`
-filters; add `-P` to include the project in output, or `--format
-json|tsv` for machine-readable output), `show`, `edit`, `delete`,
-`search` (full-text via FTS5), and `export --format json|markdown` (for
-durable dumps or review-ready writeups; JSON shares the DEC-011 shape
-with `list --format json`, markdown shape locked by DEC-013 with
-grouped-by-project default and a `--flat` modifier). `brag add` with no
-arguments opens `$EDITOR` against a templated markdown buffer; fields
-are parsed on save. `brag add --json` reads a single JSON entry from
-stdin (DEC-012 schema) for programmatic capture. `brag summary
---range week|month`, `brag review --week|--month`, and `brag stats`
-are shipped (STAGE-004; markdown default, `--format json` for the
-DEC-014 envelope).
-
-### Install locally (from source)
-
-Requires Go 1.26+ and `just` (optional — pure `go` commands work too).
+From source (works today):
 
 ```bash
 git clone https://github.com/jysf/bragfile000.git
 cd bragfile000
-just install              # or: go install ./cmd/brag
-brag --version            # verify ~/go/bin is on your $PATH
-brag add --title "my first brag"
-brag list
+just install                 # or: go install ./cmd/brag
+brag --version               # confirm ~/go/bin is on $PATH
 ```
 
-Homebrew install (`brew install bragfile`) arrives in STAGE-005.
+Requires Go 1.26+ from source. The Homebrew install pulls a
+prebuilt binary — no Go required.
 
-### Using the tool
+## Capture an entry
 
-See [`docs/tutorial.md`](docs/tutorial.md) for a walk-through: capturing
-your first brag, full-metadata form, reading entries back, where the
-data lives, daily-habit tips, and what's not yet implemented.
-
-### Daily commands (for working on `brag` itself)
-
-See [`AGENTS.md` §4](AGENTS.md) for the full list. Most common:
+The fastest path — one flag:
 
 ```bash
-just run -- list          # run without installing
-just test                 # run the test suite
-just build                # build ./brag locally
-just install              # install/upgrade brag on $PATH
+brag add --title "shipped FTS5 search end-to-end"
+# prints the new entry's ID on stdout, e.g. "12"
 ```
 
-## Where things live
+With full metadata:
 
-| Path | Purpose |
-|---|---|
-| `AGENTS.md` | Conventions for Claude working in this repo |
-| `.repo-context.yaml` | Structured metadata about the app |
-| `docs/` | Architecture, data model, API contract |
-| `guidance/` | Repo-level rules and open questions |
-| `decisions/` | Decision log (accumulates across projects) |
-| `projects/` | Each project (wave of work) lives here |
-| `projects/*/brief.md` | What this project is and why |
-| `projects/*/stages/` | Stages within a project |
-| `projects/*/specs/` | Specs within a project (with folded-in Implementation Context) |
-| `cmd/brag/` | CLI entrypoint (added during STAGE-001) |
-| `internal/` | Implementation packages: storage, commands, editor, export |
+```bash
+brag add \
+  --title "cut p99 login latency from 600ms to 120ms" \
+  --project platform \
+  --type shipped \
+  --tags auth,perf,backend \
+  --impact "unblocked mobile v3 release"
+```
+
+For longer narrative entries, `brag add` with no flags opens
+`$EDITOR` against a templated buffer:
+
+```bash
+brag add        # → editor opens; fill in the fields, save, quit
+```
+
+For programmatic capture from a script or AI agent, pipe JSON to
+`brag add --json` (see [`BRAG.md`](BRAG.md)):
+
+```bash
+echo '{"title":"…","project":"…"}' | brag add --json
+```
+
+## Read entries back
+
+List them, newest first:
+
+```bash
+brag list                                  # all entries
+brag list --project platform --since 30d   # filter by project + window
+brag list -P                               # add a project column
+brag list --format json                    # machine-readable
+```
+
+Search across every field via SQLite FTS5:
+
+```bash
+brag search "latency"
+brag search "auth-refactor"     # hyphens are literal, not operators
+```
+
+Show the full record for a single entry, edit it, or delete it:
+
+```bash
+brag show 12
+brag edit 12
+brag delete 12
+```
+
+## Export for reviews
+
+Markdown report grouped by project (paste into a quarterly review
+or promo packet):
+
+```bash
+brag export --format markdown --since 90d > q-review.md
+```
+
+JSON dump (for AI piping or backup):
+
+```bash
+brag export --format json --since 90d > q-review.json
+```
+
+## Weekly and monthly digests
+
+Rule-based aggregations of recent entries — no LLM, no network.
+Pipe the JSON into your favourite AI session for guided
+reflection.
+
+```bash
+brag summary --range week               # 7-day digest, grouped
+brag summary --range month --format json
+brag review --week                      # entries + reflection prompts
+brag stats                              # lifetime metrics
+```
+
+## Where the data lives
+
+```
+~/.bragfile/db.sqlite
+```
+
+Back up by copying the file. Move to a new machine by copying the
+file. Override the path with the `--db` flag or the `BRAGFILE_DB`
+environment variable.
+
+## Where to go next
+
+- [`docs/tutorial.md`](docs/tutorial.md) — the deep-dive
+  walkthrough: every command, every flag, every gotcha.
+- [`BRAG.md`](BRAG.md) — guide for AI coding agents that want to
+  propose brag entries from work sessions.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — how this repo is built
+  and how to contribute.
+- [`docs/api-contract.md`](docs/api-contract.md) — full CLI
+  reference.
 
 ## License
 
-MIT. See `LICENSE`.
+MIT. See [`LICENSE`](LICENSE).

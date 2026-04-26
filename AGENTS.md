@@ -212,6 +212,7 @@ DECs are stable; specs come and go. DECs don't reciprocally list specs.
 - CLI command tests construct a `*cobra.Command` with in-memory buffers for stdout/stderr and assert on them, not on the host's terminal. Use **separate `outBuf` and `errBuf`** (`cmd.SetOut(&outBuf)` / `cmd.SetErr(&errBuf)`) and assert no cross-leakage — e.g., a `--version` test must assert `errBuf.Len() == 0` in addition to the stdout substring check. This enforces the `stdout-is-for-data-stderr-is-for-humans` constraint at the test layer. Lesson earned in SPEC-001 verify punch list (2026-04-20).
 - Time-based ordering tests must use a monotonic tie-break column (e.g., `id DESC` under DEC-005) in addition to `created_at DESC`. Sleep-based timestamp separation alone is insufficient because RFC3339 is second-precision — a test that sleeps 10ms between rows will see identical `created_at` strings and produce non-deterministic ordering without a tie-break. Lesson earned in SPEC-002 build reflection (2026-04-20).
   - **Addendum for freshness assertions:** the same rule applies to tests proving a row is freshly created (not inherited from input): assert on `new.ID != source.ID`, not on `new.CreatedAt != source.CreatedAt`. Time-based inequality requires an artificial `sleep`; ID-based inequality does not, and `AUTOINCREMENT` guarantees monotonicity. The ordering and freshness cases are two faces of the same rule: RFC3339 is second-precision, so use the monotonic column for any distinctness assertion. Lesson earned in SPEC-017 verify (2026-04-24): `TestAddCmd_JSON_RoundTripWithListJSON` carried a 1s `sleep` + `CreatedAt.Equal` check that was redundant with the server-field test's frozen-timestamp comparison and added CI-flake surface for zero additional coverage.
+- **Shell test scripts treat `--exclude-dir` as decorative.** BSD grep (the macOS default) matches basenames, not path fragments — `--exclude-dir=docs/reports` is a silent no-op because no directory has a basename containing `/`. The correctness boundary is an explicit whitelist of tolerable hit paths via a `case` post-filter, not the `--exclude-dir` set. See `scripts/test-docs.sh:340-358` for the canonical shape (E2 link-integrity assertion). Lesson earned in SPEC-021 build reflection Q3 (2026-04-25); codified at SPEC-021 ship after verify recommended codify-now-vs-watch (the rule is concrete, mechanical, and saves SPEC-022 + SPEC-024 from re-deriving it).
 - Coverage expectations: no hard threshold. Every storage method and every command has at least one happy-path and one error-path test. Migration runner has a "runs twice is a no-op" test.
 - **TDD:** Tests live in the spec's `## Failing Tests` section, written
   during **design**, made to pass during **build**. Enforced by the `test-before-implementation` constraint.
@@ -309,6 +310,23 @@ comment in the CLI source containing forbidden tokens is fine because comments
 don't render to `--help`; a sentence in the cobra `Long` string is not. Lesson
 earned across SPEC-019 ship reflection (2026-04-25) and SPEC-020 design
 (2026-04-25); codified at SPEC-020 ship.
+
+**Literal-artifact-as-spec for fixed-shape deliverables.** When a spec ships a
+fixed-shape artifact decidable at design time (markdown file, JSON schema,
+YAML workflow, shell-script template, slash-command body, cobra `Long` string),
+embed the literal artifact under `## Notes for the Implementer` rather than
+describing it in prose. Build transcribes verbatim; verify diffs against the
+embedded literal. Both cycles become mechanical and fast, and design carries
+the cost of getting the artifact right at the moment alternatives are still
+cheap. Three confirming cases: SPEC-018 ship reflection (2026-04-25, Go test
+fixtures embedded verbatim and byte-loaded by goldens); SPEC-020 design
+(2026-04-25, cobra `Long` string locked literally with NOT-contains
+self-audit run against it); SPEC-021 ship reflection (2026-04-25, three full
+markdown files — README/CONTRIBUTING/development.md, 292 lines total —
+byte-transcribed from sketches with zero deviation). Codified at SPEC-021
+ship. The pattern applies where the artifact's shape is design-decidable; it
+does NOT apply where the artifact must be synthesised from constraints (most
+Go code) — there, prose-with-failing-tests stays the right shape.
 
 ### During **build**
 
