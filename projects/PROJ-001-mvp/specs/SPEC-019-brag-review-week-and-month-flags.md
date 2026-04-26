@@ -7,7 +7,7 @@
 task:
   id: SPEC-019
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S — consumes DEC-014 verbatim, one new helper, one new command, one new render file. No DEC emission, no new package.
@@ -2234,28 +2234,61 @@ subsection.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
-- **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+- **Branch:** `feat/spec-019-brag-review-week-and-month-flags`
+- **PR (if applicable):** *opened after build complete*
+- **All acceptance criteria met?** yes
+- **New decisions emitted:** none — DEC-014 consumed verbatim per
+  Locked design decisions §1.
 - **Deviations from spec:**
-  - [list]
-- **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - The spec's `internal/cli/review.go` Long-description sketch
+    referenced filter flags by their `--`-prefixed names ("Filter
+    flags (--tag, --project, --type) are NOT accepted on review …
+    no --out flag"). That wording would have failed the spec's own
+    acceptance criterion *TestReviewCmd_HelpShowsWeekMonthAndFormat*
+    ("help text DOES NOT advertise `--tag`, `--project`, `--type`,
+    or `--out`") since `cobra` includes the Long block in `--help`
+    output. Adjusted the prose to drop the `--` prefixes
+    ("Filter flags (tag, project, type) are NOT accepted on
+    review … redirect with > if you want a file") so the help
+    surface no longer literally advertises the rejected flag
+    names. Behavior, semantics, and accepted-flag set unchanged.
+- **Follow-up work identified:** none. SPEC-020 (`brag stats`) is
+  the natural sibling and was already on the stage backlog before
+  this build; no fresh items surfaced.
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — One small contradiction: the `Long`-description sketch in
+   *Notes for the Implementer* literally contained `--tag`,
+   `--out`, etc. while the matching acceptance criterion +
+   failing test asserted `--help` output must NOT contain those
+   strings. The sketch's intent was "state explicitly that these
+   flags are unsupported"; the test's intent was "the help
+   surface advertises only the supported flag names." Both are
+   defensible — the test wins because it's the locking
+   contract — and a one-line note in the sketch ("strip `--`
+   prefixes from the Long description so the rejection-prose
+   doesn't trip the help-surface assertion") would have removed
+   the friction entirely.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. Constraints, decisions, locked rejected-alternatives,
+   and the audit-grep enumeration were exhaustive. The design-
+   side audit-grep cross-check landed every doc-sweep target
+   correctly; build re-running the same greps surfaced zero
+   deltas, exactly as the addendum prescribes.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Run `cobra`'s `--help` rendering against the planned
+   `Long` description during design (not just spec-prose review),
+   to catch the kind of help-surface-contradicts-prose tension
+   above before the failing-tests-first run hits it. Otherwise
+   the build flowed exactly as the SPEC-018 precedent suggested —
+   goldens-first, single sketch-per-file, no scope creep, no DEC
+   emission, all four locked rejected alternatives held.
 
 ---
 
