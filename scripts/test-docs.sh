@@ -611,29 +611,29 @@ assert_contains_literal "L4b" "$GORELEASER" "- linux"
 assert_contains_literal "L5a" "$GORELEASER" "- amd64"
 assert_contains_literal "L5b" "$GORELEASER" "- arm64"
 
-# L6 — declares a top-level `brews:` block
+# L6 — declares a top-level `homebrew_casks:` block
 if [ ! -f "$GORELEASER" ]; then
     fail "L6" "$GORELEASER does not exist"
-elif grep -E -q '^brews:[[:space:]]*$' "$GORELEASER"; then
+elif grep -E -q '^homebrew_casks:[[:space:]]*$' "$GORELEASER"; then
     ok "L6"
 else
-    fail "L6" "$GORELEASER does not declare a top-level 'brews:' block"
+    fail "L6" "$GORELEASER does not declare a top-level 'homebrew_casks:' block"
 fi
 
-# L7 — brews block points at homebrew-bragfile
+# L7 — homebrew_casks block points at homebrew-bragfile
 assert_contains_literal "L7" "$GORELEASER" "name: homebrew-bragfile"
 
-# L8 — brews block has `skip_upload: auto`
+# L8 — homebrew_casks block has `skip_upload: auto`
 assert_contains_literal "L8" "$GORELEASER" "skip_upload: auto"
 
 # L9 — declares `-X main.version=` ldflag
 assert_contains_literal "L9" "$GORELEASER" "-X main.version="
 
-# L10 — archive format is `tar.gz`
-assert_contains_literal "L10" "$GORELEASER" "format: tar.gz"
+# L10 — archive format is `tar.gz` (goreleaser v2 list form)
+assert_contains_literal "L10" "$GORELEASER" "formats: [tar.gz]"
 
-# L11 — brews block declares license: MIT
-assert_contains_literal "L11" "$GORELEASER" 'license: "MIT"'
+# L11 — homebrew_casks block symlinks the `brag` binary onto $PATH
+assert_contains_literal "L11" "$GORELEASER" "- brag"
 
 # ===== Group M — .github/workflows/ci.yml shape =====
 

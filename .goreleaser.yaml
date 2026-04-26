@@ -31,7 +31,7 @@ archives:
   - id: default
     name_template: >-
       {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
-    format: tar.gz
+    formats: [tar.gz]
     files:
       - README.md
       - LICENSE
@@ -60,8 +60,10 @@ changelog:
     - title: Other
       order: 999
 
-brews:
+homebrew_casks:
   - name: bragfile
+    binaries:
+      - brag
     repository:
       owner: jysf
       name: homebrew-bragfile
@@ -69,12 +71,7 @@ brews:
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: "https://github.com/jysf/bragfile000"
     description: "Local-first Go CLI to capture and retrieve career-worthy moments."
-    license: "MIT"
     skip_upload: auto
-    test: |
-      system "#{bin}/brag", "--version"
-    install: |
-      bin.install "brag"
 
 release:
   github:
