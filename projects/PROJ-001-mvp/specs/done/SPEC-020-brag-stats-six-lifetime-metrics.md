@@ -7,7 +7,7 @@
 task:
   id: SPEC-020
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S — consumes DEC-014 verbatim, three new helpers, one new command, one new render file. No DEC emission, no new package.

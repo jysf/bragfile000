@@ -222,16 +222,23 @@ sequencing them is fine too.
       case for the SPEC-018 §9 audit-grep cross-check addendum
       (zero deltas both times).
 
-- [ ] SPEC-020 (pending, **S**) — **`brag stats`.** Six lifetime
-      aggregations: total count, entries/week (rolling average),
-      current streak, longest streak, most-common tags (top 5),
-      most-common projects (top 5), corpus span. `--format
-      markdown|json` honored; markdown default is a small human-
-      readable block, JSON is a single-object envelope per DEC-014.
-      Extends `internal/aggregate` with `Streak`, `MostCommon`,
-      `Span` helpers.
+- [x] SPEC-020 (shipped 2026-04-25, **S**) — **`brag stats`.** Six
+      lifetime aggregations: total count, entries/week (rolling
+      average via decimal weeks), current streak, longest streak,
+      top-5 tags, top-5 projects, corpus span. DEC-014 third
+      consumer (envelope verbatim, single-object). Extended
+      `internal/aggregate` with `Streak`, `MostCommon`, `Span`
+      helpers. Shipped via PR #20 (squash-merged `9208017`).
+      Clean cycle — 14 tests green, no build-time DECs, all 6
+      rejected-alternatives held, trim experiment validated
+      (signatures + invariants sufficient when in-stage
+      precedents exist; goldens passed first run). Two
+      AGENTS.md addenda earned second confirming case here:
+      §9 audit-grep cross-check (validated unchanged) and
+      §12 negative-substring self-audit (codified at this
+      ship). Last STAGE-004 spec — stage closes via Prompt 1d.
 
-**Count:** 2 shipped / 0 active / 1 pending
+**Count:** 3 shipped / 0 active / 0 pending — STAGE-004 ready for ship (Prompt 1d)
 
 **Complexity check:** 1×M + 2×S, total ~3 specs. Within the
 "3–4 specs" healthy-stage band. SPEC-018 is the load-bearing one
