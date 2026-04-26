@@ -39,6 +39,282 @@ disappear otherwise, and any soft decisions that need revisiting>
 
 ---
 
+## 2026-04-26 — STAGE-005 at 2/4 + cross-format literal-artifact-as-spec validated
+
+**Session duration (approx):** continuation of the long-running
+coordinator session that started 2026-04-22 (STAGE-003 framing).
+Today's segment: SPEC-022 design+build+verify+ship in one
+sequence, plus pre-compaction prep.
+**Branches / PRs landed:** PR #22 (SPEC-022; squash-merged
+`079bb89`).
+**brag entries:** #36 (SPEC-022 ship).
+
+### What shipped
+
+- **SPEC-022** — AI-integration distribution asset: three new
+  artifacts (`docs/brag-entry.schema.json` 50-line JSON Schema
+  draft 2020-12 mirroring DEC-012; `scripts/claude-code-post-session.sh`
+  67-line pure-stdin bash hook with `chmod +x`;
+  `examples/brag-slash-command.md` 14-line tight slash-command
+  template). Plus `BRAG.md` 50-line "## JSON contract for
+  programmatic capture" insertion + 161-line scripts/test-docs.sh
+  extension (23 new asserts in groups H/I/J/K). All 30 AC met,
+  63/63 test-docs pass (40 SPEC-021 + 23 new), no DEC, all 10
+  rejected-alternatives held.
+
+- **Examples directory created** (`examples/`) — first use of
+  this directory in the repo. Established pattern: `scripts/`
+  for executable artifacts, `examples/` for reference content
+  the user copies somewhere. Q1 of SPEC-022 framing locked
+  this split.
+
+### Framework / AGENTS.md lessons earned
+
+None new (no AGENTS.md addenda landed at SPEC-022 ship). The
+quiet positive: every existing addendum proven correct on a
+second confirming case.
+
+- **§10 push-discipline rule** held cleanly on its second
+  proactive application (SPEC-021 first, SPEC-022 second).
+  Third case from SPEC-023 or SPEC-024 promotes the rule from
+  "codified at framing" to "load-bearing across the stage"
+  without any rewording.
+- **`bfa1474` archive-spec empty-`<answer>` rejection**
+  exercised second time on a real ship and PASSED (proven
+  previously at SPEC-021).
+- **§9 audit-grep cross-check + §12 NOT-contains self-audit
+  + §9 BSD-grep `--exclude-dir` warning** — all three
+  no-op'd at build for the second consecutive spec. Design
+  pre-emption working as designed.
+- **§12 literal-artifact-as-spec pattern (codified at
+  SPEC-021 ship)** — third application, FIRST CROSS-FORMAT.
+  Validated cleanly across JSON + bash + markdown + in-place
+  markdown insertion + shell-script extension. Empirically
+  format-agnostic. Carry to SPEC-024 + PROJ-002 framing.
+
+One Q3 cosmetic observation surfaced: the BRAG.md insertion
+literal omitted the `---` HR separator that surrounding
+sections use. Verify confirmed asymmetry is cosmetic
+(markdown viewers handle `##` as a strong section break with
+or without preceding `---`). WATCHED at N=1, not codified
+per the three-confirming-cases bar that prior §12
+codifications crossed; pattern bloat from a single
+observation outweighs marginal signal.
+
+### Stage state at session end
+
+PROJ-001 — 4 stages shipped + STAGE-005 at 2/4:
+
+```
+[x] STAGE-001 (shipped 2026-04-20)
+[x] STAGE-002 (shipped 2026-04-22)
+[x] STAGE-003 (shipped 2026-04-24)
+[x] STAGE-004 (shipped 2026-04-25)
+[ ] STAGE-005 — distribution + cleanup (2/4)
+    [x] SPEC-021 — README rewrite + dev-process migration  (shipped 2026-04-25)
+    [x] SPEC-022 — AI-integration distribution asset       (shipped 2026-04-26)
+    [ ] SPEC-023 — Distribution proper                      (pending; M, watch-flag for split)
+    [ ] SPEC-024 — Shell completions                        (pending; S)
+```
+
+Roughly on track for ~2-week MVP target — STAGE-001 shipped
+2026-04-20, today 2026-04-26 = 7 days; estimate ~3 more
+days for SPEC-023 + SPEC-024 + STAGE-005 close + PROJ-001
+close.
+
+### Pick up here next session
+
+**Coordinator session context-compacted** at end of this
+entry. SPEC-023 design starts in a fresh coordinator session.
+
+**Next concrete action:** scaffold SPEC-023 + draft Design
+prompt + paste into a fresh design Claude session.
+
+```bash
+just new-spec "distribution proper goreleaser gha tap changelog" STAGE-005
+```
+
+Confirm scaffolder produces SPEC-023 (next free number after
+022 archived); `git mv` if not.
+
+**SPEC-023 specifics that will inform Design:**
+- Heaviest remaining spec in PROJ-001. Stage framing flagged
+  watch-for-split. Design session can split into
+  goreleaser+CI vs tap+CHANGELOG if scope inspection argues
+  for it; otherwise bundled as one M.
+- Inherits SPEC-021's deferred punch list mechanically:
+  stale STAGE-NNN refs across 4 doc files (api-contract.md
+  13 hits, architecture.md 4 hits including line 45 stale
+  "sqlite-file-copy" claim, data-model.md 5 hits,
+  tutorial.md:493 brew-install row in "What's NOT there
+  yet" table). SPEC-023 doc-sweep activates these references
+  the way SPEC-021's brew-install forward-reference becomes
+  a live link.
+- §12 literal-artifact-as-spec pattern applies directly:
+  goreleaser config + GitHub Actions workflow YAMLs + tap
+  formula + CHANGELOG seed are all fixed-shape artifacts
+  decidable at design time. Trim heuristic: SPEC-021/022
+  are construction precedents within stage; signatures +
+  invariants compression COULD apply to non-literal prose
+  (default fuller skeleton if uncertain — N=2 for the trim
+  itself within STAGE-005).
+- Homebrew tap repo at `github.com/jysf/homebrew-bragfile`
+  was pre-created as a STAGE-005 framing chore (empty repo
+  with one-paragraph README); SPEC-023's goreleaser `brews:`
+  block points at it.
+
+**Lessons for SPEC-023's design+build+ship discipline
+(carry from SPEC-021/022 cycles):**
+- §10 push-discipline applies at build (run `git push origin
+  HEAD` before `gh pr merge`).
+- bfa1474 archive-spec precondition will reject empty
+  Reflection (Ship) `<answer>` placeholders at ship.
+- §9 audit-grep cross-check + §12 NOT-contains self-audit
+  apply at design (run greps; reconcile against `## Outputs`).
+- §9 BSD-grep `--exclude-dir` warning applies if test-docs
+  extension uses grep -r.
+- §12 literal-artifact-as-spec: embed YAMLs + CHANGELOG seed
+  + tap formula verbatim under Notes for the Implementer.
+
+**Outstanding STAGE-005 sequence after SPEC-023:**
+- SPEC-024 (shell completions, S) — smaller; literal-artifact
+  pattern applies; per-shell completion output is fixed-shape.
+- STAGE-005 ship (Prompt 1d) — same shape as STAGE-003/004
+  closes; stage-level reflection across SPEC-021/022/023/024.
+- PROJ-001 ship (Prompt 1e) — FIRST USE in this repo;
+  project-level retrospective; closes the MVP.
+- Blog post artifact — placement decided as `docs/`; publication
+  target TBD. Independent of spec cycles.
+
+**State for fresh-session pickup:**
+- Working tree clean (only persistent untracked noise:
+  `framework-feedback/`, `revew1.md`, `status-after-nine-specs.md`).
+- No daily-status-report refresh today (per user: EOD only,
+  not per-ship). Today's snapshot pending if you stop for the
+  day.
+- Untracked cleanup deferred to PROJ-001 close (`framework-feedback/`
+  to evaluate; `revew1.md` to evaluate; `status-after-nine-specs.md`
+  is stale and obsoleted by daily-status-report system).
+
+### Compaction note
+
+This session was the long-running coordinator thread that ran
+SPEC-013 through SPEC-022 + STAGE-003/004/005 framings + 2
+stage closes + ~30 brag entries (#10-#36) + 4 AGENTS.md
+addenda earned + 5+ tooling chores (specs-by-stage,
+daily-status-report, archive-spec precondition,
+push-discipline rule, etc.). Compacted at SPEC-022 ship
+boundary by user choice; SPEC-023 design starts in a fresh
+coordinator session reading the artifacts above.
+
+---
+
+## 2026-04-25 — STAGE-004 closed + STAGE-005 framed + SPEC-021 shipped
+
+**Session duration (approx):** full day (continuation of
+2026-04-24 coordinator session).
+**Branches / PRs landed:** PR #18 (SPEC-018), PR #19
+(SPEC-019), PR #20 (SPEC-020), PR #21 (SPEC-021); plus
+chore commits for STAGE-004 close + STAGE-005 framing
+prep.
+**brag entries:** #21 (SPEC-018), #23 (SPEC-019), #24
+(SPEC-020), #25 (STAGE-004 close), #26-#31 (assorted
+chores + tooling), #32 (SPEC-021), #33 (STAGE-005 milestone).
+
+### What shipped
+
+- **SPEC-018** — `brag summary --range week|month` + DEC-014
+  (rule-based output envelope) + new `internal/aggregate`
+  package (ByType, ByProject, GroupForHighlights, rangeCutoff
+  helpers).
+- **SPEC-019** — `brag review --week|--month` consuming
+  DEC-014; added `GroupEntriesByProject` to
+  `internal/aggregate`; refactored `internal/export/json.go`
+  to extract `toEntryRecord` helper for review.go reuse.
+- **SPEC-020** — `brag stats` six lifetime metrics consuming
+  DEC-014; added Streak/MostCommon/Span helpers to
+  `internal/aggregate`. Trim experiment validated (signatures
+  + invariants sufficient when in-stage precedents exist).
+- **STAGE-004 closed** — stage-level reflection drafted;
+  status flipped proposed → shipped. SPEC-019 reflection
+  recovery (orphaned `bef84b1` commit recovered from
+  `git show` and bundled into stage-ship commit; root-cause
+  of the missing-push-before-merge bug class).
+- **STAGE-005 framed** — 4 specs (021/022/023/024) proposed;
+  3 pre-stage chores landed (homebrew tap repo created,
+  AGENTS.md §10 push-discipline rule codified,
+  scripts/archive-spec.sh empty-`<answer>` rejection
+  precondition added).
+- **SPEC-021** — README user-facing rewrite + new
+  CONTRIBUTING.md + new docs/development.md + new
+  scripts/test-docs.sh harness (40 grep-based asserts)
+  exposed via new `just test-docs` recipe. First STAGE-005
+  spec; first doc-restructure spec for PROJ-001.
+
+### Framework / AGENTS.md lessons earned
+
+Three earned at STAGE-004 close + during STAGE-005 framing
++ at SPEC-021 ship:
+
+- **§9 audit-grep cross-check (SPEC-018-earned, codified at
+  SPEC-018 ship 2026-04-25)** — closes the design/build
+  premise-audit loop: design enumerates → design verifies
+  enumeration → build re-verifies and questions deltas.
+  Validated SPEC-019 + SPEC-020 + SPEC-021.
+- **§12 NOT-contains self-audit (SPEC-019-earned, codified
+  at SPEC-020 ship 2026-04-25)** — when a Failing Test
+  asserts output DOES NOT contain "X", grep the spec's
+  load-bearing prose for X at design time. Two confirming
+  cases (SPEC-019 build self-catch + SPEC-020 design
+  pre-empt) crossed the codification bar because the rule
+  is concrete (a grep run).
+- **§9 BSD grep `--exclude-dir` warning + §12
+  literal-artifact-as-spec pattern (both SPEC-021-earned,
+  codified at SPEC-021 ship 2026-04-25)** — BSD grep
+  matches basenames not path fragments, treat
+  `--exclude-dir` as decorative; whitelist tolerable hits
+  via case post-filter. Literal-artifact-as-spec: when a
+  spec ships a fixed-shape artifact decidable at design
+  time, embed the literal artifact under Notes for the
+  Implementer; build transcribes verbatim, verify diffs.
+  Three confirming cases (SPEC-018 Go fixtures + SPEC-020
+  cobra Long string + SPEC-021 markdown documents) crossed
+  the codification bar.
+
+Plus operational rules codified at STAGE-005 framing:
+
+- **§10 push-discipline rule** — any commit added to a
+  feat branch just before `gh pr merge --squash
+  --delete-branch` MUST be pushed to `origin/<feat-branch>`
+  first. Three confirming cases (SPEC-013 + SPEC-018 +
+  SPEC-019 orphaned reflection commit). Codified
+  preemptively at STAGE-005 framing; first proactive
+  application held cleanly at SPEC-021 ship.
+- **`bfa1474` archive-spec empty-`<answer>` precondition**
+  — `scripts/archive-spec.sh` fail-fasts if Reflection
+  (Ship) section has unfilled placeholders. Belt-and-
+  suspenders for the SPEC-019 reflection-orphan class.
+  Validated as PASSING on a real ship at SPEC-021.
+
+### Stage state at session end
+
+```
+[x] STAGE-001 (shipped 2026-04-20)
+[x] STAGE-002 (shipped 2026-04-22)
+[x] STAGE-003 (shipped 2026-04-24)
+[x] STAGE-004 (shipped 2026-04-25)
+[ ] STAGE-005 — distribution + cleanup (1/4)
+    [x] SPEC-021 (shipped 2026-04-25)
+    [ ] SPEC-022/023/024 pending
+```
+
+### Pick up here next session
+
+Was: SPEC-022 design (AI-integration distribution asset).
+Done same day; see 2026-04-26 entry above.
+
+---
+
 ## 2026-04-24 (continued) — STAGE-003 closed, STAGE-004/005 cherry-picked
 
 **Session duration (approx):** continued same-day after the
