@@ -76,7 +76,7 @@ brag add --title "my first brag"
 brag list
 ```
 
-Homebrew install (`brew install bragfile`) arrives in STAGE-004.
+Homebrew install (`brew install bragfile`) arrives in STAGE-005.
 
 ### Using the tool
 

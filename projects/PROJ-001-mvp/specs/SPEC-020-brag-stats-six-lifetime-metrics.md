@@ -2226,7 +2226,8 @@ pattern, the same shape as the SPEC-018/019 subsections.
 
 - **Branch:** `feat/spec-020-brag-stats-six-lifetime-metrics`
 - **PR (if applicable):** opened post-`just advance-cycle SPEC-020 verify`
-- **All acceptance criteria met?** yes — 16/16. Aggregate, export
+- **All acceptance criteria met?** yes — 17/17 (corrected from
+  build-time miscount of 16; verify caught). Aggregate, export
   goldens (markdown + JSON byte-exact), empty-corpus contract, top-5
   cap with alpha-ASC tiebreak, decimal-weeks formula, CLI defaults,
   `--format json` envelope, unknown-format ErrUser, help shows
@@ -2309,17 +2310,69 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — The trim experiment was the load-bearing data point of this
+   build, and it validated cleanly: zero thrash, both goldens
+   byte-exact on first run, no missing skeleton bits surfaced at
+   build time. The actionable lesson is more specific than
+   "compress when precedent exists" — the precondition that
+   mattered is **structural analogy**, not just that prior specs
+   are in `done/`. SPEC-020 worked because it followed SPEC-019's
+   exact shape (consume DEC-014 verbatim, extend
+   `internal/aggregate`, new sibling renderer, new sibling CLI
+   file), and SPEC-019 followed SPEC-018's shape. The construction
+   was already proven twice; the spec just needed to point at the
+   proof.
+
+   For STAGE-005: the **first spec in any new stage should keep a
+   fuller Notes-for-the-Implementer skeleton; specs 2+ in a stage
+   can compress to signatures + invariants only when the first
+   spec's shape is the construction precedent.** STAGE-005's first
+   spec (likely homebrew distribution / goreleaser) has no in-stage
+   precedent and shouldn't trim. The second STAGE-005 spec, if it
+   shares a shape with the first, can. Worth carrying into SPEC-021
+   design as a heuristic to apply, not yet a rule to codify (N=1
+   for the trim itself; SPEC-018 + SPEC-019 both used fuller
+   skeletons).
 
 2. **Does any template, constraint, or decision need updating?**
-   — *Watch-pattern §12 codification candidate:* if the SPEC-019-
-   earned Long-vs-help negative-substring self-audit watch-pattern
-   held clean through this build (no Long-vs-help contradiction
-   surfaced) AND the SPEC-018-earned audit-grep cross-check
-   addendum held clean (no doc-sweep deltas at build), this is
-   the second confirming case for both — propose §12 codification
-   for both addenda together. The user makes the codify-or-watch
-   call at ship time; design-time prep tees it up.
+   — Yes. **Codify the SPEC-019 negative-substring self-audit
+   watch-pattern as a §12 addendum at this ship.** Two confirming
+   cases (SPEC-019 build self-catch + SPEC-020 design pre-empt),
+   the rule is concrete and greppable, and the scope clause
+   (spec→binary→test path, NOT spec-prose→reader path) earned its
+   place when SPEC-020 build self-caught a Go comment containing
+   forbidden tokens that wouldn't reach `--help`. Suggested
+   addendum text — keep tight:
+
+   > **NOT-contains assertions need a self-audit grep against
+   > load-bearing prose.** When a Failing Test asserts output
+   > DOES NOT contain "X", grep the spec's load-bearing text
+   > (the Long / help-rendering / doc-rendering prose that the
+   > implementer types into the binary) for X at design time.
+   > Hits in load-bearing prose are bugs to fix BEFORE locking.
+   > Hits in commentary or design-justification prose are fine
+   > — those don't reach the binary. Lesson earned in SPEC-019
+   > build reflection (caught at build) and SPEC-020 design
+   > (caught proactively).
+
+   **Hold the trim heuristic for one more confirming case.**
+   STAGE-005's shape is sufficiently different (distribution, CI,
+   packaging — not the aggregate/render symmetry STAGE-004 had)
+   that the trim might not transfer cleanly. Mention as a flag
+   for SPEC-021 design; don't codify yet.
+
+   **§9 audit-grep cross-check addendum stands as written** (per
+   verify N1) — second confirming case ran clean unchanged; no
+   refinement surface area appeared.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No spec. STAGE-005's six workstreams are already queued in
+   `brief.md`; SPEC-021 emerges naturally when STAGE-005 starts.
+   The `README.md:79` STAGE-004→STAGE-005 typo is a one-line
+   chore — bundled into the stage-ship commit.
+
+   **One small flag worth carrying into STAGE-005's first spec
+   design:** doc sweeps should grep for stale stage-references
+   (`STAGE-00N` mentions) at the start of each stage as a routine
+   sanity check; the SPEC-020 verify accidentally surfaced that
+   the discipline isn't currently routine.
