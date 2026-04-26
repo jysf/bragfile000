@@ -30,6 +30,15 @@ if [ "$CYCLE" != "ship" ]; then
     fi
 fi
 
+# Reject empty <answer> placeholders in reflection sections.
+# Lesson earned at STAGE-004 ship (SPEC-019 orphaned reflection commit
+# was recovered, but the same shape could otherwise ship empty).
+if grep -q "^   — <answer>" "$SPEC_FILE"; then
+    echo "✗ Reflection section has unanswered <answer> placeholders."
+    echo "  Fill in the answers before archiving."
+    exit 1
+fi
+
 SPEC_DIR=$(dirname "$SPEC_FILE")
 DONE_DIR="${SPEC_DIR}/done"
 mkdir -p "$DONE_DIR"
