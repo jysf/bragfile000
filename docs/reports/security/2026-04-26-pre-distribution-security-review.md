@@ -190,13 +190,13 @@ After creation:
 
 | # | Effort | Severity | Fix |
 |---|---|---|---|
-| 1 | 5 min | Medium | M1 — DB file mode → 0600 in [internal/storage/store.go:Open](../../../internal/storage/store.go); add chmod-after-create + a test asserting the post-Open mode |
-| 2 | 1 min | Low | L1 — Export file mode `0o644` → `0o600` in [internal/cli/export.go:142](../../../internal/cli/export.go) |
-| 3 | 10 min | Medium | M2 — SHA-pin `goreleaser/goreleaser-action@v6` in [.github/workflows/release.yml:34](../../../.github/workflows/release.yml) |
-| 4 | 5 min | Low | L5 — SHA-pin `actions/checkout@v4`, `actions/setup-go@v5` in both workflow files |
-| 5 | 5 min | Low | L4a — Add `maxLength` constraints to [docs/brag-entry.schema.json](../../../docs/brag-entry.schema.json) |
-| 6 | 15 min | Low | L4b — Add length checks in [internal/cli/add_json.go:parseAddJSON](../../../internal/cli/add_json.go) matching schema (binary is the authoritative validator) |
-| 7 | 10 min | Info | I1+I2 — Add `timeout-minutes: 30` and `concurrency:` block to [.github/workflows/release.yml](../../../.github/workflows/release.yml) |
+| 1 | 5 min | Medium | ✅ **Resolved** in [`e443cf3`](https://github.com/jysf/bragfile000/commit/e443cf3) (PR #28). M1 — DB file mode → 0600 in [internal/storage/store.go:Open](../../../internal/storage/store.go); chmod-after-create + tests asserting both file (0600) and dir (0700) modes. |
+| 2 | 1 min | Low | ✅ **Resolved** in [`e443cf3`](https://github.com/jysf/bragfile000/commit/e443cf3) (PR #28). L1 — Export file mode `0o644` → `0o600` in [internal/cli/export.go:142](../../../internal/cli/export.go). |
+| 3 | 10 min | Medium | ✅ **Resolved** in [`e443cf3`](https://github.com/jysf/bragfile000/commit/e443cf3) (PR #28). M2 — `goreleaser/goreleaser-action@v6` SHA-pinned to `e435cc...` (v6.4.0) in [.github/workflows/release.yml](../../../.github/workflows/release.yml). |
+| 4 | 5 min | Low | ✅ **Resolved** in [`e443cf3`](https://github.com/jysf/bragfile000/commit/e443cf3) (PR #28). L5 — `actions/checkout@v4` → `34e114...` (v4.3.1), `actions/setup-go@v5` → `40f158...` (v5.6.0) in both workflow files. |
+| 5 | 5 min | Low | ✅ **Resolved** in [`e443cf3`](https://github.com/jysf/bragfile000/commit/e443cf3) (PR #28). L4a — `maxLength` added to all six user-owned fields in [docs/brag-entry.schema.json](../../../docs/brag-entry.schema.json) (title 200, tags/project/type 64, impact 256, description 100000). |
+| 6 | 15 min | Low | ✅ **Resolved** in [`e443cf3`](https://github.com/jysf/bragfile000/commit/e443cf3) (PR #28). L4b — Length caps enforced via `UserErrorf` in [internal/cli/add_json.go:parseAddJSON](../../../internal/cli/add_json.go); six new subtests in `TestAddCmd_JSON_FieldLengthLimits` cover every field. |
+| 7 | 10 min | Info | ✅ **Resolved** in [`e443cf3`](https://github.com/jysf/bragfile000/commit/e443cf3) (PR #28). I1+I2 — `timeout-minutes: 30` on the goreleaser job + workflow-level `concurrency: { group: release, cancel-in-progress: false }` in [.github/workflows/release.yml](../../../.github/workflows/release.yml). |
 | 8 | — | — | ~~Add a govulncheck step to ci.yml~~ → **deferred to backlog** ([projects/PROJ-001-mvp/backlog.md](../../../projects/PROJ-001-mvp/backlog.md) "govulncheck CI step"). Largely redundant with Dependabot security alerts (item 2 of GitHub Advanced Security section below) — both consult the same Go vulnerability database; Dependabot fires continuously. Govulncheck's incremental value (call-graph reachability filter) is marginal for a small dep graph. |
 | 9 | 10 min | Medium (compensating) | M3 — Create the PAT with the fine-grained scope above; set 90-day expiration; calendar-remind for rotation |
 
@@ -225,7 +225,7 @@ After the four review tracks landed, the following native GitHub features were e
 
 | # | Feature | Status | Notes |
 |---|---|---|---|
-| 1 | **CodeQL (Code Scanning)** | ✅ enabled | `state: configured`, `languages: ["actions", "go"]`, `query_suite: default`, `threat_model: remote`, weekly schedule. Scans both Go source AND workflow YAMLs — partially mitigates M2/L5 by alerting on action-pinning patterns automatically. **Currently 0 alerts; first scan pending** (will populate within ~24h or on next push). |
+| 1 | **CodeQL (Code Scanning)** | ✅ enabled, first scan run cleanly | `state: configured`, `languages: ["actions", "go"]`, `query_suite: default`, `threat_model: remote`, weekly schedule. Scans both Go source AND workflow YAMLs — partially mitigates M2/L5 by alerting on action-pinning patterns automatically. **First scan complete (PR #28, 2026-04-26): 0 alerts** total / 0 open. Validates that the manual review didn't miss anything CodeQL's default Go + Actions query suites would catch. |
 | 2 | **Dependabot security alerts** | ✅ enabled | `dependabot_security_updates: enabled`; `vulnerability-alerts` endpoint returns 204 (active). Watches `go.mod` against the GitHub Advisory Database. Auto-PRs on advisory publication. Replaces the deferred govulncheck CI step (item 8 above). |
 | 3 | **Dependabot version updates** | ✅ enabled | Configured via [.github/dependabot.yml](../../../.github/dependabot.yml). Watches both `gomod` (weekly Go-module bumps) and `github-actions` (weekly action-version bumps). The `github-actions` watcher is the maintenance story for M2/L5 — once actions are SHA-pinned, Dependabot opens an auto-PR on each upstream version. *(Initial commit `df6213b` shipped GitHub's empty placeholder template; corrected in a follow-up commit before any Dependabot run.)* |
 | 4 | **Secret scanning + push protection** | ✅ enabled | `secret_scanning: enabled`, `secret_scanning_push_protection: enabled`. Scans real-time and historical commits for known secret patterns (PATs, AWS keys, etc.); blocks pushes containing detected secrets at git-push time. The historical scan in track 1C confirmed no past leaks; this adds forward protection. Two minor sub-options remain default-disabled: `secret_scanning_non_provider_patterns` (high-entropy generic strings) and `secret_scanning_validity_checks` (live-token-validation API calls). |
@@ -245,10 +245,11 @@ After the four Claude-driven review tracks (Tier 1A/B/C, Tier 2 subagent, `/secu
 
 ## Verdict
 
-**Cleared for tag-push after items 1–6 of the prioritized fix list.**
-Items 7–9 are recommended but not blocking. The codebase has no critical or high-severity findings; the discipline applied during construction (parameterized SQL, narrow FTS5 input handling, no `panic`, no shell-string composition, no network surface) shows up clearly in the review. The medium-severity findings are hardening / privacy posture rather than active exploitation paths.
+**Cleared for tag-push.** Items 1–7 of the prioritized fix list landed in PR #28 ([`e443cf3`](https://github.com/jysf/bragfile000/commit/e443cf3)) on 2026-04-26 with all CI gates green and CodeQL's first scan returning 0 alerts. Item 8 (govulncheck CI step) is documented in [the project backlog](../../../projects/PROJ-001-mvp/backlog.md) as redundant with Dependabot security alerts.
 
-The PAT creation step (item 9) gates the `git tag v0.1.0` step regardless — without `HOMEBREW_TAP_GITHUB_TOKEN` set in the repo's Actions secrets, the release workflow's tap-formula push will fail. Use the recommended fine-grained scope.
+**Only item 9 remains: HOMEBREW_TAP_GITHUB_TOKEN PAT creation** — a manual GitHub UI step gating the `git tag v0.1.0` step. Without the secret, the release workflow's tap-formula push will fail. Use the recommended fine-grained scope (single repo: `homebrew-bragfile`; permissions: Contents r/w + Metadata r; 90-day expiration).
+
+The codebase has no critical or high-severity findings; the discipline applied during construction (parameterized SQL, narrow FTS5 input handling, no `panic`, no shell-string composition, no network surface) shows up clearly in the review. The medium-severity findings were hardening / privacy posture rather than active exploitation paths, and all are now resolved.
 
 ---
 
