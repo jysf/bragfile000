@@ -46,6 +46,44 @@ func objectExists(t *testing.T, db *sql.DB, kind, name string) bool {
 	return got == name
 }
 
+func TestOpen_DBFileMode(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "db.sqlite")
+
+	s, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat %s: %v", path, err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Errorf("DB file mode = %04o, want 0600", got)
+	}
+}
+
+func TestOpen_DirMode(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "nested", "db.sqlite")
+
+	s, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+
+	info, err := os.Stat(filepath.Dir(path))
+	if err != nil {
+		t.Fatalf("stat dir: %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0o700 {
+		t.Errorf("parent dir mode = %04o, want 0700", got)
+	}
+}
+
 func TestOpen_CreatesDBFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "db.sqlite")

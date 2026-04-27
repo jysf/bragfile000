@@ -675,8 +675,8 @@ assert_contains_literal "M7" "$CI_WORKFLOW" "gofmt -l ."
 # M8 — runs `go vet ./...`
 assert_contains_literal "M8" "$CI_WORKFLOW" "go vet ./..."
 
-# M9 — uses actions/setup-go@v5
-assert_contains_literal "M9" "$CI_WORKFLOW" "actions/setup-go@v5"
+# M9 — uses actions/setup-go (SHA-pinned; version in comment)
+assert_contains_literal "M9" "$CI_WORKFLOW" "actions/setup-go@"
 
 # ===== Group N — .github/workflows/release.yml shape =====
 
@@ -694,14 +694,20 @@ else
     fail "N2" "$RELEASE_WORKFLOW does not trigger on tag pattern 'v*'"
 fi
 
-# N3 — uses goreleaser/goreleaser-action@v6
-assert_contains_literal "N3" "$RELEASE_WORKFLOW" "goreleaser/goreleaser-action@v6"
+# N3 — uses goreleaser/goreleaser-action (SHA-pinned; version in comment)
+assert_contains_literal "N3" "$RELEASE_WORKFLOW" "goreleaser/goreleaser-action@"
 
 # N4 — passes HOMEBREW_TAP_GITHUB_TOKEN env
 assert_contains_literal "N4" "$RELEASE_WORKFLOW" "HOMEBREW_TAP_GITHUB_TOKEN"
 
 # N5 — checkout uses fetch-depth: 0
 assert_contains_literal "N5" "$RELEASE_WORKFLOW" "fetch-depth: 0"
+
+# N6 — job declares timeout-minutes: 30
+assert_contains_literal "N6" "$RELEASE_WORKFLOW" "timeout-minutes: 30"
+
+# N7 — workflow declares concurrency block
+assert_contains_literal "N7" "$RELEASE_WORKFLOW" "concurrency:"
 
 # ===== Group O — CHANGELOG.md shape =====
 
