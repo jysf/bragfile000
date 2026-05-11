@@ -386,6 +386,32 @@ Unknown `--format` values exit 1 (user error). Undeclared flags
 (`--tag`, `--project`, `--type`, `--out`, `--range`, `--since`,
 `--week`, `--month`) surface as cobra `unknown flag` errors.
 
+### `brag completion <shell>` — generate shell completion script (STAGE-005)
+
+```
+brag completion zsh|bash|fish
+```
+
+Writes a shell completion script to stdout. Supported shells: `zsh`, `bash`,
+`fish`.
+
+To source in the current session:
+
+- **zsh:** `source <(brag completion zsh)`
+- **bash:** `source <(brag completion bash)`
+- **fish:** `brag completion fish | source`
+
+For permanent setup, add the sourcing line to the shell's startup file
+(`~/.zshrc`, `~/.bashrc`, or `~/.config/fish/config.fish`).
+
+- Stdout on success: the completion script (pipe to `source` or redirect to a
+  file).
+- Stderr on success: empty.
+- Exit 0 on success; 1 if an unsupported shell name is given (user error); cobra
+  arg-count error if the shell arg is omitted.
+- No `--db` / `BRAGFILE_DB` dependency — completion generation is stateless.
+- PowerShell is not supported (bragfile distributes for macOS + Linux only).
+
 ## Error output
 
 All human-readable errors go to stderr with the prefix `brag: `. Example:

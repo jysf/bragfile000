@@ -7,7 +7,7 @@
 task:
   id: SPEC-024
   type: story                      # epic | story | task | bug | chore
-  cycle: build                     # design complete; ready for a fresh build session
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -634,13 +634,13 @@ Add the following under `## [Unreleased]`:
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-024-shell-completions`
+- **PR (if applicable):** TBD (opened after build commit)
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - (none expected)
+  - (none)
 - **Deviations from spec:**
-  - [list]
+  - None. All seven literal artifacts transcribed verbatim. All 14 ACs verified.
 - **Follow-up work identified:**
   - Stage-005 ship prompt (STAGE-005-distribution-and-cleanup.md)
   - PROJ-001 close prompt (projects/PROJ-001-mvp/brief.md)
@@ -648,13 +648,24 @@ Add the following under `## [Unreleased]`:
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing. The §12(b) bash-marker correction (use `__start_brag`, not
+   `_brag_completion`) was clearly documented and the sanity check confirmed
+   it. The wire-up sequence was unambiguous. Zero ambiguity requiring a stop.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. The `firstChars` helper was referenced in the test literal without
+   annotation, but a quick grep showed it already exists in `summary_test.go`
+   within the same package — a non-issue. The spec could have noted it as a
+   pre-existing helper, but the omission caused no delay.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — The test-first rhythm for the Go tests was slightly awkward: the spec's
+   wire-up sequence writes completion.go then completion_test.go, then says
+   "confirm tests fail." Writing both together means they pass immediately. In
+   future specs, the fail-first step for Go tests would be cleaner if test file
+   is written before implementation file, even in the wire-up sequence. The
+   test-docs.sh fail-first (Q+R appended before any implementation) worked
+   exactly as intended.
 
 ---
 
