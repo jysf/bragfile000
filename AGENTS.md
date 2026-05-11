@@ -342,6 +342,33 @@ ship. The pattern applies where the artifact's shape is design-decidable; it
 does NOT apply where the artifact must be synthesised from constraints (most
 Go code) — there, prose-with-failing-tests stays the right shape.
 
+**Design-time pre-flight: run embedded literals through their target tools.**
+When the literal-artifact-as-spec pattern embeds a literal whose validity
+depends on the current behavior of an external tool (a goreleaser config that
+must pass `goreleaser check`; a cobra-generated completion script whose
+expected markers depend on the cobra version in `go.mod`; a JSON Schema whose
+strict-reject behavior depends on a validator; an action workflow whose
+schema version depends on the runner's parser), **run the literal through
+the tool at design time** before declaring design done. The check is cheap
+at design (a few seconds of `goreleaser check`, a scratch program that
+invokes `cmd.GenBashCompletion(&buf)`, etc.) and prevents the entire
+build/verify/recovery cycle that surfaces when a literal embeds a stale
+assumption about an external tool's output. Two confirming cases, opposing
+outcomes, same sub-rule: SPEC-023 verify D3 NEGATIVE (2026-04-26 — design
+skipped pre-flight against `goreleaser check`; deprecated `brews:` →
+`homebrew_casks:` and `format:` → `formats:` keys surfaced at verify; cost a
+recovery commit on the feat branch plus the test-docs.sh group L assertion
+updates that had to follow); SPEC-024 design §12(b) POSITIVE (2026-05-10 —
+design ran a scratch Go program against cobra v1.10.2's `GenBashCompletion`,
+observed `__start_brag` not `_brag_completion()`, corrected the spec's
+failing-test markers AND noted the discrepancy explicitly under a new "§12(b)
+design-time verification" section in the spec; zero deviations at build).
+Codified at SPEC-024 ship (2026-05-10). The pattern pairs with the broader
+literal-artifact-as-spec rule above: design-time pre-flight is what makes
+"build transcribes verbatim, verify diffs" actually mechanical, because the
+literal was already validated against external reality at the moment it was
+embedded.
+
 ### During **build**
 
 Start a **new Claude session**. Do not continue from the design session.

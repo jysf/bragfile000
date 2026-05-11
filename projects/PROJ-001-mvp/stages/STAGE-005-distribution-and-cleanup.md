@@ -273,13 +273,30 @@ isolated and small.
       features (CodeQL, Dependabot security alerts + version
       updates, secret scanning + push protection) enabled and
       operational. Zero new DECs.
-- [ ] SPEC-024 (designed 2026-05-10, **S**) — **Shell completions.**
+- [x] SPEC-024 (shipped 2026-05-10, **S**) — **Shell completions.**
       `brag completion zsh|bash|fish` subcommand wrapping cobra's
-      built-in completion API. Smoke tests on at least zsh and bash;
-      help text; tutorial.md install-section addendum showing how to
-      source the script.
+      built-in completion API. Shipped via PR #32 (squash-merged
+      `3c9c912`). Seven literal artifacts (completion.go,
+      completion_test.go with 6 tests, cmd/brag/main.go 1-line
+      addition, tutorial.md §10 addendum, api-contract.md
+      `### brag completion` section, scripts/test-docs.sh groups
+      Q+R = +9 asserts → 116 total, CHANGELOG.md [Unreleased] entry).
+      PowerShell deliberately skipped per locked design decisions
+      (bragfile distributes darwin+linux only). §12(b) design-time
+      pre-flight against cobra v1.10.2 CAUGHT the bash-marker
+      assumption-vs-reality (stage Design Notes had
+      `_brag_completion()`; actual cobra emits `__start_brag` as
+      the registered entry point) — corrected at design, zero
+      deviations at build. **Cleanest spec cycle in the stage:**
+      14/14 AC, 116/116 test-docs, 0 build-time deviations, 5/5
+      CI green including CodeQL, all verify checks pass on first
+      run. Zero new DECs. §12 sub-rule (b) codified at this ship
+      (AGENTS.md update bundled in the ship commit) — D3 + §12(b)
+      forms the two-confirming-case codification.
 
-**Count:** 3 shipped / 0 active / 1 pending
+**Count:** 4 shipped / 0 active / 0 pending — **stage backlog
+fully shipped. Ready for stage close (Prompt 1d) and PROJ-001
+close (Prompt 1e, FIRST USE in this repo).**
 
 **Complexity check:** 1 × S/M + 2 × M + 1 × S; no L-complexity entries
 (none expected per framing prompt). Total ~4 specs, within the 3–5

@@ -7,7 +7,7 @@
 task:
   id: SPEC-024
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -674,10 +674,10 @@ Add the following under `## [Unreleased]`:
 *Appended during the **ship** cycle.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Almost nothing. SPEC-024 was the smoothest spec in STAGE-005: clean design (Sonnet handled it well — the trim heuristic + same-stage construction precedents made the cost-to-quality ratio favorable), zero deviations at build (the §12(b) design-time pre-flight on cobra v1.10.2 caught the bash-marker discrepancy before it could surface at build/verify), all 14 ACs and 116 test-docs assertions clean on first run, CodeQL clean. Two small process notes: (a) the test-docs assertion count in the build prompt was off (claimed 105, actual 116) — small coordinator arithmetic miss, not a real defect; verify caught and corrected; (b) the build session's own Q3 reflection proposed writing test files before implementation files in the wire-up sequence, which is a usable refinement for future specs.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Yes. AGENTS.md §12 codifies sub-rule (b) "run embedded literals through their target tools at design time" in this ship commit. Two confirming cases now exist across distinct specs: SPEC-023 verify D3 (NEGATIVE — pre-flight skipped at design, goreleaser deprecation surfaced at verify, paid a recovery commit); SPEC-024 design §12(b) (POSITIVE — pre-flight done at design against cobra v1.10.2, caught bash-marker assumption-vs-reality discrepancy, zero recovery cost). Two cases, opposing outcomes, same underlying sub-rule — sufficient evidence for codification per the project's three-confirming-cases-or-equivalent bar. The §12 sub-rule (a) "run embedded test assertions against embedded literals at design time" remains WATCHED at N=2 within SPEC-023's lifecycle (L2 + O4) with no SPEC-024 confirming case; future spec to provide the third instance.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No new spec. SPEC-024 was the last spec of PROJ-001. STAGE-005 close (Prompt 1d) + PROJ-001 close (Prompt 1e — FIRST USE in this repo) are the next cycles. Three artifacts remain to handle at PROJ-001 close (not new specs): (a) the blog-post draft mentioned in the brief as an in-repo artifact at `docs/blog-spec-driven-bragfile.md`; (b) cleanup of the three persistent untracked files (`framework-feedback/`, `revew1.md`, `status-after-nine-specs.md`) — either commit to docs/ or add to .gitignore; (c) the Dependabot major-version PRs (#27 modernc.org/sqlite, #29 actions/checkout, #30 goreleaser-action, #31 actions/setup-go) — most were already merged via earlier squash-merges during Phase 2; verify and close any remaining.
