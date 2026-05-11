@@ -237,38 +237,49 @@ isolated and small.
       passed. One Q3 cosmetic observation (BRAG.md HR-separator
       asymmetry) WATCHED at N=1, not codified. STAGE-005 at
       2/4.
-- [ ] SPEC-023 (designed 2026-04-26, build pending, **M**) —
-      **Distribution proper: goreleaser + GitHub Actions + CHANGELOG
-      + tap-formula auto-publish.** `.goreleaser.yaml` (cross-compile
-      darwin+linux × arm64+amd64), `.github/workflows/ci.yml` (test +
-      gofmt + vet matrix on macos-latest + ubuntu-latest),
-      `.github/workflows/release.yml` (tag-`v*` → goreleaser release
-      → brews-push to pre-existing `github.com/jysf/homebrew-bragfile`
-      with `skip_upload: auto` for prereleases), `CHANGELOG.md`
-      populated retroactively for v0.1.0 in Keep-A-Changelog 1.1.0
-      shape (literal-artifact-as-spec, fourth confirming application).
-      Plus six-line const→var rewiring of `cmd/brag/main.go` for
-      ldflags injection, plus six-file doc sweep folding in the
-      inherited SPEC-021 punch-list (architecture.md:45 sqlite-file-
-      copy fix + architecture.md:103 STAGE-004→STAGE-005 +
-      tutorial.md:493 §9 collapse) and SPEC-023's own forward-
-      reference flips (README.md status banner + AGENTS.md §3 line 67
-      + §4 lines 97/106 + cmd/brag/main.go:12 STAGE-004→STAGE-005),
-      verified by 33 new test-docs.sh asserts in groups L–P (running
-      total: 96 asserts after build). Bundle-vs-split decision
-      explicit at top of spec — KEEP BUNDLED (single ship narrative;
-      doc sweep activates as a unit; size lands at solid M not L; no
-      operational gain from splitting). Zero new DECs expected.
-      End-to-end smoke (AC-37/38/39/40): local `goreleaser build
-      --snapshot --clean` + RC-tag pre-flight + `v0.1.0` tag-cut +
-      `brew install jysf/bragfile/bragfile` from clean shell.
-- [ ] SPEC-024 (not yet designed, **S**) — **Shell completions.**
+- [x] SPEC-023 (shipped 2026-05-10, **M**) — **Distribution
+      proper: goreleaser + GitHub Actions + CHANGELOG + tap-formula
+      auto-publish.** Shipped via PR #23 (squash-merged `d91e56b`)
+      + post-merge deprecation fix `1582572`. Four primary literal
+      artifacts (`.goreleaser.yaml` cross-compile darwin+linux ×
+      arm64+amd64; `ci.yml` test+gofmt+vet matrix; `release.yml`
+      tag-`v*` → goreleaser release → cask-push to
+      `github.com/jysf/homebrew-bragfile`; `CHANGELOG.md`
+      Keep-A-Changelog 1.1.0 with retroactive [0.1.0] section) +
+      three secondary literals (cmd/brag/main.go const→var
+      rewiring for ldflags injection, six-file doc sweep, 33-assert
+      test-docs.sh extension in groups L–P). §12 literal-artifact-
+      as-spec applied as fourth confirming application. Bundle-
+      vs-split decision documented at top of spec — KEPT BUNDLED.
+      Clean build cycle: 35/35 AC, three pre-tracked deviations
+      resolved at verify (L2 goreleaser version-line ordering; O4
+      CHANGELOG plain-verb form; D3 goreleaser deprecation
+      brews→homebrew_casks migration). End-to-end smoke verified:
+      v0.1.0-rc1 → v0.1.0 cut on 2026-05-11 with dual-tag-on-
+      same-commit gotcha caught and recovered (codified in
+      AGENTS.md §4); cask landed at `homebrew-bragfile/Casks/
+      bragfile.rb`; `brew install jysf/bragfile/bragfile` works
+      on macOS arm64 (Gatekeeper xattr workaround documented in
+      README §Install + AGENTS.md §4; notarization deferred to
+      backlog with full implementer checklist at
+      `docs/macos-notarization-checklist.md`).
+      **Stretched ship cycle** (2026-04-26 PR merge → 2026-05-11
+      Phase 2 close) due to user-requested security review pause
+      mid-ship: 280-line pre-distribution security review report
+      (`docs/reports/security/2026-04-26-pre-distribution-security-
+      review.md`) surfaced 3 medium + 5 low + ~13 info findings;
+      7 hardening fixes landed via PR #28 (`e443cf3`); CodeQL
+      first scan returned 0 alerts; GitHub Advanced Security
+      features (CodeQL, Dependabot security alerts + version
+      updates, secret scanning + push protection) enabled and
+      operational. Zero new DECs.
+- [ ] SPEC-024 (designed 2026-05-10, **S**) — **Shell completions.**
       `brag completion zsh|bash|fish` subcommand wrapping cobra's
       built-in completion API. Smoke tests on at least zsh and bash;
       help text; tutorial.md install-section addendum showing how to
       source the script.
 
-**Count:** 2 shipped / 0 active / 2 pending
+**Count:** 3 shipped / 0 active / 1 pending
 
 **Complexity check:** 1 × S/M + 2 × M + 1 × S; no L-complexity entries
 (none expected per framing prompt). Total ~4 specs, within the 3–5
