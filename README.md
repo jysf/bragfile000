@@ -32,6 +32,22 @@ brag --version               # confirm ~/go/bin is on $PATH
 The Homebrew install pulls a prebuilt binary — no Go required.
 Requires Go 1.26+ if you build from source instead.
 
+**macOS Gatekeeper note.** The Homebrew-installed binary is not
+Apple-signed/notarized (v0.1.0 ships unsigned to keep the personal
+project free of Apple Developer Program dues). The first time you
+run `brag` after `brew install`, macOS may say *"Apple could not
+verify 'brag' is free of malware…"* and refuse to execute it.
+Clear the quarantine attribute once:
+
+```bash
+sudo xattr -dr com.apple.quarantine /opt/homebrew/Caskroom/bragfile/
+```
+
+Then `brag --version` works normally. You only need to do this
+once per `brew install` / `brew upgrade`. If you'd rather avoid
+the warning entirely, build from source instead — locally-built
+binaries don't trigger Gatekeeper.
+
 ## Capture an entry
 
 The fastest path — one flag:

@@ -433,6 +433,52 @@ nothing is lost but the project stays focused.
 - **Sketch:** N/A — this is a pointer, not a deferred item.
   See the dedicated entries above for the actual deferred work.
 
+## macOS code signing + notarization (Apple Developer ID)
+
+- **Source:** 2026-05-11 Phase 2 ship of bragfile v0.1.0 — smoke-test
+  install hit `"Apple could not verify 'brag' is free of malware"`
+  on macOS Gatekeeper. Workaround documented in README ("macOS
+  Gatekeeper note") and AGENTS.md §4 (xattr -dr quarantine).
+- **Reason deferred:** Apple Developer Program is $99/year ongoing
+  + ~half-day of focused work (account approval, Developer ID
+  Application certificate, app-specific password, goreleaser
+  `signs:`/`notarize:` blocks, release.yml updates to run signing
+  on a macos-latest runner with new secrets MACOS_CERTIFICATE +
+  MACOS_CERTIFICATE_PASSWORD + APPLE_ID + APPLE_PASSWORD +
+  APPLE_TEAM_ID). For a personal project shipping for learning
+  value with no marketing push (per PROJ-001 brief), the cost-
+  benefit isn't there yet. The xattr workaround is fine for the
+  small audience this binary actually reaches.
+- **Revisit when:** Either (a) actual adoption materializes and the
+  Gatekeeper UX cliff becomes a real friction point with real
+  users, (b) the user enrolls in Apple Developer for another
+  reason (iOS / Mac App Store work) and the cert is already
+  available, or (c) bragfile is rolled into a paid distribution
+  channel where notarization is a hard requirement.
+- **Sketch:**
+  1. Enroll in Apple Developer Program (~$99/year, ~1-2 day
+     approval). Generate a Developer ID Application certificate
+     via developer.apple.com. Generate an app-specific password
+     for notarytool via appleid.apple.com.
+  2. Export certificate as `.p12`, base64-encode it, add as
+     repo secret `MACOS_CERTIFICATE` (plus
+     `MACOS_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_PASSWORD`,
+     `APPLE_TEAM_ID`).
+  3. Add `signs:` block to `.goreleaser.yaml` invoking
+     `codesign --options runtime --sign "Developer ID
+     Application: <name>" {{ .Path }}` per darwin artifact.
+  4. Add `notarize:` block invoking `xcrun notarytool submit
+     ... --wait` post-sign, per archive.
+  5. Update `.github/workflows/release.yml` to run on
+     `macos-latest` instead of (or alongside) `ubuntu-latest`
+     for darwin builds — signing requires macOS runner; linux
+     builds can stay on ubuntu via a matrix split.
+  6. Test: tag a `v0.x.y-rc` pre-release, verify the darwin
+     archives pass Gatekeeper on a fresh Mac without the
+     xattr workaround.
+  7. Remove the "macOS Gatekeeper note" from README; update the
+     AGENTS.md §4 lesson to "no longer applies as of vX.Y.Z."
+
 ## govulncheck CI step
 
 - **Source:** 2026-04-26 pre-distribution security review

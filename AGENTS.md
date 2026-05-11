@@ -105,6 +105,20 @@ goreleaser build --snapshot --clean          # local cross-compile smoke test
 
 macOS note: `brew upgrade go` to move to the latest Go. `brew install goreleaser` before tagging a release locally.
 
+**Release tagging — dual-tag-on-same-commit gotcha** (lesson earned at v0.1.0 cut, 2026-05-11). Goreleaser inspects git state to determine "what tag am I building?" and does NOT reliably pick the right tag when multiple tags point at the same commit. Symptom: pushing `v0.1.0` after `v0.1.0-rc1` (both pointing at the same SHA) makes goreleaser pick `v0.1.0-rc1`, try to re-upload its existing release assets, and fail with `422 Validation Failed [Code: already_exists]`. Two valid patterns:
+
+1. **Delete the RC tag + release before cutting the final tag at the same commit.** Use this when the RC commit is the one you want to ship verbatim. Recovery commands: `gh release delete vX.Y.Z-rcN --yes --cleanup-tag`, then `git tag vX.Y.Z && git push origin vX.Y.Z`.
+2. **Cut the final tag from a separate commit** (e.g. one small post-RC tweak). Use this when there's a real reason to ship a different tree than the RC.
+
+Default to pattern 1 — simpler and matches the common case of "RC validated the workflow, ship the same tree."
+
+**macOS Gatekeeper on unsigned binaries** (lesson earned at v0.1.0 smoke-test, 2026-05-11). Without an Apple Developer ID code-signing certificate, goreleaser-produced darwin binaries trigger Gatekeeper's `"Apple could not verify 'brag' is free of malware…"` prompt on first run after `brew install`. The cask install path doesn't auto-clear quarantine. Two paths:
+
+1. **Document the workaround.** Each macOS user runs `sudo xattr -dr com.apple.quarantine /opt/homebrew/Caskroom/<cask>/` once per install/upgrade. Cheap; the friction is real but bounded. README's "macOS Gatekeeper note" section covers this for end users.
+2. **Add signing + notarization.** Requires Apple Developer Program enrollment ($99/year), Developer ID Application cert, app-specific password, goreleaser `signs:`/`notarize:` blocks, and a `macos-latest` runner step in release.yml. Deferred to backlog under "macOS code signing + notarization" — revisit if/when adoption matters or Apple Developer is acquired for another reason.
+
+For personal-scale CLI distribution, default to pattern 1.
+
 ---
 
 ## 5. Directory Structure
