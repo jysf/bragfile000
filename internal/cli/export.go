@@ -139,7 +139,7 @@ func runExport(cmd *cobra.Command, _ []string) error {
 
 	outPath, _ := cmd.Flags().GetString("out")
 	if outPath != "" {
-		f, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+		f, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 		if err != nil {
 			return fmt.Errorf("write output: %w", err)
 		}

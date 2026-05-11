@@ -476,6 +476,72 @@ func TestAddCmd_JSON_AloneDispatchesToJSONMode(t *testing.T) {
 	}
 }
 
+func TestAddCmd_JSON_FieldLengthLimits(t *testing.T) {
+	cases := []struct {
+		name      string
+		stdin     string
+		substring string
+	}{
+		{
+			name:      "title over 200",
+			stdin:     `{"title":"` + strings.Repeat("x", 201) + `"}`,
+			substring: `"title" exceeds 200-character limit`,
+		},
+		{
+			name:      "description over 100000",
+			stdin:     `{"title":"ok","description":"` + strings.Repeat("d", 100001) + `"}`,
+			substring: `"description" exceeds 100000-character limit`,
+		},
+		{
+			name:      "tags over 64",
+			stdin:     `{"title":"ok","tags":"` + strings.Repeat("t", 65) + `"}`,
+			substring: `"tags" exceeds 64-character limit`,
+		},
+		{
+			name:      "project over 64",
+			stdin:     `{"title":"ok","project":"` + strings.Repeat("p", 65) + `"}`,
+			substring: `"project" exceeds 64-character limit`,
+		},
+		{
+			name:      "type over 64",
+			stdin:     `{"title":"ok","type":"` + strings.Repeat("y", 65) + `"}`,
+			substring: `"type" exceeds 64-character limit`,
+		},
+		{
+			name:      "impact over 256",
+			stdin:     `{"title":"ok","impact":"` + strings.Repeat("i", 257) + `"}`,
+			substring: `"impact" exceeds 256-character limit`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			root, dbPath := newRootWithAdd(t)
+			var outBuf, errBuf bytes.Buffer
+			root.SetOut(&outBuf)
+			root.SetErr(&errBuf)
+			root.SetIn(strings.NewReader(tc.stdin))
+			root.SetArgs([]string{"--db", dbPath, "add", "--json"})
+
+			err := root.Execute()
+			if err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			if !errors.Is(err, ErrUser) {
+				t.Fatalf("expected errors.Is(err, ErrUser); got %v", err)
+			}
+			if !strings.Contains(err.Error(), tc.substring) {
+				t.Errorf("expected error to contain %q, got %q", tc.substring, err.Error())
+			}
+			if outBuf.Len() != 0 {
+				t.Errorf("expected stdout empty, got %q", outBuf.String())
+			}
+			if got := len(listAll(t, dbPath)); got != 0 {
+				t.Errorf("expected 0 entries, got %d", got)
+			}
+		})
+	}
+}
+
 func TestAddCmd_JSON_HelpShowsJSONFlag(t *testing.T) {
 	root, _ := newRootWithAdd(t)
 	var outBuf, errBuf bytes.Buffer

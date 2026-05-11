@@ -25,8 +25,14 @@ type Store struct {
 // directory if needed, and applies any pending embedded migrations
 // before returning.
 func Open(path string) (*Store, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return nil, fmt.Errorf("open store: %w", err)
+	}
+
+	// sql.Open is lazy — the driver creates the file 0644 on first query.
+	// Pre-create at 0600 so personal brag data is never world-readable.
+	if f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600); err == nil {
+		_ = f.Close()
 	}
 
 	db, err := sql.Open("sqlite", path)

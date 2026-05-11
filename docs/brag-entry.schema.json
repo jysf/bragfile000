@@ -10,26 +10,32 @@
     "title": {
       "type": "string",
       "minLength": 1,
+      "maxLength": 200,
       "description": "Required, non-empty after whitespace trim. Short, action-verb headline. Per DEC-012 choice 2."
     },
     "description": {
       "type": "string",
+      "maxLength": 100000,
       "description": "Optional free-form narrative. Per DEC-012 choice 3."
     },
     "tags": {
       "type": "string",
+      "maxLength": 64,
       "description": "Optional comma-joined string of tags (e.g. \"auth,perf,backend\"). Per DEC-004, tags are stored as a single TEXT column inside the binary; per DEC-012 choice 3, the input contract mirrors this shape. Array form (e.g. [\"auth\",\"perf\"]) is rejected at the type check below. To migrate to array-shaped tags, DEC-004 + DEC-011 + DEC-012 + this schema migrate in lockstep."
     },
     "project": {
       "type": "string",
+      "maxLength": 64,
       "description": "Optional work-context label (repo, client, team, initiative). Per DEC-012 choice 3."
     },
     "type": {
       "type": "string",
+      "maxLength": 64,
       "description": "Optional category (e.g. \"shipped\", \"fixed\", \"learned\", \"documented\", \"mentored\", \"unblocked\", \"reviewed\"). Free-form; the binary does not enumerate. Per DEC-012 choice 3."
     },
     "impact": {
       "type": "string",
+      "maxLength": 256,
       "description": "Optional concrete-outcome statement: a metric, an unlock, a named result. The most load-bearing field for review writeups. Per DEC-012 choice 3."
     },
     "id": {

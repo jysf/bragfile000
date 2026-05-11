@@ -433,6 +433,40 @@ nothing is lost but the project stays focused.
 - **Sketch:** N/A — this is a pointer, not a deferred item.
   See the dedicated entries above for the actual deferred work.
 
+## govulncheck CI step
+
+- **Source:** 2026-04-26 pre-distribution security review
+  (`docs/reports/security/2026-04-26-pre-distribution-security-review.md`),
+  prioritized fix list item 8.
+- **Reason deferred:** Largely redundant with the Dependabot
+  security alerts enabled the same day (item 2 of the report's
+  GitHub Advanced Security section). Both consult the same Go
+  vulnerability database (vuln.go.dev). Dependabot fires
+  continuously on every advisory publication; govulncheck's
+  incremental value is its call-graph reachability analysis —
+  alerts only fire when the vulnerable function is *actually
+  reachable* from the project's call graph. For a personal
+  project with a small dep graph and Dependabot already
+  surfacing every advisory, the noise reduction is marginal.
+- **Revisit when:** Either (a) Dependabot starts producing
+  enough advisory noise that reachability filtering would
+  meaningfully help; (b) a future project with a much larger
+  dep graph (e.g. PROJ-002 if it pulls in LLM client libraries)
+  benefits from the call-graph filter; or (c) a CVE is missed
+  because Dependabot's advisory-version match doesn't apply
+  (rare).
+- **Sketch:** Add a workflow step to `.github/workflows/ci.yml`:
+  ```yaml
+  - name: Run govulncheck
+    run: |
+      go install golang.org/x/vuln/cmd/govulncheck@latest
+      govulncheck ./...
+  ```
+  Runs on every PR + push-to-main alongside the existing
+  test/gofmt/vet steps. Fails CI on any reachable vulnerability.
+  ~10s per run on a project this size. Confirmed clean against
+  current main at 2026-04-26.
+
 ---
 
 ## Removed / delivered — keep the list honest
