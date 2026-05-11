@@ -813,6 +813,43 @@ fi
 # P10 — README.md does NOT contain "(recommended once available)"
 assert_not_contains_iregex "P10" "README.md" "recommended once available"
 
+# ===== Group Q — completion subcommand source shape =====
+
+# Q1 — internal/cli/completion.go exists
+assert_file_exists "Q1" "internal/cli/completion.go"
+
+# Q2 — internal/cli/completion_test.go exists
+assert_file_exists "Q2" "internal/cli/completion_test.go"
+
+# Q3 — completion.go wires GenZshCompletion
+assert_contains_literal "Q3" "internal/cli/completion.go" "GenZshCompletion"
+
+# Q4 — completion.go wires GenBashCompletion
+assert_contains_literal "Q4" "internal/cli/completion.go" "GenBashCompletion"
+
+# Q5 — completion.go wires GenFishCompletion
+assert_contains_literal "Q5" "internal/cli/completion.go" "GenFishCompletion"
+
+# ===== Group R — tutorial §10 shell completions addendum =====
+
+# R1 — tutorial §10 heading exists (line-regex avoids substring trap)
+if [ ! -f docs/tutorial.md ]; then
+    fail "R1" "docs/tutorial.md does not exist"
+elif grep -E -q '^## 10\. Shell completions' docs/tutorial.md; then
+    ok "R1"
+else
+    fail "R1" "docs/tutorial.md missing '## 10. Shell completions' heading"
+fi
+
+# R2 — tutorial contains zsh sourcing example
+assert_contains_literal "R2" "docs/tutorial.md" "source <(brag completion zsh)"
+
+# R3 — tutorial contains bash sourcing example
+assert_contains_literal "R3" "docs/tutorial.md" "source <(brag completion bash)"
+
+# R4 — tutorial contains fish sourcing example
+assert_contains_literal "R4" "docs/tutorial.md" "brag completion fish | source"
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

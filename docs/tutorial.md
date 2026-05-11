@@ -492,6 +492,33 @@ escape hatch.
 
 ---
 
+## 10. Shell completions
+
+`brag completion` generates tab-completion scripts for zsh, bash, and fish.
+
+**zsh** — add to `~/.zshrc`:
+
+```zsh
+source <(brag completion zsh)
+```
+
+**bash** — add to `~/.bashrc`:
+
+```bash
+source <(brag completion bash)
+```
+
+**fish** — add to `~/.config/fish/config.fish`:
+
+```fish
+brag completion fish | source
+```
+
+After sourcing, `brag <tab>` and `brag add --<tab>` show available commands
+and flags. Run `brag completion --help` for details.
+
+---
+
 ## Further reading
 
 - [`docs/api-contract.md`](./api-contract.md) — full CLI surface
