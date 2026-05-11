@@ -13,7 +13,7 @@ task:
                                    # version-injection wiring change in
                                    # cmd/brag/main.go and a doc sweep
                                    # over previously-deferred references.
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -2404,10 +2404,13 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Three concrete things from this stretched ship cycle (2026-04-26 PR merge through 2026-05-11 Phase 2 close):
+   (a) **Delete the RC tag/release before cutting the production tag at the same commit.** Goreleaser does not reliably disambiguate when two tags point at one SHA; v0.1.0 push picked up `v0.1.0-rc1` as `current=` and failed with `422 already_exists` on asset re-uploads. Recovery was clean (`gh release delete v0.1.0-rc1 --yes --cleanup-tag` then re-tag) but the pattern is now codified in AGENTS.md §4.
+   (b) **Trust-but-verify agent reports immediately.** Both the SPEC-023 punch-list fix session and the items 1-5 fix session reported "pushed to origin" when the working tree had the edits but `git ls-remote` showed origin still at the prior SHA. A 2-second `git ls-remote origin <branch>` after any agent reports completion would have caught both before they cost recovery cycles. N=2 within this spec; worth promoting to a coordinator-discipline reflex.
+   (c) **Surface macOS Gatekeeper friction at design time, not smoke-test time.** Could have been an explicit design-time call ("v0.1.0 ships unsigned; document `xattr -dr` workaround in README at design") rather than discovering it when `brag --version` got blocked by Gatekeeper post-`brew install`. README addendum + AGENTS.md §4 note + dedicated implementer checklist at `docs/macos-notarization-checklist.md` all landed afterward; folding this awareness into SPEC-023 design directly would have saved the Phase 2 surprise.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Two AGENTS.md §4 addenda landed mid-ship and ARE the codification of operational lessons (dual-tag gotcha + Gatekeeper note). One §12 pattern remains WATCHED at N=2 within this spec but only N=1 per distinct shape across specs: design-time pre-flight sub-rules — one for "run embedded test assertions against embedded literals before declaring design done" (caught L2 + O4 at build), one for "run embedded literals through their target tools (`goreleaser check` etc.) before declaring design done" (would have caught D3 at design). Each shape needs a third confirming case from SPEC-024 or PROJ-002 framing before codifying. The trust-but-verify-agent-reports pattern is at N=2 within this spec — possibly worth a coordinator-discipline note in §13 alongside the fresh-session rule if SPEC-024 surfaces a third case; for now, watch.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No new spec to frame now. All identified follow-ups are already tracked in their appropriate homes: SPEC-024 (shell completions) is framed in the STAGE-005 backlog; macOS notarization has both a backlog entry with trigger conditions AND a step-by-step implementer checklist at `docs/macos-notarization-checklist.md`; govulncheck CI step is backlogged as redundant with Dependabot security alerts. The pre-distribution security review itself produced a 280-line report at `docs/reports/security/2026-04-26-pre-distribution-security-review.md` — that's an artifact, not a spec, and is correctly outside the spec cycle. If anything, the post-mortem here is that SPEC-023 absorbed substantially more scope than its initial framing anticipated (security review + Phase 2 manual ops + Gatekeeper triage) — but each was a legitimate extension rather than scope creep, and the work either codified into reusable lessons (AGENTS.md) or backlogged with explicit triggers.
