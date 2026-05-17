@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-005                     # stable, zero-padded within the project
-  status: proposed                  # proposed | active | shipped | cancelled | on_hold
+  status: shipped                   # proposed | active | shipped | cancelled | on_hold
   priority: medium                  # critical | high | medium | low
   target_complete: 2026-04-30       # ~3–5 days from framing; outside boundary 2026-05-04 per brief
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-04-25
-shipped_at: null
+shipped_at: 2026-05-11
 ---
 
 # STAGE-005: Distribution and cleanup
@@ -531,13 +531,265 @@ empty `<answer>` placeholders codified same day.
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped. Run Prompt 1d (Stage Ship) in
-FIRST_SESSION_PROMPTS.md to draft this in a fresh session.*
+*Drafted via Prompt 1d (Stage Ship) in a fresh session on 2026-05-11.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
+### Success Criteria check
+
+The stage file enumerated seven success bullets at framing. All seven
+shipped; two carry operationally visible caveats that are documented
+upstream rather than carried as silent debt.
+
+- **`brew install jysf/bragfile/bragfile` works on macOS arm64.** ✅
+  Shipped via SPEC-023 (`d91e56b`) + v0.1.0 cut on 2026-05-11; cask
+  landed at `homebrew-bragfile/Casks/bragfile.rb`. **Caveat:** unsigned
+  binary triggers macOS Gatekeeper on first run; xattr workaround
+  documented in README §Install + AGENTS.md §4; full notarization
+  deferred to backlog with implementer checklist at
+  `docs/macos-notarization-checklist.md`.
+- **README is user-facing.** ✅ Shipped via SPEC-021 (PR #21, `9abdeb6`):
+  install/capture/list/export/digests/where-data-lives above the fold;
+  dev-process content moved to `CONTRIBUTING.md` (thin pointer) +
+  `docs/development.md` (framework details); 40-assert `test-docs.sh`
+  link-integrity harness ensured nothing broke.
+- **`docs/brag-entry.schema.json` exists and is referenced from BRAG.md.**
+  ✅ Shipped via SPEC-022 (PR #22, `079bb89`): 50-line JSON Schema draft
+  2020-12 mirroring DEC-012, plus a 50-line "## JSON contract for
+  programmatic capture" section in BRAG.md.
+- **Claude Code session-end hook artifacts ship.** ✅ Shipped via
+  SPEC-022: `scripts/claude-code-post-session.sh` (67-line pure-stdin
+  bash hook); `examples/brag-slash-command.md` (14-line slash-command
+  template, established the `examples/` directory convention); install
+  instructions co-located in BRAG.md. **No new `brag` CLI surface
+  introduced** (Q3 framing answer held).
+- **CI runs on every PR.** ✅ Shipped via SPEC-023:
+  `.github/workflows/ci.yml` runs `go test ./...`, `gofmt -l .`, and
+  `go vet ./...` on macos-latest + ubuntu-latest matrix; branch
+  protection on `main` requires this workflow as green-check
+  pre-merge.
+- **Release on tag publishes binaries + auto-pushes formula to the
+  tap.** ✅ Shipped via SPEC-023: `.goreleaser.yaml` cross-compiles
+  darwin+linux × arm64+amd64; `release.yml` triggers on `v*` tags;
+  `homebrew_casks:` block auto-pushes the cask formula to
+  `github.com/jysf/homebrew-bragfile`; `CHANGELOG.md` populated with a
+  retroactive `[0.1.0]` section. End-to-end smoke verified at v0.1.0-rc1
+  → v0.1.0 cut on 2026-05-11.
+- **`brag completion zsh|bash|fish` writes a working completion
+  script.** ✅ Shipped via SPEC-024 (PR #32, `3c9c912`): tab-completion
+  works after sourcing the generated script; PowerShell deliberately
+  skipped per locked design (bragfile distributes darwin+linux only).
+- **All STAGE-001..004 success criteria still hold.** ✅ `go test ./...`,
+  `gofmt -l .`, `go vet ./...` clean through every spec; v0.1.0 binary
+  exercises the full feature surface.
+
+### Three-sentence summary
+
+Built exactly the four specs framed at stage-open (SPEC-021/022/023/024)
+with no scope additions and no items deferred back to backlog mid-stage;
+v0.1.0 cut on the public homebrew tap on 2026-05-11. Speed was the
+slowest of any stage in PROJ-001 — 16 wall-clock days from framing to
+ship versus the framing-time outside boundary of 2026-05-04 (+6 days),
+driven primarily by a user-requested pre-distribution security-review
+pause inserted between SPEC-023 PR merge and ship (280-line review
+report, 7 hardening fixes via PR #28, GitHub Advanced Security feature
+enablement) plus a Phase 2 manual ship cycle that surfaced two
+operational frictions (goreleaser dual-tag-on-same-commit, macOS
+Gatekeeper on unsigned binaries). The emergent behaviour worth naming:
+SPEC-024 ran the cleanest cycle of PROJ-001 (zero deviations, 14/14
+AC, 116/116 test-docs assertions, all CI green on first push) because
+the new §12(b) design-time pre-flight against cobra v1.10.2 caught a
+bash-marker assumption mid-design that would otherwise have surfaced as
+a build/verify recovery — exactly the kind of payoff the codification
+predicts.
+
+### Reflection questions
+
+- **Did we deliver the outcome in "What This Stage Is"?** Yes. A
+  stranger who lands on the repo via `brew install
+  jysf/bragfile/bragfile` (or the GitHub URL) can install a working
+  binary, read a user-facing README, find a checked-in JSON-Schema
+  contract for AI integrations, copy a working Claude Code session-end
+  hook, and wire shell completion into zsh/bash/fish — all without
+  ever needing to know the spec-driven development process the repo
+  was built with. The two caveats are bounded and documented: macOS
+  Gatekeeper xattr workaround (xattr `com.apple.quarantine` removal,
+  one-time per install) and linux cross-builds shipped but not
+  smoke-tested on a real linux host (per framing: not a success
+  criterion). PROJ-001 is now ready to close.
+
+- **How many specs did it actually take?** 4 shipped / 4 framed —
+  exactly as planned. Complexity was 1 × M + 1 × M + 1 × M + 1 × S,
+  no L items, all four ship rows held their original complexity
+  estimate. SPEC-023's bundle-vs-split decision (flagged at framing
+  as a watch-for-split candidate — goreleaser + CI + release + tap +
+  CHANGELOG is a lot of surface for one spec) was documented at the
+  top of the spec and held: KEPT BUNDLED. The bundle decision survived
+  the stretched ship cycle without re-litigation, which is signal that
+  "one heavy spec is the right shape when the artifacts are
+  co-validating" — splitting would have produced two specs whose
+  separate end-to-end smoke tests would have needed re-running anyway.
+
+- **What changed between starting and shipping?** Two material shifts,
+  both insertions rather than pivots. (a) A user-requested security
+  review paused SPEC-023 ship between PR merge and Homebrew deploy
+  (mid-spec, 2026-04-26): produced a 280-line report at
+  `docs/reports/security/2026-04-26-pre-distribution-security-review.md`
+  (3 medium + 5 low + 13 info findings; zero critical/high), 7
+  hardening fixes via PR #28 (`e443cf3`), and enabled CodeQL +
+  Dependabot security alerts + Dependabot version updates + secret
+  scanning + push protection. (b) A Phase 2 manual ship cycle on
+  2026-05-11 surfaced two operational frictions — goreleaser
+  dual-tag-on-same-commit (v0.1.0 push picked `v0.1.0-rc1` as
+  `current=`, failed with `422 already_exists` on asset re-uploads;
+  recovery via `gh release delete v0.1.0-rc1 --cleanup-tag`) and
+  macOS Gatekeeper blocking unsigned binaries on first run after
+  `brew install`. Both frictions codified mid-stage into AGENTS.md §4
+  rather than carried as debt.
+
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
-- **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <one-line items>
+  - **Already landed mid-stage (no further action needed):**
+    - AGENTS.md §4 dual-tag-on-same-commit recovery recipe (codified
+      2026-05-11 in `a15e36b`).
+    - AGENTS.md §4 macOS Gatekeeper unsigned-binary note + xattr
+      workaround (codified same commit).
+    - AGENTS.md §12 sub-rule (b) "design-time pre-flight: run
+      embedded literals through their target tools" — codified at
+      SPEC-024 ship (`17cf8e3`); two confirming cases (SPEC-023 D3
+      NEGATIVE — pre-flight skipped, deprecated goreleaser keys
+      surfaced at verify; SPEC-024 §12(b) POSITIVE — pre-flight done
+      against cobra v1.10.2, caught bash-marker assumption at design
+      with zero recovery cost) meets the project's "two opposing
+      outcomes on the same mechanical sub-rule" codification bar.
+  - **WATCH-list carry-forward (do NOT codify at this stage close):**
+    - **§12 sub-rule (a) "run embedded test assertions against
+      embedded literals at design time."** Two confirming cases, but
+      both within SPEC-023's lifecycle (L2 goreleaser version-line
+      ordering + O4 CHANGELOG plain-verb form). The mechanical shape
+      is identical to §12(b) — run the literal through its
+      mechanical checker before declaring design done — but a third
+      confirming case across a distinct spec is wanted before
+      codifying. Carry to PROJ-002 framing.
+    - **Trust-but-verify-agent-push-reports.** Two confirming cases
+      inside SPEC-023's ship lifecycle (punch-list fix + items 1-5
+      fix); a 2-second `git ls-remote origin <branch>` after any
+      agent reports "pushed" would have caught both before they cost
+      recovery cycles. Mechanically adjacent to §10's existing
+      push-discipline rule and §13's fresh-session discipline, but
+      addressed to the coordinator's verification reflex rather than
+      the implementer's process. Carry to PROJ-002 framing; a third
+      confirming case promotes it to §13.
+    - **§13 fresh-session-discipline for working-tree state.**
+      Single instance at SPEC-024 build cycle (working-tree edits
+      not visible to the coordinator's add+commit because a fresh
+      session lost the in-flight edits). N=1 only; not promotable.
+      Note here for future cross-reference.
+  - **Did NOT generalize as expected:** the STAGE-004 trim-when-
+    structural-analogy heuristic ("first spec keeps fuller skeleton;
+    siblings 2+ can trim when first sets the precedent") was carried
+    into STAGE-005 with the framing-time caveat that STAGE-005's
+    workstreams are heterogeneous (SPEC-021 prose, SPEC-022
+    multi-format, SPEC-023 YAML+CI, SPEC-024 Go+cobra). The caveat
+    held: no STAGE-005 spec compressed its Notes-for-the-Implementer
+    section by analogy to an in-stage sibling because no pair
+    shared a construction shape. The heuristic stays soft N=1 from
+    STAGE-004; PROJ-002's same-shape feature work is its next test.
+  - **Premise-audit sub-template extraction.** Flagged at SPEC-015
+    ship, re-flagged at STAGE-004 ship, deferred at STAGE-005 framing
+    on grounds that STAGE-005 specs are mostly new-file work where
+    the audit-family rules have minimal trigger surface. Confirmed
+    at stage close: SPEC-021 was the only stage spec with material
+    audit scope (status-change at scale across the doc set), and
+    its execution was clean. **Carry to PROJ-002 framing** — that is
+    the next project where same-shape feature work will repeat the
+    skeleton and the extraction's value concentrates.
+
+- **Should any spec-level reflections be promoted to stage-level
+  lessons?**
+  - **Yes (already promoted at the spec ship that earned it):** §12(b)
+    design-time pre-flight rule. SPEC-024 ship codified this into
+    AGENTS.md inline with the ship commit; no further action.
+  - **Yes (stage-level signal worth naming):** SPEC-022's reflection
+    captured that the §12 literal-artifact-as-spec pattern is
+    empirically **format-agnostic** — JSON Schema (50 lines) + bash
+    hook (67 lines) + markdown slash-command (14 lines) + in-place
+    markdown insertion (50 lines) + shell-script extension (155
+    lines) all transcribed and verified independently with zero
+    drift in one cycle. This is stronger evidence than any single
+    spec reflection conveys: the pattern's value compounds with
+    artifact count rather than degrading with format heterogeneity.
+    Directly applicable to PROJ-002 (any future `brag` integration
+    assets — webhook templates, IDE snippets, additional slash-
+    command templates — default to literal-artifact-embed when shape
+    is design-decidable).
+  - **No on everything else.** §9/§12/§4 addenda are already at
+    AGENTS.md scope.
+
+### Carry-forward
+
+- **To PROJ-002 (AI assist) framing:** a distributable binary is now
+  the integration target rather than a source build; the JSON schema
+  at `docs/brag-entry.schema.json` is the contract AI agents validate
+  against; the Claude Code session-end hook at
+  `scripts/claude-code-post-session.sh` is the reference
+  implementation new integrations pattern off. Premise-audit
+  sub-template extraction explicitly deferred to PROJ-002 framing
+  per stage scope. Two WATCH-list items (§12(a) literal-test
+  assertion pre-flight, trust-but-verify-agent-push-reports) need
+  third confirming cases from PROJ-002 specs before codification.
+- **To PROJ-001 close (Prompt 1e — first use in this repo):** blog-
+  post draft at `docs/blog-spec-driven-bragfile.md` (artifact, not a
+  spec; framing-time deliverable carried forward to project close);
+  cleanup of three persistent untracked files
+  (`framework-feedback/`, `revew1.md`, `status-after-nine-specs.md`)
+  — either commit, gitignore, or delete; the Project-Level
+  Reflection section in `brief.md`; verify any leftover Dependabot
+  major-version PRs are closed.
+- **Truly done:** every stage success criterion; every spec ship
+  cycle; v0.1.0 on the public homebrew tap; the
+  `2026-04-26-pre-distribution-security-review.md` report as a
+  durable artifact; the `docs/macos-notarization-checklist.md`
+  implementer guide for whenever notarization gets revisited.
+
+### Proposed AGENTS.md / templates / constraints edits at stage close
+
+**No new inline codifications proposed at this stage close.** Every
+codify-worthy lesson earned during STAGE-005 was codified at the spec
+ship that surfaced it (§4 dual-tag in `a15e36b`; §4 Gatekeeper in
+`a15e36b`; §12(b) pre-flight in `17cf8e3`). The remaining patterns
+are explicitly on the WATCH list with documented third-case triggers
+for PROJ-002 — codifying at N=2-within-one-spec would over-fit. The
+STAGE-004 trim-when-structural-analogy heuristic stays at soft N=1
+per its framing-time caveat.
+
+**One small templates note** (not blocking, captured here for the
+coordinator's PROJ-001-close commit consideration): the stage scope
+section explicitly invokes "doc sweeps fold into originating specs"
+as a stage-wide rule; SPEC-023's stretched cycle confirmed this rule
+works under non-trivial conditions (the doc sweep landed as a
+secondary literal artifact inside SPEC-023 itself rather than as a
+separate cleanup spec). Worth a one-line strengthening in the stage
+template if a future iteration touches it: "doc sweeps fold into
+originating specs even when the originating spec is heavy" — but
+not load-bearing enough to warrant a templates change as part of
+this stage close.
+
+### Stage summary
+
+STAGE-005 delivered the four-spec backlog cleanly but on a stretched
+timeline (16 days vs. 2-week intent; +6 days past the framing-time
+outside boundary), driven by two insertions rather than pivots: a
+user-requested pre-distribution security review and a Phase 2 manual
+ship cycle that surfaced two operational gotchas. Both insertions
+produced durable artifacts — the 280-line security report, PR #28's
+hardening fixes, GitHub Advanced Security feature enablement, and two
+AGENTS.md §4 operational addenda — rather than silent debt or
+follow-up spec sprawl. The cleanest evidence the framework matured
+mid-stage: SPEC-024 ran with zero deviations at build, 116/116
+test-docs green on first run, all CI green on first push, because
+§12(b) design-time pre-flight against cobra v1.10.2 caught a
+bash-marker assumption at the cheapest possible moment. The
+codification bar was met by two opposing-outcome cases (SPEC-023 D3
+NEGATIVE, SPEC-024 §12(b) POSITIVE) on the same mechanical sub-rule,
+which is the pattern STAGE-005 most clearly demonstrates: process
+lessons that produce both a costly miss and a cheap save earn their
+codification with two cases, not three. PROJ-001 closes next via
+Prompt 1e.
