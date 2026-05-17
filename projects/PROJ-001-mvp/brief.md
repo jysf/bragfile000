@@ -1,7 +1,7 @@
 ---
 project:
   id: PROJ-001
-  status: active
+  status: shipped
   priority: high
   target_ship: 2026-05-03
 
@@ -9,7 +9,7 @@ repo:
   id: bragfile
 
 created_at: 2026-04-19
-shipped_at: null
+shipped_at: 2026-05-17
 ---
 
 # PROJ-001: MVP — capture, retrieve, export, ship
@@ -499,12 +499,362 @@ promoted into future stages or projects when the trigger fires.
 
 ## Project-Level Reflection
 
-*Filled in when status moves to shipped.*
+*Drafted via Prompt 1e (Project Close — FIRST USE in this repo) in a
+fresh session on 2026-05-17.*
 
-- **Did we deliver the outcome in "What This Project Is"?** <not yet>
-- **How many stages did it actually take?** <not yet>
-- **What changed between starting and shipping?** <not yet>
-- **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <not yet>
-- **What did we defer to the next project?**
-  - <not yet>
+### Success Criteria check
+
+The brief enumerated five success bullets at project framing. Four
+shipped outright; one is satisfied in spirit but cannot be literally
+verified yet because the homebrew-shipped binary has only existed for
+6 days.
+
+- **A new entry can be captured in under 10 seconds from an open
+  terminal.** ✅ Shipped via SPEC-003 (`brag add --title "..."`
+  one-shot, STAGE-001) and SPEC-010 (`brag add` no-args → `$EDITOR`
+  on templated markdown buffer, STAGE-002). End-to-end verified on
+  installed binary 2026-05-11.
+- **Past entries can be listed, filtered, searched, shown, edited,
+  and deleted from the CLI.** ✅ Full surface delivered:
+  SPEC-004/SPEC-007 (list + filter flags), SPEC-006 (show),
+  SPEC-009 (edit, with `$EDITOR` round-trip), SPEC-008 (delete with
+  `[y/N]` confirmation), SPEC-011 + SPEC-012 (FTS5 full-text
+  search), SPEC-013 (project column in list).
+- **`brag export` produces a readable Markdown report.** ✅ Shipped
+  via SPEC-014 (JSON shape + DEC-011) + SPEC-015 (markdown shape +
+  DEC-013), plus SPEC-017 (`brag add --json` stdin half + DEC-012)
+  closing the I/O loop. **Scope-adjusted (deliberate):**
+  `--format sqlite` deferred to backlog 2026-04-23 because
+  `cp ~/.bragfile/db.sqlite backup.db` already covers the
+  portable-backup use case named in the brief; SPEC-016 slot
+  preserved in stage file as deferral marker.
+- **`brew install bragfile` installs a working binary on macOS via
+  a public homebrew tap.** ✅ Shipped via SPEC-023 + v0.1.0 cut on
+  2026-05-11; cask at `homebrew-bragfile/Casks/bragfile.rb`;
+  `brew install jysf/bragfile/bragfile` works on macOS arm64.
+  **Caveat:** unsigned binary triggers macOS Gatekeeper on first
+  run; xattr workaround documented in README §Install + AGENTS.md
+  §4; full notarization deferred to backlog with an implementer
+  checklist at `docs/macos-notarization-checklist.md`.
+- **Author has logged ≥1 entry per working day for two consecutive
+  weeks using the shipped binary.** ⚠ **Satisfied in spirit; not
+  yet literally verifiable.** The dogfooding habit ran continuously
+  through PROJ-001 against locally-built binaries (`just install` →
+  `~/go/bin/brag`); `framework-feedback/process-feedback.md`
+  attests to ~20 entries across two weeks as of 2026-04-20. The
+  homebrew-shipped binary only exists since 2026-05-11 (6 working
+  days at project close on 2026-05-17), so the criterion's literal
+  "two consecutive weeks using the *shipped* binary" cannot yet be
+  satisfied. The habit and corpus are real; the binary-source
+  switch is recent. Recommend treating this as "shipped, with a
+  trailing-clock asterisk" rather than as deferred.
+
+### Three-sentence summary
+
+The brief's framing held: five stages shipped in framing order with
+no reordering, no stage cancelled mid-flight, and no DEC deprecated
+across the 23 specs and 14 DECs that landed; the only scope
+adjustments were small and explicitly logged (JSON export added to
+STAGE-003, `--format sqlite` deferred to backlog, three STAGE-004
+candidates retriaged out at framing time). STAGES 001–004 ran fast
+and smooth (002 shipped 12 days ahead of its target, 003 in 2
+wall-clock days, 004 in 1 day); STAGE-005 stretched to +6 days past
+the framing-time outside boundary because of a user-requested
+pre-distribution security review pause and a Phase 2 manual ship
+cycle that surfaced two operational gotchas (goreleaser
+dual-tag-on-same-commit; macOS Gatekeeper on unsigned binaries),
+both codified into AGENTS.md §4 rather than carried as silent debt.
+The deeper signal across the project is that the framework itself
+matured measurably mid-stream — ~150 lines of earned codifications
+landed in AGENTS.md §9/§10/§12/§4, and PROJ-001 produced the first
+"two opposing-outcome cases earn codification at N=2" data point
+(§12(b) design-time pre-flight at SPEC-024 ship), which is itself
+the strongest meta-finding of the project.
+
+### Reflection questions
+
+- **Did we deliver the outcome in "What This Project Is"?** Yes. A
+  local-first Go CLI exists on the public homebrew tap; an engineer
+  can capture, retrieve, filter, search, export, summarise, review,
+  and stat their brags from a single terminal; entries live at
+  `~/.bragfile/db.sqlite`; an AI agent has a checked-in JSON-Schema
+  contract and a reference Claude Code session-end hook to integrate
+  against without ever needing source. The two operationally-visible
+  caveats — macOS Gatekeeper xattr workaround and the 6-day clock
+  on the shipped-binary dogfooding criterion — are bounded and
+  documented rather than carried as silent debt.
+
+- **How many stages did it actually take?** 5 stages (exactly as
+  framed): STAGE-001 foundations → 002 capture-and-retrieval → 003
+  reports-and-AI-friendly-I/O → 004 rule-based polish → 005
+  distribution-and-cleanup. 23 specs shipped (4/8/4/3/4) plus 1
+  deferred slot (SPEC-016 → backlog). 14 DECs emitted, zero
+  deprecated, zero superseded. Project-vs-brief timeline: created
+  2026-04-19, target ship 2026-05-03, actual v0.1.0 cut 2026-05-11
+  (+8 days), project close 2026-05-17 (+14 days). Most of the
+  overrun lives in STAGE-005; STAGES 001–004 were on or ahead of
+  pace.
+
+- **What changed between starting and shipping?** Three categories
+  of change, all small and all explicitly logged at the moment they
+  happened.
+  - *Additive scope:* JSON export added to STAGE-003 scope
+    (2026-04-21) — useful for AI/programmatic consumers; emoji + UX
+    polish list accumulated 2026-04-21 then triaged out of STAGE-003
+    into a polish bucket; project column in `brag list` added to
+    STAGE-003 must-haves (2026-04-22) for daily-scan utility;
+    pre-distribution security review *inserted* into STAGE-005
+    mid-ship at user request (2026-04-26).
+  - *Subtractive scope:* `--format sqlite` export deferred to
+    backlog 2026-04-23 post-SPEC-013 because `cp` already covers
+    the portable-backup use case; emoji/remind/Claude-hook
+    re-triaged out of STAGE-004 to backlog or STAGE-005 on
+    2026-04-24 ("will I actually use this?" filter).
+  - *Framework maturation:* the most consequential change wasn't to
+    scope but to the framework itself — AGENTS.md grew the full
+    premise-audit family (inversion/count/status), audit-grep
+    cross-check, BSD-grep `--exclude-dir` warning, NOT-contains
+    self-audit, literal-artifact-as-spec, §10 push-discipline, §4
+    dual-tag and Gatekeeper recipes, and §12(b) design-time
+    pre-flight. None of these existed at project framing; all
+    earned through actual punch lists or post-incident reflections.
+
+- **Lessons that should update AGENTS.md, templates, or
+  constraints?** Almost everything codify-worthy landed at the spec
+  ship that surfaced it, not at this project close. Confirming
+  STAGE-005's no-codifications-at-stage-close stance at project
+  altitude: the lessons live where they were earned.
+  - **Already landed mid-project (no further action):**
+    - §9 audit family — separate buf/errBuf cross-leakage check
+      (SPEC-001); monotonic tie-break (SPEC-002); distinctive-token
+      help asserts (SPEC-005); markdown heading line-equality
+      (SPEC-015); ID-vs-timestamp freshness (SPEC-017); BSD-grep
+      `--exclude-dir` warning (SPEC-021).
+    - §9 premise-audit family — inversion-removal (SPEC-010),
+      count-bump (SPEC-011), status-change (SPEC-012); plus
+      audit-grep cross-check both sides (SPEC-018).
+    - §10 anchored-`.gitignore` for binaries (SPEC-003);
+      push-discipline between local commits and merge (codified
+      STAGE-005 framing 2026-04-25 after three confirming cases
+      SPEC-013 + SPEC-018 + SPEC-019).
+    - §12 prose-cannot-relax-blocking-constraint (SPEC-007);
+      decide-at-design-time when decidable (SPEC-018 after three
+      confirming cases); NOT-contains self-audit against
+      load-bearing prose (SPEC-019/020); literal-artifact-as-spec
+      (SPEC-021, three confirming cases 018/020/021);
+      design-time pre-flight (SPEC-024 §12(b), two
+      opposing-outcomes cases SPEC-023 D3 NEGATIVE + SPEC-024
+      POSITIVE).
+    - §4 dual-tag-on-same-commit recovery + macOS Gatekeeper
+      unsigned-binary note (both codified 2026-05-11 in `a15e36b`
+      mid-STAGE-005 ship).
+  - **Proposed at project close — one inline meta-rule (see
+    "Proposed AGENTS.md edits at project close" below).** The
+    §12(b) codification at N=2 was distinctive enough as a process
+    finding to warrant a meta-rule at project altitude.
+  - **NOT promoted at project close (carry to PROJ-002 framing):**
+    three WATCH-list items — §12 sub-rule (a) literal-test
+    assertion pre-flight; trust-but-verify agent push reports; §13
+    fresh-session working-tree state preservation. Each has a
+    documented third-case trigger and is mechanically adjacent to
+    a rule already at AGENTS.md scope; codifying at N=2-within-
+    one-spec would over-fit. Carry to PROJ-002 framing per
+    STAGE-005's already-explicit ask.
+  - **Premise-audit sub-template extraction.** Flagged at SPEC-015
+    ship, re-flagged at STAGE-004 ship, deferred at STAGE-005
+    framing on grounds STAGE-005 was mostly new-file work where
+    the audit-family rules have minimal trigger surface, deferred
+    at STAGE-005 close on grounds that SPEC-021 was the only
+    audit-heavy spec in the stage and its execution was clean.
+    Carry forward to PROJ-002 framing — that is the next project
+    where same-shape feature work will repeat the skeleton and
+    the extraction's value concentrates.
+
+- **What did we defer to the next project?** Two distinct
+  categories: feature scope and framework process. Feature scope
+  is enumerated in `backlog.md` (~20 entries with concrete
+  trigger conditions) — top-of-mind candidates for PROJ-002
+  framing intake are LLM-backed summaries (always was PROJ-002's
+  raison d'être), `--at <date>` backdating, the emoji passes (if
+  a palette is chosen), attachments, and the `--exclude-tag`
+  redaction filter. Framework process carry-forward: three WATCH-
+  list AGENTS.md candidates needing third confirming cases; the
+  premise-audit sub-template extraction; the STAGE-004
+  trim-when-structural-analogy heuristic still at soft N=1.
+  Accepted v0.1 debt deliberately not addressed: tags-
+  normalization migration; soft-delete + edit-history; macOS
+  notarization (with full implementer checklist at
+  `docs/macos-notarization-checklist.md` waiting for a trigger).
+  See "Carry-forward to PROJ-002" below for the synthesised
+  themes.
+
+### Carry-forward to PROJ-002
+
+- **Integration target is now a distributable binary, not a source
+  build.** PROJ-002's AI-assist surface designs against
+  `brew install jysf/bragfile/bragfile` as the install path; the
+  JSON Schema at `docs/brag-entry.schema.json` is the contract AI
+  agents validate against; `scripts/claude-code-post-session.sh`
+  is the reference implementation new integrations pattern off.
+  This is a substantive architectural inheritance, not a
+  formality.
+- **All 14 DECs apply forward unchanged.** Framing PROJ-002 should
+  not require re-litigating DEC-001..014; if any DEC needs
+  supersession the framing prompt will surface that explicitly. No
+  pre-emptive supersession review needed at project close.
+- **Three WATCH-list framework rules with documented third-case
+  triggers:** §12 sub-rule (a) (literal-test assertion pre-flight),
+  trust-but-verify agent push reports, §13 fresh-session
+  working-tree state preservation. PROJ-002's feature work in the
+  same shape as STAGE-002/003/004 is the natural next test bed.
+- **Premise-audit sub-template extraction** — third deferral. The
+  pattern earned three confirming applications in PROJ-001
+  (SPEC-010/011/012); a template extraction would compress the
+  skeleton across same-shape feature work. PROJ-002 framing should
+  decide at framing-time whether to extract before the first
+  feature spec or hold one more time.
+- **Backlog entries with PROJ-002-shaped triggers:** LLM-backed
+  summaries (explicitly PROJ-002 territory); attachments (heavy
+  scope, AI agents might need this); `--link`/`--refs` field
+  (AI consumers benefit from structured access); JSON envelope
+  + lenient mode + NDJSON batch (all pair with AI-piping
+  workflows). Backlog entries with later-project triggers stay
+  put.
+
+### Proposed AGENTS.md edits at project close
+
+**One inline meta-rule proposed for codification at project
+altitude.**
+
+> **Process lessons that produce paired opposing outcomes (a
+> costly miss + a cheap save) on the same mechanical sub-rule
+> earn codification at N=2; same-outcome confirming cases still
+> need N=3.** Earned across SPEC-023 D3 NEGATIVE (design skipped
+> pre-flight against `goreleaser check`; deprecated
+> `brews:`→`homebrew_casks:` keys surfaced at verify, cost a
+> recovery commit) and SPEC-024 §12(b) POSITIVE (design ran a
+> scratch Go program against cobra v1.10.2's `GenBashCompletion`,
+> caught a bash-marker assumption mid-design, zero deviations at
+> build). The two cases form a single mechanical proof — same
+> sub-rule, opposing outcomes — and that pairing carries more
+> evidence than three same-outcome confirming cases. Apply the
+> meta-rule at any future codification decision: paired
+> opposing-outcome data points clear the bar at N=2; otherwise
+> hold for N=3.
+
+This belongs in AGENTS.md §12 (the cycle-specific rules section
+where the codification machinery already lives), likely as a
+brief preamble or sidebar to the existing per-rule lessons. The
+coordinator commits the exact insertion point.
+
+**Otherwise, no new inline codifications at project close.** Every
+codify-worthy lesson earned during PROJ-001 was codified at the
+spec ship that surfaced it; three WATCH-list items stay watched;
+the STAGE-004 trim heuristic stays soft N=1; the premise-audit
+sub-template extraction stays deferred. STAGE-005's close confirmed
+this stance at stage altitude, and re-examination at project
+altitude reconfirms it.
+
+### Blog-post artifact disposition
+
+**Recommendation: (b) defer post-close as a project-close-adjacent
+follow-up.** The brief and STAGE-005 framing both named
+`docs/blog-spec-driven-bragfile.md` as a deliverable; it has NOT
+been drafted yet.
+
+Drafting now as part of project close would conflate two scoping
+acts (project-altitude reflection + audience-shaped write-up) and
+risk bloating the close commit. Deferring post-close keeps the
+project-close commit clean and gives the blog draft its own session
+with proper scope (audience, voice, length, publication target —
+none of which were settled at framing).
+
+Raw material already exists in three places: `framework-feedback/`
+(458 lines of agent-perspective notes on the framework itself), the
+five stage-level reflection sections (cumulative dense narrative),
+and the session log (chronological). A dedicated drafting session
+with these as inputs is a clean handoff.
+
+Recommend the coordinator opens a separate session post-close
+specifically to draft the blog post; publication target
+(HN / dev.to / Substack / personal site / GitHub Discussion)
+remains TBD per the in-repo-canonical convention named at STAGE-005
+framing.
+
+### Untracked-files disposition
+
+Three persistent untracked files have ridden the working tree across
+PROJ-001. Per-file recommendations:
+
+- **`framework-feedback/` (`process-feedback.md` + 
+  `scale-recommendations.md`, 458 lines total): COMMIT to 
+  `docs/framework-feedback/`.** Both files explicitly open with
+  "Intended for the template author; not part of the bragfile
+  project itself" — they are durable artifacts about the
+  spec-driven framework, written from the agent's perspective.
+  They are exactly the kind of evidence that should be reachable
+  from `git log` when the template author later refines the
+  framework. Committing under `docs/framework-feedback/` keeps
+  them adjacent to the rest of the docs without claiming they're
+  project documentation in the user-facing sense.
+- **`revew1.md` (155 lines): DELETE.** The file is a one-shot
+  weekly-review prompt template that hardcodes file paths for a
+  specific point-in-time spec list (top 9 specs of STAGE-003
+  era). Its content is derivable from `FIRST_SESSION_PROMPTS.md`
+  Prompt 6 plus `just status`. The session log already flagged
+  this category as a cleanup candidate ("Untracked files worth
+  cleaning up eventually: framework-feedback/ … and
+  status-after-nine-specs.md"). The weekly-review machinery as a
+  whole is a framework concern, not a per-project artifact; if
+  the user wants to invoke Prompt 6 again, regenerating from
+  `FIRST_SESSION_PROMPTS.md` is the right path.
+- **`status-after-nine-specs.md` (39 lines): DELETE.** Confirmed
+  stale — a `just status` snapshot from the SPEC-009 era (project
+  is now at SPEC-024 ship + STAGE-005 close + v0.1.0 cut).
+  Explicitly flagged in the session log as a stale snapshot
+  obsoleted by the session log itself.
+
+The coordinator runs these as three small commits (or bundled into
+the project-close commit) per their judgement.
+
+### Recommendation: mark PROJ-001 shipped and frame PROJ-002
+
+**Ship-and-frame.** "Feature-complete bragfile MVP on homebrew" is
+the right scope for PROJ-001 and the brief's success criteria are
+substantively met (with the trailing-clock asterisk on the
+dogfooding criterion explicitly named above). Extending PROJ-001
+into a "phase 2" would violate the framework's hierarchy rule that
+*specs do not cross project boundaries* (AGENTS.md §2) — and
+PROJ-002's AI-assist scope brings genuinely different architectural
+concerns (API-key strategy, network boundary, prompt design,
+model-choice strategy, latency/cost tradeoffs, offline-first story)
+that warrant their own framing session and their own initial DEC
+set.
+
+Concretely: STAGE-005's close already explicitly enumerated PROJ-002
+framing as the next step; the brief's "Enables" section names
+PROJ-002 by reference; the backlog has been triaged with PROJ-002
+markers since 2026-04-22; and the homebrew binary that PROJ-002's
+AI agents will integrate against now exists. Frame PROJ-002 in a
+separate Prompt 1a cycle.
+
+### Project summary
+
+PROJ-001 delivered the bragfile MVP in five stages across roughly
+four weeks of wall-clock (2026-04-19 brief → 2026-05-11 v0.1.0 cut
+→ 2026-05-17 project close), shipping 23 specs and 14 DECs with
+zero DEC deprecations and zero stage reorderings. The brief's
+framing held intact; scope adjustments were small, additive or
+clean deferrals, and explicitly logged at the moment they happened.
+The most consequential thing that didn't fit cleanly into any
+stage's reflection: the framework itself matured measurably mid-
+stream, with ~150 lines of earned AGENTS.md codifications, the
+first appearance of the §12 literal-artifact-as-spec pattern in
+three confirming cross-format applications, and the first
+"opposing-outcomes-at-N=2" codification (§12(b)) which generalises
+into the project-altitude meta-rule proposed above. The two
+operational caveats on the shipped binary (macOS Gatekeeper xattr,
+6-day dogfooding clock) are bounded and documented; three WATCH-list
+framework patterns and one sub-template extraction carry forward to
+PROJ-002 framing rather than getting force-codified at N=2 same-
+outcome. PROJ-001 closes; PROJ-002 frames next.

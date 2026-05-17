@@ -369,6 +369,26 @@ literal-artifact-as-spec rule above: design-time pre-flight is what makes
 literal was already validated against external reality at the moment it was
 embedded.
 
+**Codification meta-rule: paired opposing-outcome cases earn codification at
+N=2; same-outcome confirming cases still need N=3.** Earned at PROJ-001 close
+(2026-05-17) from the §12(b) codification itself, which is the project's
+canonical instance: SPEC-023 verify D3 NEGATIVE (design skipped pre-flight
+against `goreleaser check`; deprecated `brews:` → `homebrew_casks:` keys
+surfaced at verify, paid a recovery commit) paired with SPEC-024 design
+§12(b) POSITIVE (design ran a scratch Go program against cobra v1.10.2's
+`GenBashCompletion`, caught a bash-marker assumption mid-design, zero
+deviations at build). Two cases, opposing outcomes, same mechanical sub-rule
+— that pairing carries more evidence than three same-outcome confirming
+cases because each outcome independently constrains the rule's shape: the
+negative case proves "skipping the pre-flight has a cost," the positive
+case proves "doing the pre-flight prevents the cost." Apply the meta-rule
+at any future codification decision: when a candidate rule has produced
+both a costly miss *and* a cheap save on the same mechanical surface,
+clear the bar at N=2; otherwise hold for N=3 (the same-outcome confirming-
+cases bar that codified §9 audit family, §10 push discipline, §12
+NOT-contains, §12 literal-artifact-as-spec, and most other AGENTS.md
+addenda).
+
 ### During **build**
 
 Start a **new Claude session**. Do not continue from the design session.
