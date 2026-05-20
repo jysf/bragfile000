@@ -12,10 +12,10 @@ Numbered in the order they were brainstormed; publish order may differ.
 
 | # | Slug | Status | Notes |
 |---|---|---|---|
-| 1 | `why-bragfile.md` | not yet drafted | Motivation. Why keep a brag log at all; the gap between "I shipped a lot" and "I can articulate what I shipped"; the local-first / no-cloud framing. |
+| 1 | `why-bragfile.md` | **draft** | Motivation. Why keep a brag log at all; the gap between "I shipped a lot" and "I can articulate what I shipped"; the local-first / no-cloud framing. |
 | 2 | `who-is-bragfile-for.md` | not yet drafted | Audience targeting. Mid+ career engineers, performance-review-anxious folks, the "I forget what I worked on three months ago" crowd. Honest about who it's NOT for. |
 | 3 | `using-brag-with-ai-tools.md` | not yet drafted | Working title `using-brag-with-claude-codex-cursor.md`. The AI-integration story: `docs/brag-entry.schema.json` as the contract, `scripts/claude-code-post-session.sh` as the reference hook, `examples/brag-slash-command.md` as the template. Concrete walkthroughs for Claude Code + Cursor + Codex if applicable. |
-| 4 | `how-brag-was-built.md` | not yet drafted | Process narrative. The spec-driven framework (Repo → Project → Stage → Spec → Cycle), ~4 weeks from brief to v0.1.0, 5 stages × 23 specs × 14 DECs. This was the deferred `docs/blog-spec-driven-bragfile.md` artifact mentioned in PROJ-001's brief — new canonical path. |
+| 4 | `how-brag-was-built.md` | **draft** | Process narrative. The spec-driven framework (Repo → Project → Stage → Spec → Cycle), ~4 weeks from brief to v0.1.0, 5 stages × 23 specs × 14 DECs. This was the deferred `docs/blog-spec-driven-bragfile.md` artifact mentioned in PROJ-001's brief — new canonical path. |
 | 5 | `capturing-a-good-brag-entry.md` | not yet drafted | Practical how-to. Field-by-field walkthrough; impact-framing prompts; examples of strong vs weak entries. Closes the gap between #2 (who) and #3 (AI capture). |
 | 6 | `the-weekly-brag-review-rhythm.md` | not yet drafted | Workflow post on `brag review --week`, piping into Claude for synthesis, the rhythm itself. Highlights an underused feature. |
 | 7 | `why-pure-go-sqlite.md` | not yet drafted | Technical deep-dive on DEC-001 + `modernc.org/sqlite` + CGO-free distribution. Different audience (Go folks); SEO-discoverable. Probably 600-800 words. |
