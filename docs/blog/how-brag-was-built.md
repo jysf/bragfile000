@@ -7,11 +7,7 @@ status: draft
 
 # How brag was built
 
-bragfile is a small Go CLI — a few thousand lines, SQLite-backed,
-nothing exotic. What's more interesting than the tool is how it got
-built: through a spec-driven development process, with Claude doing the
-design and implementation work across structured, deliberately
-separated sessions, and a human in the orchestration and review seat.
+bragfile is a small Go CLI — a few thousand lines, SQLite-backed. What's more interesting than the tool is how it got built: through a spec-driven development process, with Claude doing the design and implementation work across structured, deliberately separated sessions, and a human in the orchestration and review seat.
 
 This is the build narrative. Roughly four weeks, five stages,
 twenty-three specs.
@@ -48,7 +44,7 @@ a fresh Claude session.** The design session writes the spec. A new
 session — which has never seen the design conversation — does the build.
 A third new session does the verify review.
 
-## Why fresh sessions — the honest version
+## Why fresh sessions?
 
 The tempting explanation is "different sessions are different
 perspectives, so they catch more bugs." That's partly true but it isn't
@@ -94,6 +90,65 @@ in framing order with no reordering:
 Twenty-three specs shipped. Fourteen architectural decisions recorded,
 and not one of them deprecated over the life of the project. Version
 0.1.0 hit the public Homebrew tap on May 11.
+
+## The shape of the binary
+
+The architecture stayed boringly conventional. A Cobra CLI on top of a
+typed storage package, with thin per-subcommand files in between.
+Everything that needed the database went through one
+`internal/storage.Store` type; nothing else touched SQL. The interesting
+thing isn't the shape — it's what got *added* over five stages without
+bending it: an editor-launch helper, a markdown/JSON exporter, a
+rule-based digest package, an FTS5 ride-along table, a stdin JSON
+input path, shell completions — each new spec extended the original
+architecture rather than reshaping it.
+
+```mermaid
+graph TD
+    User[User shell] -->|argv| Main[cmd/brag/main.go<br/>cobra root + ldflags version]
+    Stdin[stdin JSON] -.->|brag add --json| Capture
+    Editor[$EDITOR<br/>vim / nvim / code / ...] -.->|launched as subprocess| EditorPkg
+
+    Main --> Config[internal/config<br/>DB path: flag → env → default]
+    Main --> Capture[Capture<br/>add / add --json / edit]
+    Main --> Retrieve[Retrieve<br/>list / show / search]
+    Main --> Digest[Digest<br/>summary / review / stats]
+    Main --> ExportCmd[Export<br/>export --format md / json]
+    Main --> DeleteCmd[Delete<br/>delete + y/N confirm]
+    Main --> Completion[Completion<br/>completion zsh / bash / fish]
+
+    Capture --> EditorPkg[internal/editor<br/>$EDITOR launch + tempfile + parse]
+    Capture --> Store
+    Retrieve --> Store
+    Digest --> Aggregate[internal/aggregate<br/>ByType / ByProject / Streak / Span]
+    Aggregate --> Store
+    ExportCmd --> ExportPkg[internal/export<br/>markdown + JSON renderers]
+    ExportPkg --> Store
+    DeleteCmd --> Store
+    Completion -.cobra GenZsh/Bash/FishCompletion.-> Stdout[stdout<br/>shell-completion script]
+
+    Config -.path.-> Store
+    Store[internal/storage.Store<br/>typed API; no SQL leaks upward]
+    Store -->|database/sql| Driver[modernc.org/sqlite<br/>pure-Go, no CGO]
+    Driver --> DB[(~/.bragfile/db.sqlite<br/>mode 0600<br/>entries + entries_fts + schema_migrations)]
+    Store -.embeds.-> Migrations[migrations/0001_initial.sql<br/>migrations/0002_add_fts.sql<br/>via embed.FS]
+    Migrations -.applied on Open inside tx.-> DB
+
+    classDef cli fill:#e8f4ff,stroke:#5b8dbe,color:#1a3a5c
+    classDef helper fill:#fff4d6,stroke:#b8941f,color:#5a4a0a
+    classDef storage fill:#ffe8e8,stroke:#bc4a4a,color:#5c1a1a
+    classDef external fill:#f0f0f0,stroke:#999,stroke-dasharray:5 5,color:#444
+    class Main,Capture,Retrieve,Digest,ExportCmd,DeleteCmd,Completion cli
+    class EditorPkg,Aggregate,ExportPkg,Config helper
+    class Store,Driver,Migrations storage
+    class User,Stdin,Editor,DB,Stdout external
+```
+
+Blue = CLI command surface. Yellow = internal helper packages. Red =
+storage layer (the I/O boundary). Grey-dashed = external boundary
+(user, subprocesses, files, stdin/stdout). The canonical version of
+this diagram — plus a per-package responsibility table — lives in
+[`docs/architecture.md`](../architecture.md).
 
 ## AGENTS.md — the rulebook that wrote itself
 

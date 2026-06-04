@@ -18,20 +18,51 @@ without changing this shape.
 
 ```mermaid
 graph TD
-    User[User shell] -->|argv| Main[cmd/brag/main.go<br/>cobra root]
-    Main --> AddCmd[internal/cli/add.go]
-    Main --> ListCmd[internal/cli/list.go]
-    Main --> OtherCmds[show / edit / delete / search<br/>shipped in STAGE-002<br/><br/>export shipped in STAGE-003<br/>summary STAGE-004]
-    AddCmd --> Store[internal/storage.Store]
-    ListCmd --> Store
-    OtherCmds --> Store
-    Main --> Config[internal/config<br/>DB path resolution]
+    User[User shell] -->|argv| Main[cmd/brag/main.go<br/>cobra root + ldflags version]
+    Stdin[stdin JSON] -.->|brag add --json| Capture
+    Editor[$EDITOR<br/>vim / nvim / code / ...] -.->|launched as subprocess| EditorPkg
+
+    Main --> Config[internal/config<br/>DB path: flag → env → default]
+    Main --> Capture[Capture<br/>add / add --json / edit]
+    Main --> Retrieve[Retrieve<br/>list / show / search]
+    Main --> Digest[Digest<br/>summary / review / stats]
+    Main --> ExportCmd[Export<br/>export --format md / json]
+    Main --> DeleteCmd[Delete<br/>delete + y/N confirm]
+    Main --> Completion[Completion<br/>completion zsh / bash / fish]
+
+    Capture --> EditorPkg[internal/editor<br/>$EDITOR launch + tempfile + parse]
+    Capture --> Store
+    Retrieve --> Store
+    Digest --> Aggregate[internal/aggregate<br/>ByType / ByProject / Streak / Span]
+    Aggregate --> Store
+    ExportCmd --> ExportPkg[internal/export<br/>markdown + JSON renderers]
+    ExportPkg --> Store
+    DeleteCmd --> Store
+    Completion -.cobra GenZsh/Bash/FishCompletion.-> Stdout[stdout<br/>shell-completion script]
+
     Config -.path.-> Store
-    Store -->|database/sql| Driver[modernc.org/sqlite<br/>pure-Go driver]
-    Driver --> DB[(~/.bragfile/db.sqlite)]
-    Store -.embeds.-> Migrations[internal/storage/migrations/*.sql<br/>via embed.FS]
-    Migrations -.applied on Open.-> DB
+    Store[internal/storage.Store<br/>typed API; no SQL leaks upward]
+    Store -->|database/sql| Driver[modernc.org/sqlite<br/>pure-Go, no CGO]
+    Driver --> DB[(~/.bragfile/db.sqlite<br/>mode 0600<br/>entries + entries_fts + schema_migrations)]
+    Store -.embeds.-> Migrations[migrations/0001_initial.sql<br/>migrations/0002_add_fts.sql<br/>via embed.FS]
+    Migrations -.applied on Open inside tx.-> DB
+
+    classDef cli fill:#e8f4ff,stroke:#5b8dbe,color:#1a3a5c
+    classDef helper fill:#fff4d6,stroke:#b8941f,color:#5a4a0a
+    classDef storage fill:#ffe8e8,stroke:#bc4a4a,color:#5c1a1a
+    classDef external fill:#f0f0f0,stroke:#999,stroke-dasharray:5 5,color:#444
+    class Main,Capture,Retrieve,Digest,ExportCmd,DeleteCmd,Completion cli
+    class EditorPkg,Aggregate,ExportPkg,Config helper
+    class Store,Driver,Migrations storage
+    class User,Stdin,Editor,DB,Stdout external
 ```
+
+Diagram conventions: blue = CLI command surface (Cobra); yellow =
+internal helper packages; red = storage layer (the I/O boundary);
+grey-dashed = external boundary (user, subprocesses, files, stdin/
+stdout). The twelve subcommands are clustered into six functional
+groups rather than listed individually — see the per-command
+contracts in [./api-contract.md](./api-contract.md).
 
 ### Responsibilities
 
@@ -41,8 +72,9 @@ graph TD
 | `internal/config` | Resolves the DB path from `--db` flag → `BRAGFILE_DB` env → `~/.bragfile/db.sqlite`. Creates parent directory on first use. Single source of truth for path resolution. |
 | `internal/cli` | One file per subcommand. Each exports a `func New<Name>Cmd(deps) *cobra.Command`. Depends on `storage.Store` (an interface or concrete type) for all persistence. Does no SQL. |
 | `internal/storage` | `Store` struct wrapping `*sql.DB`. Embeds migration SQL files and applies them on `Open`. Exposes typed methods (`Add`, `List`, `Get`, `Update`, `Delete`, `Search`) — no SQL leaks upward. Owns the `Entry` type. Plus an FTS5 ride-along table `entries_fts` that indexes title, description, tags, project, impact and stays in sync via SQL triggers (SPEC-011). |
-| `internal/editor` | (STAGE-002) Launches `$EDITOR` against a templated markdown buffer; parses front-matter on save. |
+| `internal/editor` | (STAGE-002) Launches `$EDITOR` against a templated markdown buffer; parses front-matter on save. Used by `add` (no-args mode) and `edit`. |
 | `internal/export` | (STAGE-003) Markdown-report and JSON exporters (`brag export --format markdown\|json`). |
+| `internal/aggregate` | (STAGE-004) Rule-based digest helpers — `ByType` / `ByProject` / `GroupEntriesByProject` / `Streak` / `MostCommon` / `Span` / `rangeCutoff`. Shared by `summary`, `review`, and `stats` per DEC-014's rule-based output envelope. No SQL — operates over `[]Entry` returned by `Store`. |
 
 ## Key Design Principles
 
