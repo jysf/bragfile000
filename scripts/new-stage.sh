@@ -24,7 +24,10 @@ if [ -z "$PROJECT_DIR" ]; then
     die "Project not found: ${PROJECT_ID}"
 fi
 
-STAGE_ID=$(next_id STAGE "${PROJECT_DIR}/stages")
+# Stage IDs are repo-global and monotonic (like DEC-* and SPEC-*), not
+# reset per project — so search all projects, not just this one. This
+# keeps every STAGE-NNN globally unique across the repo's history.
+STAGE_ID=$(next_id STAGE "${REPO_ROOT}/projects")
 SLUG=$(slugify "$TITLE")
 STAGE_FILE="${PROJECT_DIR}/stages/${STAGE_ID}-${SLUG}.md"
 

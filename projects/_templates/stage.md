@@ -4,7 +4,7 @@
 # It has a spec backlog and ships as a unit when the backlog is done.
 
 stage:
-  id: STAGE-XXX                     # stable, zero-padded within the project
+  id: STAGE-XXX                     # stable, zero-padded, repo-global (never reused)
   status: proposed                  # proposed | active | shipped | cancelled | on_hold
   priority: medium                  # critical | high | medium | low
   target_complete: null             # optional: YYYY-MM-DD

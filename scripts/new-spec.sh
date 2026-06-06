@@ -33,7 +33,10 @@ if [ -z "$STAGE_FILE" ]; then
     die "Stage not found in ${PROJECT_ID}: ${STAGE_ID}"
 fi
 
-SPEC_ID=$(next_id SPEC "${PROJECT_DIR}/specs")
+# Spec IDs are repo-global and monotonic (like DEC-* and STAGE-*), not
+# reset per project — so search all projects, not just this one. This
+# keeps every SPEC-NNN globally unique across the repo's history.
+SPEC_ID=$(next_id SPEC "${REPO_ROOT}/projects")
 SLUG=$(slugify "$TITLE")
 SPEC_FILE="${PROJECT_DIR}/specs/${SPEC_ID}-${SLUG}.md"
 VARIANT=$(get_variant)

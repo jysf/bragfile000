@@ -53,6 +53,17 @@ binds PROJ-002 as well.
 
 **Specs do not cross project boundaries.**
 
+**ID numbering is repo-global and monotonic.** `PROJ-*`, `STAGE-*`,
+`SPEC-*`, and `DEC-*` IDs are all zero-padded, never reused, and **do
+not reset per project** — PROJ-002's first stage is `STAGE-006`
+(continuing PROJ-001's `STAGE-001`–`STAGE-005`), its first spec is
+`SPEC-025`. This keeps every ID globally unique, so a cross-project
+reference never needs a `PROJ-` qualifier to disambiguate. (Settled at
+PROJ-002 framing, 2026-06-05 — the first multi-project test surfaced
+that `new-stage.sh`/`new-spec.sh` were scoping `next_id` per-project,
+which would have reset both to `001`; the scripts now search repo-wide,
+matching how `DEC-*` already numbered.)
+
 ---
 
 ## 3. Tech Stack
