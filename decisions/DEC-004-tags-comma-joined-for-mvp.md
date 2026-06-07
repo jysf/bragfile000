@@ -18,7 +18,7 @@ repo:
 
 created_at: 2026-04-19
 supersedes: null
-superseded_by: null
+superseded_by: DEC-015
 
 tags:
   - data-model
@@ -26,6 +26,13 @@ tags:
 ---
 
 # DEC-004: Store tags as a comma-joined TEXT column for MVP
+
+> **Superseded by [DEC-015](DEC-015-polymorphic-tags-normalization.md)
+> (2026-06-06).** DEC-004's two named revisit triggers — "tag rename
+> becomes a user ask" and "a second consumer appears" — were both
+> tripped by PROJ-002, so DEC-015 normalizes tags into a polymorphic
+> `tags` + `taggings` model. This is DEC-004 firing as designed, not a
+> reversal. The text below is preserved as the historical MVP record.
 
 ## Decision
 

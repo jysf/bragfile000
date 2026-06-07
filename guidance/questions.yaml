@@ -43,6 +43,34 @@ questions:
       FTS5 lands in SPEC-011 — kept this question for the record,
       but the MVP-scale answer is "comma-joined stays".
 
+  - id: tag-ordering-projection
+    question: "Should the reconstructed Entry.Tags projection preserve each entry's original tag order (via the taggings.position column) or is name-ASC sufficient — i.e. can we drop the position column?"
+    priority: low
+    status: open
+    raised_by: claude
+    raised_at: 2026-06-06
+    assigned_to: null
+    notes: |
+      DEC-015 (SPEC-025) reconstructs Entry.Tags via
+      GROUP_CONCAT(tags.name, ',' ORDER BY taggings.position). The
+      `position` column was added so a canonical-but-unsorted input
+      ("perf,auth") round-trips byte-identically instead of being
+      sorted to "auth,perf". This is the only DEC-015 sub-choice below
+      0.8 confidence (~0.75).
+
+      The catch: every tag string that currently round-trips through the
+      Store in the test corpus (and, as far as we can tell, in practice)
+      is already alphabetically ordered, so `name ASC` ordering with NO
+      position column would pass every existing test today. `position`
+      is therefore insurance whose value is not yet observable.
+
+      Revisit trigger: if, by the end of PROJ-002 (or first real v0.2.x
+      dogfooding), no consumer depends on per-entry tag order AND no
+      production entry is observed with unsorted tags, drop the
+      `position` column in a follow-up migration and switch the
+      projection to `ORDER BY tags.name`. Until then, keep `position` —
+      it is the byte-faithful choice for "lossless and invisible."
+
   - id: shareable-ids
     question: "Will we ever need IDs that are portable across machines (sync, sharing, export-import), and if so when do we add a ULID column alongside the integer PK?"
     priority: low
