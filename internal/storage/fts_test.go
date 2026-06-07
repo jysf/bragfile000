@@ -47,8 +47,10 @@ func TestFTS_SmokeCreateUnderPureGoDriver(t *testing.T) {
 }
 
 // TestFTS_VirtualTableShape asserts the entries_fts virtual table
-// exists with the expected indexed columns, external-content linkage
-// to entries, and default (unicode61) tokenizer.
+// exists with the expected indexed columns, is a regular (own-content)
+// FTS5 table (no external-content markers), and uses the default
+// (unicode61) tokenizer. Rewritten at SPEC-025 from external-content
+// shape to regular shape.
 func TestFTS_VirtualTableShape(t *testing.T) {
 	_, path := newTestStore(t)
 	db := openRawDB(t, path)
@@ -70,19 +72,21 @@ func TestFTS_VirtualTableShape(t *testing.T) {
 			t.Errorf("entries_fts DDL missing column %q; ddl=%q", col, ddl)
 		}
 	}
-	if !strings.Contains(ddl, "content='entries'") {
-		t.Errorf("entries_fts DDL missing content='entries'; ddl=%q", ddl)
+	// Regular (own-content) FTS5 — no external-content markers.
+	if strings.Contains(ddl, "content='entries'") {
+		t.Errorf("entries_fts DDL must not have content='entries' (now regular table); ddl=%q", ddl)
 	}
-	if !strings.Contains(ddl, "content_rowid='id'") {
-		t.Errorf("entries_fts DDL missing content_rowid='id'; ddl=%q", ddl)
+	if strings.Contains(ddl, "content_rowid='id'") {
+		t.Errorf("entries_fts DDL must not have content_rowid='id' (now regular table); ddl=%q", ddl)
 	}
 	if strings.Contains(ddl, "tokenize") {
 		t.Errorf("entries_fts DDL should use the default tokenizer; ddl=%q", ddl)
 	}
 }
 
-// TestFTS_TriggersExistAfterMigration asserts the three FTS-sync
-// triggers exist (and no others).
+// TestFTS_TriggersExistAfterMigration asserts the six FTS-sync triggers
+// exist (and no others). Rewritten at SPEC-025 to the new topology:
+// entries ×3, taggings ×2, tags ×1.
 func TestFTS_TriggersExistAfterMigration(t *testing.T) {
 	_, path := newTestStore(t)
 	db := openRawDB(t, path)
@@ -105,7 +109,8 @@ func TestFTS_TriggersExistAfterMigration(t *testing.T) {
 		t.Fatalf("rows.Err: %v", err)
 	}
 
-	want := []string{"entries_ad", "entries_ai", "entries_au"}
+	// Lexicographic sort: 'taggings_*' < 'tags_*' (g < s at position 3).
+	want := []string{"entries_ad", "entries_ai", "entries_au", "taggings_ad", "taggings_ai", "tags_au"}
 	sort.Strings(got)
 	if len(got) != len(want) {
 		t.Fatalf("triggers = %v, want %v", got, want)
@@ -141,8 +146,8 @@ func TestFTS_BothMigrationsTracked(t *testing.T) {
 		t.Fatalf("rows.Err: %v", err)
 	}
 
-	want := []string{"0001_initial", "0002_add_fts"}
-	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+	want := []string{"0001_initial", "0002_add_fts", "0003_normalize_tags"}
+	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] || got[2] != want[2] {
 		t.Fatalf("schema_migrations = %v, want %v", got, want)
 	}
 }
@@ -256,13 +261,13 @@ func TestFTS_MigrationBackfillsExistingRows(t *testing.T) {
 		}
 	}
 
-	// Step 4: schema_migrations now contains both versions.
+	// Step 4: schema_migrations now contains all three versions.
 	var count int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&count); err != nil {
 		t.Fatalf("count schema_migrations: %v", err)
 	}
-	if count != 2 {
-		t.Fatalf("schema_migrations count = %d, want 2", count)
+	if count != 3 {
+		t.Fatalf("schema_migrations count = %d, want 3", count)
 	}
 }
 
@@ -586,5 +591,79 @@ func TestSearch_ZeroLimitMeansUnlimited(t *testing.T) {
 	}
 	if len(neg) != 7 {
 		t.Errorf("Search(.., -1) len = %d, want 7", len(neg))
+	}
+}
+
+// --- SPEC-025: FTS re-topology tests ---
+
+// TestFTS_ReSyncsOnTaggingMembership verifies that adding a tag to an
+// entry via Update causes entries_fts.tags to reflect the new tag, so
+// Store.Search on the new tag returns the entry.
+func TestFTS_ReSyncsOnTaggingMembership(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	e, err := s.Add(Entry{Title: "membership-row"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+
+	if _, err := s.Update(e.ID, Entry{Title: "membership-row", Tags: "newtag"}); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	results, err := s.Search("newtag", 0)
+	if err != nil {
+		t.Fatalf("Search(newtag): %v", err)
+	}
+	if len(results) != 1 || results[0].ID != e.ID {
+		t.Errorf("Search(newtag) = %v, want [{ID: %d}]", results, e.ID)
+	}
+}
+
+// TestFTS_ReSyncsOnTagRename verifies that renaming a tag via raw SQL on
+// the tags table (driving the tags_au trigger) updates entries_fts so
+// the new name is searchable and the old name is no longer found by tag.
+func TestFTS_ReSyncsOnTagRename(t *testing.T) {
+	s, path := newTestStore(t)
+
+	e, err := s.Add(Entry{Title: "rename-row", Tags: "auth,perf"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+
+	// Drive the tags_au trigger directly (SPEC-026 ships the command).
+	if _, err := db.Exec(
+		`UPDATE tags SET name = 'authz' WHERE name = 'auth'`,
+	); err != nil {
+		t.Fatalf("rename tag: %v", err)
+	}
+
+	// New name is searchable.
+	found, err := s.Search("authz", 0)
+	if err != nil {
+		t.Fatalf("Search(authz): %v", err)
+	}
+	if len(found) != 1 || found[0].ID != e.ID {
+		t.Errorf("Search(authz) = %v, want entry %d", found, e.ID)
+	}
+
+	// Old token "auth" no longer matches via the tags column (title-free fixture).
+	notFound, err := s.Search("auth", 0)
+	if err != nil {
+		t.Fatalf("Search(auth): %v", err)
+	}
+	// The FTS may still match on "authz" containing "auth" as a prefix if
+	// the tokenizer includes it; but since our token is exact-word "auth" and
+	// the new stored value is "authz", there should be no match.
+	for _, r := range notFound {
+		if r.ID == e.ID {
+			t.Errorf("Search(auth) still returns entry %d after rename to authz", e.ID)
+		}
 	}
 }

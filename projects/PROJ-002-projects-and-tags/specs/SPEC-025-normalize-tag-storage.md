@@ -7,7 +7,7 @@
 task:
   id: SPEC-025
   type: story                      # epic | story | task | bug | chore
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: L                    # S | M | L  (L accepted, not split — see Context)
@@ -817,28 +817,28 @@ Keep all the existing error wrapping; wrap tx begin/exec/commit failures.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-025-normalize-tag-storage`
+- **PR (if applicable):** TBD (opened after verify)
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any beyond DEC-015, which was emitted at design)
+  - none beyond DEC-015, which was emitted at design
 - **Deviations from spec:**
-  - [list]
+  - Trigger sorted-order in `TestFTS_TriggersExistAfterMigration`: spec listed `tags_au` before `taggings_*` but lexicographic order is `taggings_*` < `tags_*` (at byte 3, 'g' < 's'). Fixed the test `want` slice — not a deviation in the migration itself, only a test fixture correction.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - none
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — The trigger-name sorted order in §11 was listed incorrectly (`tags_au, taggings_ad, taggings_ai`). This created a test failure that needed investigation before the fix was trivial. Everything else in the spec was precise enough to implement directly.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — The position-base gotcha (ETL is 1-based because the sentinel row starts at 0; Go write path is 0-based) was documented in the spec header but not echoed in the taggings INSERT helper section. A brief note there would have made the `insertTaggings` implementation self-contained to read.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Run the migration pre-flight against the actual test corpus _before_ writing the trigger-exists test, so the expected sorted list is derived from observation rather than typed by hand. The spec's §12(b) pre-flight is exactly the right tool; the trigger test should cite its output directly.
 
 ---
 

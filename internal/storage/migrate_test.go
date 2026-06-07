@@ -146,3 +146,60 @@ func TestMigrate_Idempotent(t *testing.T) {
 		t.Fatalf("schema_migrations count = %d, want 2", count)
 	}
 }
+
+// TestOpen_TagSchemaExists asserts the normalized tag tables and their
+// indexes exist after Open applies all migrations (SPEC-025).
+func TestOpen_TagSchemaExists(t *testing.T) {
+	_, path := newTestStore(t)
+	db := openRawDB(t, path)
+
+	for _, tbl := range []string{"tags", "taggings"} {
+		var got string
+		err := db.QueryRow(
+			"SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?", tbl,
+		).Scan(&got)
+		if err != nil {
+			t.Errorf("table %q missing: %v", tbl, err)
+		}
+	}
+
+	for _, idx := range []string{"idx_taggings_tag", "idx_taggings_taggable"} {
+		var got string
+		err := db.QueryRow(
+			"SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?", idx,
+		).Scan(&got)
+		if err != nil {
+			t.Errorf("index %q missing: %v", idx, err)
+		}
+	}
+}
+
+// TestOpen_TagsColumnDropped asserts entries.tags no longer exists after
+// the 0003 migration (SPEC-025).
+func TestOpen_TagsColumnDropped(t *testing.T) {
+	_, path := newTestStore(t)
+	db := openRawDB(t, path)
+
+	rows, err := db.Query("PRAGMA table_info(entries)")
+	if err != nil {
+		t.Fatalf("PRAGMA table_info: %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name, typ string
+		var notnull int
+		var dflt interface{}
+		var pk int
+		if err := rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk); err != nil {
+			t.Fatalf("scan PRAGMA row: %v", err)
+		}
+		if name == "tags" {
+			t.Errorf("entries.tags column still present after 0003 migration")
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("rows.Err: %v", err)
+	}
+}
