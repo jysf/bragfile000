@@ -7,7 +7,7 @@
 task:
   id: SPEC-025
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: L                    # S | M | L  (L accepted, not split — see Context)
@@ -847,11 +847,33 @@ Process-focused: how did the build go? What friction did the spec create?
 *Appended during the **ship** cycle. Outcome-focused reflection, distinct
 from the process-focused build reflection above.*
 
+Shipped clean: PR #36 merged at `2bb81ec`, CI green on macOS + ubuntu,
+verify approved first-pass at `362adc3`. The atomic-migration scope
+decision held — one `0003_*` transaction did schema + ETL + FTS
+re-topology + column drop with no half-migrated states. DEC-015 held at
+0.80; no new decisions needed at build.
+
 1. **What would I do differently next time?**
-   — <answer>
+   — The spec's Failing Tests section embedded the FTS trigger want-list
+   in non-alphabetical order (`tags_au` before `taggings_*`); the build
+   had to correct it. The §12(b) pre-flight ran the *migration SQL*
+   against the real driver but not the test's *expected sorted-list
+   literal*. Next time, also run expected-value collections (sorted name
+   lists, counts) through their comparison tool at design — extend the
+   pre-flight to test assertions, not just the SQL under test.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Yes: the §12(a) WATCH-list rule ("run embedded test assertions
+   against embedded literals at design time") just earned its **third**
+   same-outcome confirming case (this trigger-list ordering miss;
+   N=1/N=2 were in SPEC-023), crossing the N=3 codification bar from the
+   PROJ-001-close meta-rule. **Proposed: codify §12(a) into AGENTS.md §12**
+   (coordinator to land as a separate addendum). No constraint or
+   decision change — DEC-015 and all referenced DECs held.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None new. Orphan-tag GC (an `Update` can leave a `tags` row with
+   zero `taggings`) is already scoped to **SPEC-026**; confirm at its
+   design. The position-base divergence (ETL 1-based vs `Add` 0-based) is
+   documented in the spec's Gotchas and is harmless (order-only key); no
+   spec needed.

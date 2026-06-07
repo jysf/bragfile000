@@ -173,7 +173,7 @@ split provided. SPEC-026 adds the user-visible taxonomy surface on top.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-025 (design) — **L** *(accepted, not split — see above)* —
+- [x] SPEC-025 (shipped on 2026-06-07) — **L** *(accepted, not split)* —
       **Normalize tag storage.** One `0003_*` migration does it all in a
       single forward-only transaction: create `tags` + polymorphic
       `taggings` tables; lossless ETL from `entries.tags`; rewrite the
@@ -192,7 +192,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       design). Stats/digest top-tags may read counts directly from `tags`
       where cleaner.
 
-**Count:** 0 shipped / 0 active / 2 pending
+**Count:** 1 shipped / 0 active / 1 pending
 
 **Complexity check:** 1 × L (accepted) + 1 × M = 2 specs — under the
 brief's ~3–4 estimate, but coherent: the L is a single load-bearing
