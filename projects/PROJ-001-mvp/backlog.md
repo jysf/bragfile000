@@ -513,6 +513,39 @@ nothing is lost but the project stays focused.
   ~10s per run on a project this size. Confirmed clean against
   current main at 2026-04-26.
 
+## WAL-safe backup recipe + automated daily backup
+
+- **Source:** 2026-06-07 PROJ-002 coordinator session — user asked to
+  back up the production DB before the v0.2.x migrations land; explicitly
+  deferred to the end of PROJ-002. Belt-and-suspenders, not urgent: the
+  prod DB at `~/.bragfile` is untouched by v0.2.x until a deliberate
+  `brew upgrade` (dev/prod DB isolation holds through development).
+- **Reason deferred:** Not blocking. The product-facing backup step is
+  already in STAGE-008's doc scope (the v0.2.0 upgrade / CHANGELOG /
+  tutorial backup workflow), and an unattended dev-machine backup is ops,
+  not project code.
+- **Revisit when:** STAGE-008 doc sweep, or PROJ-002 close — sooner if
+  the user wants an automated daily backup during development.
+- **Two distinct pieces:**
+  1. **Doc-accuracy fix (STAGE-008):** the tutorial documents backup as
+     bare `cp ~/.bragfile/db.sqlite backup.db` (the `brag export --format
+     sqlite` entry below repeats the claim). That is **WAL-unsafe** if the
+     DB ever runs in WAL mode — recent commits can sit unflushed in
+     `db.sqlite-wal`. Upgrade the recipe to `sqlite3
+     ~/.bragfile/db.sqlite ".backup 'backup.db'"` (or `VACUUM INTO`),
+     which is WAL-aware and yields one consistent file. First confirm
+     whether bragfile sets `PRAGMA journal_mode=WAL` at open — if it never
+     does, bare `cp` is actually safe and this is a no-op, but the doc
+     should still prefer `.backup` to be robust.
+  2. **Automated daily backup (ops, optional):** a macOS launchd
+     LaunchAgent running `sqlite3 ... ".backup"` to
+     `~/.bragfile/backups/db-<date>.db` with keep-last-N pruning; trivial
+     to remove after PROJ-002. Could be productized as a
+     `scripts/backup-db.sh` shipped with the repo.
+- **Related:** the `brag export --format sqlite` (full-DB `VACUUM INTO`)
+  entry below — a built-in command version of the same backup need; would
+  supersede the manual recipe if built.
+
 ---
 
 ## Removed / delivered — keep the list honest
