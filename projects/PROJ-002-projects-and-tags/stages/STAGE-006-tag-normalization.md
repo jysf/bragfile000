@@ -155,45 +155,51 @@ is where the schema first changes.
 
 ## Spec Backlog
 
-Three specs. The migration is framed as an **expand→contract pair**
-(confirmed at framing, 2026-06-06) so `main` is never left in a
-half-migrated state between PRs and the load-bearing migration does not
-become a single complexity-L spec. SPEC-025 expands (adds the new
-schema, backfills, dual-writes, moves reads); SPEC-026 contracts (moves
-FTS onto the join, drops the shadow column); SPEC-027 adds the
-user-visible taxonomy surface on top.
+Two specs. The migration is a **single atomic in-place migration**
+(scope decision, 2026-06-06): one `0003_*` migration creates the schema,
+backfills the ETL, re-points FTS, and drops the legacy `entries.tags`
+column in one forward-only transaction. The earlier expand→contract
+split (a dual-written `entries.tags` shadow column carried across two
+PRs) was dropped as over-engineered for this context — bragfile has
+effectively one user, v0.2.0 only tags at project close, and the
+downgrade story is already a `cp` backup of the SQLite file (brief). The
+inter-PR "keep `main` green" safety the split was buying is therefore
+worthless here. An import/export round-trip was also considered and
+rejected: it would require building an import command that does not
+exist and is more error-prone than a tested transactional migration. The
+atomic migration reads complexity-**L**; that is accepted and justified,
+**not split back**, because the single-user premise removes the value the
+split provided. SPEC-026 adds the user-visible taxonomy surface on top.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-025 (design) — **M** — **Normalize tag storage (expand).**
-      New `0003_*` migration: `tags` + polymorphic `taggings` tables +
-      lossless ETL from `entries.tags`. Store write path splits/upserts
-      into the join and dual-writes the legacy `entries.tags` column (so
-      FTS keeps working untouched this spec); read path reconstructs
-      `Entry.Tags` via `GROUP_CONCAT`; `brag list --tag` filters through
-      the join. **Emits DEC-015** (supersedes DEC-004) at design. *Watch
-      for L:* if dual-write + read cutover + `list --tag` balloon at
-      design, peel the `list --tag` join migration into its own spec.
-- [ ] SPEC-026 (not yet written) — **M** — **FTS re-sync + contract.**
-      Rewrite the `entries_fts.tags` trigger topology so it tracks
-      `taggings`/`tags` mutations instead of `entries`-row writes; drop
-      the legacy `entries.tags` shadow column in a `0004_*` migration.
-      `brag search` byte-stable (DEC-010). This is the trickiest
-      correctness surface and is isolated deliberately.
-- [ ] SPEC-027 (not yet written) — **M** — **Tag taxonomy + mutations.**
+- [ ] SPEC-025 (design) — **L** *(accepted, not split — see above)* —
+      **Normalize tag storage.** One `0003_*` migration does it all in a
+      single forward-only transaction: create `tags` + polymorphic
+      `taggings` tables; lossless ETL from `entries.tags`; rewrite the
+      `entries_fts.tags` sync off the `entries` row and onto
+      `taggings`/`tags` mutations (dropping the old `entries`-row
+      triggers); drop the legacy `entries.tags` column. Store write path
+      splits/upserts into the join; read path reconstructs `Entry.Tags`
+      via `GROUP_CONCAT` (output shapes byte-stable, DEC-011/013/014);
+      `brag list --tag` filters through the join (replacing the DEC-004
+      sentinel-comma `LIKE`); `brag search` byte-stable (DEC-010).
+      **Emits DEC-015** (supersedes DEC-004) at design.
+- [ ] SPEC-026 (not yet written) — **M** — **Tag taxonomy + mutations.**
       `brag tags` (taxonomy view with counts, sourced from the `tags`
       table), `brag tag rename <old> <new>`, `brag tag merge <src> <dst>`
       (de-dupes memberships; rename-into-existing semantics decided at
       design). Stats/digest top-tags may read counts directly from `tags`
       where cleaner.
 
-**Count:** 0 shipped / 0 active / 3 pending
+**Count:** 0 shipped / 0 active / 2 pending
 
-**Complexity check:** 3 × M, no L — within the brief's ~3–4 estimate and
-the 3–8 healthy band, so **no rescope**. The expand→contract split is
-what keeps the migration off the L line; if SPEC-025 still reads L at
-design, its `list --tag` join cutover is the clean peel-off (→ 4 specs,
-still healthy).
+**Complexity check:** 1 × L (accepted) + 1 × M = 2 specs — under the
+brief's ~3–4 estimate, but coherent: the L is a single load-bearing
+migration that is cleaner atomic than split for a solo tool, and the
+taxonomy work is genuinely separable. The fallback, only if SPEC-025's
+design truly cannot hold together as one spec, is the expand→contract
+split (back to 3); the default is one atomic migration.
 
 ## Design Notes
 
@@ -225,6 +231,18 @@ framing** per the frame-cycle rule.
 - **Forward-only.** Same constraint as PROJ-001 (DEC-002: no down
   migrations). The downgrade story is the documented SQLite-file backup,
   spelled out in STAGE-008's CHANGELOG/tutorial work.
+- **One atomic in-place migration (scope decision, 2026-06-06).** The
+  earlier expand→contract split (a dual-written `entries.tags` shadow
+  column carried across two PRs) was dropped as over-engineered: bragfile
+  has effectively one user, v0.2.0 tags only at project close, and the
+  backup story is already a `cp` of the SQLite file — so the inter-PR
+  safety the split bought is worthless here. A hand-rolled import/export
+  round-trip was also considered and rejected (more error-prone than a
+  tested transactional migration, and it would require building an import
+  command that does not exist). So `0003_*` does everything in one
+  transaction: create `tags` + `taggings`, backfill the ETL, rewrite the
+  FTS triggers, drop `entries.tags`. The spec is complexity-L and that is
+  accepted, not split.
 - **Output-shape stability is the mechanism that makes "invisible"
   true.** DEC-011 §3 locks `tags` as a comma-joined string in JSON;
   DEC-013 and DEC-014 render it similarly. The Store therefore keeps
@@ -235,32 +253,32 @@ framing** per the frame-cycle rule.
   unchanged. This is what lets "refactor every tag-touching command to
   read through the join" cost almost nothing at the call sites — the
   refactor lives inside the Store.
-- **FTS topology moves, FTS shape does not.** `entries_fts.tags` stays a
-  denormalized indexed column (DEC-010 search behavior unchanged). What
-  changes is *what fires the sync*: today three triggers on `entries`
-  copy `new.tags`; after normalization, tag membership changes happen via
-  `taggings` INSERT/DELETE and tag renames via `tags` UPDATE, none of
-  which touch the `entries` row — so the triggers must move onto those
-  tables and recompute the affected entry's `GROUP_CONCAT`. SPEC-026
-  owns this; it is the single highest-risk change in the stage, which is
-  why it is its own spec rather than bundled into SPEC-025.
-- **Expand→contract keeps main green.** SPEC-025 retains `entries.tags`
-  as a dual-written shadow so the existing FTS triggers keep working
-  unchanged while reads/`list --tag` move to the join. SPEC-026 then
-  re-points FTS at the join and drops the shadow. Neither PR leaves
-  `main` with broken search or a half-migrated read path.
+- **FTS topology moves, FTS shape does not — in the same migration.**
+  `entries_fts.tags` stays a denormalized indexed column (DEC-010 search
+  behavior unchanged). What changes is *what fires the sync*: today three
+  triggers on `entries` copy `new.tags`; after normalization, tag
+  membership changes happen via `taggings` INSERT/DELETE and tag renames
+  via `tags` UPDATE, none of which touch the `entries` row — so the
+  triggers must move onto those tables and recompute the affected entry's
+  `GROUP_CONCAT`, and the old `entries`-row triggers must be dropped
+  before `entries.tags` is dropped. This is the single highest-risk
+  change in the stage; because the migration is atomic it lands inside
+  SPEC-025 and demands that spec's most thorough test coverage (FTS
+  add/rename/merge round-trips against a representative corpus).
 
 ### Premise-audit triggers (every migration spec must reconcile these)
 
-- **Migration count-bump (the additive case).** Adding `0003_*` (and
-  `0004_*` in SPEC-026) breaks the literal-count assertions in **five**
-  test files that hard-code `schema_migrations count = 2` and the exact
-  list `["0001_initial","0002_add_fts"]`:
-  `internal/storage/store_test.go`, `internal/storage/fts_test.go`,
-  `internal/storage/migrate_test.go`. Each migration spec enumerates the
-  count-bump under `## Outputs` and runs `grep -rn "schema_migrations"
-  internal/**/*_test.go` plus `grep -rn "0002_add_fts" internal` at
-  design (audit-grep cross-check, §9).
+- **Migration count-bump (the additive case).** Adding `0003_*` breaks
+  the literal-count assertions in **two** test files (four assertion
+  sites) that hard-code `schema_migrations count = 2` and the exact list
+  `["0001_initial","0002_add_fts"]`:
+  `internal/storage/store_test.go` and `internal/storage/fts_test.go`.
+  SPEC-025 ground-truthed this at design (audit-grep cross-check, §9):
+  `internal/storage/migrate_test.go`'s `count == 2` assertions run
+  against in-test `fstest.MapFS` fixtures (`0001_a`/`0002_b`), **not** the
+  real `migrationsFS`, so they stay untouched — a correction to this
+  stage's original "≈five sites across three files" estimate. SPEC-025
+  enumerates the count-bump (2 → 3) under `## Outputs`.
 - **Status-change (the doc case).** `docs/data-model.md` documents tags
   as comma-joined (DEC-004), the FTS tokenizer note, the "No index on
   `tags`" line, and a "Tags normalization" future-work section that this
@@ -280,10 +298,12 @@ The premise-audit sub-template extraction, deferred 3× (SPEC-015 ship,
 STAGE-004 ship, STAGE-005 framing) with the standing instruction to
 decide at STAGE-006 framing, is **extracted now** (decision 2026-06-06).
 Rationale: STAGE-006 is the first stage where the trigger fires
-concretely and repeatedly — both migration specs hit the count-bump
-across five test files, both carry a status-change doc sweep, and
-SPEC-025 carries an inversion/removal — and the value compounds across
-STAGE-006/007/008 (10–13 specs all in the audit family). A fourth "wait
+concretely and repeatedly — SPEC-025's migration hits the count-bump
+across two test files, carries a status-change doc sweep, AND carries
+an inversion/removal (the `list --tag` join), and the value compounds
+across STAGE-006/007/008 (the projects schema migration in STAGE-007
+hits the same count-bump; ~9–11 specs across the project all sit in the
+audit family). A fourth "wait
 for more volume" deferral would be the exact over-deferral the §12
 codification meta-rule cautions against, with no new information to gain.
 The sub-template lives at `projects/_templates/premise-audit.md`; each
@@ -297,7 +317,7 @@ STAGE-006 specs are the natural next test cases; none is codified yet
 
 - **§12(a) — run embedded test assertions against embedded literals at
   design time.** N=2 within SPEC-023; awaits a third confirming case
-  across a distinct spec. The `0003_*`/`0004_*` migration SQL is an
+  across a distinct spec. SPEC-025's `0003_*` migration SQL is an
   embedded literal whose assertions (row counts post-ETL) should be run
   at design — a likely third case.
 - **Trust-but-verify agent push reports.** N=2 within SPEC-023; a
@@ -316,7 +336,7 @@ STAGE-006 specs are the natural next test cases; none is codified yet
   directly: DEC-002 (embedded forward-only migrations), DEC-010 (search
   syntax — must stay byte-stable), DEC-011 / DEC-013 / DEC-014 (output
   shapes — must stay byte-stable). AGENTS.md conventions all apply: §2 ID
-  numbering (this stage's specs are SPEC-025..027; the new DEC is
+  numbering (this stage's specs are SPEC-025..026; the new DEC is
   DEC-015), §9 audit family, §10 push-discipline, §12 literal-artifact +
   §12(b) design-time pre-flight + codification meta-rule, §13
   fresh-session rule.
