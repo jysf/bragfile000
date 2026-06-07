@@ -4,9 +4,10 @@ import "time"
 
 // Entry is one captured brag-worthy moment.
 //
-// Tags is stored as a comma-joined string for MVP (DEC-004). The
-// caller's input is persisted verbatim; splitting/normalization is the
-// caller's problem.
+// Tags is the comma-joined, whitespace-trimmed, deduplicated tag
+// projection reconstructed from the tags/taggings join (DEC-015).
+// Store.Add and Store.Update canonicalize raw input; Store.Get, List,
+// and Search reconstruct this value from the normalized join.
 type Entry struct {
 	ID          int64
 	Title       string
@@ -23,7 +24,7 @@ type Entry struct {
 // "no filter": every field's zero value contributes no WHERE clause.
 // Populated fields combine via AND.
 type ListFilter struct {
-	Tag     string    // sentinel-comma token match against comma-joined tags
+	Tag     string    // exact tag-name membership via normalized join (DEC-015)
 	Project string    // exact equality on entries.project
 	Type    string    // exact equality on entries.type
 	Since   time.Time // entries.created_at >= Since (RFC3339 UTC)

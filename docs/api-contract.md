@@ -111,7 +111,8 @@ brag list [-P|--show-project] [--format json|tsv] [--tag T] [--project P] [--typ
 ```
 
 - `--tag`, `--project`, `--type` filter on exact field value
-  (tags filter uses substring against the comma-joined column in MVP).
+  (tags filter uses exact tag-name membership via the normalized
+  `taggings` join — DEC-015 / SPEC-025).
 - `--since` accepts `YYYY-MM-DD` or a duration like `7d`, `2w`, `3m`.
 - `--limit` defaults to unlimited; useful for `brag list --limit 5`.
 - Order: `created_at DESC`.

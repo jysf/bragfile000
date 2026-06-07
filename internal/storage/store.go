@@ -61,17 +61,78 @@ func (s *Store) Close() error {
 	return nil
 }
 
+// canonicalizeTags splits a comma-joined tag string, trims whitespace,
+// drops empty tokens, and deduplicates keeping first occurrence.
+// Returns nil when there are no tokens.
+func canonicalizeTags(raw string) []string {
+	parts := strings.Split(raw, ",")
+	seen := make(map[string]bool)
+	var tokens []string
+	for _, p := range parts {
+		t := strings.TrimSpace(p)
+		if t == "" || seen[t] {
+			continue
+		}
+		seen[t] = true
+		tokens = append(tokens, t)
+	}
+	return tokens
+}
+
+// insertTaggings writes canonical tags into the tags + taggings tables
+// for the given entry inside the provided transaction. Position is
+// 0-based (index in the canonical token slice).
+func insertTaggings(ctx context.Context, tx *sql.Tx, entryID int64, tokens []string) error {
+	for i, name := range tokens {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT OR IGNORE INTO tags(name) VALUES (?)`, name,
+		); err != nil {
+			return fmt.Errorf("insert tag %q: %w", name, err)
+		}
+		var tagID int64
+		if err := tx.QueryRowContext(ctx,
+			`SELECT id FROM tags WHERE name = ?`, name,
+		).Scan(&tagID); err != nil {
+			return fmt.Errorf("lookup tag %q: %w", name, err)
+		}
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO taggings(tag_id, taggable_type, taggable_id, position)
+			 VALUES (?, 'entry', ?, ?)`,
+			tagID, entryID, i,
+		); err != nil {
+			return fmt.Errorf("insert tagging %q: %w", name, err)
+		}
+	}
+	return nil
+}
+
+// tagsProjection is the correlated scalar subquery fragment that reconstructs
+// Entry.Tags from the taggings join (validated at design, §12(b)).
+const tagsProjection = `COALESCE((
+    SELECT GROUP_CONCAT(t.name, ',' ORDER BY tg.position)
+      FROM taggings tg
+      JOIN tags t ON t.id = tg.tag_id
+     WHERE tg.taggable_type = 'entry' AND tg.taggable_id = e.id
+), '') AS tags`
+
 // Add inserts e and returns it hydrated with the generated ID and
 // CreatedAt/UpdatedAt timestamps (both set to now, UTC, RFC3339).
+// Tags are canonicalized (trim, dedup) and stored via the join.
 func (s *Store) Add(e Entry) (Entry, error) {
 	now := time.Now().UTC().Truncate(time.Second)
 	ts := now.Format(time.RFC3339)
 
-	res, err := s.db.ExecContext(context.Background(),
-		`INSERT INTO entries (
-            title, description, tags, project, type, impact, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		e.Title, e.Description, e.Tags, e.Project, e.Type, e.Impact, ts, ts,
+	ctx := context.Background()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Entry{}, fmt.Errorf("add entry: %w", err)
+	}
+	defer tx.Rollback()
+
+	res, err := tx.ExecContext(ctx,
+		`INSERT INTO entries (title, description, project, type, impact, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		e.Title, e.Description, e.Project, e.Type, e.Impact, ts, ts,
 	)
 	if err != nil {
 		return Entry{}, fmt.Errorf("add entry: %w", err)
@@ -81,9 +142,19 @@ func (s *Store) Add(e Entry) (Entry, error) {
 		return Entry{}, fmt.Errorf("add entry: %w", err)
 	}
 
+	tokens := canonicalizeTags(e.Tags)
+	if err := insertTaggings(ctx, tx, id, tokens); err != nil {
+		return Entry{}, fmt.Errorf("add entry: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return Entry{}, fmt.Errorf("add entry: %w", err)
+	}
+
 	e.ID = id
 	e.CreatedAt = now
 	e.UpdatedAt = now
+	e.Tags = strings.Join(tokens, ",")
 	return e, nil
 }
 
@@ -91,14 +162,16 @@ func (s *Store) Add(e Entry) (Entry, error) {
 // ErrNotFound if no row matches.
 func (s *Store) Get(id int64) (Entry, error) {
 	var (
-		e                                       Entry
-		description, tags, project, typ, impact sql.NullString
-		createdAtRaw, updatedAtRaw              string
+		e                                 Entry
+		description, project, typ, impact sql.NullString
+		tags                              string
+		createdAtRaw, updatedAtRaw        string
 	)
 	row := s.db.QueryRowContext(context.Background(),
-		`SELECT id, title, description, tags, project, type, impact, created_at, updated_at
-         FROM entries
-         WHERE id = ?`,
+		`SELECT e.id, e.title, e.description, `+tagsProjection+`,
+		        e.project, e.type, e.impact, e.created_at, e.updated_at
+		 FROM entries e
+		 WHERE e.id = ?`,
 		id,
 	)
 	if err := row.Scan(
@@ -111,7 +184,7 @@ func (s *Store) Get(id int64) (Entry, error) {
 		return Entry{}, fmt.Errorf("get entry %d: %w", id, err)
 	}
 	e.Description = description.String
-	e.Tags = tags.String
+	e.Tags = tags
 	e.Project = project.String
 	e.Type = typ.String
 	e.Impact = impact.String
@@ -131,17 +204,23 @@ func (s *Store) Get(id int64) (Entry, error) {
 }
 
 // Update replaces every user-editable field on the row with id and
-// bumps updated_at. Returns the hydrated Entry (via a follow-up Get)
-// so callers see the final state; id and created_at are preserved.
-// Returns an error wrapping ErrNotFound if no row matches.
+// bumps updated_at. Tags are replaced atomically via the join.
+// Returns the hydrated Entry (via a follow-up Get); id and created_at
+// are preserved. Returns an error wrapping ErrNotFound if no row matches.
 func (s *Store) Update(id int64, e Entry) (Entry, error) {
 	now := time.Now().UTC().Truncate(time.Second)
-	res, err := s.db.ExecContext(context.Background(),
+	ctx := context.Background()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Entry{}, fmt.Errorf("update entry %d: %w", id, err)
+	}
+	defer tx.Rollback()
+
+	res, err := tx.ExecContext(ctx,
 		`UPDATE entries
-         SET title = ?, description = ?, tags = ?, project = ?,
-             type = ?, impact = ?, updated_at = ?
-         WHERE id = ?`,
-		e.Title, e.Description, e.Tags, e.Project, e.Type, e.Impact,
+		 SET title = ?, description = ?, project = ?, type = ?, impact = ?, updated_at = ?
+		 WHERE id = ?`,
+		e.Title, e.Description, e.Project, e.Type, e.Impact,
 		now.Format(time.RFC3339), id,
 	)
 	if err != nil {
@@ -154,14 +233,43 @@ func (s *Store) Update(id int64, e Entry) (Entry, error) {
 	if n == 0 {
 		return Entry{}, fmt.Errorf("update entry %d: %w", id, ErrNotFound)
 	}
+
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM taggings WHERE taggable_type = 'entry' AND taggable_id = ?`, id,
+	); err != nil {
+		return Entry{}, fmt.Errorf("update entry %d: remove taggings: %w", id, err)
+	}
+
+	tokens := canonicalizeTags(e.Tags)
+	if err := insertTaggings(ctx, tx, id, tokens); err != nil {
+		return Entry{}, fmt.Errorf("update entry %d: %w", id, err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return Entry{}, fmt.Errorf("update entry %d: %w", id, err)
+	}
+
 	return s.Get(id)
 }
 
-// Delete removes the entry with the given id. Returns an error wrapping
-// ErrNotFound if no row matches.
+// Delete removes the entry with the given id and its taggings.
+// Returns an error wrapping ErrNotFound if no row matches.
 func (s *Store) Delete(id int64) error {
-	res, err := s.db.ExecContext(context.Background(),
-		`DELETE FROM entries WHERE id = ?`, id)
+	ctx := context.Background()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("delete entry %d: %w", id, err)
+	}
+	defer tx.Rollback()
+
+	// Delete taggings first; entries_ad trigger removes the FTS row.
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM taggings WHERE taggable_type = 'entry' AND taggable_id = ?`, id,
+	); err != nil {
+		return fmt.Errorf("delete entry %d: remove taggings: %w", id, err)
+	}
+
+	res, err := tx.ExecContext(ctx, `DELETE FROM entries WHERE id = ?`, id)
 	if err != nil {
 		return fmt.Errorf("delete entry %d: %w", id, err)
 	}
@@ -172,6 +280,10 @@ func (s *Store) Delete(id int64) error {
 	if n == 0 {
 		return fmt.Errorf("delete entry %d: %w", id, ErrNotFound)
 	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("delete entry %d: %w", id, err)
+	}
 	return nil
 }
 
@@ -180,33 +292,36 @@ func (s *Store) Delete(id int64) error {
 // A zero-value ListFilter returns every row.
 func (s *Store) List(f ListFilter) ([]Entry, error) {
 	var conds []string
-	var args []interface{}
+	var args []any
 
 	if f.Tag != "" {
-		// Sentinel-comma match: ',tags,' LIKE '%,<tag>,%' (DEC-004).
-		// NULL tags never match (NULL LIKE x is NULL → false).
-		conds = append(conds, "',' || tags || ',' LIKE ?")
-		args = append(args, "%,"+f.Tag+",%")
+		// Exact tag-token membership via the normalized taggings join (DEC-015).
+		conds = append(conds, `EXISTS (SELECT 1 FROM taggings tg
+		    JOIN tags t ON t.id = tg.tag_id
+		   WHERE tg.taggable_type = 'entry' AND tg.taggable_id = e.id
+		     AND t.name = ?)`)
+		args = append(args, f.Tag)
 	}
 	if f.Project != "" {
-		conds = append(conds, "project = ?")
+		conds = append(conds, "e.project = ?")
 		args = append(args, f.Project)
 	}
 	if f.Type != "" {
-		conds = append(conds, "type = ?")
+		conds = append(conds, "e.type = ?")
 		args = append(args, f.Type)
 	}
 	if !f.Since.IsZero() {
-		conds = append(conds, "created_at >= ?")
+		conds = append(conds, "e.created_at >= ?")
 		args = append(args, f.Since.UTC().Format(time.RFC3339))
 	}
 
-	q := `SELECT id, title, description, tags, project, type, impact, created_at, updated_at
-         FROM entries`
+	q := `SELECT e.id, e.title, e.description, ` + tagsProjection + `,
+		         e.project, e.type, e.impact, e.created_at, e.updated_at
+		  FROM entries e`
 	if len(conds) > 0 {
 		q += " WHERE " + strings.Join(conds, " AND ")
 	}
-	q += " ORDER BY created_at DESC, id DESC"
+	q += " ORDER BY e.created_at DESC, e.id DESC"
 	if f.Limit > 0 {
 		q += " LIMIT ?"
 		args = append(args, f.Limit)
@@ -221,9 +336,10 @@ func (s *Store) List(f ListFilter) ([]Entry, error) {
 	out := make([]Entry, 0)
 	for rows.Next() {
 		var (
-			e                                       Entry
-			description, tags, project, typ, impact sql.NullString
-			createdAtRaw, updatedAtRaw              string
+			e                                 Entry
+			description, project, typ, impact sql.NullString
+			tags                              string
+			createdAtRaw, updatedAtRaw        string
 		)
 		if err := rows.Scan(
 			&e.ID, &e.Title, &description, &tags, &project, &typ, &impact,
@@ -232,7 +348,7 @@ func (s *Store) List(f ListFilter) ([]Entry, error) {
 			return nil, fmt.Errorf("list entries: %w", err)
 		}
 		e.Description = description.String
-		e.Tags = tags.String
+		e.Tags = tags
 		e.Project = project.String
 		e.Type = typ.String
 		e.Impact = impact.String
@@ -266,13 +382,13 @@ func (s *Store) List(f ListFilter) ([]Entry, error) {
 // limit <= 0 means no LIMIT is applied (matches Store.List's zero-is-
 // no-limit convention).
 func (s *Store) Search(query string, limit int) ([]Entry, error) {
-	q := `SELECT e.id, e.title, e.description, e.tags, e.project,
-	             e.type, e.impact, e.created_at, e.updated_at
-	      FROM entries_fts
-	      JOIN entries e ON e.id = entries_fts.rowid
-	      WHERE entries_fts MATCH ?
-	      ORDER BY rank, e.id DESC`
-	args := []interface{}{query}
+	q := `SELECT e.id, e.title, e.description, ` + tagsProjection + `,
+		         e.project, e.type, e.impact, e.created_at, e.updated_at
+		  FROM entries_fts
+		  JOIN entries e ON e.id = entries_fts.rowid
+		  WHERE entries_fts MATCH ?
+		  ORDER BY rank, e.id DESC`
+	args := []any{query}
 	if limit > 0 {
 		q += " LIMIT ?"
 		args = append(args, limit)
@@ -287,9 +403,10 @@ func (s *Store) Search(query string, limit int) ([]Entry, error) {
 	out := make([]Entry, 0)
 	for rows.Next() {
 		var (
-			e                                       Entry
-			description, tags, project, typ, impact sql.NullString
-			createdAtRaw, updatedAtRaw              string
+			e                                 Entry
+			description, project, typ, impact sql.NullString
+			tags                              string
+			createdAtRaw, updatedAtRaw        string
 		)
 		if err := rows.Scan(
 			&e.ID, &e.Title, &description, &tags, &project, &typ, &impact,
@@ -298,7 +415,7 @@ func (s *Store) Search(query string, limit int) ([]Entry, error) {
 			return nil, fmt.Errorf("search entries: %w", err)
 		}
 		e.Description = description.String
-		e.Tags = tags.String
+		e.Tags = tags
 		e.Project = project.String
 		e.Type = typ.String
 		e.Impact = impact.String

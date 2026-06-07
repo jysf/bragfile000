@@ -1,10 +1,14 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -165,8 +169,8 @@ func TestOpen_MigrationsTracked(t *testing.T) {
 		t.Fatalf("rows.Err: %v", err)
 	}
 
-	want := []string{"0001_initial", "0002_add_fts"}
-	if len(versions) != len(want) || versions[0] != want[0] || versions[1] != want[1] {
+	want := []string{"0001_initial", "0002_add_fts", "0003_normalize_tags"}
+	if len(versions) != len(want) || versions[0] != want[0] || versions[1] != want[1] || versions[2] != want[2] {
 		t.Fatalf("schema_migrations = %v, want %v", versions, want)
 	}
 }
@@ -199,9 +203,9 @@ func TestOpen_Idempotent(t *testing.T) {
 	if err := db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&count); err != nil {
 		t.Fatalf("count schema_migrations: %v", err)
 	}
-	// 0001_initial + 0002_add_fts (SPEC-011).
-	if count != 2 {
-		t.Fatalf("schema_migrations count = %d, want 2", count)
+	// 0001_initial + 0002_add_fts + 0003_normalize_tags (SPEC-025).
+	if count != 3 {
+		t.Fatalf("schema_migrations count = %d, want 3", count)
 	}
 
 	// Schema still intact.
@@ -463,10 +467,11 @@ func TestList_TagFilterNoFalsePositive(t *testing.T) {
 func TestList_TagFilterNullAndEmpty(t *testing.T) {
 	s, path := newTestStore(t)
 
-	// Empty tags via Add (stored as "").
+	// Empty tags via Add (no Tags field = no taggings row).
 	addWithTags(t, s, "empty", "", "", "")
 
-	// NULL tags via direct SQL INSERT (Store.Add always writes "").
+	// No-tags row via direct SQL INSERT omitting the tags column entirely
+	// (a row with no taggings is the "no tags" case after 0003).
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -474,11 +479,11 @@ func TestList_TagFilterNullAndEmpty(t *testing.T) {
 	defer db.Close()
 	now := time.Now().UTC().Format(time.RFC3339)
 	if _, err := db.Exec(
-		`INSERT INTO entries (title, description, tags, project, type, impact, created_at, updated_at)
-		 VALUES (?, NULL, NULL, NULL, NULL, NULL, ?, ?)`,
+		`INSERT INTO entries (title, description, project, type, impact, created_at, updated_at)
+		 VALUES (?, NULL, NULL, NULL, NULL, ?, ?)`,
 		"nulltags", now, now,
 	); err != nil {
-		t.Fatalf("INSERT NULL tags: %v", err)
+		t.Fatalf("INSERT no-tags row: %v", err)
 	}
 
 	got, err := s.List(ListFilter{Tag: "auth"})
@@ -486,7 +491,7 @@ func TestList_TagFilterNullAndEmpty(t *testing.T) {
 		t.Fatalf("List: %v", err)
 	}
 	if len(got) != 0 {
-		t.Errorf("len=%d, want 0 (null and empty tags must not match) — titles=%v", len(got), titlesOf(got))
+		t.Errorf("len=%d, want 0 (empty and no-tags rows must not match) — titles=%v", len(got), titlesOf(got))
 	}
 }
 
@@ -800,5 +805,444 @@ func TestStore_CloseNoError(t *testing.T) {
 	}
 	if err := s.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
+	}
+}
+
+// --- SPEC-025: tag normalization ---
+
+// apply0001Only opens a raw DB in a temp file, applies only 0001_initial.sql
+// (plus its schema_migrations row), and returns the db and path. The caller
+// uses this to seed a corpus into entries.tags before calling Open (which
+// applies 0002 + 0003).
+func apply0001Only(t *testing.T) (*sql.DB, string) {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "db.sqlite")
+	ctx := context.Background()
+
+	rawDB, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	if _, err := rawDB.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
+		version TEXT PRIMARY KEY,
+		applied_at TEXT NOT NULL
+	)`); err != nil {
+		t.Fatalf("create schema_migrations: %v", err)
+	}
+	body, err := fs.ReadFile(migrationsFS, "migrations/0001_initial.sql")
+	if err != nil {
+		t.Fatalf("read 0001_initial.sql: %v", err)
+	}
+	if _, err := rawDB.ExecContext(ctx, string(body)); err != nil {
+		t.Fatalf("exec 0001_initial.sql: %v", err)
+	}
+	if _, err := rawDB.ExecContext(ctx,
+		`INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)`,
+		"0001_initial", time.Now().UTC().Format(time.RFC3339),
+	); err != nil {
+		t.Fatalf("record 0001_initial: %v", err)
+	}
+	return rawDB, path
+}
+
+// TestMigrate_ETL_Lossless seeds a representative corpus via raw INSERT
+// into entries.tags (while only 0001 is applied), then calls Open to apply
+// 0002+0003 and verifies the ETL is lossless: exact tags/taggings counts,
+// correct projected Tags per entry, and no non-entry taggings. Also folds
+// in the byte-stable search assertion (SPEC-025 §12(b) confirmed [1 2 3]).
+func TestMigrate_ETL_Lossless(t *testing.T) {
+	rawDB, path := apply0001Only(t)
+
+	ctx := context.Background()
+	now := time.Now().UTC().Format(time.RFC3339)
+	corpus := []struct {
+		id       int64 // set after insert
+		tagsIn   string
+		tagsWant string
+	}{
+		{tagsIn: "auth,perf", tagsWant: "auth,perf"},
+		{tagsIn: "perf,auth", tagsWant: "perf,auth"},
+		{tagsIn: " auth , auth ,perf", tagsWant: "auth,perf"},
+		{tagsIn: "", tagsWant: ""},
+		{tagsIn: "", tagsWant: ""}, // NULL via empty string sentinel
+		{tagsIn: "solo", tagsWant: "solo"},
+	}
+	// Row 5 should be NULL in the DB; insert it specially.
+	for i, row := range corpus {
+		var tagsVal interface{} = row.tagsIn
+		if i == 4 { // id=5: NULL
+			tagsVal = nil
+		}
+		res, err := rawDB.ExecContext(ctx,
+			`INSERT INTO entries (title, description, tags, project, type, impact, created_at, updated_at)
+			 VALUES (?, NULL, ?, NULL, NULL, NULL, ?, ?)`,
+			fmt.Sprintf("etl-%d", i+1), tagsVal, now, now,
+		)
+		if err != nil {
+			t.Fatalf("seed row %d: %v", i+1, err)
+		}
+		id, _ := res.LastInsertId()
+		corpus[i].id = id
+	}
+	rawDB.Close()
+
+	// Open applies 0002 + 0003.
+	s, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+
+	db := openRawDB(t, path)
+
+	// (a) 3 distinct tags: auth, perf, solo.
+	var tagCount int
+	if err := db.QueryRow("SELECT COUNT(*) FROM tags").Scan(&tagCount); err != nil {
+		t.Fatalf("count tags: %v", err)
+	}
+	if tagCount != 3 {
+		t.Errorf("tags count = %d, want 3", tagCount)
+	}
+	rows, err := db.Query("SELECT name FROM tags ORDER BY name")
+	if err != nil {
+		t.Fatalf("query tags: %v", err)
+	}
+	var tagNames []string
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			t.Fatalf("scan tag: %v", err)
+		}
+		tagNames = append(tagNames, n)
+	}
+	rows.Close()
+	wantNames := []string{"auth", "perf", "solo"}
+	if len(tagNames) != len(wantNames) {
+		t.Fatalf("tag names = %v, want %v", tagNames, wantNames)
+	}
+	for i, n := range wantNames {
+		if tagNames[i] != n {
+			t.Fatalf("tag names = %v, want %v", tagNames, wantNames)
+		}
+	}
+
+	// (b) 7 taggings total.
+	var taggingCount int
+	if err := db.QueryRow("SELECT COUNT(*) FROM taggings").Scan(&taggingCount); err != nil {
+		t.Fatalf("count taggings: %v", err)
+	}
+	if taggingCount != 7 {
+		t.Errorf("taggings count = %d, want 7", taggingCount)
+	}
+
+	// (c) projection round-trips correctly for each entry.
+	for _, row := range corpus {
+		got, err := s.Get(row.id)
+		if err != nil {
+			t.Fatalf("Get(%d): %v", row.id, err)
+		}
+		if got.Tags != row.tagsWant {
+			t.Errorf("id=%d: Tags=%q, want %q", row.id, got.Tags, row.tagsWant)
+		}
+	}
+
+	// (d) only 'entry' taggings exist.
+	var nonEntry int
+	if err := db.QueryRow(
+		"SELECT COUNT(*) FROM taggings WHERE taggable_type <> 'entry'",
+	).Scan(&nonEntry); err != nil {
+		t.Fatalf("count non-entry taggings: %v", err)
+	}
+	if nonEntry != 0 {
+		t.Errorf("non-entry taggings = %d, want 0", nonEntry)
+	}
+
+	// Byte-stable search: 'perf' should match entries 1, 2, 3 (the set {1,2,3}).
+	results, err := s.Search("perf", 0)
+	if err != nil {
+		t.Fatalf("Search(perf): %v", err)
+	}
+	if len(results) != 3 {
+		t.Fatalf("Search(perf) len=%d, want 3", len(results))
+	}
+	var gotIDs []int64
+	for _, e := range results {
+		gotIDs = append(gotIDs, e.ID)
+	}
+	sort.Slice(gotIDs, func(i, j int) bool { return gotIDs[i] < gotIDs[j] })
+	wantIDs := []int64{corpus[0].id, corpus[1].id, corpus[2].id}
+	for i, id := range wantIDs {
+		if gotIDs[i] != id {
+			t.Errorf("Search(perf) sorted ids[%d]=%d, want %d (full: %v)", i, gotIDs[i], id, gotIDs)
+		}
+	}
+}
+
+// TestAdd_TagsWriteThroughJoin verifies Add writes tags into the join,
+// not a column, and that Get reconstructs them in insertion order.
+func TestAdd_TagsWriteThroughJoin(t *testing.T) {
+	s, path := newTestStore(t)
+
+	e, err := s.Add(Entry{Title: "join-write", Tags: "perf,auth"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+
+	// (a) Get returns Tags == "perf,auth" (insertion order preserved).
+	got, err := s.Get(e.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Tags != "perf,auth" {
+		t.Errorf("Tags = %q, want %q", got.Tags, "perf,auth")
+	}
+
+	// (b) two taggings exist for this entry, positions 0,1 → perf,auth.
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+
+	rows, err := db.Query(
+		`SELECT t.name, tg.position FROM taggings tg
+		 JOIN tags t ON t.id = tg.tag_id
+		 WHERE tg.taggable_type = 'entry' AND tg.taggable_id = ?
+		 ORDER BY tg.position`,
+		e.ID,
+	)
+	if err != nil {
+		t.Fatalf("query taggings: %v", err)
+	}
+	defer rows.Close()
+
+	type pair struct {
+		name     string
+		position int
+	}
+	var pairs []pair
+	for rows.Next() {
+		var p pair
+		if err := rows.Scan(&p.name, &p.position); err != nil {
+			t.Fatalf("scan: %v", err)
+		}
+		pairs = append(pairs, p)
+	}
+	if len(pairs) != 2 {
+		t.Fatalf("taggings count = %d, want 2", len(pairs))
+	}
+	if pairs[0].name != "perf" || pairs[0].position != 0 {
+		t.Errorf("tagging[0] = {%q, %d}, want {perf, 0}", pairs[0].name, pairs[0].position)
+	}
+	if pairs[1].name != "auth" || pairs[1].position != 1 {
+		t.Errorf("tagging[1] = {%q, %d}, want {auth, 1}", pairs[1].name, pairs[1].position)
+	}
+
+	// (c) tags table has rows for perf and auth.
+	for _, name := range []string{"perf", "auth"} {
+		var id int64
+		if err := db.QueryRow("SELECT id FROM tags WHERE name = ?", name).Scan(&id); err != nil {
+			t.Errorf("tag %q missing: %v", name, err)
+		}
+	}
+}
+
+// TestAdd_TagsCanonicalizeTrimDedup verifies non-canonical input is
+// trimmed and deduplicated on write.
+func TestAdd_TagsCanonicalizeTrimDedup(t *testing.T) {
+	s, path := newTestStore(t)
+
+	e, err := s.Add(Entry{Title: "canon", Tags: " auth , auth ,perf"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	got, err := s.Get(e.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Tags != "auth,perf" {
+		t.Errorf("Tags = %q, want %q", got.Tags, "auth,perf")
+	}
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	var count int
+	if err := db.QueryRow(
+		"SELECT COUNT(*) FROM taggings WHERE taggable_type='entry' AND taggable_id=?", e.ID,
+	).Scan(&count); err != nil {
+		t.Fatalf("count taggings: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("taggings count = %d, want 2 (auth,perf after dedup)", count)
+	}
+}
+
+// TestAdd_EmptyTagsNoTaggings verifies an entry with no tags produces
+// zero taggings and returns Tags == "".
+func TestAdd_EmptyTagsNoTaggings(t *testing.T) {
+	s, path := newTestStore(t)
+
+	e, err := s.Add(Entry{Title: "notags"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	got, err := s.Get(e.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Tags != "" {
+		t.Errorf("Tags = %q, want empty", got.Tags)
+	}
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	var count int
+	if err := db.QueryRow(
+		"SELECT COUNT(*) FROM taggings WHERE taggable_type='entry' AND taggable_id=?", e.ID,
+	).Scan(&count); err != nil {
+		t.Fatalf("count taggings: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("taggings count = %d, want 0", count)
+	}
+}
+
+// TestUpdate_TagsReplacedThroughJoin verifies Update replaces taggings
+// atomically: old membership gone, new membership written, orphan tag
+// row is not referenced by any tagging.
+func TestUpdate_TagsReplacedThroughJoin(t *testing.T) {
+	s, path := newTestStore(t)
+
+	inserted, err := s.Add(Entry{Title: "u", Tags: "a,b"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	if _, err := s.Update(inserted.ID, Entry{Title: "u", Tags: "b,c"}); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	got, err := s.Get(inserted.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Tags != "b,c" {
+		t.Errorf("Tags = %q, want %q", got.Tags, "b,c")
+	}
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+
+	// Taggings for entry = exactly {b, c}.
+	rows, err := db.Query(
+		`SELECT t.name FROM taggings tg JOIN tags t ON t.id = tg.tag_id
+		 WHERE tg.taggable_type = 'entry' AND tg.taggable_id = ?
+		 ORDER BY t.name`,
+		inserted.ID,
+	)
+	if err != nil {
+		t.Fatalf("query taggings: %v", err)
+	}
+	defer rows.Close()
+	var names []string
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			t.Fatalf("scan: %v", err)
+		}
+		names = append(names, n)
+	}
+	if len(names) != 2 || names[0] != "b" || names[1] != "c" {
+		t.Errorf("taggings names = %v, want [b c]", names)
+	}
+
+	// Orphaned tag "a" must not be referenced by any tagging.
+	var aRefs int
+	if err := db.QueryRow(
+		`SELECT COUNT(*) FROM taggings tg JOIN tags t ON t.id = tg.tag_id WHERE t.name = 'a'`,
+	).Scan(&aRefs); err != nil {
+		t.Fatalf("count a refs: %v", err)
+	}
+	if aRefs != 0 {
+		t.Errorf("orphan tag 'a' still referenced by %d tagging(s)", aRefs)
+	}
+}
+
+// TestDelete_RemovesTaggings verifies Delete removes taggings for the
+// entry and the entries_fts row.
+func TestDelete_RemovesTaggings(t *testing.T) {
+	s, path := newTestStore(t)
+
+	e, err := s.Add(Entry{Title: "del", Tags: "x,y"})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+	if err := s.Delete(e.ID); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+
+	var taggingCount int
+	if err := db.QueryRow(
+		"SELECT COUNT(*) FROM taggings WHERE taggable_type='entry' AND taggable_id=?", e.ID,
+	).Scan(&taggingCount); err != nil {
+		t.Fatalf("count taggings: %v", err)
+	}
+	if taggingCount != 0 {
+		t.Errorf("taggings count = %d, want 0 after Delete", taggingCount)
+	}
+
+	var ftsCount int
+	if err := db.QueryRow(
+		"SELECT COUNT(*) FROM entries_fts WHERE rowid = ?", e.ID,
+	).Scan(&ftsCount); err != nil {
+		t.Fatalf("count entries_fts: %v", err)
+	}
+	if ftsCount != 0 {
+		t.Errorf("entries_fts count = %d, want 0 after Delete", ftsCount)
+	}
+}
+
+// TestList_TagFilterThroughJoin is an explicit join-path test for the
+// tag filter — mirrors TestList_FilterByTag but names the join mechanism.
+func TestList_TagFilterThroughJoin(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	addWithTags(t, s, "ap", "auth,perf", "", "")
+	addWithTags(t, s, "pb", "perf,backend", "", "")
+	addWithTags(t, s, "a", "auth", "", "")
+
+	cases := []struct {
+		tag     string
+		wantLen int
+	}{
+		{"auth", 2},
+		{"perf", 2},
+		{"backend", 1},
+		{"nonesuch", 0},
+	}
+	for _, tc := range cases {
+		got, err := s.List(ListFilter{Tag: tc.tag})
+		if err != nil {
+			t.Fatalf("List(Tag=%q): %v", tc.tag, err)
+		}
+		if len(got) != tc.wantLen {
+			t.Errorf("List(Tag=%q) len=%d, want %d (titles=%v)",
+				tc.tag, len(got), tc.wantLen, titlesOf(got))
+		}
 	}
 }
