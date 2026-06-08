@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-006                     # stable, zero-padded, repo-global (never reused)
-  status: proposed                  # proposed | active | shipped | cancelled | on_hold
+  status: shipped                   # proposed | active | shipped | cancelled | on_hold
   priority: high                    # critical | high | medium | low
   target_complete: 2026-06-13       # ~1 week; first + load-bearing stage of PROJ-002
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-06-05
-shipped_at: null
+shipped_at: 2026-06-07
 ---
 
 # STAGE-006: Tag normalization
@@ -369,13 +369,64 @@ STAGE-006 specs are the natural next test cases; none is codified yet
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped. Run Prompt 1c (Stage Ship) in
-FIRST_SESSION_PROMPTS.md to draft this.*
+*Drafted at stage close (Prompt 1d, fresh Opus, 2026-06-07); all
+success criteria independently re-verified at close.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes — all seven
+  success criteria met and independently re-verified at close (build /
+  gofmt / vet clean, 401 tests across 8 packages, DEC-004→DEC-015
+  supersession wired both ways). Tags are now a first-class shared
+  taxonomy; the v0.1 surface is byte-stable; `brag tags` / `tag rename` /
+  `tag merge` ship; the model is polymorphic and forward-only with only
+  `'entry'` rows.
+- **How many specs did it actually take?** 2 (SPEC-025 L, SPEC-026 M) vs.
+  the brief's ~3–4 and the framing-time expand→contract 3-spec sketch.
+  The 2-spec atomic-migration rescope (2026-06-06) held through ship —
+  the L was not split. Shipped 6 days early (both merged 2026-06-07 vs.
+  `target_complete` 2026-06-13; project `target_ship` 2026-06-26).
+- **What changed between starting and shipping?** Only the framing-time
+  rescope from 3-spec expand→contract to 2-spec atomic in-place migration
+  (single-user premise made the inter-PR "keep main green" safety of the
+  dual-written shadow column worthless); from design lock to ship there
+  were zero scope or decision changes (DEC-015 @0.80 and DEC-016 @0.82
+  both held, no new DECs at build).
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
+  - **Codified at this close:** §12(a) — "design-time pre-flight also
+    covers the test's own expected-value literals" — reached N=3
+    same-outcome (SPEC-023 L2 + O4, SPEC-025 trigger-list ordering).
+    Landed in AGENTS.md §12.
+  - **Already landed mid-stage** (not re-proposed): §2 repo-global ID
+    numbering; the `premise-audit.md` sub-template extraction.
+  - **On WATCH (not yet earned):** (4b) the contamination-heuristic
+    exception for literal-artifact builds (N=1; also a paired-opposing
+    candidate); (4c) "state each embedded flag's default, not just its
+    accepted values" in literal-artifact CLI specs (N=1, zero-cost miss).
+  - **Bookkeeping:** the brief's Stage Plan said "a possible DEC-016 lands
+    [at STAGE-008]"; DEC-016 was consumed by SPEC-026, so STAGE-008's
+    hypothetical migration-prompt DEC is now DEC-017 — corrected in the
+    brief at this close.
 - **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <one-line items>
+  - Promoted + codified: SPEC-025 ship Q2 (§12(a) third confirming case).
+  - Promoted to WATCH: SPEC-026's contamination-heuristic exception (4b)
+    and its `--format`-default refinement (4c).
+
+### WATCH-list update at stage close (carry into STAGE-007)
+
+- **§12(a) literal-test-assertion pre-flight — CODIFIED** at this close
+  (AGENTS.md §12). Removed from WATCH.
+- **Trust-but-verify agent push reports** — still N=2 (SPEC-023);
+  applied as coordinator reflex throughout STAGE-006 (every "pushed"
+  claim checked via `git ls-remote` / PR state). Carry forward.
+- **§13 fresh-session working-tree preservation** — N=1 (SPEC-024).
+  Carry forward.
+- **(NEW) Contamination-heuristic exception for literal-artifact builds**
+  — N=1 (SPEC-026). Discriminator to preserve verbatim: "'nothing was
+  unclear' is the expected honest output of a literal-artifact-as-spec
+  build; distinguish honest-frictionless from mailed-in by whether the
+  reflection surfaces ANY specific observation." Also a paired-opposing
+  candidate (N=2) if a future build mails in a contaminated "nothing was
+  unclear" with no specific observation.
+- **(NEW) Flag-default explicitness in literal-artifact CLI specs** —
+  N=1, zero-cost (SPEC-026 `--format ""` default). Fold a one-liner into
+  the literal-artifact-as-spec guidance if a second STAGE-007/008 CLI
+  spec hits it.

@@ -380,6 +380,30 @@ literal-artifact-as-spec rule above: design-time pre-flight is what makes
 literal was already validated against external reality at the moment it was
 embedded.
 
+**Design-time pre-flight covers the test's own expected-value literals, too —
+not just the artifact-under-test.** §12(b) validates the artifact a spec embeds
+by running it through its external tool. This sub-rule extends the same
+discipline to the *test assertions* a spec embeds: when a Failing Test
+hard-codes an expected value that is design-decidable — a sorted name list, a
+row/element count derivable from the migration/ETL, or a substring that must
+appear in another embedded literal — compute or run that expectation against
+its source at design, before declaring design done. A `want := []string{...}`
+whose order depends on a sort, a `count == N` that depends on the migration,
+and an `assert_contains "X"` whose `X` must match an embedded artifact are all
+design-decidable; typing them by hand defers a guaranteed-catchable error to
+build. Three same-outcome confirming cases (across two distinct specs; the
+first two are mechanically independent contradictions within one build):
+SPEC-023 build L2 (2026-04-26 — the `.goreleaser.yaml` literal put `version: 2`
+on line 6 while test L2 asserted it within `head -5`; the two embedded literals
+contradicted, caught on first build run); SPEC-023 build O4 (2026-04-26 — the
+CHANGELOG literal wrote `brag show <id>` while test O4 asserted the plain
+`brag show` substring; caught at build); SPEC-025 build (2026-06-07 —
+`TestFTS_TriggersExistAfterMigration`'s `want` was typed `tags_au` before
+`taggings_*`, but `sqlite_master`/`sort.Strings` order `taggings_*` first since
+`'g' < 's'`; the §12(b) pre-flight ran the migration SQL through the real driver
+but not the test's expected sorted list, so the order error surfaced at build).
+Codified at STAGE-006 close (2026-06-07).
+
 **Codification meta-rule: paired opposing-outcome cases earn codification at
 N=2; same-outcome confirming cases still need N=3.** Earned at PROJ-001 close
 (2026-05-17) from the §12(b) codification itself, which is the project's
