@@ -65,7 +65,28 @@ get_active_project() {
         echo "${ACTIVE_PROJECT}"
         return
     fi
-    # Look for the first PROJ-* directory that isn't the example.
+    # Prefer the project whose brief.md frontmatter is `status: active`.
+    # IDs are repo-global and only one project is active at a time; a
+    # shipped/closed project keeps its directory but is no longer active.
+    # The plain "lowest-numbered dir" pick below wrongly returns the
+    # shipped PROJ-001 once a second project exists, so check status first.
+    # If somehow several are active, take the highest-numbered.
+    local active
+    active=$(find "${REPO_ROOT}/projects" -maxdepth 1 -type d -name "PROJ-*" 2>/dev/null \
+             | grep -v "example" | sort \
+             | while IFS= read -r proj_dir; do
+                 [ -f "${proj_dir}/brief.md" ] || continue
+                 if head -n 20 "${proj_dir}/brief.md" \
+                     | grep -qE '^[[:space:]]+status:[[:space:]]+active[[:space:]]*$'; then
+                     basename "$proj_dir"
+                 fi
+               done | tail -n1)
+    if [ -n "$active" ]; then
+        echo "$active"
+        return
+    fi
+    # Fall back to the first PROJ-* directory that isn't the example
+    # (bootstrap / no-active-project case).
     local first
     first=$(find "${REPO_ROOT}/projects" -maxdepth 1 -type d -name "PROJ-*" 2>/dev/null \
             | grep -v "example" | sort | head -n1)
