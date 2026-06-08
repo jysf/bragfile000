@@ -185,14 +185,21 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `brag list --tag` filters through the join (replacing the DEC-004
       sentinel-comma `LIKE`); `brag search` byte-stable (DEC-010).
       **Emits DEC-015** (supersedes DEC-004) at design.
-- [ ] SPEC-026 (not yet written) — **M** — **Tag taxonomy + mutations.**
-      `brag tags` (taxonomy view with counts, sourced from the `tags`
-      table), `brag tag rename <old> <new>`, `brag tag merge <src> <dst>`
-      (de-dupes memberships; rename-into-existing semantics decided at
-      design). Stats/digest top-tags may read counts directly from `tags`
-      where cleaner.
+- [~] SPEC-026 (build) — **M** *(L considered, rejected — no migration)* —
+      **Tag taxonomy + mutations.** `brag tags` (counted taxonomy view,
+      sourced **through the `taggings` join** so it counts across all
+      taggable types and omits orphans; count-DESC/name-ASC),
+      `brag tag rename <old> <new>` (single `UPDATE`, rides `tags_au` →
+      FTS; **errors** into an existing name, no auto-merge),
+      `brag tag merge <src> <dst>` (de-dupes via **DELETE+INSERT** on
+      `taggings` — fires the existing `taggings_ad`/`_ai`, so FTS stays
+      correct with **no `taggings_au` / no `0004_*` migration**).
+      Orphan-tag GC: **none** — orphans are invisible (the join) and
+      reused by `INSERT OR IGNORE`, so cleanup is deferred. **Emits
+      DEC-016** (mutation semantics) at design. Design done 2026-06-07;
+      held for review before the build session.
 
-**Count:** 1 shipped / 0 active / 1 pending
+**Count:** 1 shipped / 1 active / 0 pending
 
 **Complexity check:** 1 × L (accepted) + 1 × M = 2 specs — under the
 brief's ~3–4 estimate, but coherent: the L is a single load-bearing

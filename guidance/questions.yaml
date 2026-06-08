@@ -71,6 +71,33 @@ questions:
       projection to `ORDER BY tags.name`. Until then, keep `position` —
       it is the byte-faithful choice for "lossless and invisible."
 
+  - id: tag-rename-into-existing
+    question: "Should `brag tag rename <old> <new>` error when `<new>` already exists (forcing the user to `merge`), or silently auto-merge `<old>` into `<new>`?"
+    priority: low
+    status: open
+    raised_by: claude
+    raised_at: 2026-06-07
+    assigned_to: null
+    notes: |
+      DEC-016 (SPEC-026) choice 2 locks **error, not auto-merge**:
+      rename is a pure single-statement UPDATE; when `<new>` collides
+      with the `tags.name` UNIQUE constraint, rename returns a user
+      error pointing at `brag tag merge`. Rationale: principle of least
+      surprise — a command named "rename" should not silently delete a
+      second tag and re-point its memberships. Keeps rename/merge
+      orthogonal (rename = "misnamed"; merge = "same concept, combine").
+
+      This is the softest DEC-016 sub-choice (~0.8). The defensible
+      alternative is "do what I mean": treat rename-into-existing as an
+      implicit merge. It is the choice most likely to attract a real
+      user request once v0.2.x is dogfooded.
+
+      Revisit trigger: if a user reports that rename-into-existing
+      *should* just merge (or finds the two-step rename→error→merge
+      annoying in practice), reconsider — the change is small (route
+      RenameTag's ErrTagExists path into MergeTags) but it is a contract
+      change and would amend DEC-016 choice 2.
+
   - id: shareable-ids
     question: "Will we ever need IDs that are portable across machines (sync, sharing, export-import), and if so when do we add a ULID column alongside the integer PK?"
     priority: low
