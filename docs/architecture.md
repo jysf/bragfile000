@@ -71,7 +71,7 @@ contracts in [./api-contract.md](./api-contract.md).
 | `cmd/brag` | Process entrypoint. Constructs the root `*cobra.Command`, wires subcommands, handles top-level flags (`--db`, `--version`), calls `os.Exit` with the right code. Contains no business logic. |
 | `internal/config` | Resolves the DB path from `--db` flag → `BRAGFILE_DB` env → `~/.bragfile/db.sqlite`. Creates parent directory on first use. Single source of truth for path resolution. |
 | `internal/cli` | One file per subcommand. Each exports a `func New<Name>Cmd(deps) *cobra.Command`. Depends on `storage.Store` (an interface or concrete type) for all persistence. Does no SQL. |
-| `internal/storage` | `Store` struct wrapping `*sql.DB`. Embeds migration SQL files and applies them on `Open`. Exposes typed methods (`Add`, `List`, `Get`, `Update`, `Delete`, `Search`) — no SQL leaks upward. Owns the `Entry` type. Tags are stored in a normalized `tags`/`taggings` join (DEC-015 / SPEC-025); `Entry.Tags` is a reconstructed comma-joined projection. `entries_fts` (regular own-content FTS5) indexes title, description, tags projection, project, impact and stays in sync via 6 SQL triggers. |
+| `internal/storage` | `Store` struct wrapping `*sql.DB`. Embeds migration SQL files and applies them on `Open`. Exposes typed methods (`Add`, `List`, `Get`, `Update`, `Delete`, `Search`, `TagCounts`, `RenameTag`, `MergeTags`) — no SQL leaks upward. Owns the `Entry` and `TagCount` types. Tags are stored in a normalized `tags`/`taggings` join (DEC-015 / SPEC-025); `Entry.Tags` is a reconstructed comma-joined projection. `entries_fts` (regular own-content FTS5) indexes title, description, tags projection, project, impact and stays in sync via 6 SQL triggers. |
 | `internal/editor` | (STAGE-002) Launches `$EDITOR` against a templated markdown buffer; parses front-matter on save. Used by `add` (no-args mode) and `edit`. |
 | `internal/export` | (STAGE-003) Markdown-report and JSON exporters (`brag export --format markdown\|json`). |
 | `internal/aggregate` | (STAGE-004) Rule-based digest helpers — `ByType` / `ByProject` / `GroupEntriesByProject` / `Streak` / `MostCommon` / `Span` / `rangeCutoff`. Shared by `summary`, `review`, and `stats` per DEC-014's rule-based output envelope. No SQL — operates over `[]Entry` returned by `Store`. |
@@ -148,3 +148,4 @@ machine. Distribution (STAGE-005) uses goreleaser to produce macOS
   - `DEC-004` — tags stored as comma-joined string for MVP (superseded by DEC-015)
   - `DEC-005` — integer auto-increment primary keys for MVP
   - `DEC-015` — normalized tag storage (`tags` + `taggings`, polymorphic; supersedes DEC-004)
+  - `DEC-016` — tag mutation semantics (`brag tags`, `brag tag rename`, `brag tag merge`; merge via DELETE+INSERT, orphans invisible)

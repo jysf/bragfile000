@@ -7,7 +7,7 @@
 task:
   id: SPEC-026
   type: story                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (M — L considered and rejected, see Context)
@@ -837,28 +837,28 @@ root.AddCommand(cli.NewTagCmd())
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-026-tag-taxonomy-and-mutations`
+- **PR (if applicable):** (to be opened)
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
   - `DEC-016` — Tag mutation semantics (emitted at design, not build)
 - **Deviations from spec:**
-  - [list]
+  - None. All Store SQL literals, the JSON helper, and the CLI shapes were transcribed verbatim from the spec.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None beyond what is already in STAGE-006/007/008 backlog.
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing was unclear. The spec's pre-flighted SQL literals, the JSON helper code block, and the CLI RunE shape sketches were precise enough that the build was pure transcription + wiring. The "Merge Gotcha" warning in the prompt prevented any temptation to reach for UPDATE.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No missing constraints. The spec correctly called out all four blocking constraints (`no-sql-in-cli-layer`, `storage-tests-use-tempdir`, `stdout-is-for-data-stderr-is-for-humans`, `test-before-implementation`). The premise-audit greps confirmed no doc hits outside the spec's enumerated list.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing substantive. The literal-artifact-as-spec pattern made this a clean transcription build. The one minor friction was that `tags.go` needed `--format ""` as the default (not `"json"`) so an empty string passes the format check; the spec's sketch used `--format json` as the only accepted non-empty value, which I implemented as `format != "" && format != "json"`. This is a correct reading of the spec but not explicitly stated — worth a one-liner note in future similar specs.
 
 ---
 

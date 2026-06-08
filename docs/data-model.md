@@ -52,6 +52,8 @@ Currently only `taggable_type = 'entry'` is used.
 
 Unique constraint: `(taggable_type, taggable_id, tag_id)` — one tag per entry, once.
 
+Tag rename mutates this join indirectly via the `tags_au` trigger (renames the `tags` row); tag merge mutates it directly via DELETE+INSERT (DEC-016 choice 3).
+
 Indexes: `idx_taggings_tag (tag_id)`, `idx_taggings_taggable (taggable_type, taggable_id)`.
 
 ### Entity: `schema_migrations`
@@ -166,6 +168,7 @@ None of them land in PROJ-001.
 - `DEC-002` — embedded migrations
 - `DEC-004` — comma-joined tags (MVP; superseded by DEC-015 / SPEC-025)
 - `DEC-015` — normalized tag storage (`tags` + `taggings` join, polymorphic; supersedes DEC-004)
+- `DEC-016` — tag mutation semantics: `brag tags` in-use-only taxonomy, rename-errors-into-existing, merge via DELETE+INSERT de-dup, orphan tags invisible (no GC)
 - `DEC-005` — INTEGER auto-increment primary keys (MVP)
 - `DEC-011` — shared JSON output shape for `brag list --format json` and `brag export --format json`: 9-key naked array mirroring the `entries` column names in order (`id, title, description, tags, project, type, impact, created_at, updated_at`).
 - `DEC-013` — markdown export shape for `brag export --format markdown`: level-1 document heading, provenance block, `**By type**` / `**By project**` summary, entries grouped under `## <project>` (alphabetical-ASC; `(no project)` last) with within-group chronological-ASC ordering; `--flat` swaps the grouping for a single `## Entries (chronological)` wrapper.

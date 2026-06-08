@@ -77,9 +77,9 @@ Run `brag add --help` to see them listed alongside the long forms.
 Notes on the fields:
 
 - **`--title`** is required. Everything else is optional.
-- **`--tags`** is a comma-joined string today (e.g. `"auth,perf"`). No
-  normalization, no tag registry. Future stages may add tag search
-  and rename.
+- **`--tags`** is a comma-joined string (e.g. `"auth,perf"`). Tags are
+  stored in a normalized taxonomy — see "Tag taxonomy" below for
+  `brag tags`, `brag tag rename`, and `brag tag merge`.
 - **`--type`** is free-form text — pick whatever feels useful
   (`shipped`, `learned`, `mentored`, `unblocked`, …). No enforced
   enum.
@@ -397,6 +397,38 @@ brag stats --format json | claude "summarize my brag history"
 Stats is corpus-wide — there are no filter or range flags. Use `brag
 summary` for windowed digests, or `brag review` for reflection over
 the last 7 or 30 days.
+
+### Tag taxonomy
+
+See every tag you've used, with usage counts:
+
+```bash
+brag tags                         # name<TAB>count rows, most-used first
+brag tags --format json           # naked JSON array of {tag, count}
+```
+
+Only tags with at least one remaining entry appear. Sort order is count
+(descending) then name (ascending).
+
+Rename a tag everywhere at once — all entries formerly tagged `auth` will
+read `authz`, and FTS search re-syncs automatically:
+
+```bash
+brag tag rename auth authz
+```
+
+- If `authz` already exists, the command errors and directs you to `merge`.
+
+Fold one tag into another, de-duplicating. An entry tagged both `auth` and
+`perf` ends up with exactly one `perf` tagging:
+
+```bash
+brag tag merge auth perf
+```
+
+- Both tags must already exist (use `rename` if the destination tag is new).
+- The `auth` tag row is deleted; `perf`'s count rises by the previously
+  `auth`-only memberships.
 
 ---
 
