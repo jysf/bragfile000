@@ -185,7 +185,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `brag list --tag` filters through the join (replacing the DEC-004
       sentinel-comma `LIKE`); `brag search` byte-stable (DEC-010).
       **Emits DEC-015** (supersedes DEC-004) at design.
-- [~] SPEC-026 (build) — **M** *(L considered, rejected — no migration)* —
+- [x] SPEC-026 (shipped on 2026-06-07) — **M** *(L considered, rejected)* —
       **Tag taxonomy + mutations.** `brag tags` (counted taxonomy view,
       sourced **through the `taggings` join** so it counts across all
       taggable types and omits orphans; count-DESC/name-ASC),
@@ -199,7 +199,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       DEC-016** (mutation semantics) at design. Design done 2026-06-07;
       held for review before the build session.
 
-**Count:** 1 shipped / 1 active / 0 pending
+**Count:** 2 shipped / 0 active / 0 pending — **stage complete, ready to close**
 
 **Complexity check:** 1 × L (accepted) + 1 × M = 2 specs — under the
 brief's ~3–4 estimate, but coherent: the L is a single load-bearing

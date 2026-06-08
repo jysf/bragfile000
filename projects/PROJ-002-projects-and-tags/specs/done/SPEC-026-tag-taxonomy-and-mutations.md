@@ -7,7 +7,7 @@
 task:
   id: SPEC-026
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (M — L considered and rejected, see Context)
@@ -867,11 +867,46 @@ Process-focused: how did the build go? What friction did the spec create?
 *Appended during the **ship** cycle. Outcome-focused reflection, distinct
 from the process-focused build reflection above.*
 
+Shipped clean: PR #37 merged at `4fdb3f9`, CI green on macOS + ubuntu,
+401 tests. No schema change — the taxonomy + mutation surface is pure
+Store methods + thin cobra commands on DEC-015's foundation. DEC-016
+(0.82) held; merge's DELETE+INSERT kept FTS correct with no `taggings_au`
+and no `0004_*` migration, exactly as pre-flighted.
+
+**Verify punch-list resolution (coordinator, at ship).** Verify returned
+ONE ⚠ item: the build reflection Q1 ("Nothing was unclear") reads as a
+same-session contamination tell. Resolved as a **false positive** with
+context verify could not see: (a) the build ran in a confirmed *separate
+fresh Sonnet session* (design was a separate Opus) — structurally not
+same-session contamination; (b) build reflection Q3 surfaces a *specific,
+verifiable* observation (the `--format ""` default gap), which a
+mailed-in reflection does not invent; (c) a frictionless "pure
+transcription" build is the **designed outcome** of a §12
+literal-artifact-as-spec deliverable, not a smell. Verify was correct to
+flag (it lacks session-boundary ground truth); the build reflection is
+left unedited.
+
 1. **What would I do differently next time?**
-   — <answer>
+   — Little — the literal-artifact spec made build mechanical. The one
+   real friction (build Q3) is the `--format` default: the spec's CLI
+   sketch named `--format json` as the only accepted value but didn't
+   state that the *default* must be `""` (not `"json"`). Pre-empt it in
+   future literal-artifact CLI specs by stating the `--format` default
+   explicitly.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Two lessons for STAGE-006 close (Prompt 1d), not landed here:
+   (1) **Contamination-heuristic exception** — "nothing was unclear" is a
+   tell *in general* but is the honest, expected output of a
+   literal-artifact-as-spec build; distinguish honest-frictionless from
+   mailed-in by whether the reflection surfaces *any specific
+   observation* (Q3 here). Pairs with the §12 literal-artifact rule.
+   (2) The `--format`-default spec-template refinement from Q1 above.
+   No constraint or decision change — DEC-016 and all referenced DECs
+   held.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None. **SPEC-026 is the last STAGE-006 spec — the stage is complete
+   (2/2 shipped) and ready to close** (Prompt 1d). Orphan-tag GC stays
+   deferred per DEC-016 choice 4 (invisible + reused; no consumer reads
+   the `tags` table directly yet).
