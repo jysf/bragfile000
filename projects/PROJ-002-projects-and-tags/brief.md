@@ -195,10 +195,11 @@ would mean migrating it twice.
       `docs/api-contract.md` + `docs/architecture.md` refresh; CHANGELOG
       `[0.2.0]`; the optional migration-prompt safety belt (an S spec
       with a high safety-vs-cost ratio); any edge cases surfaced during
-      the prior two stages. A possible DEC-017 lands here if the
+      the prior two stages. A possible new DEC lands here if the
       migration-prompt safety belt ships and encodes a project-binding
-      choice. (DEC-016 was consumed by SPEC-026 for tag-mutation
-      semantics; the next free decision id is DEC-017.)
+      choice. (Its id is assigned at design time, after STAGE-007's
+      decisions land — don't pin a number in planning docs, since
+      earlier stages consume decision ids as they emit DECs.)
 
 **Count:** 0 shipped / 0 active / 3 pending
 
