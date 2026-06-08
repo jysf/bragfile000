@@ -372,6 +372,141 @@ func (s *Store) List(f ListFilter) ([]Entry, error) {
 	return out, nil
 }
 
+// TagCount is one row of the brag tags taxonomy view: a tag name and
+// its total membership count across all taggable types (DEC-016).
+type TagCount struct {
+	Name  string
+	Count int
+}
+
+// TagCounts returns every in-use tag (count >= 1) with its total
+// taggings count across all taggable_types, ordered count DESC then
+// name ASC (DEC-016 choice 1). Orphan tags (zero taggings) are omitted.
+func (s *Store) TagCounts() ([]TagCount, error) {
+	rows, err := s.db.QueryContext(context.Background(),
+		`SELECT t.name, COUNT(tg.id) AS cnt
+		   FROM tags t
+		   JOIN taggings tg ON tg.tag_id = t.id
+		  GROUP BY t.id, t.name
+		  ORDER BY cnt DESC, t.name ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("tag counts: %w", err)
+	}
+	defer rows.Close()
+	out := make([]TagCount, 0)
+	for rows.Next() {
+		var tc TagCount
+		if err := rows.Scan(&tc.Name, &tc.Count); err != nil {
+			return nil, fmt.Errorf("tag counts: %w", err)
+		}
+		out = append(out, tc)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("tag counts: %w", err)
+	}
+	return out, nil
+}
+
+// RenameTag renames the tag with oldName to newName everywhere. Fires
+// the tags_au trigger which re-syncs entries_fts automatically (DEC-016).
+// Returns ErrTagExists if newName already exists; ErrTagNotFound if
+// oldName does not exist. The caller guards oldName == newName.
+func (s *Store) RenameTag(oldName, newName string) error {
+	ctx := context.Background()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("rename tag: %w", err)
+	}
+	defer tx.Rollback()
+
+	var exists int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM tags WHERE name = ?`, newName,
+	).Scan(&exists); err != nil {
+		return fmt.Errorf("rename tag: %w", err)
+	}
+	if exists > 0 {
+		return fmt.Errorf("rename tag %q -> %q: %w", oldName, newName, ErrTagExists)
+	}
+
+	res, err := tx.ExecContext(ctx,
+		`UPDATE tags SET name = ? WHERE name = ?`, newName, oldName)
+	if err != nil {
+		return fmt.Errorf("rename tag: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("rename tag: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("rename tag %q: %w", oldName, ErrTagNotFound)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("rename tag: %w", err)
+	}
+	return nil
+}
+
+// MergeTags folds src's taggings into dst via DELETE+INSERT (DEC-016
+// choice 3), de-duplicating, then deletes the src tag row. Both src
+// and dst must exist; caller guards src == dst.
+func (s *Store) MergeTags(src, dst string) error {
+	ctx := context.Background()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("merge tags: %w", err)
+	}
+	defer tx.Rollback()
+
+	var srcID, dstID int64
+	if err := tx.QueryRowContext(ctx,
+		`SELECT id FROM tags WHERE name = ?`, src).Scan(&srcID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("merge tags: source %q: %w", src, ErrTagNotFound)
+		}
+		return fmt.Errorf("merge tags: %w", err)
+	}
+	if err := tx.QueryRowContext(ctx,
+		`SELECT id FROM tags WHERE name = ?`, dst).Scan(&dstID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("merge tags: destination %q: %w", dst, ErrTagNotFound)
+		}
+		return fmt.Errorf("merge tags: %w", err)
+	}
+
+	// 1. Give every src-tagged object a dst tagging it doesn't already
+	//    have (fires taggings_ai → FTS re-sync). NOT EXISTS skips the
+	//    would-be UNIQUE duplicate for objects tagged both.
+	if _, err := tx.ExecContext(ctx,
+		`INSERT INTO taggings (tag_id, taggable_type, taggable_id, position)
+		 SELECT ?, s.taggable_type, s.taggable_id, s.position
+		   FROM taggings s
+		  WHERE s.tag_id = ?
+		    AND NOT EXISTS (SELECT 1 FROM taggings d
+		                     WHERE d.tag_id = ?
+		                       AND d.taggable_type = s.taggable_type
+		                       AND d.taggable_id  = s.taggable_id)`,
+		dstID, srcID, dstID); err != nil {
+		return fmt.Errorf("merge tags: graft dst: %w", err)
+	}
+	// 2. Drop all src taggings (fires taggings_ad → FTS re-sync, removing
+	//    the src token from the projection where it still lingered).
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM taggings WHERE tag_id = ?`, srcID); err != nil {
+		return fmt.Errorf("merge tags: drop src taggings: %w", err)
+	}
+	// 3. Remove the now-unreferenced src tag row.
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM tags WHERE id = ?`, srcID); err != nil {
+		return fmt.Errorf("merge tags: drop src tag: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("merge tags: %w", err)
+	}
+	return nil
+}
+
 // Search returns entries whose entries_fts row matches the given FTS5
 // query, ordered by FTS5 rank ascending (most relevant first) with
 // entries.id DESC as the tie-break. The caller (CLI layer) is

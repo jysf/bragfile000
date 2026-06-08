@@ -387,6 +387,65 @@ Unknown `--format` values exit 1 (user error). Undeclared flags
 (`--tag`, `--project`, `--type`, `--out`, `--range`, `--since`,
 `--week`, `--month`) surface as cobra `unknown flag` errors.
 
+### `brag tags` — tag taxonomy view (STAGE-006)
+
+```
+brag tags                         # name<TAB>count rows, most-used first
+brag tags --format json           # naked JSON array of {tag, count}
+```
+
+Lists every in-use tag with its total usage count across all entries, one per
+line as `<name>\t<count>`, sorted by count (descending) then name (ascending).
+Tags with no remaining memberships (orphans) are omitted — only in-use tags appear.
+Counts span all taggable object types (only `'entry'` today; `'project'` rows
+fold in automatically in STAGE-007 with no change here).
+
+Flags:
+
+- `--format json` — emits a naked JSON array of `{"tag": <name>, "count": <n>}`
+  objects (DEC-011 naked-array discipline; 2-space indent; `[]` on empty corpus,
+  never `null`). The `{tag,count}` element shape matches DEC-014's `top_tags`.
+- Default (no `--format`) — plain tab-separated `name\tcount` rows on stdout.
+
+Unknown `--format` values exit 1 (user error). stdout carries data; stderr is
+empty on success.
+
+### `brag tag rename <old> <new>` — rename a tag everywhere (STAGE-006)
+
+```
+brag tag rename auth authz
+```
+
+Renames the tag `<old>` to `<new>` globally: every entry formerly tagged `<old>`
+reads `<new>` after the operation. FTS search re-syncs automatically via the
+existing `tags_au` trigger (DEC-016). No migration.
+
+- Exits 0 on success; stderr: `Renamed.`
+- Exits 1 (user error) if `<new>` already exists — directs the caller to
+  `brag tag merge` to combine two tags.
+- Exits 1 (user error) if `<old>` does not exist, if `<old> == <new>`, or if
+  the wrong number of arguments is given.
+- DB is unchanged on any error path (the operation is a single transaction).
+
+### `brag tag merge <src> <dst>` — merge one tag into another (STAGE-006)
+
+```
+brag tag merge auth authz
+```
+
+Folds `<src>`'s memberships into `<dst>`, de-duplicating: an entry tagged both
+`<src>` and `<dst>` ends with exactly one `<dst>` tagging. `<dst>`'s count rises
+by the previously-`src`-only memberships. The `<src>` tag row is deleted.
+Implemented via DELETE+INSERT on `taggings` (DEC-016 choice 3) so the existing
+`taggings_ai`/`taggings_ad` triggers keep `entries_fts` correct. No migration.
+
+- Both `<src>` and `<dst>` must exist (use `brag tag rename` to rename a tag
+  that doesn't conflict with any existing name).
+- Exits 0 on success; stderr: `Merged.`
+- Exits 1 (user error) if either `<src>` or `<dst>` does not exist, if
+  `<src> == <dst>`, or if the wrong number of arguments is given.
+- DB is unchanged on any error path (the operation is a single transaction).
+
 ### `brag completion <shell>` — generate shell completion script (STAGE-005)
 
 ```
@@ -442,3 +501,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-013` — markdown export shape for `brag export --format markdown` (+`--flat`)
 - `DEC-012` — stdin-JSON schema for `brag add --json` (single object, title required, server-owned fields tolerated-and-ignored)
 - `DEC-014` — rule-based output shape for `brag summary`, `brag review`, and `brag stats`: single-object JSON envelope with `generated_at` / `scope` / `filters` provenance + per-spec payload keys; markdown convention reuses DEC-013's provenance + summary-block style.
+- `DEC-016` — tag mutation semantics: `brag tags` in-use-only taxonomy (count-DESC/name-ASC; `{tag,count}` JSON shape), rename-errors-into-existing, merge via DELETE+INSERT, orphan tags invisible (no GC).

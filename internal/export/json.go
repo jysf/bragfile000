@@ -6,6 +6,7 @@ package export
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -67,6 +68,28 @@ func ToJSON(entries []storage.Entry) ([]byte, error) {
 // column names in the same order as DEC-011, separated by 8 tabs. No
 // trailing newline — the caller writes it with one.
 const TSVHeader = "id\ttitle\tdescription\ttags\tproject\ttype\timpact\tcreated_at\tupdated_at"
+
+// tagCountJSON is the per-tag element of brag tags --format json. The
+// key is "tag" (matching DEC-014 top_tags), not the SQL column "name".
+type tagCountJSON struct {
+	Tag   string `json:"tag"`
+	Count int    `json:"count"`
+}
+
+// ToTagsJSON renders the tag taxonomy as a naked JSON array of
+// {tag, count} objects (DEC-011 shape; DEC-016 choice 1). Empty input
+// renders "[]", never "null".
+func ToTagsJSON(tags []storage.TagCount) ([]byte, error) {
+	out := make([]tagCountJSON, 0, len(tags))
+	for _, tc := range tags {
+		out = append(out, tagCountJSON{Tag: tc.Name, Count: tc.Count})
+	}
+	b, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal tags json: %w", err)
+	}
+	return b, nil
+}
 
 // ToTSVRow renders one storage.Entry as a tab-separated data row. Field
 // order matches TSVHeader and DEC-011. Embedded tabs in user text are

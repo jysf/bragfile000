@@ -29,6 +29,8 @@ func main() {
 	root.AddCommand(cli.NewSummaryCmd())
 	root.AddCommand(cli.NewReviewCmd())
 	root.AddCommand(cli.NewStatsCmd())
+	root.AddCommand(cli.NewTagsCmd())
+	root.AddCommand(cli.NewTagCmd())
 	root.AddCommand(cli.NewCompletionCmd(root))
 
 	if err := root.Execute(); err != nil {
