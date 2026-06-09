@@ -176,8 +176,8 @@ backfill into its own spec rather than letting SPEC-027 grow to L.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [~] SPEC-027 (build) — **M** *(L-risk; split-watch did NOT fire — soft
-      match needs no backfill)* — **Projects schema + `0004_*` migration +
+- [x] SPEC-027 (shipped on 2026-06-08) — **M** *(L-risk; split-watch did
+      NOT fire — soft match needs no backfill)* — **Projects schema + `0004_*` migration +
       DEC-017.** `projects` (id PK, name, status enum, state_note,
       timestamps) + `project_locations` (project_id FK, path UNIQUE)
       tables; forward-only `0004_add_projects.sql`. **DEC-017 emitted:**
@@ -216,7 +216,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       inside a registered location, auto-fill it via the SPEC-031
       resolver; write-path must agree with DEC-017.
 
-**Count:** 0 shipped / 1 active / 5 pending
+**Count:** 1 shipped / 0 active / 5 pending
 
 **Complexity check:** 6 specs, all S/M by construction (no L). The split
 preference traded STAGE-006's one-atomic-L approach for a foundation spec

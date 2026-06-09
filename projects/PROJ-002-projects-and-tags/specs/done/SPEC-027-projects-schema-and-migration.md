@@ -7,7 +7,7 @@
 task:
   id: SPEC-027
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it) — L-risk, held to M (see Context)
@@ -579,11 +579,28 @@ remained green. Build transcribes the literal; verify diffs against it.
 
 *Appended during the **ship** cycle.*
 
+Shipped clean: PR #40 merged at `7a67834`, CI green on macOS + ubuntu,
+414 tests. The L-split-watch did not fire — DEC-017's soft-string-match
+(zero backfill) held SPEC-027 at M, and the inversion premise-audit
+correctly came back zero rewrites. Pure-additive `0004` migration,
+`entries.project` untouched.
+
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing substantive; a literal-artifact spec with a §12(b)-validated
+   migration made build a clean transcription. Verify confirmed the build
+   reflection was honest-frictionless (surfaced the errors.go-vs-project.go
+   placement micro-choice) — the codified §12 contamination-exception
+   working as intended.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. DEC-017 (0.80) held; no new DEC at build. The flag-default
+   WATCH item (STAGE-006) does NOT advance here — SPEC-027 ships no CLI
+   flags; STAGE-007's CLI specs (SPEC-028+) remain its natural N=2.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None new. **Forward design note for SPEC-029 (`brag project delete`):**
+   FK enforcement is OFF in bragfile (no `PRAGMA foreign_keys=ON`), so
+   `project_locations.project_id REFERENCES projects(id)` is decorative —
+   `DeleteProject` must MANUALLY delete the project's `project_locations`
+   rows (and define its blast radius on `'project'` taggings if any
+   exist); no cascade will fire. Carry into SPEC-029 design.
