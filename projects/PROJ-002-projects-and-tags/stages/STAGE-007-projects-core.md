@@ -194,10 +194,21 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       (soft match preserves every `entries.project` premise); §12(b)
       migration pre-flighted against modernc.org/sqlite. Mutations →
       SPEC-029, `here` resolver → SPEC-031.
-- [ ] SPEC-028 (not yet written) — **M** — **`brag project new` / `list`
-      / `show`.** Read+create CLI on the SPEC-027 primitives; plain and
-      `--format json` output (DEC-011/013/014 family); `new --path`
-      registers an initial location.
+- [ ] SPEC-028 (build) — **M** — **`brag project new` / `list` /
+      `show`.** Read+create CLI on the SPEC-027 primitives; `brag project`
+      parent (no RunE) mirroring SPEC-026's `brag tag`; plain and
+      `--format json` output (DEC-011 array for `list`, single object for
+      `show`; locations as a JSON array). Design locked four CLI
+      decisions (**no DEC**, all ≥0.8): `--path` required (LD1);
+      `show <name|id>` resolves name-first then id-fallback + a small
+      `GetProjectByName` Store helper (LD2); `new` path pre-check via
+      `ListProjects` prevents an orphan project on a path conflict (LD3);
+      `--format` default `""` stated explicitly per the STAGE-006
+      flag-default WATCH item (LD4). Premise audit run at design:
+      inversion NONE, count-bump NONE (no migration), status-change →
+      `docs/api-contract.md` only (tutorial/architecture deferred to
+      STAGE-008). Registration gap noted (no test enumerates the root
+      set; build confirms `brag project --help` in the real binary).
 - [ ] SPEC-029 (not yet written) — **M** — **`brag project edit` /
       `archive` / `delete`.** Mutation CLI + Store `UpdateProject` /
       `ArchiveProject` (status flip) / `DeleteProject` (destructive;
@@ -216,7 +227,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       inside a registered location, auto-fill it via the SPEC-031
       resolver; write-path must agree with DEC-017.
 
-**Count:** 1 shipped / 0 active / 5 pending
+**Count:** 1 shipped / 1 active / 4 pending
 
 **Complexity check:** 6 specs, all S/M by construction (no L). The split
 preference traded STAGE-006's one-atomic-L approach for a foundation spec
