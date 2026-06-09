@@ -7,7 +7,7 @@
 task:
   id: SPEC-027
   type: story                      # epic | story | task | bug | chore
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it) — L-risk, held to M (see Context)
@@ -537,28 +537,41 @@ remained green. Build transcribes the literal; verify diffs against it.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-027-projects-schema-and-migration`
+- **PR (if applicable):** opened after `just advance-cycle SPEC-027 verify`
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
   - `DEC-017` — entries.project ↔ projects relationship (soft string match)
-    + status enum + state-note model *(emitted at design; confirm no build
-    deviation)*
-- **Deviations from spec:**
-  - [list]
-- **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+    + status enum + state-note model *(emitted at design; no build deviation)*
+- **Deviations from spec:** none. All literals transcribed verbatim; all
+  four count-bump sites applied as planned. `ErrProjectExists` and
+  `ErrLocationExists` placed in `errors.go` per the spec's option (either
+  `errors.go` or `project.go`); chose `errors.go` to keep sentinel errors
+  co-located with the existing pattern.
+- **Follow-up work identified:** none new; SPEC-028–032 remain as planned
+  in the STAGE-007 backlog.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing. The spec was a literal-artifact build: the migration SQL, the
+   method shapes, the count-bump sites, and the `docs/data-model.md` edits
+   were all fully specified. Build was mechanical transcription. The one
+   micro-choice (errors in `errors.go` vs `project.go`) was explicitly
+   flagged as "either is fine" with no ambiguity.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No missing constraints. `timestamps-in-utc-rfc3339` and
+   `errors-wrap-with-context` were both applied as specified. The
+   `gofmt` step was needed (the spec mentions it in Gotchas); it was
+   clean after `gofmt -w`.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing structural. The literal-artifact-as-spec pattern held perfectly:
+   the pre-flight SQL ran at design, the count-bump sites were enumerated
+   at design, and build transcribed cleanly with zero re-derivation. The
+   "fail-first" TDD step caught compilation failures for the expected reason
+   (undefined types/methods), not stray errors.
 
 ---
 

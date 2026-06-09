@@ -4,7 +4,8 @@ The entire bragfile schema lives in a single SQLite database file,
 default path `~/.bragfile/db.sqlite`. Two tables ship in v0.1: `entries`
 (the user's brags) and `schema_migrations` (applied-version tracking).
 STAGE-002 adds a third virtual table (`entries_fts`, SPEC-011) for
-FTS5 search.
+FTS5 search. STAGE-006 adds `tags` and `taggings` (SPEC-025). STAGE-007
+adds `projects` and `project_locations` (SPEC-027).
 
 ## Entities
 
@@ -55,6 +56,34 @@ Unique constraint: `(taggable_type, taggable_id, tag_id)` — one tag per entry,
 Tag rename mutates this join indirectly via the `tags_au` trigger (renames the `tags` row); tag merge mutates it directly via DELETE+INSERT (DEC-016 choice 3).
 
 Indexes: `idx_taggings_tag (tag_id)`, `idx_taggings_taggable (taggable_type, taggable_id)`.
+
+### Entity: `projects` (shipped in SPEC-027)
+
+One row per registered first-class project (DEC-017).
+
+| Field | Type | Nullable | Default | Description |
+|---|---|---|---|---|
+| `id` | INTEGER PRIMARY KEY AUTOINCREMENT | no | auto | Opaque stable ID (DEC-005). |
+| `name` | TEXT NOT NULL UNIQUE | no | — | Project name. Globally unique. Matches `entries.project` via soft string equality (DEC-017). |
+| `status` | TEXT NOT NULL | no | `'active'` | Store-validated enum: `active` \| `paused` \| `done` \| `archived`. No DB CHECK — mirrors `entries.type` free-text approach (DEC-017). |
+| `state_note` | TEXT NOT NULL | no | `''` | Single free-text state/next-action note rendered by `brag project status` (SPEC-030). |
+| `created_at` | TEXT NOT NULL | no | — | RFC3339 UTC, written by the Go layer. |
+| `updated_at` | TEXT NOT NULL | no | — | RFC3339 UTC, set equal to `created_at` on insert, bumped on mutations (SPEC-029). |
+
+**Relationship to `entries`:** DEC-017 soft string match — `entries.project` is free text joined to `projects.name` opportunistically at query time. No FK, no link column, no backfill.
+
+### Entity: `project_locations` (shipped in SPEC-027)
+
+One row per filesystem path registered to a project. One project may have
+many directories; each path maps to at most one project (globally unique).
+
+| Field | Type | Nullable | Default | Description |
+|---|---|---|---|---|
+| `id` | INTEGER PRIMARY KEY AUTOINCREMENT | no | auto | Opaque stable ID; drives insertion-order hydration of `Project.Locations`. |
+| `project_id` | INTEGER NOT NULL REFERENCES projects(id) | no | — | Foreign key into `projects`. |
+| `path` | TEXT NOT NULL UNIQUE | no | — | Filesystem path, stored verbatim (SPEC-031 owns normalization). Globally unique — the guarantee `brag project here` relies on. |
+
+Index: `idx_project_locations_project (project_id)`.
 
 ### Entity: `schema_migrations`
 
@@ -131,6 +160,11 @@ Shipped in STAGE-006 (SPEC-025):
 - Indexes `idx_taggings_tag` and `idx_taggings_taggable`.
 - FTS5 re-pointed to own-content; 3 new triggers (`taggings_ai`, `taggings_ad`, `tags_au`).
 
+Shipped in STAGE-007 (SPEC-027):
+- `projects(id, name UNIQUE, status, state_note, created_at, updated_at)` — first-class projects entity (DEC-017).
+- `project_locations(id, project_id, path UNIQUE)` — one-project-many-directories join.
+- Index `idx_project_locations_project (project_id)`.
+
 ## Data Lifecycle
 
 - **Create.** `brag add` inserts a single row. `created_at` and
@@ -152,8 +186,7 @@ Shipped in STAGE-006 (SPEC-025):
 These are noted so readers don't treat the current schema as the end state.
 None of them land in PROJ-001.
 
-- **Projects normalization.** Same polymorphic shape as `tags`/`taggings`. Deferred for
-  the same reason.
+- ~~**Projects normalization.**~~ Shipped as first-class `projects` + `project_locations` entity in STAGE-007 (SPEC-027). See DEC-017 for the `entries.project` relationship model.
 - **Type enum / taxonomy.** If we ever want structured types, they
   become their own table. Free-form text is fine for now.
 - **Soft delete.** `deleted_at` column + read-path filter. Only worth
@@ -169,6 +202,7 @@ None of them land in PROJ-001.
 - `DEC-004` — comma-joined tags (MVP; superseded by DEC-015 / SPEC-025)
 - `DEC-015` — normalized tag storage (`tags` + `taggings` join, polymorphic; supersedes DEC-004)
 - `DEC-016` — tag mutation semantics: `brag tags` in-use-only taxonomy, rename-errors-into-existing, merge via DELETE+INSERT de-dup, orphan tags invisible (no GC)
+- `DEC-017` — `entries.project` ↔ `projects` relationship: soft string match (free text, opportunistic join on `projects.name`, zero backfill); `projects.status` Store-validated enum; single `state_note` free-text column
 - `DEC-005` — INTEGER auto-increment primary keys (MVP)
 - `DEC-011` — shared JSON output shape for `brag list --format json` and `brag export --format json`: 9-key naked array mirroring the `entries` column names in order (`id, title, description, tags, project, type, impact, created_at, updated_at`).
 - `DEC-013` — markdown export shape for `brag export --format markdown`: level-1 document heading, provenance block, `**By type**` / `**By project**` summary, entries grouped under `## <project>` (alphabetical-ASC; `(no project)` last) with within-group chronological-ASC ordering; `--flat` swaps the grouping for a single `## Entries (chronological)` wrapper.

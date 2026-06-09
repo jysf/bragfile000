@@ -15,3 +15,10 @@ var ErrTagNotFound = errors.New("tag not found")
 // ErrTagExists is returned (wrapped) by RenameTag when the target name
 // already names a tag. Callers map it to "use merge".
 var ErrTagExists = errors.New("tag already exists")
+
+// ErrProjectExists is returned (wrapped) by CreateProject when name is taken.
+var ErrProjectExists = errors.New("project already exists")
+
+// ErrLocationExists is returned (wrapped) by AddLocation when the path is
+// already attached to some project (paths are globally unique).
+var ErrLocationExists = errors.New("location already exists")

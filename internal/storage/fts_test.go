@@ -146,8 +146,8 @@ func TestFTS_BothMigrationsTracked(t *testing.T) {
 		t.Fatalf("rows.Err: %v", err)
 	}
 
-	want := []string{"0001_initial", "0002_add_fts", "0003_normalize_tags"}
-	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] || got[2] != want[2] {
+	want := []string{"0001_initial", "0002_add_fts", "0003_normalize_tags", "0004_add_projects"}
+	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] || got[2] != want[2] || got[3] != want[3] {
 		t.Fatalf("schema_migrations = %v, want %v", got, want)
 	}
 }
@@ -261,13 +261,13 @@ func TestFTS_MigrationBackfillsExistingRows(t *testing.T) {
 		}
 	}
 
-	// Step 4: schema_migrations now contains all three versions.
+	// Step 4: schema_migrations now contains all four versions.
 	var count int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&count); err != nil {
 		t.Fatalf("count schema_migrations: %v", err)
 	}
-	if count != 3 {
-		t.Fatalf("schema_migrations count = %d, want 3", count)
+	if count != 4 {
+		t.Fatalf("schema_migrations count = %d, want 4", count)
 	}
 }
 
