@@ -7,7 +7,7 @@
 task:
   id: SPEC-028
   type: story                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -1164,28 +1164,36 @@ row):
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-028-brag-project-new-list-show`
+- **PR (if applicable):** pending
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - none expected (LD1–LD4 are localized CLI decisions; no DEC-018)
+  - none (LD1–LD4 are localized CLI decisions; confidence ≥ 0.82; no DEC-018)
 - **Deviations from spec:**
-  - [list]
+  - none — all literals transcribed verbatim; no unexpected implementation choices
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - none beyond the already-listed SPEC-029..032 backlog
+
+**Real-binary registration confirmed:**
+`CGO_ENABLED=0 go build -o /tmp/brag-028 ./cmd/brag` → success.
+`/tmp/brag-028 project --help` renders `Available Commands: list / new / show`.
+`/tmp/brag-028 project new --help` shows `Examples:` + `--path` flag.
+`/tmp/brag-028 project list --help` shows `Examples:` + `--format` flag.
+`/tmp/brag-028 project show --help` shows `Examples:` + `--format` flag.
+All render correctly; `NewProjectCmd()` is wired in `cmd/brag/main.go`.
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing was unclear. The spec was a canonical literal-artifact-as-spec build: `GetProjectByName`, the two export helpers, and all four CLI functions were embedded verbatim under "Notes for the Implementer" with explicit imports, and the `--format` default/check pattern was called out explicitly in both LD4 and Gotchas. The one test I wrote with ad-hoc string manipulation (`TestProjectShow_ById`) was self-introduced complexity I immediately replaced with `strconv.FormatInt` — that was not a spec ambiguity, just a code quality reflex.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. The `no-sql-in-cli-layer`, stdout/stderr discipline, `--format ""` default, and orphan pre-check were all listed and exercised. The `getFlagString` helper being package-private in `add.go` (accessible to `project.go` as same-package) is the kind of "go read this file" detail the spec correctly points to rather than re-explaining.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Write `TestProjectShow_ById` with `strconv.FormatInt` from the start rather than drafting a hand-rolled `formatInt64`. Otherwise nothing: the spec's literal-artifact approach made the build mechanical and fast.
 
 ---
 

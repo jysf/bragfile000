@@ -446,6 +446,60 @@ Implemented via DELETE+INSERT on `taggings` (DEC-016 choice 3) so the existing
   `<src> == <dst>`, or if the wrong number of arguments is given.
 - DB is unchanged on any error path (the operation is a single transaction).
 
+### `brag project new <name> --path <dir>` — register a project (STAGE-007)
+
+```
+brag project new bragfile --path ~/code/bragfile
+```
+
+Registers a new project named `<name>` with one initial filesystem location
+`<dir>`. The project starts with status `active` and an empty state note
+(use `brag project edit` to change them — STAGE-007 later spec). `--path` is
+required and stored verbatim (path normalization is `brag project here`'s
+concern, STAGE-007).
+
+- Exits 0 on success; stderr: `Created project "<name>".` (stdout empty).
+- Exit 1 (user error) if `<name>` is empty, `--path` is missing/empty, the
+  name already exists, or the path is already registered to another project
+  (in which case nothing is created — the path is checked first).
+
+### `brag project list` — list projects (STAGE-007)
+
+```
+brag project list                 # name<TAB>status<TAB>locations
+brag project list --format json   # naked JSON array of project objects
+```
+
+Lists every registered project, most-recently-updated first
+(`updated_at DESC, id DESC`), one per line as `<name>\t<status>\t<locations>`
+(locations comma-joined; `-` when none).
+
+- `--format json` — naked JSON array of project objects (DEC-011; 2-space
+  indent; `[]` on empty, never `null`). Object keys: `id, name, status,
+  state_note, locations, created_at, updated_at` (locations a JSON array of
+  strings; timestamps RFC3339).
+- Default (no `--format`) — plain tab-separated rows on stdout.
+- Unknown `--format` exits 1 (user error). stdout carries data; stderr empty.
+
+### `brag project show <name|id>` — show one project (STAGE-007)
+
+```
+brag project show bragfile
+brag project show 3 --format json
+```
+
+Shows one project's name, status, state note, and locations. The argument is
+resolved as a **name first**; if no project has that name and the argument is
+a positive integer, it is resolved as a project **id**. (No recent-brag count
+— that is `brag project status`, a later STAGE-007 spec.)
+
+- Plain output is a labeled block (`Name:`, `Status:`, `State note:`,
+  `Locations:`).
+- `--format json` — a single JSON object (not an array) with the same element
+  shape as `brag project list`.
+- Exit 1 (user error) if no project matches the name or id, or on unknown
+  `--format`.
+
 ### `brag completion <shell>` — generate shell completion script (STAGE-005)
 
 ```
@@ -502,3 +556,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-012` — stdin-JSON schema for `brag add --json` (single object, title required, server-owned fields tolerated-and-ignored)
 - `DEC-014` — rule-based output shape for `brag summary`, `brag review`, and `brag stats`: single-object JSON envelope with `generated_at` / `scope` / `filters` provenance + per-spec payload keys; markdown convention reuses DEC-013's provenance + summary-block style.
 - `DEC-016` — tag mutation semantics: `brag tags` in-use-only taxonomy (count-DESC/name-ASC; `{tag,count}` JSON shape), rename-errors-into-existing, merge via DELETE+INSERT, orphan tags invisible (no GC).
+- `DEC-017` — `entries.project` ↔ `projects` relationship (soft string match) + `projects.status` enum + single `state_note`; the data `brag project show`/`list` render.
