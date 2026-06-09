@@ -6,6 +6,47 @@ import (
 	"testing"
 )
 
+func TestGetProjectByName_RoundTrip(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	created, err := s.CreateProject(Project{Name: "bragfile", StateNote: "n"})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	if err := s.AddLocation(created.ID, "/a"); err != nil {
+		t.Fatalf("AddLocation: %v", err)
+	}
+
+	got, err := s.GetProjectByName("bragfile")
+	if err != nil {
+		t.Fatalf("GetProjectByName: %v", err)
+	}
+	if got.ID != created.ID {
+		t.Errorf("ID = %d, want %d", got.ID, created.ID)
+	}
+	if got.Name != "bragfile" {
+		t.Errorf("Name = %q, want %q", got.Name, "bragfile")
+	}
+	if got.Status != "active" {
+		t.Errorf("Status = %q, want %q", got.Status, "active")
+	}
+	if got.StateNote != "n" {
+		t.Errorf("StateNote = %q, want %q", got.StateNote, "n")
+	}
+	if len(got.Locations) != 1 || got.Locations[0] != "/a" {
+		t.Errorf("Locations = %v, want [\"/a\"]", got.Locations)
+	}
+}
+
+func TestGetProjectByName_NotFound(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	_, err := s.GetProjectByName("nope")
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound", err)
+	}
+}
+
 func TestCreateProject_RoundTrip(t *testing.T) {
 	s, _ := newTestStore(t)
 

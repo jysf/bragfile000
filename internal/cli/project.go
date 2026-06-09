@@ -1,0 +1,259 @@
+package cli
+
+import (
+	"errors"
+	"fmt"
+	"io"
+	"strconv"
+	"strings"
+
+	"github.com/jysf/bragfile000/internal/config"
+	"github.com/jysf/bragfile000/internal/export"
+	"github.com/jysf/bragfile000/internal/storage"
+	"github.com/spf13/cobra"
+)
+
+// NewProjectCmd returns the `brag project` parent command with new,
+// list, and show subcommands. A bare `brag project` prints help (cobra
+// default for a command with subcommands and no RunE). SPEC-029 adds
+// edit/archive/delete to this same parent.
+func NewProjectCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "project",
+		Short: "Manage projects (new, list, show)",
+	}
+	cmd.AddCommand(newProjectNewCmd())
+	cmd.AddCommand(newProjectListCmd())
+	cmd.AddCommand(newProjectShowCmd())
+	return cmd
+}
+
+func newProjectNewCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "new <name> --path <dir>",
+		Short: "Register a new project with an initial location",
+		Long: `Register a new project with a filesystem location. The project starts with
+status "active" and an empty state note; use 'brag project edit' to change them.
+The --path is required and is stored verbatim; a path already registered to
+another project is rejected.
+
+Examples:
+  brag project new bragfile --path ~/code/bragfile
+  brag project new platform --path /srv/platform`,
+		RunE: runProjectNew,
+	}
+	cmd.Flags().String("path", "", "filesystem directory for the project (required)")
+	return cmd
+}
+
+func runProjectNew(cmd *cobra.Command, args []string) error {
+	if len(args) != 1 {
+		return UserErrorf("new requires exactly one <name> argument")
+	}
+	name := strings.TrimSpace(args[0])
+	if name == "" {
+		return UserErrorf("project name must not be empty")
+	}
+	path, _ := cmd.Flags().GetString("path")
+	if strings.TrimSpace(path) == "" {
+		return UserErrorf("--path is required (the project's directory)")
+	}
+
+	dbFlag := getFlagString(cmd, "db")
+	dbPath, err := config.ResolveDBPath(dbFlag)
+	if err != nil {
+		return fmt.Errorf("resolve db path: %w", err)
+	}
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	defer s.Close()
+
+	// LD3: pre-check the path is free so a conflict creates no orphan
+	// project. ListProjects hydrates Locations; iterating its result is
+	// plain Go (no SQL in the CLI layer). Exact-string match — the same
+	// verbatim basis AddLocation enforces; SPEC-031 owns normalization.
+	existing, err := s.ListProjects()
+	if err != nil {
+		return fmt.Errorf("list projects: %w", err)
+	}
+	for _, p := range existing {
+		for _, loc := range p.Locations {
+			if loc == path {
+				return UserErrorf("path %q is already registered to project %q", path, p.Name)
+			}
+		}
+	}
+
+	created, err := s.CreateProject(storage.Project{Name: name})
+	if err != nil {
+		if errors.Is(err, storage.ErrProjectExists) {
+			return UserErrorf("project %q already exists", name)
+		}
+		return fmt.Errorf("create project: %w", err)
+	}
+	if err := s.AddLocation(created.ID, path); err != nil {
+		if errors.Is(err, storage.ErrLocationExists) {
+			// Defensive backstop for the TOCTOU window (no real race in a
+			// single-user CLI); the pre-check above is the primary guard.
+			return UserErrorf("path %q is already registered to another project", path)
+		}
+		return fmt.Errorf("add location: %w", err)
+	}
+	fmt.Fprintf(cmd.ErrOrStderr(), "Created project %q.\n", name)
+	return nil
+}
+
+func newProjectListCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List projects (most-recently-updated first)",
+		Long: `List every registered project, most-recently-updated first, one per line as
+<name>` + "\t" + `<status>` + "\t" + `<locations> (comma-joined; "-" when none).
+
+Output is plain tab-separated rows (default) or a naked JSON array of project
+objects (--format json) per DEC-011.
+
+Examples:
+  brag project list                 # name<TAB>status<TAB>locations
+  brag project list --format json   # naked JSON array of project objects`,
+		RunE: runProjectList,
+	}
+	cmd.Flags().String("format", "", "output format (one of: json); default is plain tab-separated")
+	return cmd
+}
+
+func runProjectList(cmd *cobra.Command, _ []string) error {
+	format, _ := cmd.Flags().GetString("format")
+	if format != "" && format != "json" {
+		return UserErrorf("unknown --format value %q (accepted: json)", format)
+	}
+
+	dbFlag := getFlagString(cmd, "db")
+	dbPath, err := config.ResolveDBPath(dbFlag)
+	if err != nil {
+		return fmt.Errorf("resolve db path: %w", err)
+	}
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	defer s.Close()
+
+	projects, err := s.ListProjects()
+	if err != nil {
+		return fmt.Errorf("list projects: %w", err)
+	}
+
+	out := cmd.OutOrStdout()
+	if format == "json" {
+		body, err := export.ToProjectsJSON(projects)
+		if err != nil {
+			return fmt.Errorf("render projects json: %w", err)
+		}
+		fmt.Fprintln(out, string(body))
+		return nil
+	}
+	for _, p := range projects {
+		loc := "-"
+		if len(p.Locations) > 0 {
+			loc = strings.Join(p.Locations, ",")
+		}
+		fmt.Fprintf(out, "%s\t%s\t%s\n", p.Name, p.Status, loc)
+	}
+	return nil
+}
+
+func newProjectShowCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "show <name|id>",
+		Short: "Show a single project by name or id",
+		Long: `Show one project's name, status, state note, and locations. The argument is
+resolved as a name first; if no project has that name and the argument is a
+positive integer, it is resolved as a project id.
+
+Examples:
+  brag project show bragfile         # by name
+  brag project show 3                # by id (when no project is named "3")
+  brag project show bragfile --format json`,
+		RunE: runProjectShow,
+	}
+	cmd.Flags().String("format", "", "output format (one of: json); default is plain")
+	return cmd
+}
+
+func runProjectShow(cmd *cobra.Command, args []string) error {
+	if len(args) != 1 {
+		return UserErrorf("show requires exactly one <name|id> argument")
+	}
+	key := strings.TrimSpace(args[0])
+	if key == "" {
+		return UserErrorf("project name or id must not be empty")
+	}
+	format, _ := cmd.Flags().GetString("format")
+	if format != "" && format != "json" {
+		return UserErrorf("unknown --format value %q (accepted: json)", format)
+	}
+
+	dbFlag := getFlagString(cmd, "db")
+	dbPath, err := config.ResolveDBPath(dbFlag)
+	if err != nil {
+		return fmt.Errorf("resolve db path: %w", err)
+	}
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	defer s.Close()
+
+	// LD2: name first, then integer-id fallback.
+	project, err := s.GetProjectByName(key)
+	if err != nil {
+		if !errors.Is(err, storage.ErrNotFound) {
+			return fmt.Errorf("get project: %w", err)
+		}
+		// Name miss: try id iff the key is a positive integer.
+		id, convErr := strconv.ParseInt(key, 10, 64)
+		if convErr != nil || id <= 0 {
+			return UserErrorf("no project named %q", key)
+		}
+		project, err = s.GetProject(id)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				return UserErrorf("no project named or with id %q", key)
+			}
+			return fmt.Errorf("get project: %w", err)
+		}
+	}
+
+	out := cmd.OutOrStdout()
+	if format == "json" {
+		body, err := export.ToProjectJSON(project)
+		if err != nil {
+			return fmt.Errorf("render project json: %w", err)
+		}
+		fmt.Fprintln(out, string(body))
+		return nil
+	}
+	renderProjectPlain(out, project)
+	return nil
+}
+
+func renderProjectPlain(out io.Writer, p storage.Project) {
+	fmt.Fprintf(out, "Name: %s\n", p.Name)
+	fmt.Fprintf(out, "Status: %s\n", p.Status)
+	note := p.StateNote
+	if note == "" {
+		note = "-"
+	}
+	fmt.Fprintf(out, "State note: %s\n", note)
+	if len(p.Locations) == 0 {
+		fmt.Fprintln(out, "Locations: (none)")
+		return
+	}
+	fmt.Fprintln(out, "Locations:")
+	for _, l := range p.Locations {
+		fmt.Fprintf(out, "  %s\n", l)
+	}
+}

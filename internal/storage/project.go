@@ -111,6 +111,47 @@ func (s *Store) GetProject(id int64) (Project, error) {
 	return p, nil
 }
 
+// GetProjectByName returns the project with the given name (names are
+// globally UNIQUE), with its Locations hydrated in insertion order.
+// Returns an error wrapping ErrNotFound if no row matches. Mirrors
+// GetProject; used by `brag project show <name|id>` (SPEC-028).
+func (s *Store) GetProjectByName(name string) (Project, error) {
+	ctx := context.Background()
+
+	var (
+		p                          Project
+		createdAtRaw, updatedAtRaw string
+	)
+	err := s.db.QueryRowContext(ctx,
+		`SELECT id, name, status, state_note, created_at, updated_at
+		 FROM projects WHERE name = ?`, name,
+	).Scan(&p.ID, &p.Name, &p.Status, &p.StateNote, &createdAtRaw, &updatedAtRaw)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Project{}, fmt.Errorf("get project %q: %w", name, ErrNotFound)
+		}
+		return Project{}, fmt.Errorf("get project %q: %w", name, err)
+	}
+
+	created, err := time.Parse(time.RFC3339, createdAtRaw)
+	if err != nil {
+		return Project{}, fmt.Errorf("get project %q: parse created_at %q: %w", name, createdAtRaw, err)
+	}
+	updated, err := time.Parse(time.RFC3339, updatedAtRaw)
+	if err != nil {
+		return Project{}, fmt.Errorf("get project %q: parse updated_at %q: %w", name, updatedAtRaw, err)
+	}
+	p.CreatedAt = created.UTC()
+	p.UpdatedAt = updated.UTC()
+
+	locs, err := s.locationsForProject(ctx, p.ID)
+	if err != nil {
+		return Project{}, fmt.Errorf("get project %q: %w", name, err)
+	}
+	p.Locations = locs
+	return p, nil
+}
+
 // ListProjects returns all projects ordered updated_at DESC, id DESC,
 // each hydrated with its Locations. Returns a non-nil empty slice when
 // no projects exist.
