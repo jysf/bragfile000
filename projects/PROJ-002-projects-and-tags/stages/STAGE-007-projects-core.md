@@ -194,7 +194,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       (soft match preserves every `entries.project` premise); §12(b)
       migration pre-flighted against modernc.org/sqlite. Mutations →
       SPEC-029, `here` resolver → SPEC-031.
-- [ ] SPEC-028 (build) — **M** — **`brag project new` / `list` /
+- [x] SPEC-028 (shipped on 2026-06-08) — **M** — **`brag project new` / `list` /
       `show`.** Read+create CLI on the SPEC-027 primitives; `brag project`
       parent (no RunE) mirroring SPEC-026's `brag tag`; plain and
       `--format json` output (DEC-011 array for `list`, single object for
@@ -227,7 +227,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       inside a registered location, auto-fill it via the SPEC-031
       resolver; write-path must agree with DEC-017.
 
-**Count:** 1 shipped / 1 active / 4 pending
+**Count:** 2 shipped / 0 active / 4 pending
 
 **Complexity check:** 6 specs, all S/M by construction (no L). The split
 preference traded STAGE-006's one-atomic-L approach for a foundation spec

@@ -7,7 +7,7 @@
 task:
   id: SPEC-028
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -1202,11 +1202,29 @@ Process-focused: how did the build go? What friction did the spec create?
 *Appended during the **ship** cycle. Outcome-focused reflection, distinct
 from the process-focused build reflection above.*
 
+Shipped clean: PR #41 merged at `85c5173`, CI green on macOS + ubuntu,
+437 tests. Pure CLI on SPEC-027's primitives — no migration, no schema
+change, inversion premise-audit zero. Verify independently confirmed
+`brag project` is registered in the real binary (the untested-registration
+gap closed by hand).
+
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing substantive; the literal-artifact spec (Store helper + export
+   helpers + three RunEs + api-contract sections all embedded) made build
+   a clean transcription. The LD3 orphan-prevention pre-check shipped as
+   designed; if multi-location `new` or a real race ever emerges, the
+   transactional `CreateProjectWithLocation` fallback is the clean upgrade.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — The **flag-default-explicitness WATCH item advances to N=2**
+   (SPEC-026 `--format ""` + SPEC-028's explicit `--format` default).
+   Still below the N=3 same-outcome bar, so NOT codified here — but it is
+   now a live candidate for **STAGE-007 close** (or N=3 at the next CLI
+   spec, SPEC-029/030). No constraint/decision change; DEC-017 held, no
+   new DEC.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None new. The SPEC-027 forward note still stands for **SPEC-029**
+   (`brag project delete`): FK enforcement is OFF, so `DeleteProject` must
+   manually delete `project_locations` rows (no cascade). SPEC-029 also
+   makes a (rare) location-less orphan recoverable.
