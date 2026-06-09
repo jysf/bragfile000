@@ -137,3 +137,23 @@ questions:
       Lands in STAGE-003. Leaning toward: always group by `project`
       first, then `type` second, with tags shown inline per entry.
       Make this choice when writing the summary spec — not now.
+
+  - id: project-state-note-shape
+    question: "Should a project's state/next-action note stay a single free-text `state_note` column, or split into structured `state` + `next_action` fields?"
+    priority: medium
+    status: open
+    raised_by: claude
+    raised_at: 2026-06-08
+    assigned_to: null
+    notes: |
+      Filed at SPEC-027 design (DEC-017, confidence 0.80 composite; this
+      sub-choice ~0.78, the one piece below 0.8). DEC-017 locks a single
+      free-text `state_note TEXT NOT NULL DEFAULT ''` column in the
+      `0004_add_projects` migration as the minimal primitive — the user
+      writes "Shipped tags; next: cut v0.2.0" freely. Resolve at SPEC-030
+      design (the `brag project status` dashboard) BEFORE the dashboard
+      renders the note: if the dashboard wants to surface "next action"
+      distinctly from "state," a split is warranted. Under forward-only
+      migrations (DEC-002) splitting later is an additive column +
+      one-shot copy, not a rebuild — so deferring is cheap and YAGNI
+      favors holding the single column until a renderer needs structure.

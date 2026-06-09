@@ -176,16 +176,24 @@ backfill into its own spec rather than letting SPEC-027 grow to L.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-027 (design) — **M** *(L-risk; split-watch on the entries.project
-      backfill)* — **Projects schema + `0004_*` migration + DEC-017.**
-      `projects` (id PK, name, status enum, state/next-action note,
-      timestamps) + `project_locations` (project_id FK, path) tables; a
-      forward-only `0004_*` migration. **Resolves the central
-      `entries.project` ↔ `projects` relationship and emits DEC-017**
-      (next free id), including whatever backfill/link the chosen model
-      needs. Store read primitives: `CreateProject` / `GetProject` /
-      `ListProjects` + location attach. Premise audit: count-bump 3→4
-      (see Design Notes for the four exact sites).
+- [~] SPEC-027 (build) — **M** *(L-risk; split-watch did NOT fire — soft
+      match needs no backfill)* — **Projects schema + `0004_*` migration +
+      DEC-017.** `projects` (id PK, name, status enum, state_note,
+      timestamps) + `project_locations` (project_id FK, path UNIQUE)
+      tables; forward-only `0004_add_projects.sql`. **DEC-017 emitted:**
+      `entries.project` ↔ `projects` is **soft string match** (free text,
+      join on `projects.name`, zero backfill) — the choice that holds the
+      spec at M; status enum `active|paused|done|archived` (default
+      `active`, Store-validated, no DB CHECK) + single free-text
+      `state_note` ride in DEC-017 (state-note shape filed as
+      `project-state-note-shape`, < 0.8). Store read primitives:
+      `CreateProject` / `GetProject` / `ListProjects` / `AddLocation`.
+      Premise audit run at design: count-bump 3→4 (four sites confirmed:
+      `store_test.go:172,206-208`; `fts_test.go:149,266-270`;
+      `migrate_test.go` MapFS stays); inversion → zero rewrites
+      (soft match preserves every `entries.project` premise); §12(b)
+      migration pre-flighted against modernc.org/sqlite. Mutations →
+      SPEC-029, `here` resolver → SPEC-031.
 - [ ] SPEC-028 (not yet written) — **M** — **`brag project new` / `list`
       / `show`.** Read+create CLI on the SPEC-027 primitives; plain and
       `--format json` output (DEC-011/013/014 family); `new --path`
@@ -208,7 +216,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       inside a registered location, auto-fill it via the SPEC-031
       resolver; write-path must agree with DEC-017.
 
-**Count:** 0 shipped / 0 active / 6 pending
+**Count:** 0 shipped / 1 active / 5 pending
 
 **Complexity check:** 6 specs, all S/M by construction (no L). The split
 preference traded STAGE-006's one-atomic-L approach for a foundation spec
