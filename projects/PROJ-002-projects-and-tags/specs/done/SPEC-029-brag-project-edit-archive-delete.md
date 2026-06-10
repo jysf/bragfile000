@@ -7,7 +7,7 @@
 task:
   id: SPEC-029
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -1304,11 +1304,32 @@ Process-focused: how did the build go? What friction did the spec create?
 *Appended during the **ship** cycle. Outcome-focused reflection, distinct
 from the process-focused build reflection above.*
 
+Shipped after a one-round punch-list iteration: PR #42 merged at
+`8102a25`, CI green, 470 tests. Verify found no code-correctness issues —
+DEC-018's delete blast radius (three DELETEs in one tx, entries untouched,
+path freed) was exact — but flagged a real AC-coverage gap (integer-id
+resolution untested on the mutation commands) plus two bookkeeping misses
+(unrecorded binary-registration confirmation; a prematurely-shipped
+backlog count). A scoped fix (2 tests + 2 doc lines) closed all three.
+
 1. **What would I do differently next time?**
-   — <answer>
+   — Two design-time misses worth carrying: (a) the spec's Failing Tests
+   listed integer-id resolution as an AC for all three mutation commands
+   but only wrote a `show` test — when an AC says "all three," the failing
+   tests should cover each, not lean on a shared helper's single test; (b)
+   the build session marked the backlog `[x]/shipped` at build time, which
+   is the coordinator's ship-step job — build should leave specs in the
+   in-progress marker. Both caught at verify, both cheap.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — The flag-default-explicitness WATCH item is now firmly at **N=3**
+   (SPEC-026 + SPEC-028 + SPEC-029) — a STAGE-007-close codification
+   candidate (do not codify mid-stage). The "AC-says-all-three → test each"
+   point above is a candidate premise-audit/spec-template nudge if it
+   recurs. No constraint/decision change; DEC-018 (0.85) held.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None new beyond the already-planned SPEC-033 (location editing,
+   peeled from this spec at design). DEC-018 future-proofed the
+   `'project'`-taggings cleanup, so a later project-tag surface needs no
+   delete change.
