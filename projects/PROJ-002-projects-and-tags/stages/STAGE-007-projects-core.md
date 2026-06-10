@@ -229,10 +229,11 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       Registration: rides the existing `NewProjectCmd` parent (no `main.go`
       change). Flag-default WATCH advances to **N=3** (note for stage
       close; not codified mid-spec).
-- [ ] SPEC-030 (not yet written) — **M** — **status + state-note model +
-      `brag project status` dashboard.** The "scannable" criterion:
-      active projects by recency, state note, recent-brag count (the
-      count depends on the DEC-017 linkage).
+- [~] SPEC-030 (design) — **M** — **`brag project status` dashboard.**
+      The "scannable" criterion: active projects by recency, state note,
+      lifetime brag count (DEC-017 soft join, `COUNT(e.id)` LEFT JOIN).
+      Q1 → total/lifetime count (LD1). Q2 → single free-text state_note
+      confirmed; `project-state-note-shape` question closed. No new DEC.
 - [ ] SPEC-031 (not yet written) — **S/M** — **`brag project here`
       cwd auto-detect.** Resolve cwd against `project_locations`
       (resolution policy decided at design: exact / nearest-ancestor /
