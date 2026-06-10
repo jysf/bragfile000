@@ -211,7 +211,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `docs/api-contract.md` only (tutorial/architecture deferred to
       STAGE-008). Registration gap noted (no test enumerates the root
       set; build confirms `brag project --help` in the real binary).
-- [x] SPEC-029 (build on 2026-06-09) — **M** — **`brag project
+- [~] SPEC-029 (build) — **M** — **`brag project
       edit` / `archive` / `delete`.** Mutation CLI + Store `UpdateProject`
       (scalar fields, bumps `updated_at`) / `ArchiveProject` (status flip)
       / `DeleteProject` (destructive). **DEC-018 emitted:** delete blast
@@ -249,7 +249,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       respecting the global `UNIQUE(path)` guarantee. Placement (STAGE-007
       vs STAGE-008) is a stage call; not a STAGE-007 success criterion.
 
-**Count:** 3 shipped / 0 active / 4 pending
+**Count:** 2 shipped / 1 active / 4 pending
 
 **Complexity check:** 7 specs, all S/M by construction (no L). The split
 preference traded STAGE-006's one-atomic-L approach for a foundation spec

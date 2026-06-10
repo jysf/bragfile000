@@ -1282,6 +1282,7 @@ the documented trigger at a close, not a unilateral mid-stage edit).
   - `TestProjectMutations_HelpShowsExamples` — the spec's test description listed `--status active` as the edit-help distinctive token, but the edit Long uses `--status paused` in its examples and `--status active` appears in the archive Long (the recovery command). The test was corrected to assert `--status active` in archive --help (not edit --help), which matches the spec's parenthetical exactly (`archive --help contains recoverable (or edit … --status active)`). This is a test-spec alignment fix, not a logic change; the implementation is verbatim.
 - **Follow-up work identified:**
   - SPEC-033 (location editing — peeled from SPEC-029, already in STAGE-007 backlog at design)
+- **Binary registration confirmed:** `brag project --help` lists `edit`, `archive`, `delete`; `brag project edit --help`, `archive --help`, and `delete --help` each render with `Examples:`.
 
 ### Build-phase reflection (3 questions, short answers)
 
