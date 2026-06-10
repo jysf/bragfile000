@@ -164,9 +164,11 @@ v0.2.x format.
 
 ## Spec Backlog
 
-Six specs, deliberately kept S/M with the schema/migration foundation
-split from the CLI surface (split preference, 2026-06-08). The one
-L-risk spec is **SPEC-027** (schema + `0004_*` migration + the DEC-017
+Seven specs (framed as six; grew to seven at SPEC-029 design when its
+L-watch peeled location editing into SPEC-033 — see the Complexity check
+below), deliberately kept S/M with the schema/migration foundation split
+from the CLI surface (split preference, 2026-06-08). The one L-risk
+foundation spec is **SPEC-027** (schema + `0004_*` migration + the DEC-017
 relationship decision + Store read primitives + the count-bump premise
 audit); it is held to **M** by splitting the Store *mutation* methods
 out into SPEC-029 and the location *resolver* out into SPEC-031. If
@@ -209,11 +211,24 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `docs/api-contract.md` only (tutorial/architecture deferred to
       STAGE-008). Registration gap noted (no test enumerates the root
       set; build confirms `brag project --help` in the real binary).
-- [ ] SPEC-029 (not yet written) — **M** — **`brag project edit` /
-      `archive` / `delete`.** Mutation CLI + Store `UpdateProject` /
-      `ArchiveProject` (status flip) / `DeleteProject` (destructive;
-      blast radius defined against DEC-017 + locations + any `'project'`
-      taggings).
+- [ ] SPEC-029 (design → build on 2026-06-09) — **M** — **`brag project
+      edit` / `archive` / `delete`.** Mutation CLI + Store `UpdateProject`
+      (scalar fields, bumps `updated_at`) / `ArchiveProject` (status flip)
+      / `DeleteProject` (destructive). **DEC-018 emitted:** delete blast
+      radius — entries UNTOUCHED (DEC-017 soft match), `project_locations`
+      deleted manually in-tx (FK off → no cascade; SPEC-027 forward note),
+      `'project'` taggings cleaned in-tx (forward-proof; none written yet);
+      archive recoverable vs delete irreversible. `edit` held to **scalar
+      fields only** (`--name`/`--status`/`--state-note`); the L-watch FIRED
+      — location editing (`--add-path`/`--remove-path` + `RemoveLocation`)
+      peeled to **SPEC-033**. delete confirmation matches `brag delete`
+      (y/N + `--yes`/`-y`). Premise audit at design: count-bump NONE (no
+      migration); inversion NONE (the `updated_at`-bump ordering case is an
+      ADDITION, not a rewrite of SPEC-027's same-second tie-break test);
+      status-change → `docs/api-contract.md` 3 sections + DEC-018 row.
+      Registration: rides the existing `NewProjectCmd` parent (no `main.go`
+      change). Flag-default WATCH advances to **N=3** (note for stage
+      close; not codified mid-spec).
 - [ ] SPEC-030 (not yet written) — **M** — **status + state-note model +
       `brag project status` dashboard.** The "scannable" criterion:
       active projects by recency, state note, recent-brag count (the
@@ -226,17 +241,27 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       auto-fill from cwd.** When no explicit `--project` and cwd is
       inside a registered location, auto-fill it via the SPEC-031
       resolver; write-path must agree with DEC-017.
+- [ ] SPEC-033 (not yet written) — **S/M** — **`brag project edit`
+      location editing.** Peeled from SPEC-029 (the L-watch that fired):
+      `--add-path` / `--remove-path` flags + a Store `RemoveLocation`
+      method (the additive counterpart to SPEC-027's `AddLocation`).
+      Multi-directory editing of a registered project's `project_locations`,
+      respecting the global `UNIQUE(path)` guarantee. Placement (STAGE-007
+      vs STAGE-008) is a stage call; not a STAGE-007 success criterion.
 
-**Count:** 2 shipped / 0 active / 4 pending
+**Count:** 2 shipped / 1 active / 4 pending
 
-**Complexity check:** 6 specs, all S/M by construction (no L). The split
+**Complexity check:** 7 specs, all S/M by construction (no L). The split
 preference traded STAGE-006's one-atomic-L approach for a foundation spec
-(SPEC-027) plus four CLI specs plus the resolver — coherent because the
+(SPEC-027) plus the CLI specs plus the resolver — coherent because the
 CLI surfaces are genuinely separable and the schema is the only shared
-dependency. Six sits at the top of the brief's ~5–6 estimate, not over
-it. The single watch item is SPEC-027: if the `entries.project` backfill
-DEC-017 mandates is non-trivial, peel it into a seventh spec rather than
-let SPEC-027 cross into L.
+dependency. The plan grew from six to seven at SPEC-029 design: the
+SPEC-027 backfill watch did **not** fire (DEC-017 soft match needs none),
+but the **SPEC-029 L-watch DID** — `edit` + `archive` + `delete` with
+location editing folded in read L, so location editing was peeled into
+**SPEC-033** (the stage-prescribed split), holding SPEC-029 at M. One
+above the brief's ~5–6 estimate, by a conscious peel rather than scope
+creep.
 
 ## Design Notes
 
@@ -371,7 +396,9 @@ not codify mid-stage without the documented trigger):
   longer pins a number for a not-yet-emitted DEC — its id is assigned at
   design time. (STAGE-007 may itself emit more than one DEC; the
   resolution-policy and status-enum questions could each warrant one.)
-- STAGE-007 specs are **SPEC-027..032** (SPEC-026 was the last shipped).
+- STAGE-007 specs are **SPEC-027..033** (SPEC-026 was the last shipped;
+  SPEC-033 added at SPEC-029 design when the L-watch peeled location
+  editing out of SPEC-029).
 
 ### Already-true, no work needed
 
