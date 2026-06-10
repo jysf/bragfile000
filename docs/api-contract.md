@@ -500,6 +500,58 @@ a positive integer, it is resolved as a project **id**. (No recent-brag count
 - Exit 1 (user error) if no project matches the name or id, or on unknown
   `--format`.
 
+### `brag project edit <name|id>` — edit a project's scalar fields (STAGE-007)
+
+```
+brag project edit bragfile --status paused
+brag project edit bragfile --state-note "shipped tags; next: cut v0.2.0"
+brag project edit bragfile --name brag-cli
+```
+
+Edits a project's scalar fields. The argument resolves as a **name first**,
+then as a positive-integer **id**. Pass at least one of `--name`, `--status`,
+or `--state-note`; unspecified fields are unchanged.
+
+- `--name` — rename (must be unique). Renaming does **not** rewrite the project
+  string on existing brag entries (DEC-017); they keep their captured string.
+- `--status` — one of `active`, `paused`, `done`, `archived` (validated).
+- `--state-note` — the free-text state/next-action note.
+- Bumps `updated_at` (so the project rises in `brag project list` recency order).
+- Exits 0 on success; stderr: `Edited project "<name>".` (stdout empty).
+- Exit 1 (user error) if no field flag is given, the project is not found, the
+  new name is already taken, or `--status` is outside the enum.
+
+### `brag project archive <name|id>` — archive a project (STAGE-007)
+
+```
+brag project archive bragfile
+```
+
+Sets a project's status to `archived` — a **non-destructive, recoverable**
+flip. The project, its state note, and its locations are all preserved. Restore
+it with `brag project edit <name|id> --status active`. This is **not** delete.
+
+- Exits 0 on success; stderr: `Archived project "<name>".` (stdout empty).
+- Exit 1 (user error) if the project is not found.
+
+### `brag project delete <name|id>` — permanently delete a project (STAGE-007)
+
+```
+brag project delete bragfile        # prompts y/N on stdin
+brag project delete bragfile --yes  # skip the prompt
+```
+
+Permanently removes a project and its `project_locations` rows. **Irreversible**
+(distinct from `archive`). Prompts for `y/N` confirmation on stderr unless
+`--yes`/`-y` is passed; a non-`y` answer prints `Aborted.` and exits 0 without
+deleting. Existing brag entries are **not** touched — an entry keeps its
+project string (DEC-017), so `brag list --project <name>` still finds those
+entries afterward (blast radius on entries: none — DEC-018).
+
+- `--yes`, `-y` — skip the confirmation prompt.
+- Exits 0 on success; stderr: `Deleted project "<name>".` (stdout empty).
+- Exit 1 (user error) if the project is not found.
+
 ### `brag completion <shell>` — generate shell completion script (STAGE-005)
 
 ```
@@ -557,3 +609,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-014` — rule-based output shape for `brag summary`, `brag review`, and `brag stats`: single-object JSON envelope with `generated_at` / `scope` / `filters` provenance + per-spec payload keys; markdown convention reuses DEC-013's provenance + summary-block style.
 - `DEC-016` — tag mutation semantics: `brag tags` in-use-only taxonomy (count-DESC/name-ASC; `{tag,count}` JSON shape), rename-errors-into-existing, merge via DELETE+INSERT, orphan tags invisible (no GC).
 - `DEC-017` — `entries.project` ↔ `projects` relationship (soft string match) + `projects.status` enum + single `state_note`; the data `brag project show`/`list` render.
+- `DEC-018` — `brag project delete` blast radius: entries untouched (soft match), project_locations deleted manually in-tx (FK off → no cascade), `'project'` taggings cleaned in-tx; archive is the recoverable status flip, delete is irreversible.

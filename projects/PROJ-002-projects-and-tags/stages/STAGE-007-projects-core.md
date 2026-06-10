@@ -211,7 +211,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `docs/api-contract.md` only (tutorial/architecture deferred to
       STAGE-008). Registration gap noted (no test enumerates the root
       set; build confirms `brag project --help` in the real binary).
-- [ ] SPEC-029 (design → build on 2026-06-09) — **M** — **`brag project
+- [~] SPEC-029 (build) — **M** — **`brag project
       edit` / `archive` / `delete`.** Mutation CLI + Store `UpdateProject`
       (scalar fields, bumps `updated_at`) / `ArchiveProject` (status flip)
       / `DeleteProject` (destructive). **DEC-018 emitted:** delete blast

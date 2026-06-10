@@ -22,3 +22,9 @@ var ErrProjectExists = errors.New("project already exists")
 // ErrLocationExists is returned (wrapped) by AddLocation when the path is
 // already attached to some project (paths are globally unique).
 var ErrLocationExists = errors.New("location already exists")
+
+// ErrInvalidStatus is returned (wrapped) by UpdateProject when the given
+// status is not one of the DEC-017 enum values (active|paused|done|
+// archived). Validated in the Store (not a DB CHECK) so adding a value
+// later is an additive change.
+var ErrInvalidStatus = errors.New("invalid project status")
