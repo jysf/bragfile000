@@ -7,7 +7,7 @@
 task:
   id: SPEC-030
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -1012,28 +1012,55 @@ embedded flag's default, not just its accepted values").
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-030-project-status-dashboard`
+- **PR (if applicable):** (see PR opened below)
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - none expected (LD1–LD5 are localized; confidence ≥ 0.85; no DEC-019)
+  - none (LD1–LD5 are localized; confidence ≥ 0.85; no DEC-019)
 - **Deviations from spec:**
-  - [list]
+  - `TestProjectStatus_OrderedByRecency` required adding a SQL backdate step
+    (via a second `sql.Open` handle) before the edit, because all creates and
+    the edit happened in the same second — identical `updated_at` made the
+    tie-break put p3 first instead of p1. The fix matches the §9 no-sleep
+    pattern from storage tests; the spec's description said "avoids sleep"
+    and "the updated_at advance comes from the Store stamping a fresh now on
+    update" — which requires the pre-existing timestamps to be clearly in the
+    past. The storage-level test `TestProjectStatuses_OrderedByUpdatedAtThenIDDesc`
+    already used `backdateProject` for the same reason. This deviation is
+    mechanical (pattern already established in the codebase) and does not
+    affect behaviour.
+  - `internal/cli/project_test.go` gained `"database/sql"` and `"time"`
+    imports to support the backdate — not foreseen in the spec's import list
+    but required by the fix above.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - none beyond the already-planned SPEC-031/032/033 in the STAGE-007 backlog
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — The `TestProjectStatus_OrderedByRecency` test description said it "avoids
+   sleep" and the advance comes from the Store stamping a fresh `now` — but
+   it didn't call out that the CLI test would also need a backdate step. The
+   analogous storage test (`TestProjectStatuses_OrderedByUpdatedAtThenIDDesc`)
+   explicitly calls `backdateProject` before the UpdateProject call, but the
+   CLI test description only said "edit p1 --state-note touched." One more
+   sentence — "backdate all three to the past first, as in the storage test"
+   — would have made this zero-friction.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No missing constraints. The `no-sql-in-cli-layer` constraint correctly
+   applies to production CLI code; the test's `sql.Open` backdate is a test
+   helper (same category as `backdateProject` in storage tests). The
+   distinction is already implicit in how the codebase handles it elsewhere.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — When a CLI ordering test depends on timestamp ordering, explicitly note
+   in the Failing Tests section whether a raw-SQL backdate is needed (same
+   guidance as §9's "no-sleep" rule but from the CLI test perspective). The
+   storage test pattern is well-established; bridging it to CLI tests in the
+   spec's Notes would save the one-iteration fix.
 
 ---
 

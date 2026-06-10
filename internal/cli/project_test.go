@@ -2,12 +2,14 @@ package cli
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jysf/bragfile000/internal/storage"
 	"github.com/spf13/cobra"
@@ -46,7 +48,7 @@ func TestProjectCmd_BarePrintsHelp(t *testing.T) {
 	if !strings.Contains(out, "Usage:") {
 		t.Errorf("expected 'Usage:' in help output, got %q", out)
 	}
-	for _, sub := range []string{"new", "list", "show"} {
+	for _, sub := range []string{"new", "list", "show", "status"} {
 		if !strings.Contains(out, sub) {
 			t.Errorf("expected subcommand %q in help output, got %q", sub, out)
 		}
@@ -885,5 +887,291 @@ func TestProjectMutations_HelpShowsExamples(t *testing.T) {
 	}
 	if !strings.Contains(deleteOut, "IRREVERSIBLE") {
 		t.Errorf("delete --help should mention 'IRREVERSIBLE', got %q", deleteOut)
+	}
+}
+
+func TestProjectStatus_ListsActiveWithCount(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	// Seed 2 entries via a second storage handle.
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open store: %v", err)
+	}
+	for range 2 {
+		if _, err := s.Add(storage.Entry{Title: "t", Project: "bragfile"}); err != nil {
+			s.Close()
+			t.Fatalf("Add entry: %v", err)
+		}
+	}
+	s.Close()
+
+	out, errOut, err := runProjectCmd(t, dbPath, "status")
+	if err != nil {
+		t.Fatalf("status: %v", err)
+	}
+	if errOut != "" {
+		t.Errorf("expected empty stderr, got %q", errOut)
+	}
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("expected 1 row, got %d: %q", len(lines), out)
+	}
+	cols := strings.Split(lines[0], "\t")
+	if len(cols) != 4 {
+		t.Fatalf("expected 4 tab-separated columns, got %d: %q", len(cols), lines[0])
+	}
+	if cols[0] != "bragfile" {
+		t.Errorf("col[0] (name) = %q, want bragfile", cols[0])
+	}
+	if cols[1] != "active" {
+		t.Errorf("col[1] (status) = %q, want active", cols[1])
+	}
+	if cols[2] != "2" {
+		t.Errorf("col[2] (brag_count) = %q, want 2", cols[2])
+	}
+	if cols[3] != "" {
+		t.Errorf("col[3] (state_note) = %q, want empty (no state note set)", cols[3])
+	}
+}
+
+func TestProjectStatus_ExcludesArchived(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "a", "--path", "/a"); err != nil {
+		t.Fatalf("new a: %v", err)
+	}
+	if _, _, err := runProjectCmd(t, dbPath, "new", "b", "--path", "/b"); err != nil {
+		t.Fatalf("new b: %v", err)
+	}
+	if _, _, err := runProjectCmd(t, dbPath, "archive", "b"); err != nil {
+		t.Fatalf("archive b: %v", err)
+	}
+
+	out, errOut, err := runProjectCmd(t, dbPath, "status")
+	if err != nil {
+		t.Fatalf("status: %v", err)
+	}
+	if errOut != "" {
+		t.Errorf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "a") {
+		t.Errorf("expected project 'a' in output, got %q", out)
+	}
+	if strings.Contains(out, "b\t") {
+		t.Errorf("archived project 'b' must not appear in status, got %q", out)
+	}
+}
+
+func TestProjectStatus_OrderedByRecency(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	for _, args := range [][]string{
+		{"new", "p1", "--path", "/p1"},
+		{"new", "p2", "--path", "/p2"},
+		{"new", "p3", "--path", "/p3"},
+	} {
+		if _, _, err := runProjectCmd(t, dbPath, args...); err != nil {
+			t.Fatalf("new %v: %v", args, err)
+		}
+	}
+
+	// Backdate all three to the past so the upcoming edit stamps "now" (2026)
+	// clearly after them — the §9 no-sleep technique for making updated_at
+	// ordering observable without time.Sleep.
+	past := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	if _, err := db.Exec(`UPDATE projects SET updated_at = ?, created_at = ?`, past, past); err != nil {
+		db.Close()
+		t.Fatalf("backdate: %v", err)
+	}
+	db.Close()
+
+	// bump p1's updated_at via edit — stamps time.Now() which is after 2020
+	if _, _, err := runProjectCmd(t, dbPath, "edit", "p1", "--state-note", "touched"); err != nil {
+		t.Fatalf("edit p1: %v", err)
+	}
+
+	out, _, err := runProjectCmd(t, dbPath, "status")
+	if err != nil {
+		t.Fatalf("status: %v", err)
+	}
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("expected 3 rows, got %d: %q", len(lines), out)
+	}
+	if !strings.HasPrefix(lines[0], "p1\t") {
+		t.Errorf("first row should be p1 (most-recently-updated), got %q", lines[0])
+	}
+}
+
+func TestProjectStatus_StateNoteTruncatedInPlain(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	// 60-char note
+	note60 := strings.Repeat("a", 60)
+	if _, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--state-note", note60); err != nil {
+		t.Fatalf("edit: %v", err)
+	}
+
+	out, _, err := runProjectCmd(t, dbPath, "status")
+	if err != nil {
+		t.Fatalf("status: %v", err)
+	}
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("expected 1 row, got %d: %q", len(lines), out)
+	}
+	cols := strings.Split(lines[0], "\t")
+	if len(cols) != 4 {
+		t.Fatalf("expected 4 columns, got %d", len(cols))
+	}
+	truncated := cols[3]
+	runes := []rune(truncated)
+	// 50 runes + "…" = 51 display runes
+	if len(runes) != 51 {
+		t.Errorf("truncated note rune-len = %d, want 51 (50 + ellipsis)", len(runes))
+	}
+	if !strings.HasSuffix(truncated, "…") {
+		t.Errorf("truncated note should end with '…', got %q", truncated)
+	}
+	if strings.Contains(out, note60) {
+		t.Errorf("full 60-char note must NOT appear in plain output, got %q", out)
+	}
+}
+
+func TestProjectStatus_JSON(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	// Seed 3 entries.
+	s2, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open store: %v", err)
+	}
+	for range 3 {
+		if _, err := s2.Add(storage.Entry{Title: "t", Project: "bragfile"}); err != nil {
+			s2.Close()
+			t.Fatalf("Add entry: %v", err)
+		}
+	}
+	s2.Close()
+
+	// Set a long state note (70 chars).
+	note70 := strings.Repeat("z", 70)
+	if _, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--state-note", note70); err != nil {
+		t.Fatalf("edit: %v", err)
+	}
+
+	out, errOut, err := runProjectCmd(t, dbPath, "status", "--format", "json")
+	if err != nil {
+		t.Fatalf("status --format json: %v", err)
+	}
+	if errOut != "" {
+		t.Errorf("expected empty stderr, got %q", errOut)
+	}
+
+	trimmed := strings.TrimSpace(out)
+	if !strings.HasPrefix(trimmed, "[") {
+		t.Errorf("expected naked array, got %q", trimmed)
+	}
+
+	var got []struct {
+		ID        int64  `json:"id"`
+		Name      string `json:"name"`
+		Status    string `json:"status"`
+		StateNote string `json:"state_note"`
+		BragCount int    `json:"brag_count"`
+		CreatedAt string `json:"created_at"`
+		UpdatedAt string `json:"updated_at"`
+	}
+	if err := json.Unmarshal([]byte(trimmed), &got); err != nil {
+		t.Fatalf("JSON unmarshal: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 element, got %d", len(got))
+	}
+	if got[0].BragCount != 3 {
+		t.Errorf("brag_count = %d, want 3", got[0].BragCount)
+	}
+	if got[0].StateNote != note70 {
+		t.Errorf("state_note = %q, want full 70-char note (untruncated)", got[0].StateNote)
+	}
+	if !strings.Contains(out, "    \"id\"") {
+		t.Errorf("expected 4-space indent for keys, got %q", out)
+	}
+}
+
+func TestProjectStatus_EmptyJSONIsBrackets(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+
+	// JSON mode: emits []
+	out, errOut, err := runProjectCmd(t, dbPath, "status", "--format", "json")
+	if err != nil {
+		t.Fatalf("status --format json: %v", err)
+	}
+	if errOut != "" {
+		t.Errorf("expected empty stderr, got %q", errOut)
+	}
+	if strings.TrimSpace(out) != "[]" {
+		t.Errorf("expected [], got %q", out)
+	}
+
+	// plain mode: empty stdout
+	out2, errOut2, err2 := runProjectCmd(t, dbPath, "status")
+	if err2 != nil {
+		t.Fatalf("status plain: %v", err2)
+	}
+	if errOut2 != "" {
+		t.Errorf("expected empty stderr (plain), got %q", errOut2)
+	}
+	if strings.TrimSpace(out2) != "" {
+		t.Errorf("expected empty plain output, got %q", out2)
+	}
+}
+
+func TestProjectStatus_UnknownFormatErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	_, _, err := runProjectCmd(t, dbPath, "status", "--format", "xml")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for unknown format, got %v", err)
+	}
+}
+
+func TestProjectStatus_StdoutDiscipline(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	out, errOut, err := runProjectCmd(t, dbPath, "status")
+	if err != nil {
+		t.Fatalf("status: %v", err)
+	}
+	if errOut != "" {
+		t.Errorf("expected empty stderr (no cross-leakage), got %q", errOut)
+	}
+	if !strings.Contains(out, "bragfile") {
+		t.Errorf("expected dashboard row on stdout, got %q", out)
+	}
+}
+
+func TestProjectStatus_HelpShowsExamples(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	out, _, _ := runProjectCmd(t, dbPath, "status", "--help")
+	if !strings.Contains(out, "Examples:") {
+		t.Errorf("status --help missing 'Examples:', got %q", out)
+	}
+	if !strings.Contains(out, "brag project status") {
+		t.Errorf("status --help missing distinctive token 'brag project status', got %q", out)
 	}
 }

@@ -369,6 +369,71 @@ func (s *Store) DeleteProject(id int64) error {
 	return nil
 }
 
+// ProjectStatus is one row of the `brag project status` dashboard: a
+// non-archived project plus its brag count — the number of entries whose
+// free-text project string equals the project name (the DEC-017
+// soft-string-match join, entries.project = projects.name). Locations are
+// intentionally omitted: the dashboard is about activity, not where a
+// project lives (that is `brag project show`).
+type ProjectStatus struct {
+	ID        int64
+	Name      string
+	Status    string
+	StateNote string
+	BragCount int
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// ProjectStatuses returns every non-archived project (status != 'archived')
+// ordered updated_at DESC, id DESC, each with its total brag count via the
+// DEC-017 soft-string-match join (entries.project = projects.name). A
+// project with no matching entries has BragCount 0 (LEFT JOIN + COUNT(e.id)).
+// Returns a non-nil empty slice when no non-archived projects exist.
+func (s *Store) ProjectStatuses() ([]ProjectStatus, error) {
+	ctx := context.Background()
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT p.id, p.name, p.status, p.state_note, p.created_at, p.updated_at,
+		        COUNT(e.id) AS brag_count
+		   FROM projects p
+		   LEFT JOIN entries e ON e.project = p.name
+		  WHERE p.status != 'archived'
+		  GROUP BY p.id
+		  ORDER BY p.updated_at DESC, p.id DESC`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("project statuses: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]ProjectStatus, 0)
+	for rows.Next() {
+		var (
+			st                         ProjectStatus
+			createdAtRaw, updatedAtRaw string
+		)
+		if err := rows.Scan(&st.ID, &st.Name, &st.Status, &st.StateNote,
+			&createdAtRaw, &updatedAtRaw, &st.BragCount); err != nil {
+			return nil, fmt.Errorf("project statuses: %w", err)
+		}
+		created, err := time.Parse(time.RFC3339, createdAtRaw)
+		if err != nil {
+			return nil, fmt.Errorf("project statuses: parse created_at %q: %w", createdAtRaw, err)
+		}
+		updated, err := time.Parse(time.RFC3339, updatedAtRaw)
+		if err != nil {
+			return nil, fmt.Errorf("project statuses: parse updated_at %q: %w", updatedAtRaw, err)
+		}
+		st.CreatedAt = created.UTC()
+		st.UpdatedAt = updated.UTC()
+		out = append(out, st)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("project statuses: %w", err)
+	}
+	return out, nil
+}
+
 // locationsForProject returns paths for the given project ordered by
 // project_locations.id (insertion order).
 func (s *Store) locationsForProject(ctx context.Context, projectID int64) ([]string, error) {
