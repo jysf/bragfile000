@@ -460,3 +460,343 @@ func TestProjectNew_HelpShowsExamples(t *testing.T) {
 		t.Errorf("list --help missing 'brag project list --format json', got %q", listOut)
 	}
 }
+
+// runProjectCmdWithStdin is like runProjectCmd but sets a custom stdin reader.
+// Used by prompt-confirmation tests that need to supply y/n input.
+func runProjectCmdWithStdin(t *testing.T, dbPath string, stdin string, args ...string) (stdout, stderr string, runErr error) {
+	t.Helper()
+	root, outBuf, errBuf := newProjectTestRoot(t)
+	root.SetIn(strings.NewReader(stdin))
+	full := append([]string{"--db", dbPath, "project"}, args...)
+	root.SetArgs(full)
+	runErr = root.Execute()
+	return outBuf.String(), errBuf.String(), runErr
+}
+
+func TestProjectEdit_ChangesStatusAndConfirms(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	out, errOut, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--status", "paused")
+	if err != nil {
+		t.Fatalf("edit: %v", err)
+	}
+	if out != "" {
+		t.Errorf("stdout must be empty, got %q", out)
+	}
+	if !strings.Contains(errOut, `Edited project "bragfile".`) {
+		t.Errorf("expected confirmation on stderr, got %q", errOut)
+	}
+
+	showOut, _, showErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if showErr != nil {
+		t.Fatalf("show: %v", showErr)
+	}
+	if !strings.Contains(showOut, "Status: paused") {
+		t.Errorf("show: expected 'Status: paused', got %q", showOut)
+	}
+}
+
+func TestProjectEdit_SetsStateNote(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	if _, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--state-note", "next: cut v0.2.0"); err != nil {
+		t.Fatalf("edit --state-note: %v", err)
+	}
+
+	showOut, _, showErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if showErr != nil {
+		t.Fatalf("show: %v", showErr)
+	}
+	if !strings.Contains(showOut, "State note: next: cut v0.2.0") {
+		t.Errorf("show: expected state note, got %q", showOut)
+	}
+}
+
+func TestProjectEdit_Rename(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	if _, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--name", "brag-cli"); err != nil {
+		t.Fatalf("edit --name: %v", err)
+	}
+
+	showOut, _, showErr := runProjectCmd(t, dbPath, "show", "brag-cli")
+	if showErr != nil {
+		t.Fatalf("show brag-cli: %v", showErr)
+	}
+	if !strings.Contains(showOut, "Name: brag-cli") {
+		t.Errorf("show brag-cli: expected 'Name: brag-cli', got %q", showOut)
+	}
+
+	_, _, err := runProjectCmd(t, dbPath, "show", "bragfile")
+	if !errors.Is(err, ErrUser) {
+		t.Errorf("show old name bragfile: expected ErrUser, got %v", err)
+	}
+}
+
+func TestProjectEdit_NoFlagsErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	_, _, err := runProjectCmd(t, dbPath, "edit", "bragfile")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for no-flag edit, got %v", err)
+	}
+}
+
+func TestProjectEdit_InvalidStatusErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	_, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--status", "bogus")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for invalid status, got %v", err)
+	}
+	if err == nil || !strings.Contains(err.Error(), "active") {
+		t.Errorf("error should mention accepted set, got %v", err)
+	}
+
+	showOut, _, showErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if showErr != nil {
+		t.Fatalf("show: %v", showErr)
+	}
+	if !strings.Contains(showOut, "Status: active") {
+		t.Errorf("status should still be active, got %q", showOut)
+	}
+}
+
+func TestProjectEdit_DuplicateNameErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "a", "--path", "/a"); err != nil {
+		t.Fatalf("new a: %v", err)
+	}
+	if _, _, err := runProjectCmd(t, dbPath, "new", "b", "--path", "/b"); err != nil {
+		t.Fatalf("new b: %v", err)
+	}
+
+	_, _, err := runProjectCmd(t, dbPath, "edit", "b", "--name", "a")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for duplicate name, got %v", err)
+	}
+
+	showOut, _, showErr := runProjectCmd(t, dbPath, "show", "b")
+	if showErr != nil {
+		t.Fatalf("show b: %v", showErr)
+	}
+	if !strings.Contains(showOut, "Name: b") {
+		t.Errorf("show b: expected 'Name: b' (unchanged), got %q", showOut)
+	}
+}
+
+func TestProjectEdit_UnknownProjectErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+
+	_, _, err := runProjectCmd(t, dbPath, "edit", "nope", "--status", "paused")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for unknown project, got %v", err)
+	}
+}
+
+func TestProjectArchive_FlipsStatusAndRecoverable(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	out, errOut, err := runProjectCmd(t, dbPath, "archive", "bragfile")
+	if err != nil {
+		t.Fatalf("archive: %v", err)
+	}
+	if out != "" {
+		t.Errorf("stdout must be empty, got %q", out)
+	}
+	if !strings.Contains(errOut, `Archived project "bragfile".`) {
+		t.Errorf("expected confirmation on stderr, got %q", errOut)
+	}
+
+	showOut, _, showErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if showErr != nil {
+		t.Fatalf("show after archive: %v", showErr)
+	}
+	if !strings.Contains(showOut, "Status: archived") {
+		t.Errorf("expected 'Status: archived', got %q", showOut)
+	}
+
+	// Recover via edit --status active.
+	if _, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--status", "active"); err != nil {
+		t.Fatalf("edit --status active: %v", err)
+	}
+	showOut2, _, showErr2 := runProjectCmd(t, dbPath, "show", "bragfile")
+	if showErr2 != nil {
+		t.Fatalf("show after recovery: %v", showErr2)
+	}
+	if !strings.Contains(showOut2, "Status: active") {
+		t.Errorf("expected 'Status: active' after recovery, got %q", showOut2)
+	}
+}
+
+func TestProjectArchive_UnknownProjectErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+
+	_, _, err := runProjectCmd(t, dbPath, "archive", "nope")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for unknown project, got %v", err)
+	}
+}
+
+func TestProjectDelete_RemovesAndConfirms(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	out, errOut, err := runProjectCmd(t, dbPath, "delete", "bragfile", "--yes")
+	if err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if out != "" {
+		t.Errorf("stdout must be empty, got %q", out)
+	}
+	if !strings.Contains(errOut, `Deleted project "bragfile".`) {
+		t.Errorf("expected confirmation on stderr, got %q", errOut)
+	}
+
+	_, _, showErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if !errors.Is(showErr, ErrUser) {
+		t.Errorf("show after delete: expected ErrUser (gone), got %v", showErr)
+	}
+}
+
+func TestProjectDelete_PromptConfirmsWithY(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	_, _, err := runProjectCmdWithStdin(t, dbPath, "y\n", "delete", "bragfile")
+	if err != nil {
+		t.Fatalf("delete with y: %v", err)
+	}
+
+	_, _, showErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if !errors.Is(showErr, ErrUser) {
+		t.Errorf("show after delete: expected ErrUser (deleted), got %v", showErr)
+	}
+}
+
+func TestProjectDelete_PromptDeclineAborts(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	_, errOut, err := runProjectCmdWithStdin(t, dbPath, "n\n", "delete", "bragfile")
+	if err != nil {
+		t.Fatalf("decline should exit 0, got %v", err)
+	}
+	if !strings.Contains(errOut, "Aborted.") {
+		t.Errorf("expected 'Aborted.' in stderr, got %q", errOut)
+	}
+
+	_, _, showErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if showErr != nil {
+		t.Errorf("show after abort: expected success (not deleted), got %v", showErr)
+	}
+}
+
+func TestProjectDelete_FreesPathForReuse(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "a", "--path", "/p"); err != nil {
+		t.Fatalf("new a: %v", err)
+	}
+
+	if _, _, err := runProjectCmd(t, dbPath, "delete", "a", "--yes"); err != nil {
+		t.Fatalf("delete a: %v", err)
+	}
+
+	_, errOut, err := runProjectCmd(t, dbPath, "new", "b", "--path", "/p")
+	if err != nil {
+		t.Fatalf("new b with freed path: %v", err)
+	}
+	if !strings.Contains(errOut, `Created project "b".`) {
+		t.Errorf("expected creation confirmation, got %q", errOut)
+	}
+}
+
+func TestProjectDelete_LeavesEntryProjectString(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "did a thing", "", "bragfile", "feature")
+
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/p"); err != nil {
+		t.Fatalf("new bragfile: %v", err)
+	}
+
+	if _, _, err := runProjectCmd(t, dbPath, "delete", "bragfile", "--yes"); err != nil {
+		t.Fatalf("delete bragfile: %v", err)
+	}
+
+	listOut, _, listErr := runListCmd(t, dbPath, "--project", "bragfile")
+	if listErr != nil {
+		t.Fatalf("list --project bragfile: %v", listErr)
+	}
+	if !strings.Contains(listOut, "did a thing") {
+		t.Errorf("entry should survive project delete, got %q", listOut)
+	}
+}
+
+func TestProjectDelete_UnknownProjectErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+
+	_, _, err := runProjectCmd(t, dbPath, "delete", "nope", "--yes")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for unknown project, got %v", err)
+	}
+}
+
+func TestProjectMutations_HelpShowsExamples(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+
+	// edit --help: Examples: + distinctive token unique to edit's Long.
+	editOut, _, _ := runProjectCmd(t, dbPath, "edit", "--help")
+	if !strings.Contains(editOut, "Examples:") {
+		t.Errorf("edit --help missing 'Examples:', got %q", editOut)
+	}
+	if !strings.Contains(editOut, "brag project edit") {
+		t.Errorf("edit --help missing 'brag project edit', got %q", editOut)
+	}
+
+	// archive --help: Examples: + recoverable (Short) and the recovery
+	// command `--status active` (in the Long body) — the archive-vs-delete
+	// distinction is in the help text.
+	archiveOut, _, _ := runProjectCmd(t, dbPath, "archive", "--help")
+	if !strings.Contains(archiveOut, "Examples:") {
+		t.Errorf("archive --help missing 'Examples:', got %q", archiveOut)
+	}
+	if !strings.Contains(archiveOut, "--status active") {
+		t.Errorf("archive --help should mention '--status active' (the recovery cmd), got %q", archiveOut)
+	}
+
+	// delete --help: Examples: + distinctive token + irreversibility marker.
+	deleteOut, _, _ := runProjectCmd(t, dbPath, "delete", "--help")
+	if !strings.Contains(deleteOut, "Examples:") {
+		t.Errorf("delete --help missing 'Examples:', got %q", deleteOut)
+	}
+	if !strings.Contains(deleteOut, "brag project delete") {
+		t.Errorf("delete --help missing 'brag project delete', got %q", deleteOut)
+	}
+	if !strings.Contains(deleteOut, "IRREVERSIBLE") {
+		t.Errorf("delete --help should mention 'IRREVERSIBLE', got %q", deleteOut)
+	}
+}

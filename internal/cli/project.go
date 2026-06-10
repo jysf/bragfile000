@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -14,17 +15,19 @@ import (
 )
 
 // NewProjectCmd returns the `brag project` parent command with new,
-// list, and show subcommands. A bare `brag project` prints help (cobra
-// default for a command with subcommands and no RunE). SPEC-029 adds
-// edit/archive/delete to this same parent.
+// list, show, edit, archive, and delete subcommands. A bare `brag project`
+// prints help (cobra default for a command with subcommands and no RunE).
 func NewProjectCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project",
-		Short: "Manage projects (new, list, show)",
+		Short: "Manage projects (new, list, show, edit, archive, delete)",
 	}
 	cmd.AddCommand(newProjectNewCmd())
 	cmd.AddCommand(newProjectListCmd())
 	cmd.AddCommand(newProjectShowCmd())
+	cmd.AddCommand(newProjectEditCmd())
+	cmd.AddCommand(newProjectArchiveCmd())
+	cmd.AddCommand(newProjectDeleteCmd())
 	return cmd
 }
 
@@ -256,4 +259,249 @@ func renderProjectPlain(out io.Writer, p storage.Project) {
 	for _, l := range p.Locations {
 		fmt.Fprintf(out, "  %s\n", l)
 	}
+}
+
+// resolveProjectByNameOrID resolves key as a project name first, then —
+// if no project has that name and key is a positive integer — as a
+// project id (mirroring `brag project show`, SPEC-028 LD2). Returns the
+// resolved project, or an error wrapping storage.ErrNotFound on a miss.
+func resolveProjectByNameOrID(s *storage.Store, key string) (storage.Project, error) {
+	project, err := s.GetProjectByName(key)
+	if err == nil {
+		return project, nil
+	}
+	if !errors.Is(err, storage.ErrNotFound) {
+		return storage.Project{}, err
+	}
+	id, convErr := strconv.ParseInt(key, 10, 64)
+	if convErr != nil || id <= 0 {
+		return storage.Project{}, fmt.Errorf("resolve project %q: %w", key, storage.ErrNotFound)
+	}
+	return s.GetProject(id)
+}
+
+func newProjectEditCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "edit <name|id>",
+		Short: "Edit a project's name, status, or state note",
+		Long: `Edit a project's scalar fields. The project is resolved by name first, then
+by id. Pass at least one of --name, --status, or --state-note; unspecified
+fields are left unchanged.
+
+Renaming a project does NOT rewrite the project string on existing brag entries
+— they keep what they were captured with (DEC-017). Editing locations is a
+separate command (a later STAGE-007 spec); this edits scalar fields only.
+
+Examples:
+  brag project edit bragfile --status paused
+  brag project edit bragfile --state-note "shipped tags; next: cut v0.2.0"
+  brag project edit bragfile --name brag-cli`,
+		RunE: runProjectEdit,
+	}
+	cmd.Flags().String("name", "", "new project name (rename; must be unique)")
+	cmd.Flags().String("status", "", "new status (one of: active, paused, done, archived)")
+	cmd.Flags().String("state-note", "", "new state/next-action note")
+	return cmd
+}
+
+func runProjectEdit(cmd *cobra.Command, args []string) error {
+	if len(args) != 1 {
+		return UserErrorf("edit requires exactly one <name|id> argument")
+	}
+	key := strings.TrimSpace(args[0])
+	if key == "" {
+		return UserErrorf("project name or id must not be empty")
+	}
+
+	nameChanged := cmd.Flags().Changed("name")
+	statusChanged := cmd.Flags().Changed("status")
+	noteChanged := cmd.Flags().Changed("state-note")
+	if !nameChanged && !statusChanged && !noteChanged {
+		return UserErrorf("edit requires at least one of --name, --status, --state-note")
+	}
+
+	dbFlag := getFlagString(cmd, "db")
+	dbPath, err := config.ResolveDBPath(dbFlag)
+	if err != nil {
+		return fmt.Errorf("resolve db path: %w", err)
+	}
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	defer s.Close()
+
+	current, err := resolveProjectByNameOrID(s, key)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return UserErrorf("no project named or with id %q", key)
+		}
+		return fmt.Errorf("resolve project: %w", err)
+	}
+
+	next := current
+	if nameChanged {
+		name, _ := cmd.Flags().GetString("name")
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return UserErrorf("--name must not be empty")
+		}
+		next.Name = name
+	}
+	if statusChanged {
+		status, _ := cmd.Flags().GetString("status")
+		next.Status = strings.TrimSpace(status)
+	}
+	if noteChanged {
+		note, _ := cmd.Flags().GetString("state-note")
+		next.StateNote = note
+	}
+
+	updated, err := s.UpdateProject(current.ID, next)
+	if err != nil {
+		switch {
+		case errors.Is(err, storage.ErrProjectExists):
+			return UserErrorf("project %q already exists", next.Name)
+		case errors.Is(err, storage.ErrInvalidStatus):
+			return UserErrorf("invalid status %q (accepted: active, paused, done, archived)", next.Status)
+		case errors.Is(err, storage.ErrNotFound):
+			return UserErrorf("no project named or with id %q", key)
+		}
+		return fmt.Errorf("update project: %w", err)
+	}
+	fmt.Fprintf(cmd.ErrOrStderr(), "Edited project %q.\n", updated.Name)
+	return nil
+}
+
+func newProjectArchiveCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "archive <name|id>",
+		Short: "Archive a project (non-destructive status flip; recoverable)",
+		Long: `Archive a project by setting its status to "archived". This is a
+non-destructive flip: the project, its state note, and its locations are all
+preserved, and it can be restored at any time with:
+
+  brag project edit <name|id> --status active
+
+Archive is NOT delete. To permanently remove a project and its locations, use
+'brag project delete', which is irreversible.
+
+Examples:
+  brag project archive bragfile
+  brag project archive 3`,
+		RunE: runProjectArchive,
+	}
+	return cmd
+}
+
+func runProjectArchive(cmd *cobra.Command, args []string) error {
+	if len(args) != 1 {
+		return UserErrorf("archive requires exactly one <name|id> argument")
+	}
+	key := strings.TrimSpace(args[0])
+	if key == "" {
+		return UserErrorf("project name or id must not be empty")
+	}
+
+	dbFlag := getFlagString(cmd, "db")
+	dbPath, err := config.ResolveDBPath(dbFlag)
+	if err != nil {
+		return fmt.Errorf("resolve db path: %w", err)
+	}
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	defer s.Close()
+
+	project, err := resolveProjectByNameOrID(s, key)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return UserErrorf("no project named or with id %q", key)
+		}
+		return fmt.Errorf("resolve project: %w", err)
+	}
+
+	if err := s.ArchiveProject(project.ID); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return UserErrorf("no project named or with id %q", key)
+		}
+		return fmt.Errorf("archive project: %w", err)
+	}
+	fmt.Fprintf(cmd.ErrOrStderr(), "Archived project %q.\n", project.Name)
+	return nil
+}
+
+func newProjectDeleteCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "delete <name|id>",
+		Short: "Permanently delete a project (irreversible)",
+		Long: `Permanently delete a project and its locations. Prompts for confirmation
+unless --yes is passed.
+
+This is IRREVERSIBLE and distinct from 'brag project archive' (a recoverable
+status flip). Delete removes the project row and every filesystem location
+attached to it. Existing brag entries are NOT touched — an entry keeps the
+project string it was captured with (DEC-017), so 'brag list --project <name>'
+still finds those entries after the project is deleted.
+
+Examples:
+  brag project delete bragfile        # prompts y/N on stdin
+  brag project delete bragfile --yes  # skip the prompt
+  brag project delete 3 -y            # by id, no prompt`,
+		RunE: runProjectDelete,
+	}
+	cmd.Flags().BoolP("yes", "y", false, "skip confirmation prompt")
+	return cmd
+}
+
+func runProjectDelete(cmd *cobra.Command, args []string) error {
+	if len(args) != 1 {
+		return UserErrorf("delete requires exactly one <name|id> argument")
+	}
+	key := strings.TrimSpace(args[0])
+	if key == "" {
+		return UserErrorf("project name or id must not be empty")
+	}
+
+	dbFlag := getFlagString(cmd, "db")
+	dbPath, err := config.ResolveDBPath(dbFlag)
+	if err != nil {
+		return fmt.Errorf("resolve db path: %w", err)
+	}
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	defer s.Close()
+
+	project, err := resolveProjectByNameOrID(s, key)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return UserErrorf("no project named or with id %q", key)
+		}
+		return fmt.Errorf("resolve project: %w", err)
+	}
+
+	yes, _ := cmd.Flags().GetBool("yes")
+	if !yes {
+		fmt.Fprintf(cmd.ErrOrStderr(),
+			"Delete project %q and its locations? This cannot be undone. [y/N] ", project.Name)
+		reader := bufio.NewReader(cmd.InOrStdin())
+		line, _ := reader.ReadString('\n')
+		line = strings.TrimRight(line, "\r\n")
+		if line != "y" && line != "Y" {
+			fmt.Fprintln(cmd.ErrOrStderr(), "Aborted.")
+			return nil
+		}
+	}
+
+	if err := s.DeleteProject(project.ID); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return UserErrorf("no project named or with id %q", key)
+		}
+		return fmt.Errorf("delete project: %w", err)
+	}
+	fmt.Fprintf(cmd.ErrOrStderr(), "Deleted project %q.\n", project.Name)
+	return nil
 }

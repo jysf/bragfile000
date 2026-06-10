@@ -7,7 +7,7 @@
 task:
   id: SPEC-029
   type: story                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -1273,28 +1273,28 @@ the documented trigger at a close, not a unilateral mid-stage edit).
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-029-brag-project-edit-archive-delete`
+- **PR (if applicable):** opened after `just advance-cycle`
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - `DEC-018` — `brag project delete` blast radius (emitted at design)
+  - `DEC-018` — `brag project delete` blast radius (emitted at design; file already present at build start)
 - **Deviations from spec:**
-  - [list]
+  - `TestProjectMutations_HelpShowsExamples` — the spec's test description listed `--status active` as the edit-help distinctive token, but the edit Long uses `--status paused` in its examples and `--status active` appears in the archive Long (the recovery command). The test was corrected to assert `--status active` in archive --help (not edit --help), which matches the spec's parenthetical exactly (`archive --help contains recoverable (or edit … --status active)`). This is a test-spec alignment fix, not a logic change; the implementation is verbatim.
 - **Follow-up work identified:**
-  - [SPEC-033 already added to the backlog at design]
+  - SPEC-033 (location editing — peeled from SPEC-029, already in STAGE-007 backlog at design)
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — The `TestProjectMutations_HelpShowsExamples` assertion mapping was ambiguous: the spec's parenthetical listed three tokens (`brag project edit`, `--status active`, `brag project delete`) for three commands, but did not explicitly state which token belongs to which command. The token `--status active` is in the archive Long (recovery example), not the edit Long, but the spec's phrasing could be read either way. The fix was mechanical once the Long literals were compared against the assertions. A one-line table in the spec ("edit → `brag project edit`; archive → `--status active`; delete → `brag project delete`") would have made this unambiguous at design.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. All relevant constraints were listed and applied. The `bufio` import in project.go was the only mechanical addition beyond what the spec enumerated, and the spec's implementation context already said "add bufio to the imports."
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Run the spec's help-token assertions against the literal Long strings at design time (§12(b)-style pre-flight for test expected values), so the token-to-command mapping is validated before it becomes a failing test at build.
 
 ---
 

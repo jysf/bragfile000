@@ -228,6 +228,147 @@ func (s *Store) AddLocation(projectID int64, path string) error {
 	return nil
 }
 
+// validProjectStatuses is the DEC-017 status enum. Validated in the Store
+// (not a DB CHECK) so adding a value later is an additive change under the
+// forward-only migration regime (DEC-002), mirroring entries.type's
+// free-text column.
+var validProjectStatuses = map[string]bool{
+	"active": true, "paused": true, "done": true, "archived": true,
+}
+
+// UpdateProject replaces the editable scalar fields (Name, Status,
+// StateNote) on the project with id and bumps updated_at. Locations are
+// NOT edited here (SPEC-033). Returns the hydrated project (id and
+// created_at preserved). Errors:
+//   - ErrInvalidStatus if Status is not a DEC-017 enum value
+//   - ErrProjectExists if Name is already taken by a *different* project
+//   - ErrNotFound if no row matches id
+//
+// This is the first Store method to advance updated_at past created_at,
+// making ListProjects' recency ordering observable.
+func (s *Store) UpdateProject(id int64, p Project) (Project, error) {
+	if p.Status == "" {
+		p.Status = "active"
+	}
+	if !validProjectStatuses[p.Status] {
+		return Project{}, fmt.Errorf("update project %d: status %q: %w", id, p.Status, ErrInvalidStatus)
+	}
+	now := time.Now().UTC().Truncate(time.Second)
+
+	ctx := context.Background()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Project{}, fmt.Errorf("update project %d: %w", id, err)
+	}
+	defer tx.Rollback()
+
+	// Name is UNIQUE; a rename collides only with a *different* project.
+	// Self-exclude (id != ?) so renaming to the current name is a no-op.
+	var exists int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM projects WHERE name = ? AND id != ?`, p.Name, id,
+	).Scan(&exists); err != nil {
+		return Project{}, fmt.Errorf("update project %d: %w", id, err)
+	}
+	if exists > 0 {
+		return Project{}, fmt.Errorf("update project %d name %q: %w", id, p.Name, ErrProjectExists)
+	}
+
+	res, err := tx.ExecContext(ctx,
+		`UPDATE projects SET name = ?, status = ?, state_note = ?, updated_at = ?
+		 WHERE id = ?`,
+		p.Name, p.Status, p.StateNote, now.Format(time.RFC3339), id,
+	)
+	if err != nil {
+		return Project{}, fmt.Errorf("update project %d: %w", id, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return Project{}, fmt.Errorf("update project %d: %w", id, err)
+	}
+	if n == 0 {
+		return Project{}, fmt.Errorf("update project %d: %w", id, ErrNotFound)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return Project{}, fmt.Errorf("update project %d: %w", id, err)
+	}
+	return s.GetProject(id)
+}
+
+// ArchiveProject sets the project's status to "archived" (the DEC-017
+// non-destructive flip) and bumps updated_at. Name, state_note, and
+// locations are preserved — archive is recoverable via
+// UpdateProject(..., Status:"active"). Returns ErrNotFound if no row matches.
+func (s *Store) ArchiveProject(id int64) error {
+	now := time.Now().UTC().Truncate(time.Second)
+	res, err := s.db.ExecContext(context.Background(),
+		`UPDATE projects SET status = 'archived', updated_at = ? WHERE id = ?`,
+		now.Format(time.RFC3339), id,
+	)
+	if err != nil {
+		return fmt.Errorf("archive project %d: %w", id, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("archive project %d: %w", id, err)
+	}
+	if n == 0 {
+		return fmt.Errorf("archive project %d: %w", id, ErrNotFound)
+	}
+	return nil
+}
+
+// DeleteProject permanently removes the project with id and its full blast
+// radius (DEC-018), all in one transaction and in this order:
+//  1. any 'project' taggings (none are written yet — schema-ready per
+//     DEC-015 — but cleaned now so a future project-tag surface needs no
+//     delete change)
+//  2. the project's project_locations rows — FK enforcement is OFF in
+//     bragfile, so the REFERENCES clause does NOT cascade; deleting these
+//     manually is also what frees the globally-UNIQUE path for reuse
+//  3. the projects row itself
+//
+// entries are deliberately UNTOUCHED (DEC-017 soft string match): an entry
+// keeps the free-text project string it was captured with. Returns
+// ErrNotFound if no row matches id.
+func (s *Store) DeleteProject(id int64) error {
+	ctx := context.Background()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("delete project %d: %w", id, err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM taggings WHERE taggable_type = 'project' AND taggable_id = ?`, id,
+	); err != nil {
+		return fmt.Errorf("delete project %d: remove taggings: %w", id, err)
+	}
+	if _, err := tx.ExecContext(ctx,
+		`DELETE FROM project_locations WHERE project_id = ?`, id,
+	); err != nil {
+		return fmt.Errorf("delete project %d: remove locations: %w", id, err)
+	}
+
+	res, err := tx.ExecContext(ctx, `DELETE FROM projects WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("delete project %d: %w", id, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("delete project %d: %w", id, err)
+	}
+	if n == 0 {
+		return fmt.Errorf("delete project %d: %w", id, ErrNotFound)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("delete project %d: %w", id, err)
+	}
+	return nil
+}
+
 // locationsForProject returns paths for the given project ordered by
 // project_locations.id (insertion order).
 func (s *Store) locationsForProject(ctx context.Context, projectID int64) ([]string, error) {
