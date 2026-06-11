@@ -887,3 +887,166 @@ func TestProjectStatuses_EmptyReturnsNonNilSlice(t *testing.T) {
 		t.Errorf("len = %d, want 0", len(statuses))
 	}
 }
+
+func TestProjectForPath_ExactMatch(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	created, err := s.CreateProject(Project{Name: "bragfile"})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	if err := s.AddLocation(created.ID, "/home/user/work"); err != nil {
+		t.Fatalf("AddLocation: %v", err)
+	}
+
+	got, err := s.ProjectForPath("/home/user/work")
+	if err != nil {
+		t.Fatalf("ProjectForPath: %v", err)
+	}
+	if got == nil {
+		t.Fatal("ProjectForPath: got nil, want non-nil")
+	}
+	if got.Name != "bragfile" {
+		t.Errorf("Name = %q, want %q", got.Name, "bragfile")
+	}
+}
+
+func TestProjectForPath_SubdirectoryMatch(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	created, err := s.CreateProject(Project{Name: "bragfile"})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	if err := s.AddLocation(created.ID, "/home/user/work"); err != nil {
+		t.Fatalf("AddLocation: %v", err)
+	}
+
+	got, err := s.ProjectForPath("/home/user/work/internal/cli")
+	if err != nil {
+		t.Fatalf("ProjectForPath: %v", err)
+	}
+	if got == nil {
+		t.Fatal("ProjectForPath: got nil, want non-nil")
+	}
+	if got.Name != "bragfile" {
+		t.Errorf("Name = %q, want %q", got.Name, "bragfile")
+	}
+}
+
+func TestProjectForPath_NoMatch(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	got, err := s.ProjectForPath("/some/random/path")
+	if err != nil {
+		t.Fatalf("ProjectForPath: unexpected error: %v", err)
+	}
+	if got != nil {
+		t.Errorf("ProjectForPath: got %+v, want nil (no locations registered)", got)
+	}
+}
+
+func TestProjectForPath_LongestPrefixWins(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	pA, err := s.CreateProject(Project{Name: "A"})
+	if err != nil {
+		t.Fatalf("CreateProject A: %v", err)
+	}
+	if err := s.AddLocation(pA.ID, "/a/b"); err != nil {
+		t.Fatalf("AddLocation /a/b: %v", err)
+	}
+
+	pB, err := s.CreateProject(Project{Name: "B"})
+	if err != nil {
+		t.Fatalf("CreateProject B: %v", err)
+	}
+	if err := s.AddLocation(pB.ID, "/a/b/sub"); err != nil {
+		t.Fatalf("AddLocation /a/b/sub: %v", err)
+	}
+
+	got, err := s.ProjectForPath("/a/b/sub/deep")
+	if err != nil {
+		t.Fatalf("ProjectForPath: %v", err)
+	}
+	if got == nil {
+		t.Fatal("ProjectForPath: got nil, want project B")
+	}
+	if got.Name != "B" {
+		t.Errorf("Name = %q, want %q (longest prefix /a/b/sub wins over /a/b)", got.Name, "B")
+	}
+}
+
+func TestProjectForPath_SeparatorGuard(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	created, err := s.CreateProject(Project{Name: "work"})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	if err := s.AddLocation(created.ID, "/home/user/work"); err != nil {
+		t.Fatalf("AddLocation: %v", err)
+	}
+
+	got, err := s.ProjectForPath("/home/user/worker")
+	if err != nil {
+		t.Fatalf("ProjectForPath: %v", err)
+	}
+	if got != nil {
+		t.Errorf("ProjectForPath: got %+v, want nil (separator guard prevents /work matching /worker)", got)
+	}
+}
+
+func TestProjectForPath_NormalizesCleanPath(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	created, err := s.CreateProject(Project{Name: "bragfile"})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	if err := s.AddLocation(created.ID, "/home/user/work"); err != nil {
+		t.Fatalf("AddLocation: %v", err)
+	}
+
+	got, err := s.ProjectForPath("/home/user/work/./src")
+	if err != nil {
+		t.Fatalf("ProjectForPath: %v", err)
+	}
+	if got == nil {
+		t.Fatal("ProjectForPath: got nil, want non-nil (filepath.Clean normalizes ./)")
+	}
+	if got.Name != "bragfile" {
+		t.Errorf("Name = %q, want %q", got.Name, "bragfile")
+	}
+}
+
+func TestProjectForPath_MultipleProjectsOneMatch(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	pA, err := s.CreateProject(Project{Name: "A"})
+	if err != nil {
+		t.Fatalf("CreateProject A: %v", err)
+	}
+	if err := s.AddLocation(pA.ID, "/alpha/repo"); err != nil {
+		t.Fatalf("AddLocation /alpha/repo: %v", err)
+	}
+
+	pB, err := s.CreateProject(Project{Name: "B"})
+	if err != nil {
+		t.Fatalf("CreateProject B: %v", err)
+	}
+	if err := s.AddLocation(pB.ID, "/beta/repo"); err != nil {
+		t.Fatalf("AddLocation /beta/repo: %v", err)
+	}
+
+	got, err := s.ProjectForPath("/alpha/repo/cmd")
+	if err != nil {
+		t.Fatalf("ProjectForPath: %v", err)
+	}
+	if got == nil {
+		t.Fatal("ProjectForPath: got nil, want project A")
+	}
+	if got.Name != "A" {
+		t.Errorf("Name = %q, want %q (only A matches; B's /beta/repo is not an ancestor)", got.Name, "A")
+	}
+}

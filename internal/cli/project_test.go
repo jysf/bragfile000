@@ -48,7 +48,7 @@ func TestProjectCmd_BarePrintsHelp(t *testing.T) {
 	if !strings.Contains(out, "Usage:") {
 		t.Errorf("expected 'Usage:' in help output, got %q", out)
 	}
-	for _, sub := range []string{"new", "list", "show", "status"} {
+	for _, sub := range []string{"new", "list", "show", "status", "here"} {
 		if !strings.Contains(out, sub) {
 			t.Errorf("expected subcommand %q in help output, got %q", sub, out)
 		}
@@ -1173,5 +1173,142 @@ func TestProjectStatus_HelpShowsExamples(t *testing.T) {
 	}
 	if !strings.Contains(out, "brag project status") {
 		t.Errorf("status --help missing distinctive token 'brag project status', got %q", out)
+	}
+}
+
+func TestProjectHere_MatchedProject(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", dir); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+	if _, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--state-note", "next: cut v0.2.0"); err != nil {
+		t.Fatalf("edit state-note: %v", err)
+	}
+
+	orig := getCwd
+	getCwd = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { getCwd = orig })
+
+	out, errOut, err := runProjectCmd(t, dbPath, "here")
+	if err != nil {
+		t.Fatalf("here: unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "bragfile\tactive\tnext: cut v0.2.0") {
+		t.Errorf("stdout = %q, want plain one-liner with bragfile\\tactive\\tnext: cut v0.2.0", out)
+	}
+	if errOut != "" {
+		t.Errorf("stderr must be empty, got %q", errOut)
+	}
+}
+
+func TestProjectHere_EmptyStateNote(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", dir); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	orig := getCwd
+	getCwd = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { getCwd = orig })
+
+	out, errOut, err := runProjectCmd(t, dbPath, "here")
+	if err != nil {
+		t.Fatalf("here: unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "bragfile\tactive\t-") {
+		t.Errorf("stdout = %q, want plain one-liner bragfile\\tactive\\t-", out)
+	}
+	if errOut != "" {
+		t.Errorf("stderr must be empty, got %q", errOut)
+	}
+}
+
+func TestProjectHere_NoMatch(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+
+	orig := getCwd
+	getCwd = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { getCwd = orig })
+
+	out, errOut, err := runProjectCmd(t, dbPath, "here")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser, got %v", err)
+	}
+	if !strings.Contains(errOut, "not inside any registered project") {
+		t.Errorf("errOut = %q, want 'not inside any registered project'", errOut)
+	}
+	if out != "" {
+		t.Errorf("stdout must be empty on no-match, got %q", out)
+	}
+}
+
+func TestProjectHere_JSONFormat(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", dir); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	orig := getCwd
+	getCwd = func() (string, error) { return sub, nil }
+	t.Cleanup(func() { getCwd = orig })
+
+	out, errOut, err := runProjectCmd(t, dbPath, "here", "--format", "json")
+	if err != nil {
+		t.Fatalf("here --format json: %v", err)
+	}
+	if errOut != "" {
+		t.Errorf("stderr must be empty, got %q", errOut)
+	}
+
+	trimmed := strings.TrimSpace(out)
+	if !strings.HasPrefix(trimmed, "{") {
+		t.Errorf("expected single JSON object, got %q", trimmed)
+	}
+
+	var got struct {
+		Name      string   `json:"name"`
+		Locations []string `json:"locations"`
+	}
+	if err := json.Unmarshal([]byte(trimmed), &got); err != nil {
+		t.Fatalf("JSON unmarshal: %v", err)
+	}
+	if got.Name != "bragfile" {
+		t.Errorf("name = %q, want bragfile", got.Name)
+	}
+	if len(got.Locations) == 0 {
+		t.Errorf("locations must be non-empty (hydrated via GetProject), got %v", got.Locations)
+	}
+}
+
+func TestProjectHere_UnknownFormatErrUser(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", dir); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	orig := getCwd
+	getCwd = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { getCwd = orig })
+
+	_, _, err := runProjectCmd(t, dbPath, "here", "--format", "xml")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for unknown format, got %v", err)
+	}
+}
+
+func TestProjectHere_HelpShowsExamples(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	out, _, _ := runProjectCmd(t, dbPath, "here", "--help")
+	if !strings.Contains(out, "Examples:") {
+		t.Errorf("here --help missing 'Examples:', got %q", out)
+	}
+	if !strings.Contains(out, "brag project here --format json") {
+		t.Errorf("here --help missing distinctive token 'brag project here --format json', got %q", out)
 	}
 }

@@ -7,7 +7,7 @@
 task:
   id: SPEC-031
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -763,27 +763,26 @@ test assertion `strings.Contains(out, "bragfile\tactive\tnext: cut v0.2.0")`
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-031-brag-project-here-cwd-resolver`
+- **PR (if applicable):** opened below
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
   - `DEC-019` — nearest-ancestor (longest-prefix) cwd-to-project
-    resolution policy *(emitted at design; no build deviation expected)*
+    resolution policy *(emitted at design; no build deviation)*
 - **Deviations from spec:**
-  - [list]
-- **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - The `p == nil` no-match path uses `fmt.Fprintln(cmd.ErrOrStderr(), "not inside any registered project")` + `return fmt.Errorf("%w", ErrUser)` instead of `return UserErrorf(...)`. This is required because the test asserts `strings.Contains(errBuf, "not inside any registered project")`: with `SilenceErrors: true`, cobra does not write to errBuf — the function must write explicitly. The bare `fmt.Errorf("%w", ErrUser)` return gives exit 1 without double-printing in production. This is the spec's "SilentErr or equivalent" pattern, deferred to build-time decision since the test constraint surface wasn't fully analysed at design.
+- **Follow-up work identified:** none
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — The phrase "cobra RunE returning a SilentErr or equivalent" in the stdout/stderr discipline note required inference: with `SilenceErrors: true`, cobra never writes to errBuf, so the "not inside" message must be written explicitly before returning a bare `ErrUser` wrapper. The test asserting BOTH `errors.Is(err, ErrUser)` AND `strings.Contains(errBuf, msg)` is what made the pattern unambiguous — but that took a test-run failure to surface.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — The interaction between `SilenceErrors: true` and `errBuf`-asserting tests for user-error messages is a non-obvious pattern. The spec covered it via the "SilentErr or equivalent" hint, but a concrete example (parallel to "Aborted." in `runProjectDelete`) would have made it instantly clear. No new DEC needed; a sentence in the implementation context would have been sufficient.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — At design, trace through the test assertion for `TestProjectHere_NoMatch` against the cobra execution model (`SilenceErrors: true` + `root.SetErr(errBuf)`) to pre-decide the "write to errBuf then return bare ErrUser" implementation pattern. That would have made the build a pure transcription rather than a debug cycle.
 
 ---
 

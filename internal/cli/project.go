@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 
@@ -14,14 +15,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// getCwd is the function called to get the current working directory.
+// Package-level so tests in the cli package can override it without
+// the production binary carrying any test-only surface.
+var getCwd = os.Getwd
+
 // NewProjectCmd returns the `brag project` parent command with new,
-// list, show, status, edit, archive, and delete subcommands. A bare
+// list, show, status, edit, archive, delete, and here subcommands. A bare
 // `brag project` prints help (cobra default for a command with subcommands
 // and no RunE).
 func NewProjectCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project",
-		Short: "Manage projects (new, list, show, status, edit, archive, delete)",
+		Short: "Manage projects (new, list, show, status, edit, archive, delete, here)",
 	}
 	cmd.AddCommand(newProjectNewCmd())
 	cmd.AddCommand(newProjectListCmd())
@@ -30,6 +36,7 @@ func NewProjectCmd() *cobra.Command {
 	cmd.AddCommand(newProjectEditCmd())
 	cmd.AddCommand(newProjectArchiveCmd())
 	cmd.AddCommand(newProjectDeleteCmd())
+	cmd.AddCommand(newProjectHereCmd())
 	return cmd
 }
 
@@ -577,5 +584,82 @@ func runProjectDelete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("delete project: %w", err)
 	}
 	fmt.Fprintf(cmd.ErrOrStderr(), "Deleted project %q.\n", project.Name)
+	return nil
+}
+
+func newProjectHereCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "here",
+		Short: "Show which project the current directory belongs to",
+		Long: `Resolve the current working directory against registered project locations.
+Prints the matching project if the cwd is inside a registered location
+(nearest-ancestor match — you may be in any subdirectory, not just the exact
+registered root). If no registered project matches, exits 1.
+
+Output is a single tab-separated line (default) or a JSON object (--format json)
+with the full project shape including locations (same as 'brag project show').
+
+Examples:
+  brag project here                 # name<TAB>status<TAB>state-note
+  brag project here --format json   # single project JSON object`,
+		RunE: runProjectHere,
+	}
+	cmd.Flags().String("format", "", "output format (one of: json); default is plain")
+	return cmd
+}
+
+func runProjectHere(cmd *cobra.Command, _ []string) error {
+	format, _ := cmd.Flags().GetString("format")
+	if format != "" && format != "json" {
+		return UserErrorf("unknown --format value %q (accepted: json)", format)
+	}
+
+	cwd, err := getCwd()
+	if err != nil {
+		return fmt.Errorf("get working directory: %w", err)
+	}
+
+	dbFlag := getFlagString(cmd, "db")
+	dbPath, err := config.ResolveDBPath(dbFlag)
+	if err != nil {
+		return fmt.Errorf("resolve db path: %w", err)
+	}
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	defer s.Close()
+
+	p, err := s.ProjectForPath(cwd)
+	if err != nil {
+		return fmt.Errorf("resolve project: %w", err)
+	}
+	if p == nil {
+		// Write message explicitly so it appears in cmd.ErrOrStderr() (tests
+		// capture this). Return a bare ErrUser so main.go routes to exit 1
+		// without double-printing the message.
+		fmt.Fprintln(cmd.ErrOrStderr(), "not inside any registered project")
+		return fmt.Errorf("%w", ErrUser)
+	}
+
+	out := cmd.OutOrStdout()
+	if format == "json" {
+		full, err := s.GetProject(p.ID)
+		if err != nil {
+			return fmt.Errorf("get project: %w", err)
+		}
+		body, err := export.ToProjectJSON(full)
+		if err != nil {
+			return fmt.Errorf("render project json: %w", err)
+		}
+		fmt.Fprintln(out, string(body))
+		return nil
+	}
+	// Plain one-liner: name<TAB>status<TAB>state_note (LD2).
+	note := p.StateNote
+	if note == "" {
+		note = "-"
+	}
+	fmt.Fprintf(out, "%s\t%s\t%s\n", p.Name, p.Status, note)
 	return nil
 }
