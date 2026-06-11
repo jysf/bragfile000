@@ -236,10 +236,10 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       state_note confirmed; `project-state-note-shape` question closed.
       No new DEC. One build deviation: CLI ordering test needed §9
       no-sleep SQL-backdate (same pattern as storage tests).
-- [~] SPEC-031 (design) — **S/M** — **`brag project here` cwd resolver.**
-      DEC-019 emitted: nearest-ancestor longest-prefix (confidence 0.90);
-      `filepath.Clean` normalisation; `ProjectForPath` nil return (not
-      ErrNotFound). 13 ACs, 14 failing tests. Resolver reused by SPEC-032.
+- [x] SPEC-031 (shipped on 2026-06-11) — **S/M** — **`brag project here`
+      cwd resolver.** DEC-019: nearest-ancestor longest-prefix (0.90);
+      `filepath.Clean` both sides; separator guard; `ProjectForPath` nil
+      return. `getCwd` indirection for testability. 13 ACs, 14 tests.
 - [ ] SPEC-032 (not yet written) — **M** — **`brag add` `--project`
       auto-fill from cwd.** When no explicit `--project` and cwd is
       inside a registered location, auto-fill it via the SPEC-031
