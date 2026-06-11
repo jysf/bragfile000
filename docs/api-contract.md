@@ -491,7 +491,7 @@ brag project show 3 --format json
 Shows one project's name, status, state note, and locations. The argument is
 resolved as a **name first**; if no project has that name and the argument is
 a positive integer, it is resolved as a project **id**. (No recent-brag count
-— that is `brag project status`, a later STAGE-007 spec.)
+— that is `brag project status` (below).)
 
 - Plain output is a labeled block (`Name:`, `Status:`, `State note:`,
   `Locations:`).
@@ -499,6 +499,28 @@ a positive integer, it is resolved as a project **id**. (No recent-brag count
   shape as `brag project list`.
 - Exit 1 (user error) if no project matches the name or id, or on unknown
   `--format`.
+
+### `brag project status` — active-project dashboard (STAGE-007)
+
+```
+brag project status                 # name<TAB>status<TAB>count<TAB>state note
+brag project status --format json   # naked JSON array of status objects
+```
+
+Shows every **non-archived** project (status `active`, `paused`, or `done`),
+most-recently-updated first (`updated_at DESC, id DESC`), as a scannable
+dashboard. Each row carries the project name, status, a **brag count** (the
+number of entries whose `project` string equals the project name — the DEC-017
+soft string match, counted over all time), and the state note.
+
+- Plain output: tab-separated `<name>\t<status>\t<brag_count>\t<state_note>`
+  rows on stdout (a long state note is truncated; an empty note prints empty).
+- `--format json` — naked JSON array of status objects (DEC-011; 2-space
+  indent; `[]` on empty, never `null`). Object keys: `id, name, status,
+  state_note, brag_count, created_at, updated_at` (`brag_count` a number;
+  `state_note` carried in full, never truncated; timestamps RFC3339).
+- Default (no `--format`) — plain rows. Unknown `--format` exits 1 (user
+  error). stdout carries data; stderr empty.
 
 ### `brag project edit <name|id>` — edit a project's scalar fields (STAGE-007)
 

@@ -15,16 +15,18 @@ import (
 )
 
 // NewProjectCmd returns the `brag project` parent command with new,
-// list, show, edit, archive, and delete subcommands. A bare `brag project`
-// prints help (cobra default for a command with subcommands and no RunE).
+// list, show, status, edit, archive, and delete subcommands. A bare
+// `brag project` prints help (cobra default for a command with subcommands
+// and no RunE).
 func NewProjectCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project",
-		Short: "Manage projects (new, list, show, edit, archive, delete)",
+		Short: "Manage projects (new, list, show, status, edit, archive, delete)",
 	}
 	cmd.AddCommand(newProjectNewCmd())
 	cmd.AddCommand(newProjectListCmd())
 	cmd.AddCommand(newProjectShowCmd())
+	cmd.AddCommand(newProjectStatusCmd())
 	cmd.AddCommand(newProjectEditCmd())
 	cmd.AddCommand(newProjectArchiveCmd())
 	cmd.AddCommand(newProjectDeleteCmd())
@@ -278,6 +280,78 @@ func resolveProjectByNameOrID(s *storage.Store, key string) (storage.Project, er
 		return storage.Project{}, fmt.Errorf("resolve project %q: %w", key, storage.ErrNotFound)
 	}
 	return s.GetProject(id)
+}
+
+func newProjectStatusCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "status",
+		Short: "Show active projects by recency with brag counts",
+		Long: `Show every non-archived project, most-recently-updated first, as a scannable
+dashboard: one row per project with its status, total brag count, and state
+note. The brag count is the number of brag entries whose project matches the
+project name (DEC-017 soft string match). Archived projects are not shown.
+
+Output is plain tab-separated rows (default) or a naked JSON array of status
+objects (--format json) per DEC-011. In plain output a long state note is
+truncated; the JSON carries it in full.
+
+Examples:
+  brag project status                 # name<TAB>status<TAB>count<TAB>state note
+  brag project status --format json   # naked JSON array of status objects`,
+		RunE: runProjectStatus,
+	}
+	cmd.Flags().String("format", "", "output format (one of: json); default is plain tab-separated")
+	return cmd
+}
+
+func runProjectStatus(cmd *cobra.Command, _ []string) error {
+	format, _ := cmd.Flags().GetString("format")
+	if format != "" && format != "json" {
+		return UserErrorf("unknown --format value %q (accepted: json)", format)
+	}
+
+	dbFlag := getFlagString(cmd, "db")
+	dbPath, err := config.ResolveDBPath(dbFlag)
+	if err != nil {
+		return fmt.Errorf("resolve db path: %w", err)
+	}
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	defer s.Close()
+
+	statuses, err := s.ProjectStatuses()
+	if err != nil {
+		return fmt.Errorf("project statuses: %w", err)
+	}
+
+	out := cmd.OutOrStdout()
+	if format == "json" {
+		body, err := export.ToProjectStatusesJSON(statuses)
+		if err != nil {
+			return fmt.Errorf("render project statuses json: %w", err)
+		}
+		fmt.Fprintln(out, string(body))
+		return nil
+	}
+	for _, st := range statuses {
+		fmt.Fprintf(out, "%s\t%s\t%d\t%s\n",
+			st.Name, st.Status, st.BragCount, truncateStateNote(st.StateNote))
+	}
+	return nil
+}
+
+// truncateStateNote shortens a state note for the plain dashboard so a
+// long note doesn't blow out the row. Rune-based so a multibyte note is
+// never split mid-character. JSON output is never truncated.
+func truncateStateNote(note string) string {
+	const max = 50
+	r := []rune(note)
+	if len(r) <= max {
+		return note
+	}
+	return string(r[:max]) + "…"
 }
 
 func newProjectEditCmd() *cobra.Command {

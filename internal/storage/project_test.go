@@ -708,3 +708,182 @@ func TestDeleteProject_NotFound(t *testing.T) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
 }
+
+func TestProjectStatuses_CountsAndExcludesArchived(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	bf, err := s.CreateProject(Project{Name: "bragfile"})
+	if err != nil {
+		t.Fatalf("CreateProject bragfile: %v", err)
+	}
+	pl, err := s.CreateProject(Project{Name: "platform", Status: "paused"})
+	if err != nil {
+		t.Fatalf("CreateProject platform: %v", err)
+	}
+	sp, err := s.CreateProject(Project{Name: "sideproj", Status: "done"})
+	if err != nil {
+		t.Fatalf("CreateProject sideproj: %v", err)
+	}
+	old, err := s.CreateProject(Project{Name: "oldthing"})
+	if err != nil {
+		t.Fatalf("CreateProject oldthing: %v", err)
+	}
+	if err := s.ArchiveProject(old.ID); err != nil {
+		t.Fatalf("ArchiveProject oldthing: %v", err)
+	}
+
+	for range 2 {
+		if _, err := s.Add(Entry{Title: "t", Project: "bragfile"}); err != nil {
+			t.Fatalf("Add bragfile entry: %v", err)
+		}
+	}
+	if _, err := s.Add(Entry{Title: "t", Project: "platform"}); err != nil {
+		t.Fatalf("Add platform entry: %v", err)
+	}
+	if _, err := s.Add(Entry{Title: "t", Project: "oldthing"}); err != nil {
+		t.Fatalf("Add oldthing entry: %v", err)
+	}
+
+	statuses, err := s.ProjectStatuses()
+	if err != nil {
+		t.Fatalf("ProjectStatuses: %v", err)
+	}
+	if len(statuses) != 3 {
+		t.Fatalf("len = %d, want 3 (archived oldthing excluded)", len(statuses))
+	}
+
+	for _, st := range statuses {
+		if st.Status == "archived" {
+			t.Errorf("archived project %q should be excluded", st.Name)
+		}
+	}
+
+	counts := map[string]int{}
+	for _, st := range statuses {
+		counts[st.Name] = st.BragCount
+	}
+	if counts["bragfile"] != 2 {
+		t.Errorf("bragfile BragCount = %d, want 2", counts["bragfile"])
+	}
+	if counts["platform"] != 1 {
+		t.Errorf("platform BragCount = %d, want 1", counts["platform"])
+	}
+	if counts["sideproj"] != 0 {
+		t.Errorf("sideproj BragCount = %d, want 0", counts["sideproj"])
+	}
+	_ = bf
+	_ = pl
+	_ = sp
+}
+
+func TestProjectStatuses_SoftJoinIgnoresUnregisteredAndNull(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	bf, err := s.CreateProject(Project{Name: "bragfile"})
+	if err != nil {
+		t.Fatalf("CreateProject bragfile: %v", err)
+	}
+
+	// exact match
+	if _, err := s.Add(Entry{Title: "t", Project: "bragfile"}); err != nil {
+		t.Fatalf("Add bragfile: %v", err)
+	}
+	// unregistered project string
+	if _, err := s.Add(Entry{Title: "t", Project: "bragfile-old"}); err != nil {
+		t.Fatalf("Add bragfile-old: %v", err)
+	}
+	// empty project string
+	if _, err := s.Add(Entry{Title: "t", Project: ""}); err != nil {
+		t.Fatalf("Add empty project: %v", err)
+	}
+	// no Project field set (zero-value = empty string)
+	if _, err := s.Add(Entry{Title: "t"}); err != nil {
+		t.Fatalf("Add no project: %v", err)
+	}
+
+	statuses, err := s.ProjectStatuses()
+	if err != nil {
+		t.Fatalf("ProjectStatuses: %v", err)
+	}
+	if len(statuses) != 1 {
+		t.Fatalf("len = %d, want 1", len(statuses))
+	}
+	if statuses[0].Name != "bragfile" {
+		t.Fatalf("Name = %q, want bragfile", statuses[0].Name)
+	}
+	if statuses[0].BragCount != 1 {
+		t.Errorf("BragCount = %d, want 1 (exact-match only)", statuses[0].BragCount)
+	}
+	_ = bf
+}
+
+func TestProjectStatuses_OrderedByUpdatedAtThenIDDesc(t *testing.T) {
+	s, path := newTestStore(t)
+
+	p1, err := s.CreateProject(Project{Name: "p1"})
+	if err != nil {
+		t.Fatalf("CreateProject p1: %v", err)
+	}
+	p2, err := s.CreateProject(Project{Name: "p2"})
+	if err != nil {
+		t.Fatalf("CreateProject p2: %v", err)
+	}
+	p3, err := s.CreateProject(Project{Name: "p3"})
+	if err != nil {
+		t.Fatalf("CreateProject p3: %v", err)
+	}
+
+	// Sub-case A: all same updated_at → id DESC tie-break: p3, p2, p1
+	statuses, err := s.ProjectStatuses()
+	if err != nil {
+		t.Fatalf("ProjectStatuses (sub-case A): %v", err)
+	}
+	if len(statuses) != 3 {
+		t.Fatalf("len = %d, want 3", len(statuses))
+	}
+	if statuses[0].ID != p3.ID {
+		t.Errorf("sub-case A: [0].ID = %d, want %d (p3)", statuses[0].ID, p3.ID)
+	}
+	if statuses[1].ID != p2.ID {
+		t.Errorf("sub-case A: [1].ID = %d, want %d (p2)", statuses[1].ID, p2.ID)
+	}
+	if statuses[2].ID != p1.ID {
+		t.Errorf("sub-case A: [2].ID = %d, want %d (p1)", statuses[2].ID, p1.ID)
+	}
+
+	// Sub-case B: bump p1 via UpdateProject → p1 floats to top
+	past := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	backdateProject(t, path, p1.ID, past)
+	backdateProject(t, path, p2.ID, past)
+	backdateProject(t, path, p3.ID, past)
+
+	if _, err := s.UpdateProject(p1.ID, Project{Name: "p1", Status: "active"}); err != nil {
+		t.Fatalf("UpdateProject p1: %v", err)
+	}
+
+	statuses2, err := s.ProjectStatuses()
+	if err != nil {
+		t.Fatalf("ProjectStatuses (sub-case B): %v", err)
+	}
+	if len(statuses2) != 3 {
+		t.Fatalf("len = %d, want 3", len(statuses2))
+	}
+	if statuses2[0].ID != p1.ID {
+		t.Errorf("sub-case B: [0].ID = %d, want %d (p1, bumped to now)", statuses2[0].ID, p1.ID)
+	}
+}
+
+func TestProjectStatuses_EmptyReturnsNonNilSlice(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	statuses, err := s.ProjectStatuses()
+	if err != nil {
+		t.Fatalf("ProjectStatuses: %v", err)
+	}
+	if statuses == nil {
+		t.Error("expected non-nil slice, got nil")
+	}
+	if len(statuses) != 0 {
+		t.Errorf("len = %d, want 0", len(statuses))
+	}
+}
