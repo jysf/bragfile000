@@ -522,6 +522,29 @@ soft string match, counted over all time), and the state note.
 - Default (no `--format`) — plain rows. Unknown `--format` exits 1 (user
   error). stdout carries data; stderr empty.
 
+### `brag project here` — show the project for the current directory (STAGE-007)
+
+```
+brag project here
+brag project here --format json
+```
+
+Resolves `os.Getwd()` against registered project locations using
+nearest-ancestor (longest-prefix) matching (DEC-019): you may be anywhere
+inside a registered location's directory tree, not just at the exact root.
+When multiple registered paths are ancestors of the cwd, the most specific
+(longest) path wins.
+
+- Plain output (default): a single tab-separated line
+  `<name>\t<status>\t<state_note>` on stdout (`-` when state note is
+  empty); stderr empty; exit 0.
+- `--format json` — a single JSON object with the full project shape
+  (same as `brag project show --format json`; `locations` hydrated).
+- Not inside any registered project → stderr:
+  `not inside any registered project`, exit 1, stdout empty.
+- Unknown `--format` exits 1 (user error). No positional arguments;
+  reads `os.Getwd()` only.
+
 ### `brag project edit <name|id>` — edit a project's scalar fields (STAGE-007)
 
 ```

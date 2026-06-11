@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -432,6 +434,79 @@ func (s *Store) ProjectStatuses() ([]ProjectStatus, error) {
 		return nil, fmt.Errorf("project statuses: %w", err)
 	}
 	return out, nil
+}
+
+// ProjectForPath resolves cwd against all registered project_locations
+// using nearest-ancestor (longest-prefix) matching (DEC-019). Both cwd
+// and each stored path are cleaned with filepath.Clean before comparison.
+// Returns nil, nil — not ErrNotFound — when no location is an ancestor
+// of cwd; callers distinguish "no project here" from a real error by the
+// nil check. Locations is not hydrated on the returned Project.
+func (s *Store) ProjectForPath(cwd string) (*Project, error) {
+	cwd = filepath.Clean(cwd)
+	sep := string(filepath.Separator)
+
+	ctx := context.Background()
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT pl.path, p.id, p.name, p.status, p.state_note,
+		        p.created_at, p.updated_at
+		   FROM project_locations pl
+		   JOIN projects p ON p.id = pl.project_id`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("project for path %q: %w", cwd, err)
+	}
+	defer rows.Close()
+
+	var (
+		bestPath    string
+		bestProject *Project
+	)
+
+	for rows.Next() {
+		var (
+			locPath                    string
+			p                          Project
+			createdAtRaw, updatedAtRaw string
+		)
+		if err := rows.Scan(&locPath, &p.ID, &p.Name, &p.Status, &p.StateNote,
+			&createdAtRaw, &updatedAtRaw); err != nil {
+			return nil, fmt.Errorf("project for path %q: %w", cwd, err)
+		}
+		cleanLoc := filepath.Clean(locPath)
+
+		// Nearest-ancestor check: cwd must equal cleanLoc (exact match) or
+		// start with cleanLoc + separator (cleanLoc is a parent directory).
+		// The separator suffix prevents /home/user/work matching /home/user/worker.
+		if cwd != cleanLoc && !strings.HasPrefix(cwd, cleanLoc+sep) {
+			continue
+		}
+
+		// Longest prefix wins (most-specific registered ancestor, DEC-019).
+		if bestProject == nil || len(cleanLoc) > len(bestPath) {
+			created, err := time.Parse(time.RFC3339, createdAtRaw)
+			if err != nil {
+				return nil, fmt.Errorf("project for path %q: parse created_at %q: %w",
+					cwd, createdAtRaw, err)
+			}
+			updated, err := time.Parse(time.RFC3339, updatedAtRaw)
+			if err != nil {
+				return nil, fmt.Errorf("project for path %q: parse updated_at %q: %w",
+					cwd, updatedAtRaw, err)
+			}
+			p.CreatedAt = created.UTC()
+			p.UpdatedAt = updated.UTC()
+			// Locations intentionally nil — callers that need the full
+			// location list call GetProject(p.ID).
+			bestPath = cleanLoc
+			cp := p
+			bestProject = &cp
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("project for path %q: %w", cwd, err)
+	}
+	return bestProject, nil
 }
 
 // locationsForProject returns paths for the given project ordered by
