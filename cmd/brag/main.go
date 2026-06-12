@@ -31,6 +31,7 @@ func main() {
 	root.AddCommand(cli.NewStatsCmd())
 	root.AddCommand(cli.NewTagsCmd())
 	root.AddCommand(cli.NewTagCmd())
+	root.AddCommand(cli.NewProjectCmd())
 	root.AddCommand(cli.NewCompletionCmd(root))
 
 	if err := root.Execute(); err != nil {
