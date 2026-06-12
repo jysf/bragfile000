@@ -478,7 +478,7 @@ shared `ctx`:
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** `feat/spec-036-migration-auto-backup-safety-belt`
-- **PR (if applicable):** (opened below)
+- **PR (if applicable):** #48
 - **All acceptance criteria met?** yes
 - **New decisions emitted:**
   - `DEC-021` — migration auto-backup durability model (emitted at design)
