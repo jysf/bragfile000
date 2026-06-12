@@ -169,8 +169,8 @@ func TestOpen_MigrationsTracked(t *testing.T) {
 		t.Fatalf("rows.Err: %v", err)
 	}
 
-	want := []string{"0001_initial", "0002_add_fts", "0003_normalize_tags"}
-	if len(versions) != len(want) || versions[0] != want[0] || versions[1] != want[1] || versions[2] != want[2] {
+	want := []string{"0001_initial", "0002_add_fts", "0003_normalize_tags", "0004_add_projects"}
+	if len(versions) != len(want) || versions[0] != want[0] || versions[1] != want[1] || versions[2] != want[2] || versions[3] != want[3] {
 		t.Fatalf("schema_migrations = %v, want %v", versions, want)
 	}
 }
@@ -203,9 +203,9 @@ func TestOpen_Idempotent(t *testing.T) {
 	if err := db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&count); err != nil {
 		t.Fatalf("count schema_migrations: %v", err)
 	}
-	// 0001_initial + 0002_add_fts + 0003_normalize_tags (SPEC-025).
-	if count != 3 {
-		t.Fatalf("schema_migrations count = %d, want 3", count)
+	// 0001_initial + 0002_add_fts + 0003_normalize_tags (SPEC-025) + 0004_add_projects (SPEC-027).
+	if count != 4 {
+		t.Fatalf("schema_migrations count = %d, want 4", count)
 	}
 
 	// Schema still intact.

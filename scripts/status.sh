@@ -17,28 +17,6 @@ echo "  Variant:         ${VARIANT}"
 echo "  Active project:  ${ACTIVE_PROJECT}"
 echo ""
 
-# --- All projects ---
-echo "${BOLD}All projects${RESET}"
-for p in "${REPO_ROOT}"/projects/PROJ-*; do
-    [ -d "$p" ] || continue
-    pname=$(basename "$p")
-    brief="${p}/brief.md"
-    status="unknown"
-    if [ -f "$brief" ]; then
-        # Grep for "status:" nested under "project:" in the front-matter
-        status=$(awk '
-            /^---$/ { f = !f; next }
-            f && /^project:/ { inproj = 1; next }
-            f && inproj && /^[a-zA-Z_]+:/ { inproj = 0 }
-            f && inproj && /^[[:space:]]+status:/ { print $2; exit }
-        ' "$brief" 2>/dev/null || echo "unknown")
-    fi
-    marker=" "
-    if [ "$pname" = "$ACTIVE_PROJECT" ]; then marker="${GREEN}*${RESET}"; fi
-    printf "  %s %-40s  status: %s\n" "$marker" "$pname" "$status"
-done
-echo ""
-
 # --- Active project: stages ---
 echo "${BOLD}Stages in ${ACTIVE_PROJECT}${RESET}"
 stages_dir="${ACTIVE_PROJECT_DIR}/stages"
@@ -145,3 +123,70 @@ echo "${BOLD}Summary${RESET}"
 echo "  Total specs in ${ACTIVE_PROJECT}:     ${total_specs}"
 echo "  Shipped (archived):                   ${shipped_specs}"
 echo "  Total decisions (across all projects): ${total_decisions}"
+echo ""
+
+# --- All projects (overview — kept at the bottom) ---
+echo "${BOLD}All projects${RESET}"
+for p in "${REPO_ROOT}"/projects/PROJ-*; do
+    [ -d "$p" ] || continue
+    pname=$(basename "$p")
+    brief="${p}/brief.md"
+    status="unknown"
+    if [ -f "$brief" ]; then
+        # Grep for "status:" nested under "project:" in the front-matter
+        status=$(awk '
+            /^---$/ { f = !f; next }
+            f && /^project:/ { inproj = 1; next }
+            f && inproj && /^[a-zA-Z_]+:/ { inproj = 0 }
+            f && inproj && /^[[:space:]]+status:/ { print $2; exit }
+        ' "$brief" 2>/dev/null || echo "unknown")
+    fi
+    marker=" "
+    if [ "$pname" = "$ACTIVE_PROJECT" ]; then marker="${GREEN}*${RESET}"; fi
+    st_count=$(find "${p}/stages" -name "STAGE-*.md" 2>/dev/null | wc -l | tr -d ' ')
+    sp_total=$(find "${p}/specs" -name "SPEC-*.md" 2>/dev/null | wc -l | tr -d ' ')
+    sp_done=$(find "${p}/specs/done" -name "SPEC-*.md" 2>/dev/null | wc -l | tr -d ' ')
+    printf "  %s %-40s  status: %-9s  ${DIM}%s stages · %s/%s specs shipped${RESET}\n" \
+        "$marker" "$pname" "$status" "$st_count" "$sp_done" "$sp_total"
+done
+echo ""
+
+# --- Completed in prior projects (the accomplishment trail) ---
+# Non-active projects only (the active project gets its own deep-dive
+# above). Stage granularity, not every spec — shipped stages + dates.
+echo "${BOLD}Completed in prior projects${RESET}"
+prior_found=false
+for p in "${REPO_ROOT}"/projects/PROJ-*; do
+    [ -d "$p" ] || continue
+    pname=$(basename "$p")
+    [ "$pname" = "$ACTIVE_PROJECT" ] && continue
+    pstages_dir="${p}/stages"
+    [ -d "$pstages_dir" ] || continue
+    stage_lines=""
+    for s in "${pstages_dir}"/STAGE-*.md; do
+        [ -f "$s" ] || continue
+        sstatus=$(awk '/^---$/{f=!f; next} f && /^[[:space:]]+status:/{print $2; exit}' "$s" 2>/dev/null || echo "")
+        sshipped=$(awk '/^---$/{f=!f; next} f && /^shipped_at:/{print $2; exit}' "$s" 2>/dev/null || echo "")
+        sname=$(basename "$s" .md)
+        if [ -n "$sshipped" ] && [ "$sshipped" != "null" ]; then
+            stage_lines="${stage_lines}    - ${sname}  ${DIM}(shipped ${sshipped})${RESET}\n"
+        else
+            stage_lines="${stage_lines}    - ${sname}  ${DIM}(${sstatus})${RESET}\n"
+        fi
+    done
+    [ -z "$stage_lines" ] && continue
+    st_count=$(find "$pstages_dir" -name "STAGE-*.md" 2>/dev/null | wc -l | tr -d ' ')
+    sh_count=$(find "${p}/specs/done" -name "SPEC-*.md" 2>/dev/null | wc -l | tr -d ' ')
+    pshipped=$(awk '/^---$/{f=!f; next} f && /^shipped_at:/{print $2; exit}' "${p}/brief.md" 2>/dev/null || echo "")
+    if [ -n "$pshipped" ] && [ "$pshipped" != "null" ]; then
+        printf "  ${BOLD}%s${RESET}  ${DIM}(shipped %s — %s stages, %s specs)${RESET}\n" "$pname" "$pshipped" "$st_count" "$sh_count"
+    else
+        printf "  ${BOLD}%s${RESET}  ${DIM}(%s stages, %s specs shipped)${RESET}\n" "$pname" "$st_count" "$sh_count"
+    fi
+    printf "%b" "$stage_lines"
+    prior_found=true
+done
+if [ "$prior_found" = "false" ]; then
+    echo "  ${DIM}(none — this is the first project)${RESET}"
+fi
+echo ""

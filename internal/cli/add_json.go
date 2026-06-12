@@ -113,6 +113,8 @@ func runAddJSON(cmd *cobra.Command, _ []string) error {
 	}
 	defer s.Close()
 
+	entry.Project = autoFillProject(s, entry.Project, entry.Project != "")
+
 	inserted, err := s.Add(entry)
 	if err != nil {
 		return fmt.Errorf("add entry: %w", err)

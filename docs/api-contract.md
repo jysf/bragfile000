@@ -104,6 +104,25 @@ brag list --format json | jq '.[0]' | brag add --json
 - Schema lock:
   [DEC-012](../decisions/DEC-012-brag-add-json-stdin-schema.md).
 
+**STAGE-007 (cwd `--project` auto-fill):**
+
+When `--project` is not supplied, `brag add` resolves the current working
+directory against registered project locations (nearest-ancestor match,
+DEC-019) and auto-fills the entry's project from the matching project's
+name. This applies to all three input modes:
+
+- flag mode — fires only when `--project`/`-p` is not passed at all;
+  passing `-p` (even `-p ""`) is an explicit choice and is recorded
+  verbatim.
+- JSON mode — fires only when the stdin object has no non-empty
+  `"project"` field.
+- editor mode — fires only when the buffer's `Project:` header is empty.
+
+Auto-fill is silent (no stderr) and best-effort: if the cwd cannot be
+resolved or matches no registered project, the entry is saved with an
+empty project, exactly as before. An explicit project always wins over
+the cwd. See `brag project here` (SPEC-031) for the shared resolver.
+
 ### `brag list` — list entries
 
 ```
@@ -446,6 +465,169 @@ Implemented via DELETE+INSERT on `taggings` (DEC-016 choice 3) so the existing
   `<src> == <dst>`, or if the wrong number of arguments is given.
 - DB is unchanged on any error path (the operation is a single transaction).
 
+### `brag project new <name> --path <dir>` — register a project (STAGE-007)
+
+```
+brag project new bragfile --path ~/code/bragfile
+```
+
+Registers a new project named `<name>` with one initial filesystem location
+`<dir>`. The project starts with status `active` and an empty state note
+(use `brag project edit` to change them — STAGE-007 later spec). `--path` is
+required and stored verbatim (path normalization is `brag project here`'s
+concern, STAGE-007).
+
+- Exits 0 on success; stderr: `Created project "<name>".` (stdout empty).
+- Exit 1 (user error) if `<name>` is empty, `--path` is missing/empty, the
+  name already exists, or the path is already registered to another project
+  (in which case nothing is created — the path is checked first).
+
+### `brag project list` — list projects (STAGE-007)
+
+```
+brag project list                 # name<TAB>status<TAB>locations
+brag project list --format json   # naked JSON array of project objects
+```
+
+Lists every registered project, most-recently-updated first
+(`updated_at DESC, id DESC`), one per line as `<name>\t<status>\t<locations>`
+(locations comma-joined; `-` when none).
+
+- `--format json` — naked JSON array of project objects (DEC-011; 2-space
+  indent; `[]` on empty, never `null`). Object keys: `id, name, status,
+  state_note, locations, created_at, updated_at` (locations a JSON array of
+  strings; timestamps RFC3339).
+- Default (no `--format`) — plain tab-separated rows on stdout.
+- Unknown `--format` exits 1 (user error). stdout carries data; stderr empty.
+
+### `brag project show <name|id>` — show one project (STAGE-007)
+
+```
+brag project show bragfile
+brag project show 3 --format json
+```
+
+Shows one project's name, status, state note, and locations. The argument is
+resolved as a **name first**; if no project has that name and the argument is
+a positive integer, it is resolved as a project **id**. (No recent-brag count
+— that is `brag project status` (below).)
+
+- Plain output is a labeled block (`Name:`, `Status:`, `State note:`,
+  `Locations:`).
+- `--format json` — a single JSON object (not an array) with the same element
+  shape as `brag project list`.
+- Exit 1 (user error) if no project matches the name or id, or on unknown
+  `--format`.
+
+### `brag project status` — active-project dashboard (STAGE-007)
+
+```
+brag project status                 # name<TAB>status<TAB>count<TAB>state note
+brag project status --format json   # naked JSON array of status objects
+```
+
+Shows every **non-archived** project (status `active`, `paused`, or `done`),
+most-recently-updated first (`updated_at DESC, id DESC`), as a scannable
+dashboard. Each row carries the project name, status, a **brag count** (the
+number of entries whose `project` string equals the project name — the DEC-017
+soft string match, counted over all time), and the state note.
+
+- Plain output: tab-separated `<name>\t<status>\t<brag_count>\t<state_note>`
+  rows on stdout (a long state note is truncated; an empty note prints empty).
+- `--format json` — naked JSON array of status objects (DEC-011; 2-space
+  indent; `[]` on empty, never `null`). Object keys: `id, name, status,
+  state_note, brag_count, created_at, updated_at` (`brag_count` a number;
+  `state_note` carried in full, never truncated; timestamps RFC3339).
+- Default (no `--format`) — plain rows. Unknown `--format` exits 1 (user
+  error). stdout carries data; stderr empty.
+
+### `brag project here` — show the project for the current directory (STAGE-007)
+
+```
+brag project here
+brag project here --format json
+```
+
+Resolves `os.Getwd()` against registered project locations using
+nearest-ancestor (longest-prefix) matching (DEC-019): you may be anywhere
+inside a registered location's directory tree, not just at the exact root.
+When multiple registered paths are ancestors of the cwd, the most specific
+(longest) path wins.
+
+- Plain output (default): a single tab-separated line
+  `<name>\t<status>\t<state_note>` on stdout (`-` when state note is
+  empty); stderr empty; exit 0.
+- `--format json` — a single JSON object with the full project shape
+  (same as `brag project show --format json`; `locations` hydrated).
+- Not inside any registered project → stderr:
+  `not inside any registered project`, exit 1, stdout empty.
+- Unknown `--format` exits 1 (user error). No positional arguments;
+  reads `os.Getwd()` only.
+
+### `brag project edit <name|id>` — edit a project's fields (STAGE-007)
+
+```
+brag project edit bragfile --status paused
+brag project edit bragfile --state-note "shipped tags; next: cut v0.2.0"
+brag project edit bragfile --name brag-cli
+brag project edit bragfile --add-path ~/code/bragfile
+brag project edit bragfile --remove-path /srv/old-location
+```
+
+Edits a project's fields. The argument resolves as a **name first**, then as
+a positive-integer **id**. Pass at least one of `--name`, `--status`,
+`--state-note`, `--add-path`, or `--remove-path`; unspecified fields are
+unchanged.
+
+- `--name` — rename (must be unique). Renaming does **not** rewrite the project
+  string on existing brag entries (DEC-017); they keep their captured string.
+- `--status` — one of `active`, `paused`, `done`, `archived` (validated).
+- `--state-note` — the free-text state/next-action note.
+- `--add-path` / `--remove-path` (both repeatable) — attach/detach filesystem
+  locations. Paths match **verbatim** against what was registered.
+  `--remove-path` exits 1 if the path is not registered to this project or is
+  registered to a **different** project; `--add-path` exits 1 if the path is
+  already registered. All location changes in one invocation apply
+  **atomically** (removes before adds); a failure leaves locations unchanged.
+  Location edits do **not** change `updated_at` (DEC-020).
+- A scalar edit bumps `updated_at` (so the project rises in `brag project list`
+  recency order); a location-only edit does not.
+- Exits 0 on success; stderr: `Edited project "<name>".` (stdout empty).
+- Exit 1 (user error) if no flag is given, the project is not found, the new
+  name is already taken, `--status` is outside the enum, or a location operation
+  is rejected.
+
+### `brag project archive <name|id>` — archive a project (STAGE-007)
+
+```
+brag project archive bragfile
+```
+
+Sets a project's status to `archived` — a **non-destructive, recoverable**
+flip. The project, its state note, and its locations are all preserved. Restore
+it with `brag project edit <name|id> --status active`. This is **not** delete.
+
+- Exits 0 on success; stderr: `Archived project "<name>".` (stdout empty).
+- Exit 1 (user error) if the project is not found.
+
+### `brag project delete <name|id>` — permanently delete a project (STAGE-007)
+
+```
+brag project delete bragfile        # prompts y/N on stdin
+brag project delete bragfile --yes  # skip the prompt
+```
+
+Permanently removes a project and its `project_locations` rows. **Irreversible**
+(distinct from `archive`). Prompts for `y/N` confirmation on stderr unless
+`--yes`/`-y` is passed; a non-`y` answer prints `Aborted.` and exits 0 without
+deleting. Existing brag entries are **not** touched — an entry keeps its
+project string (DEC-017), so `brag list --project <name>` still finds those
+entries afterward (blast radius on entries: none — DEC-018).
+
+- `--yes`, `-y` — skip the confirmation prompt.
+- Exits 0 on success; stderr: `Deleted project "<name>".` (stdout empty).
+- Exit 1 (user error) if the project is not found.
+
 ### `brag completion <shell>` — generate shell completion script (STAGE-005)
 
 ```
@@ -502,3 +684,6 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-012` — stdin-JSON schema for `brag add --json` (single object, title required, server-owned fields tolerated-and-ignored)
 - `DEC-014` — rule-based output shape for `brag summary`, `brag review`, and `brag stats`: single-object JSON envelope with `generated_at` / `scope` / `filters` provenance + per-spec payload keys; markdown convention reuses DEC-013's provenance + summary-block style.
 - `DEC-016` — tag mutation semantics: `brag tags` in-use-only taxonomy (count-DESC/name-ASC; `{tag,count}` JSON shape), rename-errors-into-existing, merge via DELETE+INSERT, orphan tags invisible (no GC).
+- `DEC-017` — `entries.project` ↔ `projects` relationship (soft string match) + `projects.status` enum + single `state_note`; the data `brag project show`/`list` render.
+- `DEC-018` — `brag project delete` blast radius: entries untouched (soft match), project_locations deleted manually in-tx (FK off → no cascade), `'project'` taggings cleaned in-tx; archive is the recoverable status flip, delete is irreversible.
+- `DEC-020` — `brag project edit` location editing: `RemoveLocation`/`EditLocations`; remove-not-attached and remove-other-project are user errors; verbatim path matching; one invocation's location changes are atomic (removes before adds); location edits don't bump `updated_at`.

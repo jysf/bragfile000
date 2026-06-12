@@ -1,0 +1,577 @@
+---
+# Maps to ContextCore epic-level conventions.
+# A Stage is a coherent chunk of work within a Project.
+# It has a spec backlog and ships as a unit when the backlog is done.
+
+stage:
+  id: STAGE-007                     # stable, zero-padded, repo-global (never reused)
+  status: shipped                   # proposed | active | shipped | cancelled | on_hold
+  priority: high                    # critical | high | medium | low
+  target_complete: 2026-06-20       # largest stage of PROJ-002; leaves buffer before project ship 2026-06-26
+
+project:
+  id: PROJ-002                      # parent project
+repo:
+  id: bragfile
+
+created_at: 2026-06-08
+shipped_at: 2026-06-12
+---
+
+# STAGE-007: Projects (core)
+
+## What This Stage Is
+
+When this stage ships, **projects become a first-class entity** in
+bragfile: a named thing with one or more filesystem locations, a status,
+and a state/next-action note. The tool can finally answer the brief's
+headline question — *"what am I working on, and where does it live on
+this machine?"* `brag project new <name> --path <dir>` registers a
+project; `brag project list` / `show` read it; `brag project edit` /
+`archive` / `delete` mutate it; `brag project status` is the scannable
+dashboard (active projects by recency, each with its state note and a
+recent-brag count); `brag project here`, run from inside a registered
+directory, surfaces the matching project; and `brag add`, run from inside
+a registered project's directory, auto-fills `--project` from the cwd so
+capture knows where it is. The polymorphic `taggings` shape laid down in
+STAGE-006 is confirmed by this stage — projects become a *second
+taggable type* with **no schema change** — though whether the
+`brag project tag` command surface ships here or is deferred is a
+flagged design question, not a foregone scope item (default: schema-ready
+only). The single load-bearing design question the stage must resolve is
+**how the existing free-text `entries.project` column relates to the new
+`projects` entity** (DEC-017); everything else builds on that answer.
+
+## Why Now
+
+STAGE-006 (tag normalization) shipped 2026-06-07, six days early, and
+its reflection carries directly into this stage. Three reasons converge:
+
+1. **The substrate is live and unblocks projects with zero schema debt.**
+   STAGE-006 made `taggings` polymorphic on purpose so that "STAGE-007
+   adds `taggable_type='project'` rows with no further schema change" —
+   that prediction is now testable, and projects are the second taggable
+   type DEC-015 was designed around. Building projects now validates the
+   abstraction the prior stage paid for.
+
+2. **Projects are the brief's headline feature.** PROJ-002 is named
+   `projects-and-tags`; tags shipped first only because every later spec
+   depended on the normalized schema (the load-bearing sequencing
+   constraint). With that foundation in place, projects are the next and
+   largest chunk — the user-visible payoff that answers the recurring
+   real pain named in the brief ("the user forgets where projects live").
+
+3. **It is the only thing standing between here and STAGE-008 polish.**
+   STAGE-008 (docs refresh, CHANGELOG `[0.2.0]`, the migration-prompt
+   safety belt, v0.2.0 cut) assumes both tags *and* projects exist. This
+   stage is the last feature work in PROJ-002.
+
+No external blockers. All 14 PROJ-001 DECs plus DEC-015 / DEC-016 apply
+forward unchanged. This is the **second** schema change in PROJ-002, so
+the brief's dev/prod DB isolation story still governs: the dev binary
+runs against `~/.bragfile-dev` and must never open the prod v0.1.0 DB in
+v0.2.x format.
+
+## Success Criteria
+
+- **Projects are first-class.** `brag project new <name> --path <dir>`
+  registers a project with a location, a status, and a state note;
+  `brag project here`, run from inside that directory, surfaces the
+  matching project.
+- **Full CRUD.** `new` / `list` / `show` / `edit` / `archive` / `delete`
+  all ship. `archive` is a non-destructive status flip; `delete` is
+  destructive and its blast radius (locations, any `'project'` taggings,
+  and the `entries.project` relationship per DEC-017) is defined, tested,
+  and consciously chosen — not incidental.
+- **Projects are scannable.** `brag project status` lists active projects
+  sorted by recency, each showing its state/next-action note and a
+  recent-brag count.
+- **Capture knows where it is.** `brag add`, run from inside a registered
+  project's directory with no explicit `--project`, auto-fills
+  `--project` from the cwd.
+- **The `entries.project` relationship is resolved and lossless.** DEC-017
+  records how the free-text `entries.project` column relates to the new
+  entity; existing entries are handled with **zero data loss** (no entry
+  loses its project string), and existing `brag list --project foo` /
+  the project-grouped digests (`summary` / `review` / `stats`) keep
+  working with no user-visible regression.
+- **The polymorphic schema generalizes as predicted.** `taggings` carries
+  (or is provably able to carry) `taggable_type='project'` rows with no
+  schema change; `brag tags` counts them polymorphically with no code
+  change the moment they exist (DEC-015 / DEC-016 validated forward).
+- **No regressions.** `go test ./...`, `gofmt -l .`, `go vet ./...`, and
+  `CGO_ENABLED=0 go build ./...` are clean through every spec; all
+  STAGE-001..006 success criteria still hold; output shapes
+  (DEC-011/013/014) and search (DEC-010) stay byte-stable.
+
+## Scope
+
+### In scope
+
+- **Projects schema.** A `projects` table (DEC-005 INTEGER autoincrement
+  PK; `name`, `status`, a state/next-action note column, timestamps) and
+  a `project_locations` join supporting **one project, many directories**.
+  Delivered as a new embedded `0004_*` migration (DEC-002 mechanism,
+  forward-only). The status enum and state-note column are laid down in
+  this first migration even though the dashboard that renders them comes
+  later — "lay the schema down once," mirroring STAGE-006.
+- **The `entries.project` ↔ `projects` relationship (DEC-017).** The
+  central design question (see Design Notes); resolved by the first spec,
+  with whatever `0004_*` backfill/link the chosen model requires, lossless
+  and forward-only.
+- **Full project CRUD.** Store-layer typed methods + `brag project`
+  command surface: `new` / `list` / `show` / `edit` / `archive` /
+  `delete`, with plain and `--format json` output per the DEC-011/013/014
+  output-shape family.
+- **`brag project status` dashboard.** Active projects by recency, each
+  with state note + recent-brag count (the "scannable" criterion).
+- **`brag project here` cwd auto-detect.** Resolve the cwd against
+  `project_locations` (resolution policy is a flagged design question:
+  exact dir vs nearest-ancestor vs longest-prefix).
+- **`brag add` `--project` auto-fill from cwd.** When `brag add` runs
+  with no explicit `--project` inside a registered project location,
+  auto-fill it. Reuses the `here` resolver and must agree with DEC-017's
+  write-path semantics.
+- **Per-spec doc updates that fold into the originating spec** per the
+  premise-audit rule: `docs/data-model.md` (the new tables), targeted
+  `docs/api-contract.md` entries for each new command. Each spec
+  enumerates its own greps under `## Outputs` and runs them at design.
+
+### Explicitly out of scope
+
+- **The `brag project tag` command surface (flagged, default deferred).**
+  The schema is *ready* for `taggable_type='project'` per DEC-015, and
+  this stage may write `'project'` taggings if a spec needs them, but a
+  dedicated tag-management command for projects is **not** a stage
+  success criterion and is not in the brief's STAGE-007 line. Default:
+  schema-ready only; revisit for STAGE-008 or PROJ-003. (Surfaced in
+  Design Notes for the first spec to confirm.)
+- **v0.2.0 release mechanics.** CHANGELOG `[0.2.0]`, the RC-tag cut, the
+  migration-prompt safety belt — all STAGE-008.
+- **Comprehensive doc sweep.** The full `docs/tutorial.md` projects+tags
+  walkthrough and the `docs/architecture.md` diagram/responsibilities
+  refresh are STAGE-008; only per-spec, premise-audit-driven doc updates
+  fold in here.
+- **Orphan-tag garbage collection.** Stays deferred (DEC-016 choice 4) —
+  unchanged by this stage.
+- **Goals / any third taggable type.** Paper-sketched in DEC-015; no code
+  (PROJ-003 candidate).
+- **Reverse-direction migration.** Forward-only, same as PROJ-001/006.
+  The downgrade story is the documented SQLite-file backup (STAGE-008).
+- **Tag autocomplete; per-type tag-count breakdown in `brag tags`.**
+  STAGE-006-surfaced backlog candidates; stay backlogged (the per-type
+  breakdown only becomes meaningful once projects are actually tagged).
+
+## Spec Backlog
+
+Seven specs (framed as six; grew to seven at SPEC-029 design when its
+L-watch peeled location editing into SPEC-033 — see the Complexity check
+below), deliberately kept S/M with the schema/migration foundation split
+from the CLI surface (split preference, 2026-06-08). The one L-risk
+foundation spec is **SPEC-027** (schema + `0004_*` migration + the DEC-017
+relationship decision + Store read primitives + the count-bump premise
+audit); it is held to **M** by splitting the Store *mutation* methods
+out into SPEC-029 and the location *resolver* out into SPEC-031. If
+SPEC-027's design genuinely cannot hold together at M — most likely if
+DEC-017 requires a non-trivial `entries.project` backfill — split that
+backfill into its own spec rather than letting SPEC-027 grow to L.
+
+Format: `- [status] SPEC-ID (cycle) — one-line summary`
+
+- [x] SPEC-027 (shipped on 2026-06-08) — **M** *(L-risk; split-watch did
+      NOT fire — soft match needs no backfill)* — **Projects schema + `0004_*` migration +
+      DEC-017.** `projects` (id PK, name, status enum, state_note,
+      timestamps) + `project_locations` (project_id FK, path UNIQUE)
+      tables; forward-only `0004_add_projects.sql`. **DEC-017 emitted:**
+      `entries.project` ↔ `projects` is **soft string match** (free text,
+      join on `projects.name`, zero backfill) — the choice that holds the
+      spec at M; status enum `active|paused|done|archived` (default
+      `active`, Store-validated, no DB CHECK) + single free-text
+      `state_note` ride in DEC-017 (state-note shape filed as
+      `project-state-note-shape`, < 0.8). Store read primitives:
+      `CreateProject` / `GetProject` / `ListProjects` / `AddLocation`.
+      Premise audit run at design: count-bump 3→4 (four sites confirmed:
+      `store_test.go:172,206-208`; `fts_test.go:149,266-270`;
+      `migrate_test.go` MapFS stays); inversion → zero rewrites
+      (soft match preserves every `entries.project` premise); §12(b)
+      migration pre-flighted against modernc.org/sqlite. Mutations →
+      SPEC-029, `here` resolver → SPEC-031.
+- [x] SPEC-028 (shipped on 2026-06-08) — **M** — **`brag project new` / `list` /
+      `show`.** Read+create CLI on the SPEC-027 primitives; `brag project`
+      parent (no RunE) mirroring SPEC-026's `brag tag`; plain and
+      `--format json` output (DEC-011 array for `list`, single object for
+      `show`; locations as a JSON array). Design locked four CLI
+      decisions (**no DEC**, all ≥0.8): `--path` required (LD1);
+      `show <name|id>` resolves name-first then id-fallback + a small
+      `GetProjectByName` Store helper (LD2); `new` path pre-check via
+      `ListProjects` prevents an orphan project on a path conflict (LD3);
+      `--format` default `""` stated explicitly per the STAGE-006
+      flag-default WATCH item (LD4). Premise audit run at design:
+      inversion NONE, count-bump NONE (no migration), status-change →
+      `docs/api-contract.md` only (tutorial/architecture deferred to
+      STAGE-008). Registration gap noted (no test enumerates the root
+      set; build confirms `brag project --help` in the real binary).
+- [x] SPEC-029 (shipped on 2026-06-09) — **M** — **`brag project
+      edit` / `archive` / `delete`.** Mutation CLI + Store `UpdateProject`
+      (scalar fields, bumps `updated_at`) / `ArchiveProject` (status flip)
+      / `DeleteProject` (destructive). **DEC-018 emitted:** delete blast
+      radius — entries UNTOUCHED (DEC-017 soft match), `project_locations`
+      deleted manually in-tx (FK off → no cascade; SPEC-027 forward note),
+      `'project'` taggings cleaned in-tx (forward-proof; none written yet);
+      archive recoverable vs delete irreversible. `edit` held to **scalar
+      fields only** (`--name`/`--status`/`--state-note`); the L-watch FIRED
+      — location editing (`--add-path`/`--remove-path` + `RemoveLocation`)
+      peeled to **SPEC-033**. delete confirmation matches `brag delete`
+      (y/N + `--yes`/`-y`). Premise audit at design: count-bump NONE (no
+      migration); inversion NONE (the `updated_at`-bump ordering case is an
+      ADDITION, not a rewrite of SPEC-027's same-second tie-break test);
+      status-change → `docs/api-contract.md` 3 sections + DEC-018 row.
+      Registration: rides the existing `NewProjectCmd` parent (no `main.go`
+      change). Flag-default WATCH advances to **N=3** (note for stage
+      close; not codified mid-spec).
+- [x] SPEC-030 (shipped on 2026-06-10) — **M** — **`brag project status`
+      dashboard.** The "scannable" criterion: active projects by recency,
+      state note, lifetime brag count (DEC-017 soft join, `COUNT(e.id)`
+      LEFT JOIN). Q1 → total/lifetime count (LD1). Q2 → single free-text
+      state_note confirmed; `project-state-note-shape` question closed.
+      No new DEC. One build deviation: CLI ordering test needed §9
+      no-sleep SQL-backdate (same pattern as storage tests).
+- [x] SPEC-031 (shipped on 2026-06-11) — **S/M** — **`brag project here`
+      cwd resolver.** DEC-019: nearest-ancestor longest-prefix (0.90);
+      `filepath.Clean` both sides; separator guard; `ProjectForPath` nil
+      return. `getCwd` indirection for testability. 13 ACs, 14 tests.
+- [x] SPEC-032 (shipped on 2026-06-11) — **M** — **`brag add` `--project`
+      auto-fill from cwd.** Option C shared helper `autoFillProject` called
+      from all three add paths (flag/JSON/editor), each with its own
+      explicit-signal guard (LD4: `Changed` only valid for flag path;
+      JSON/editor use non-empty). Silent (no stderr). Best-effort: resolver
+      error → "". Reuses ProjectForPath + DEC-019; no new DEC, no Store
+      method. 11 tests. Per-file `addGetCwd` os-indirection (WATCH: N=2).
+- [x] SPEC-033 (shipped on 2026-06-12) — **S/M** — **`brag project edit`
+      location editing.** Peeled from SPEC-029 (the L-watch that fired): repeatable
+      `--add-path` / `--remove-path` (StringArray) on `edit` + Store
+      `RemoveLocation` + transactional `EditLocations` engine (removes
+      before adds, all-or-nothing). **DEC-020 emitted** (0.82): not-attached
+      → `ErrLocationNotFound`; other-project → `ErrLocationOtherProject`;
+      verbatim matching (storage verbatim end-to-end; DEC-019 owns resolve
+      normalization). No migration. Inversion: guard broadens + Long
+      forward-ref rewrite (no test rewrite — guard test asserts ErrUser
+      only). 20 tests.
+
+**Count:** 7 shipped / 0 active / 0 pending — STAGE-007 complete
+
+**Complexity check:** 7 specs, all S/M by construction (no L). The split
+preference traded STAGE-006's one-atomic-L approach for a foundation spec
+(SPEC-027) plus the CLI specs plus the resolver — coherent because the
+CLI surfaces are genuinely separable and the schema is the only shared
+dependency. The plan grew from six to seven at SPEC-029 design: the
+SPEC-027 backfill watch did **not** fire (DEC-017 soft match needs none),
+but the **SPEC-029 L-watch DID** — `edit` + `archive` + `delete` with
+location editing folded in read L, so location editing was peeled into
+**SPEC-033** (the stage-prescribed split), holding SPEC-029 at M. One
+above the brief's ~5–6 estimate, by a conscious peel rather than scope
+creep.
+
+## Design Notes
+
+Glue and cross-cutting direction. The weighty decision (the
+`entries.project` ↔ `projects` relationship) gets its own **DEC-017** at
+SPEC-027 design — **not written at framing** per the frame-cycle rule.
+The five load-bearing design questions below are **surfaced for
+spec-design time, not decided here.** The first specs resolve them.
+
+### SURFACED design questions (resolve at spec design; do not decide now)
+
+1. **THE central one — how does free-text `entries.project` relate to the
+   new `projects` entity? (DEC-017, SPEC-027.)** Three candidate shapes,
+   none chosen at framing:
+   - **Hard FK** — `entries.project_id REFERENCES projects(id)`; every
+     entry's project must be a registered project. Cleanest queries;
+     forces a backfill decision for existing entries whose string matches
+     no registered project (create-on-migrate? leave null? a synthetic
+     "unfiled" project?).
+   - **Soft string match** — keep `entries.project` as free text; join to
+     `projects.name` opportunistically. Zero migration risk; no
+     referential integrity; rename/merge of a project name silently
+     desyncs entries.
+   - **Free-text with optional link** — keep the string, add a nullable
+     `project_id` that links when a match exists. Backwards-compatible;
+     two sources of truth to keep consistent.
+   The answer determines **whether `0004_*` backfills/links existing
+   entries**, what `brag project delete` does to entries that reference
+   it, and how `brag project status`'s recent-brag count is computed.
+   This is the spec-027 split-watch trigger (see Spec Backlog).
+
+2. **`project_locations` multi-directory model + `here` resolution.**
+   Schema is clear (one project → many directory rows). The open
+   question is how `brag project here` / `brag add` resolve a cwd:
+   exact-directory match only, **nearest-ancestor** (cwd is *inside* a
+   registered dir), or **longest-prefix** when multiple registered dirs
+   are ancestors of the cwd. Pick one consciously; the resolution policy
+   is the whole UX of "capture knows where it is." (SPEC-031, reused by
+   SPEC-032.)
+
+3. **The status enum values + the state/next-action note model.** What
+   are the allowed `status` values (e.g. `active` / `paused` /
+   `archived` / `done`?) and is the state note a single free-text column,
+   a separate "next action" field, or both? The dashboard
+   (`brag project status`) renders whatever this decides. Lay the columns
+   down in `0004_*` (SPEC-027) even though SPEC-030 renders them.
+
+4. **Are projects taggable IN STAGE-007 — command surface, or
+   schema-only?** The schema is ready (DEC-015) with no change needed.
+   Default at framing: **schema-ready only**, no `brag project tag`
+   command (it's not a stage success criterion). The first spec touching
+   project mutation should confirm this default or pull the tagging
+   surface in explicitly. If `'project'` taggings *are* written, see
+   design question 6.
+
+5. **`0004_*` migration — premise audit + §12(a) expected-literals.**
+   The new migration trips the additive count-bump case at the **same
+   `schema_migrations` sites STAGE-006 exercised, now 3→4** (grounded at
+   framing, see below). Per §12(a), the test's *expected-value literals*
+   (the sorted `want` list and the `count == N`) must be computed/run
+   against the real migration at design, not typed by hand.
+
+6. **Position base when writing `'project'` taggings (carry-forward).**
+   Confirmed at framing: the `0003` ETL numbers `taggings.position`
+   **1-based** (recursive-split anchor at `pos=0` carries an empty token;
+   the first real token lands at `pos=1`), while `insertTaggings`
+   (Add/Update) is **0-based** (`for i := range tokens`). Migrated entry
+   rows and freshly-added entry rows therefore *already* differ in
+   position base. If STAGE-007 writes any `'project'` taggings, pick a
+   base consciously so migrated and freshly-added rows are
+   indistinguishable — and decide whether to also normalize the existing
+   entry-row inconsistency (likely out of scope; flag, don't silently
+   inherit). Carry-forward from STAGE-006.
+
+### Premise-audit triggers (every migration/command spec must reconcile)
+
+Reference `projects/_templates/premise-audit.md`; each spec runs its own
+greps at design and enumerates hits under `## Outputs`.
+
+- **Count-bump (additive) — `0004_*`, grounded at framing.** Adding the
+  fourth migration breaks the literal-count assertions in **two test
+  files, four sites**, all running against the real `migrationsFS`:
+  - `internal/storage/store_test.go:172` (`want := []string{"0001_initial",
+    "0002_add_fts", "0003_normalize_tags"}`) and `:206-208`
+    (`count … want 3`).
+  - `internal/storage/fts_test.go:149` (same `want` list) and `:266-270`
+    (`count … want 3`).
+  `internal/storage/migrate_test.go` runs against in-test `fstest.MapFS`
+  fixtures (`count == 2`), **not** the real FS, so it stays untouched —
+  the same correction STAGE-006 verified, restated here so SPEC-027 does
+  not re-estimate it. §12(a): the `want` lists are lexically ordered, so
+  `"0004_<slug>"` appends last — confirm the literal slug at design.
+- **Status-change (doc).** The new `brag project*` commands and the new
+  tables change shipping status. Run `grep -rn -i "project" docs/
+  README.md` and enumerate each hit as "updates" or "stays." The
+  comprehensive tutorial/architecture refresh is STAGE-008; only the
+  per-spec `data-model.md` / `api-contract.md` updates fold in here.
+- **Inversion/removal.** If DEC-017 changes `entries.project` semantics
+  (e.g. free-text → linked), the premise of existing tests around
+  `ListFilter.Project` (`e.project = ?` in `store.go`), `brag add -p`,
+  and the project-grouped digests may be invalidated. SPEC-027 must
+  enumerate these as planned rewrites, not build-time discoveries.
+
+### Carry-forwards from STAGE-006 close (WATCH-list)
+
+STAGE-007 specs are the natural next test cases; none is codified yet (do
+not codify mid-stage without the documented trigger):
+
+- **Trust-but-verify agent push reports** — N=2 (SPEC-023); applied as a
+  coordinator reflex throughout STAGE-006 (every "pushed" claim checked
+  via `git ls-remote` / PR state). Carry forward.
+- **§13 fresh-session working-tree preservation** — N=1 (SPEC-024). Carry
+  forward.
+- **Contamination-heuristic exception for literal-artifact builds** —
+  N=1 (SPEC-026). Discriminator to preserve: "'nothing was unclear' is
+  the expected honest output of a literal-artifact-as-spec build;
+  distinguish honest-frictionless from mailed-in by whether the
+  reflection surfaces ANY specific observation."
+- **Flag-default explicitness in literal-artifact CLI specs** — N=1,
+  zero-cost (SPEC-026 `--format ""` default). STAGE-007's CRUD CLI specs
+  (each a cobra `Long` + flags) are the natural N=2 test case: state each
+  embedded flag's default, not just its accepted values. Fold a one-liner
+  into the literal-artifact-as-spec guidance if a second case lands.
+
+### Bookkeeping (numbering)
+
+- Next free DEC id at framing is **DEC-017**, which SPEC-027 consumes for
+  the `entries.project` relationship. The brief's STAGE-008 line
+  previously pinned a concrete id for its hypothetical migration-prompt
+  DEC, which went stale twice (DEC-016→017 at STAGE-006 close, then
+  017→018 here). **Fixed robustly at this frame commit:** the brief no
+  longer pins a number for a not-yet-emitted DEC — its id is assigned at
+  design time. (STAGE-007 may itself emit more than one DEC; the
+  resolution-policy and status-enum questions could each warrant one.)
+- STAGE-007 specs are **SPEC-027..033** (SPEC-026 was the last shipped;
+  SPEC-033 added at SPEC-029 design when the L-watch peeled location
+  editing out of SPEC-029).
+
+### Already-true, no work needed
+
+- **`brag tags` already counts `'project'` taggings polymorphically.**
+  Its `TagCounts()` query (`store.go`) groups across all `taggable_type`
+  with no per-type filter, so the moment any `'project'` tagging exists
+  it is counted automatically — no change required in this stage.
+
+## Dependencies
+
+### Depends on
+
+- **STAGE-006 (shipped 2026-06-07).** The polymorphic `tags` + `taggings`
+  schema is live; projects become a second taggable type with no schema
+  change (DEC-015). DEC-016 (tag mutation semantics) applies unchanged.
+- **PROJ-001 (shipped 2026-05-17).** All 14 DECs apply forward. Mechanism
+  DECs governing this stage directly: DEC-002 (embedded forward-only
+  migrations — the `0004_*` mechanism), DEC-005 (INTEGER autoincrement
+  PKs — `projects.id`, `project_locations.id`), DEC-006 / DEC-007 (cobra
+  framework + required-flag validation in `RunE` — the `brag project`
+  command surface), DEC-011 / DEC-013 / DEC-014 (output shapes — the
+  project list/show/status renderers reuse the JSON/markdown envelope
+  family), DEC-010 (search — must stay byte-stable). AGENTS.md
+  conventions all apply: §2 ID numbering, §9 audit family, §10
+  push-discipline, §12 literal-artifact + §12(a)/(b) design-time
+  pre-flight + codification meta-rule, §13 fresh-session rule.
+- **PROJ-002 brief (dev/prod DB isolation).** This is the **second**
+  schema change in PROJ-002, so the dev binary must run against
+  `~/.bragfile-dev` and never open the prod v0.1.0 DB in v0.2.x format.
+- **External: none new.** `projects` + `project_locations` are plain
+  `database/sql`; cwd resolution is stdlib (`os.Getwd`, `path/filepath`).
+  Any new top-level dependency would need its own DEC per the
+  `no-new-top-level-deps-without-decision` constraint.
+
+### Enables
+
+- **STAGE-008 (polish + integration).** The full tutorial/api-contract/
+  architecture doc sweep, CHANGELOG `[0.2.0]`, the migration-prompt
+  safety belt (possible **DEC-018**), and the v0.2.0 cut all assume both
+  tags and projects exist.
+- **PROJ-003 (if framed).** A third taggable type (`goals`) joins the
+  validated polymorphic model with no schema re-litigation; richer
+  cross-object views (project-scoped digests, tag-faceted dashboards)
+  layer on first-class projects.
+
+## Stage-Level Reflection
+
+*Drafted at stage close (Prompt 1d, fresh Opus, 2026-06-12); all success
+criteria independently re-verified at close.*
+
+- **Did we deliver the outcome in "What This Stage Is"?** Yes — all seven
+  success criteria met and independently re-verified at close. `go build`,
+  `gofmt -l .`, `go vet ./...`, and `CGO_ENABLED=0 go build ./...` are clean;
+  **531 tests across 8 packages** pass (up from STAGE-006's 401, +130 for the
+  seven specs). Behavioral re-verification against a throwaway DB exercised
+  the full surface: `project new/list/show/edit/archive/delete/status/here`
+  and `add` `--project` auto-fill all behave per spec. DEC-017 soft match is
+  lossless and invisible (`brag list --project` returns the same entries
+  before and after a project delete; the `0004_add_projects` migration reads
+  and rewrites zero `entries` rows). The polymorphic-schema prediction is
+  confirmed empirically: a hand-written `taggable_type='project'` tagging is
+  counted by `brag tags` with **zero code change** (the tag count went 1→2),
+  validating DEC-015/016 forward exactly as STAGE-006 paid for. Projects are
+  first-class, scannable, and cwd-aware; capture knows where it is.
+- **How many specs did it actually take?** **7** (SPEC-027 M, 028 M, 029 M,
+  030 M, 031 S/M, 032 M, 033 S/M) vs. the brief's ~5–6 and the framing-time
+  "framed as six." All S/M by construction — **no L**. The plan grew 6→7 at
+  SPEC-029 design when the L-watch **fired** and peeled location editing into
+  SPEC-033 (the stage-prescribed split), holding SPEC-029 at M. The other
+  watched split — SPEC-027's `entries.project` backfill — did **not** fire,
+  because DEC-017's soft string match needs zero backfill, which is precisely
+  what held the foundation spec at M. One spec above the estimate by a
+  conscious peel, not scope creep. Shipped 2026-06-12, well ahead of
+  `target_complete` 2026-06-20 (and the project's `target_ship` 2026-06-26).
+- **What changed between starting and shipping?** One conscious peel
+  (SPEC-029's L-watch → SPEC-033 location editing); otherwise every DEC held
+  verbatim from design lock to ship — DEC-017 @0.80, DEC-018 @0.85, DEC-019
+  @0.90, DEC-020 @0.82 — with no DEC amended, superseded, or added at build.
+- **Lessons that should update AGENTS.md, templates, or constraints?**
+  - **Codified at this close:** **flag-default-explicitness (N=3)** — "in a
+    literal-artifact CLI spec, state each flag's *default*, not only its
+    accepted values." Reached N=3 same-outcome mid-stage (SPEC-026 `--format
+    ""` + SPEC-028 LD4 + SPEC-029), so per the codification meta-rule it
+    lands at **this** close. Landed in AGENTS.md **§12 During design**, as a
+    bolded sub-rule appended to the literal-artifact-as-spec family.
+  - **On WATCH (not yet earned), carried to STAGE-008:** injectable-os-var
+    seam (`var getCwd = os.Getwd`) N=2; cobra `SilenceErrors:true` + explicit
+    `Fprintln` example-in-Notes N=2; contamination-heuristic exception for
+    literal-artifact builds N=2 (still *not* codified — see bookkeeping); the
+    SPEC-030 "CLI ordering tests need the §9 no-sleep SQL-backdate" nudge N=1;
+    "AC-says-all-N → test each" N=1; "a design-prompt premise can be wrong —
+    the §9 grep is the source of truth" N=1 (reinforces an already-codified
+    §9 rule). See the WATCH-list update section below for the full ledger.
+  - **Structural (WATCH-list ledger):** the per-stage "WATCH-list update at
+    stage close → Carry-forwards" chain **already is** the ledger, and it
+    worked exactly as designed this stage (flag-default reached its bar
+    mid-stage, was held under the documented "do not codify mid-stage" rule,
+    and codifies here). The parallel learning doc independently downgraded
+    its own "stranded" framing to a low-priority *visibility* nicety. **No
+    new durable artifact created** — a cross-stage roll-up table is larger
+    than a stage-close edit and not warranted; recommended as an optional
+    STAGE-008 convenience only.
+  - **Bookkeeping:** (a) SPEC-027's ship reflection refers to "the codified
+    §12 contamination-exception," but that heuristic was never codified — it
+    sits on WATCH (N=1 at STAGE-006 close, N=2 now). Loose phrasing in an
+    archived spec; noted here, not rewritten (§13). (b) The brief's Stage
+    Plan still reads "0 shipped / 3 pending" with all boxes unchecked;
+    STAGE-006 close left it untouched too, so the brief's progress markers
+    are evidently reconciled at **project** close, not stage close — left
+    as-is for consistency and flagged for the PROJ-002 close.
+- **Should any spec-level reflections be promoted to stage-level lessons?**
+  - **Promoted + codified:** flag-default-explicitness (SPEC-026/028/029
+    ship Q2 → AGENTS.md §12).
+  - **Promoted to WATCH:** the injectable-os-var seam (SPEC-031/032 ship Q2);
+    the `SilenceErrors` + `Fprintln` example (SPEC-030/031); the
+    design-prompt-premise / grep-is-truth reinforcement (SPEC-033 ship Q1).
+
+### WATCH-list update at stage close (carry into STAGE-008)
+
+- **Flag-default-explicitness in literal-artifact CLI specs — CODIFIED** at
+  this close (AGENTS.md §12, During design). N=3 same-outcome
+  (SPEC-026/028/029). Removed from WATCH.
+- **Injectable-os-var seam (`var getCwd = os.Getwd` / `addGetCwd`)** — N=2
+  (SPEC-031, SPEC-032), same-outcome (both needed a test seam the literal
+  spec omitted). Below the N=3 same-outcome bar; **carry forward.** STAGE-008
+  is docs/release-heavy and may not advance it; a future os-touching CLI spec
+  (or PROJ-003) is the natural N=3. Candidate shape when it lands: a one-line
+  testing-conventions note (§9) or a stack-gotchas checklist entry, *not* a
+  blocking constraint — "os-level calls (`os.Getwd`/`os.Getenv`) go through an
+  injectable package var so tests can substitute them."
+- **cobra `SilenceErrors:true` + explicit `Fprintln` user-error pattern** —
+  N=2 (SPEC-030, SPEC-031); the "SilentErr or equivalent" hint cost a
+  test-run failure to surface twice. Below the N=3 bar; **carry forward.**
+  Cheap fix when earned: a concrete example in Notes for the Implementer
+  (parallel to the existing `"Aborted."` example).
+- **Contamination-heuristic exception for literal-artifact builds** — N=2
+  (SPEC-026 origin; SPEC-027 confirming — verify accepted an
+  honest-frictionless build because the reflection surfaced a *specific*
+  observation, the `errors.go`-vs-`project.go` placement micro-choice).
+  **Carry forward, NOT codified** (despite SPEC-027's loose "codified"
+  phrasing). Discriminator to preserve verbatim: "'nothing was unclear' is
+  the expected honest output of a literal-artifact-as-spec build; distinguish
+  honest-frictionless from mailed-in by whether the reflection surfaces ANY
+  specific observation." Also a paired-opposing candidate (would hit N=2
+  paired) if a future build mails in a contaminated "nothing was unclear"
+  with no specific observation.
+- **CLI recency-ordering tests need the §9 no-sleep SQL-backdate** — N=1
+  (SPEC-030 build). Already implied by the codified §9 monotonic-tie-break /
+  no-sleep rule (which is not storage-specific in principle); **carry
+  forward** as a candidate one-line generalization of that §9 bullet to the
+  CLI test layer if it recurs.
+- **"AC-says-all-N → test each, don't lean on one shared-helper test"** —
+  N=1 (SPEC-029 verify). **Carry forward**; candidate premise-audit / spec-
+  template nudge under Failing Tests.
+- **"A design-prompt premise can be wrong — the §9 grep is the source of
+  truth"** — N=1+ (SPEC-033 caught a false guard-message premise in its own
+  design prompt by running the grep). **Carry forward**; reinforces the
+  already-codified §9 audit-grep family ("enumeration without execution is
+  aspirational — RUN the grep") rather than adding a new rule.
+- **Trust-but-verify agent push reports** — N=2 (SPEC-023); applied as a
+  coordinator reflex throughout STAGE-007 (every "pushed" claim checked via
+  `git ls-remote` / PR state). Variant-specific (matters for
+  `claude-plus-agents`); **carry forward.**
+- **§13 fresh-session working-tree preservation** — N=1 (SPEC-024) → **N=2**
+  with this close: a parallel session's uncommitted
+  `docs/framework-feedback/process-feedback.md` was preserved untouched per
+  §13 while this close ran. Below the N=3 bar; **carry forward.**

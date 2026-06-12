@@ -563,3 +563,62 @@ func TestAddCmd_JSON_HelpShowsJSONFlag(t *testing.T) {
 		t.Errorf("expected help to contain %q, got %q", "read a single JSON entry from stdin", out)
 	}
 }
+
+func TestAddJSON_AutoFillFromCwd(t *testing.T) {
+	root, dbPath := newRootWithAdd(t)
+	dir := t.TempDir()
+	seedProjectAt(t, dbPath, "bragfile", dir)
+
+	orig := addGetCwd
+	addGetCwd = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { addGetCwd = orig })
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetIn(strings.NewReader(`{"title":"x"}`))
+	root.SetArgs([]string{"--db", dbPath, "add", "--json"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("expected stderr empty (silent), got %q", errBuf.String())
+	}
+
+	entries := listAll(t, dbPath)
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Project != "bragfile" {
+		t.Errorf("Project: got %q want %q", entries[0].Project, "bragfile")
+	}
+}
+
+func TestAddJSON_ExplicitProjectWins(t *testing.T) {
+	root, dbPath := newRootWithAdd(t)
+	dir := t.TempDir()
+	seedProjectAt(t, dbPath, "bragfile", dir)
+
+	orig := addGetCwd
+	addGetCwd = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { addGetCwd = orig })
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetIn(strings.NewReader(`{"title":"x","project":"explicit"}`))
+	root.SetArgs([]string{"--db", dbPath, "add", "--json"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	entries := listAll(t, dbPath)
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Project != "explicit" {
+		t.Errorf("Project: got %q want %q", entries[0].Project, "explicit")
+	}
+}
