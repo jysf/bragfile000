@@ -240,10 +240,12 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       cwd resolver.** DEC-019: nearest-ancestor longest-prefix (0.90);
       `filepath.Clean` both sides; separator guard; `ProjectForPath` nil
       return. `getCwd` indirection for testability. 13 ACs, 14 tests.
-- [ ] SPEC-032 (not yet written) — **M** — **`brag add` `--project`
-      auto-fill from cwd.** When no explicit `--project` and cwd is
-      inside a registered location, auto-fill it via the SPEC-031
-      resolver; write-path must agree with DEC-017.
+- [~] SPEC-032 (design) — **M** — **`brag add` `--project` auto-fill
+      from cwd.** Option C shared helper `autoFillProject` called from all
+      three add paths (flag/JSON/editor), each with its own explicit-signal
+      guard (LD4: `Changed` only valid for flag path; JSON/editor use
+      non-empty). Silent (no stderr). Best-effort: resolver error → "".
+      Reuses ProjectForPath + DEC-019; no new DEC, no Store method. 11 tests.
 - [ ] SPEC-033 (not yet written) — **S/M** — **`brag project edit`
       location editing.** Peeled from SPEC-029 (the L-watch that fired):
       `--add-path` / `--remove-path` flags + a Store `RemoveLocation`
