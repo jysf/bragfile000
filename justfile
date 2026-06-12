@@ -87,9 +87,9 @@ archive-spec SPEC_ID:
 weekly-review:
     @./scripts/weekly-review.sh
 
-# Print all specs grouped by stage with ship dates and complexity sizes
-specs-by-stage:
-    @./scripts/specs-by-stage.sh
+# Print all specs grouped by stage with ship dates, sizes, and names (--no-names for compact view)
+specs-by-stage *ARGS:
+    @./scripts/specs-by-stage.sh {{ARGS}}
 
 # Snapshot `just status` to docs/reports/daily/YYYY-MM-DD.md (overwrites if run twice in one day)
 daily-status-report:
