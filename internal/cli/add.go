@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/jysf/bragfile000/internal/config"
@@ -9,6 +10,37 @@ import (
 	"github.com/jysf/bragfile000/internal/storage"
 	"github.com/spf13/cobra"
 )
+
+// addGetCwd is the function used to read the current working directory
+// for --project auto-fill. Package-level so cli tests can inject a cwd
+// without the production binary carrying test-only surface. Separate
+// from project.go's getCwd (SPEC-031) so each file's tests override
+// independently.
+var addGetCwd = os.Getwd
+
+// autoFillProject returns the project name to record on a new entry.
+// When the user provided a project explicitly (explicitSet), that value
+// is returned verbatim — even when empty, which is the user's intent
+// (DEC-017 keeps entries.project free text). Otherwise the cwd is
+// resolved against registered project locations (nearest-ancestor,
+// DEC-019, via Store.ProjectForPath / SPEC-031) and the matching
+// project's name is auto-filled. Auto-fill is best-effort: a getCwd
+// error, a resolver error, or no match all yield "" and never fail the
+// add. Silent by design (LD5) — it writes nothing to stdout/stderr.
+func autoFillProject(s *storage.Store, explicit string, explicitSet bool) string {
+	if explicitSet {
+		return explicit
+	}
+	cwd, err := addGetCwd()
+	if err != nil {
+		return ""
+	}
+	p, err := s.ProjectForPath(cwd)
+	if err != nil || p == nil {
+		return ""
+	}
+	return p.Name
+}
 
 // addFieldFlags is the closed list of entry-field flag names that
 // trigger flag-mode dispatch. The root persistent flag --db is
@@ -38,6 +70,11 @@ Save a valid entry to insert it; save unchanged to abort cleanly.
 
 JSON mode (--json set): reads a single JSON entry from stdin and inserts it.
 Mutually exclusive with field flags. See DEC-012 for the accepted schema.
+
+When --project is not given, brag auto-fills --project from the current
+directory if you are inside a registered project's location (see 'brag
+project here'). An explicit --project always wins, and auto-fill never
+fails the add.
 
 Examples:
   brag add                                          # editor mode
@@ -114,7 +151,7 @@ func runAddFlags(cmd *cobra.Command, _ []string) error {
 		Title:       title,
 		Description: getFlagString(cmd, "description"),
 		Tags:        getFlagString(cmd, "tags"),
-		Project:     getFlagString(cmd, "project"),
+		Project:     autoFillProject(s, getFlagString(cmd, "project"), cmd.Flags().Changed("project")),
 		Type:        getFlagString(cmd, "type"),
 		Impact:      getFlagString(cmd, "impact"),
 	}
@@ -162,7 +199,7 @@ func runAddEditor(cmd *cobra.Command) error {
 		Title:       parsed.Title,
 		Description: parsed.Description,
 		Tags:        parsed.Tags,
-		Project:     parsed.Project,
+		Project:     autoFillProject(s, parsed.Project, parsed.Project != ""),
 		Type:        parsed.Type,
 		Impact:      parsed.Impact,
 	})
