@@ -45,7 +45,17 @@ func Open(path string) (*Store, error) {
 		_ = db.Close()
 		return nil, fmt.Errorf("open store: %w", err)
 	}
-	if err := applyMigrations(context.Background(), db, sub); err != nil {
+
+	// Safety belt: snapshot an existing DB before any forward-only,
+	// irreversible migration (DEC-002) mutates it. No-op for a brand-new or
+	// already-current DB. A failed snapshot aborts Open rather than migrate
+	// an un-backed-up DB (DEC-021).
+	ctx := context.Background()
+	if err := backupBeforeMigrations(ctx, db, path, sub); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("open store: %w", err)
+	}
+	if err := applyMigrations(ctx, db, sub); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("open store: %w", err)
 	}

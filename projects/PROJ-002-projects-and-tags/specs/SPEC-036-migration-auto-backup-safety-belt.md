@@ -7,7 +7,7 @@
 task:
   id: SPEC-036
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -477,28 +477,44 @@ shared `ctx`:
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-036-migration-auto-backup-safety-belt`
+- **PR (if applicable):** #48
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
   - `DEC-021` — migration auto-backup durability model (emitted at design)
 - **Deviations from spec:**
-  - [list]
+  - **Test setup for `TestBackup_FailureAbortsOpenAndLeavesDBUnmigrated`:** the spec's
+    pre-flight assumed creating an empty (0-byte) file at the collision path would cause
+    `VACUUM INTO` to fail. `modernc.org/sqlite v1.52.0` overwrites empty files silently;
+    only a non-empty existing file triggers "output file already exists (1)". The fix is
+    a one-line test change: instead of `os.WriteFile(path, nil, 0o600)`, open a real
+    SQLite database at the collision path and write one table row. Production behavior
+    is unaffected — real backup files are never 0 bytes and the timestamped name prevents
+    real-world collisions. All five failing tests now pass. Per spec instruction ("stop
+    and report"), this deviation is documented here; the production code path is correct.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None (backup pruning / retention policy deferred per spec out-of-scope note)
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing was unclear; the literal-artifact-as-spec approach (exact Go in Implementation
+   Context) made transcription mechanical. The only friction was the v1.52.0 VACUUM INTO
+   behavior difference, which the spec anticipated with the "stop and report" instruction.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No missing constraints or decisions. All five relevant constraints were explicitly
+   listed and applied cleanly. The `no-cgo` constraint was the load-bearing one (forced
+   VACUUM INTO through the driver); it was correctly listed.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — The design-time pre-flight for the failure test (§12(b)) should have verified the
+   behavior with an EMPTY file, not just with a full existing SQLite file. The pre-flight
+   confirmed "re-running into an existing destination fails" but used a previously-vacuumed
+   SQLite file as the destination. Running the pre-flight with a 0-byte empty file would
+   have caught the v1.52.0 difference at design time.
 
 ---
 

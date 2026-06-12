@@ -14,36 +14,31 @@ import (
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
-// applyMigrations reads *.sql files from src, diffs them against the
-// schema_migrations table, and applies each missing migration inside
-// its own transaction (alongside the tracking INSERT) in lexical order.
-//
-// The schema_migrations bootstrap is run outside the per-migration
-// transaction so subsequent migrations have the table to write to.
-func applyMigrations(ctx context.Context, db *sql.DB, src fs.FS) error {
+// migrationStatus ensures schema_migrations exists, then partitions the
+// embedded migrations into those already applied and those still pending
+// (pending returned in lexical apply order). It applies nothing — it is the
+// read-only half that both applyMigrations and the Open-time backup safety
+// belt (backup.go) build on.
+func migrationStatus(ctx context.Context, db *sql.DB, src fs.FS) (applied, pending []string, err error) {
 	if _, err := db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
         version TEXT PRIMARY KEY,
         applied_at TEXT NOT NULL
     )`); err != nil {
-		return fmt.Errorf("create schema_migrations: %w", err)
+		return nil, nil, fmt.Errorf("create schema_migrations: %w", err)
 	}
 
-	applied, err := loadApplied(ctx, db)
+	appliedSet, err := loadApplied(ctx, db)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	entries, err := fs.ReadDir(src, ".")
 	if err != nil {
-		return fmt.Errorf("read migrations dir: %w", err)
+		return nil, nil, fmt.Errorf("read migrations dir: %w", err)
 	}
-
 	var files []string
 	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		if !strings.HasSuffix(e.Name(), ".sql") {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") {
 			continue
 		}
 		files = append(files, e.Name())
@@ -52,9 +47,25 @@ func applyMigrations(ctx context.Context, db *sql.DB, src fs.FS) error {
 
 	for _, name := range files {
 		version := strings.TrimSuffix(name, ".sql")
-		if _, ok := applied[version]; ok {
-			continue
+		if _, ok := appliedSet[version]; ok {
+			applied = append(applied, version)
+		} else {
+			pending = append(pending, version)
 		}
+	}
+	return applied, pending, nil
+}
+
+// applyMigrations reads *.sql files from src, diffs them against the
+// schema_migrations table, and applies each missing migration inside its
+// own transaction (alongside the tracking INSERT) in lexical order.
+func applyMigrations(ctx context.Context, db *sql.DB, src fs.FS) error {
+	_, pending, err := migrationStatus(ctx, db, src)
+	if err != nil {
+		return err
+	}
+	for _, version := range pending {
+		name := version + ".sql"
 		sqlBytes, err := fs.ReadFile(src, name)
 		if err != nil {
 			return fmt.Errorf("read migration %s: %w", name, err)
