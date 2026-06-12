@@ -247,15 +247,18 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       JSON/editor use non-empty). Silent (no stderr). Best-effort: resolver
       error → "". Reuses ProjectForPath + DEC-019; no new DEC, no Store
       method. 11 tests. Per-file `addGetCwd` os-indirection (WATCH: N=2).
-- [ ] SPEC-033 (not yet written) — **S/M** — **`brag project edit`
-      location editing.** Peeled from SPEC-029 (the L-watch that fired):
-      `--add-path` / `--remove-path` flags + a Store `RemoveLocation`
-      method (the additive counterpart to SPEC-027's `AddLocation`).
-      Multi-directory editing of a registered project's `project_locations`,
-      respecting the global `UNIQUE(path)` guarantee. Placement (STAGE-007
-      vs STAGE-008) is a stage call; not a STAGE-007 success criterion.
+- [~] SPEC-033 (design) — **S/M** — **`brag project edit` location
+      editing.** Peeled from SPEC-029 (the L-watch that fired): repeatable
+      `--add-path` / `--remove-path` (StringArray) on `edit` + Store
+      `RemoveLocation` + transactional `EditLocations` engine (removes
+      before adds, all-or-nothing). **DEC-020 emitted** (0.82): not-attached
+      → `ErrLocationNotFound`; other-project → `ErrLocationOtherProject`;
+      verbatim matching (storage verbatim end-to-end; DEC-019 owns resolve
+      normalization). No migration. Inversion: guard broadens + Long
+      forward-ref rewrite (no test rewrite — guard test asserts ErrUser
+      only). 20 tests.
 
-**Count:** 3 shipped / 0 active / 4 pending
+**Count:** 6 shipped / 0 active / 1 pending
 
 **Complexity check:** 7 specs, all S/M by construction (no L). The split
 preference traded STAGE-006's one-atomic-L approach for a foundation spec
