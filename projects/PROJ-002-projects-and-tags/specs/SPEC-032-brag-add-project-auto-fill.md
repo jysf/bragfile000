@@ -7,7 +7,7 @@
 task:
   id: SPEC-032
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -684,28 +684,43 @@ the cwd. See `brag project here` (SPEC-031) for the shared resolver.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-032-brag-add-project-auto-fill`
+- **PR (if applicable):** #46 — https://github.com/jysf/bragfile000/pull/46
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - none expected (Q2 silent ≥0.85; resolution policy is DEC-019)
+  - none (Q2 silent ≥0.85; resolution policy is DEC-019)
 - **Deviations from spec:**
-  - [list]
+  - none
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - none beyond SPEC-033 (location editing) already in the backlog
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing was genuinely unclear. The spec's per-path explicit-signal section
+   (LD4) was the most nuanced part, but the "Gotchas" section preempted the
+   main trap (`Changed("project")` only valid in flag path) precisely. The
+   failing-tests section was thorough enough that writing the tests was
+   mechanical transcription.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No missing constraint. One minor note: a few tests (`TestAdd_ExplicitProjectWins_FlagPath`,
+   `TestAdd_ExplicitEmptyProjectNotAutoFilled`, `TestAdd_NoMatchLeavesProjectEmpty_FlagPath`,
+   `TestAdd_AutoFillBestEffortOnCwdError`, `TestAdd_ExplicitProjectWins_EditorPath`,
+   `TestAddJSON_ExplicitProjectWins`) passed before implementation because they
+   test existing correct behavior. Only the auto-fill and help-text tests failed
+   red first. The spec's "Failing Tests" header is slightly misleading in these
+   cases — they are better framed as "tests written at design that guard against
+   regression." All 11 pass after implementation.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing material. The spec's `addGetCwd` separation note (SPEC-031 ship
+   reflection reference) meant I correctly added `addGetCwd` as a separate var
+   rather than reusing `getCwd`. The one thing I'd note for future specs: tests
+   that guard existing behavior need a different label from "failing tests" to
+   avoid a false impression that all 11 should be red before implementation.
 
 ---
 

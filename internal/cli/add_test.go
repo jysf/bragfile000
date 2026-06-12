@@ -841,3 +841,338 @@ func TestAddCmd_EditorErrorIsInternal(t *testing.T) {
 		t.Fatalf("expected 0 entries, got %d", len(entries))
 	}
 }
+
+// seedProjectAt creates a project named `name` in the DB at dbPath and
+// registers dir as its location. Fatals on any error.
+func seedProjectAt(t *testing.T, dbPath, name, dir string) {
+	t.Helper()
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("seedProjectAt storage.Open: %v", err)
+	}
+	defer s.Close()
+	p, err := s.CreateProject(storage.Project{Name: name})
+	if err != nil {
+		t.Fatalf("seedProjectAt CreateProject(%q): %v", name, err)
+	}
+	if err := s.AddLocation(p.ID, dir); err != nil {
+		t.Fatalf("seedProjectAt AddLocation(%q): %v", dir, err)
+	}
+}
+
+func TestAdd_AutoFillFromCwd_FlagPath(t *testing.T) {
+	root, dbPath := newRootWithAdd(t)
+	dir := t.TempDir()
+	seedProjectAt(t, dbPath, "bragfile", dir)
+
+	orig := addGetCwd
+	addGetCwd = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { addGetCwd = orig })
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "add", "-t", "x"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("expected stderr empty (silent), got %q", errBuf.String())
+	}
+
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("storage.Open: %v", err)
+	}
+	defer s.Close()
+	entries, err := s.List(storage.ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Project != "bragfile" {
+		t.Errorf("Project: got %q want %q", entries[0].Project, "bragfile")
+	}
+}
+
+func TestAdd_AutoFillFromSubdir_FlagPath(t *testing.T) {
+	root, dbPath := newRootWithAdd(t)
+	dir := t.TempDir()
+	seedProjectAt(t, dbPath, "bragfile", dir)
+	subdir := filepath.Join(dir, "internal", "cli")
+
+	orig := addGetCwd
+	addGetCwd = func() (string, error) { return subdir, nil }
+	t.Cleanup(func() { addGetCwd = orig })
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "add", "-t", "x"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("storage.Open: %v", err)
+	}
+	defer s.Close()
+	entries, err := s.List(storage.ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Project != "bragfile" {
+		t.Errorf("Project: got %q want %q", entries[0].Project, "bragfile")
+	}
+}
+
+func TestAdd_ExplicitProjectWins_FlagPath(t *testing.T) {
+	root, dbPath := newRootWithAdd(t)
+	dir := t.TempDir()
+	seedProjectAt(t, dbPath, "bragfile", dir)
+
+	orig := addGetCwd
+	addGetCwd = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { addGetCwd = orig })
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "add", "-t", "x", "-p", "explicit"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("storage.Open: %v", err)
+	}
+	defer s.Close()
+	entries, err := s.List(storage.ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Project != "explicit" {
+		t.Errorf("Project: got %q want %q", entries[0].Project, "explicit")
+	}
+}
+
+func TestAdd_ExplicitEmptyProjectNotAutoFilled(t *testing.T) {
+	root, dbPath := newRootWithAdd(t)
+	dir := t.TempDir()
+	seedProjectAt(t, dbPath, "bragfile", dir)
+
+	orig := addGetCwd
+	addGetCwd = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { addGetCwd = orig })
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "add", "-t", "x", "-p", ""})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("storage.Open: %v", err)
+	}
+	defer s.Close()
+	entries, err := s.List(storage.ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Project != "" {
+		t.Errorf("Project: got %q want %q (explicit empty must not be auto-filled)", entries[0].Project, "")
+	}
+}
+
+func TestAdd_NoMatchLeavesProjectEmpty_FlagPath(t *testing.T) {
+	root, dbPath := newRootWithAdd(t)
+	unregistered := t.TempDir()
+
+	orig := addGetCwd
+	addGetCwd = func() (string, error) { return unregistered, nil }
+	t.Cleanup(func() { addGetCwd = orig })
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "add", "-t", "x"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("expected stderr empty, got %q", errBuf.String())
+	}
+
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("storage.Open: %v", err)
+	}
+	defer s.Close()
+	entries, err := s.List(storage.ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Project != "" {
+		t.Errorf("Project: got %q want empty (no match)", entries[0].Project)
+	}
+}
+
+func TestAdd_AutoFillBestEffortOnCwdError(t *testing.T) {
+	root, dbPath := newRootWithAdd(t)
+	dir := t.TempDir()
+	seedProjectAt(t, dbPath, "bragfile", dir)
+
+	orig := addGetCwd
+	addGetCwd = func() (string, error) { return "", errors.New("boom") }
+	t.Cleanup(func() { addGetCwd = orig })
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "add", "-t", "x"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("expected add to succeed despite cwd error, got: %v", err)
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("expected stderr empty, got %q", errBuf.String())
+	}
+
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("storage.Open: %v", err)
+	}
+	defer s.Close()
+	entries, err := s.List(storage.ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Project != "" {
+		t.Errorf("Project: got %q want empty (cwd error suppressed)", entries[0].Project)
+	}
+}
+
+func TestAdd_AutoFillFromCwd_EditorPath(t *testing.T) {
+	installAddEditFunc(t, func(path string) error {
+		return os.WriteFile(path, []byte("Title: shipped x\n\nbody\n"), 0o600)
+	})
+	root, dbPath := newRootWithAdd(t)
+	dir := t.TempDir()
+	seedProjectAt(t, dbPath, "bragfile", dir)
+
+	orig := addGetCwd
+	addGetCwd = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { addGetCwd = orig })
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "add"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("storage.Open: %v", err)
+	}
+	defer s.Close()
+	entries, err := s.List(storage.ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Project != "bragfile" {
+		t.Errorf("Project: got %q want %q", entries[0].Project, "bragfile")
+	}
+}
+
+func TestAdd_ExplicitProjectWins_EditorPath(t *testing.T) {
+	body := "Title: shipped x\n" +
+		"Project: explicit\n" +
+		"\nbody\n"
+	installAddEditFunc(t, func(path string) error {
+		return os.WriteFile(path, []byte(body), 0o600)
+	})
+	root, dbPath := newRootWithAdd(t)
+	dir := t.TempDir()
+	seedProjectAt(t, dbPath, "bragfile", dir)
+
+	orig := addGetCwd
+	addGetCwd = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { addGetCwd = orig })
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "add"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("storage.Open: %v", err)
+	}
+	defer s.Close()
+	entries, err := s.List(storage.ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Project != "explicit" {
+		t.Errorf("Project: got %q want %q", entries[0].Project, "explicit")
+	}
+}
+
+func TestAdd_HelpMentionsAutoFill(t *testing.T) {
+	root, _ := newRootWithAdd(t)
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"add", "--help"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("expected stderr empty, got %q", errBuf.String())
+	}
+	out := outBuf.String()
+	if !strings.Contains(out, "auto-fills --project") {
+		t.Errorf("expected help to contain %q, got %q", "auto-fills --project", out)
+	}
+}

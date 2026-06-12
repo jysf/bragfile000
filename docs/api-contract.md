@@ -104,6 +104,25 @@ brag list --format json | jq '.[0]' | brag add --json
 - Schema lock:
   [DEC-012](../decisions/DEC-012-brag-add-json-stdin-schema.md).
 
+**STAGE-007 (cwd `--project` auto-fill):**
+
+When `--project` is not supplied, `brag add` resolves the current working
+directory against registered project locations (nearest-ancestor match,
+DEC-019) and auto-fills the entry's project from the matching project's
+name. This applies to all three input modes:
+
+- flag mode — fires only when `--project`/`-p` is not passed at all;
+  passing `-p` (even `-p ""`) is an explicit choice and is recorded
+  verbatim.
+- JSON mode — fires only when the stdin object has no non-empty
+  `"project"` field.
+- editor mode — fires only when the buffer's `Project:` header is empty.
+
+Auto-fill is silent (no stderr) and best-effort: if the cwd cannot be
+resolved or matches no registered project, the entry is saved with an
+empty project, exactly as before. An explicit project always wins over
+the cwd. See `brag project here` (SPEC-031) for the shared resolver.
+
 ### `brag list` — list entries
 
 ```
