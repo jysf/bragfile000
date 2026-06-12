@@ -7,7 +7,7 @@
 task:
   id: SPEC-036
   type: story                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -524,10 +524,24 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Pin the exact driver version in the design pre-flight and re-confirm
+   at build. The design verified VACUUM INTO semantics on modernc.org/sqlite
+   v1.51.0; a dependabot bump to v1.52.0 landed mid-flight and silently
+   changed one behavior (VACUUM INTO overwrites a 0-byte target instead of
+   erroring), forcing a build-time test-setup adaptation. The production
+   invariant held, but the failure-injection test had to change. Lesson:
+   library-version-dependent behavior pre-flighted at design should be
+   re-asserted against the version actually present at build.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No new DEC needed beyond DEC-021 (which held). The injectable-os-var
+   seam (clock) is now N=3 (getCwd/addGetCwd/clock) — a stronger
+   codification candidate to evaluate at PROJ-002 close. WATCH (N=1, new):
+   "a design-time library pre-flight should name the exact dep version and
+   be re-checked at build if deps moved" — surfaced by the v1.52.0 bump.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None new. SPEC-034 (doc sweep) must document this backup behavior +
+   the WAL-safe manual recipe — already in the STAGE-008 backlog and the
+   reason SPEC-036 was sequenced first. Remaining STAGE-008: SPEC-034
+   (doc sweep), SPEC-035 (CHANGELOG), SPEC-037 (v0.2.0 cut).

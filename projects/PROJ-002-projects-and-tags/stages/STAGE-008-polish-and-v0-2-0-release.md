@@ -188,8 +188,8 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       record 015–020); reconcile the stale `[Unreleased]` `completion` line,
       the `[0.1.0]` `YYYY-MM-DD` placeholder, and the compare-link repo slug.
       Literal-artifact-as-spec. No DEC.
-- [~] SPEC-036 (design) — **S/M** — **Migration auto-backup safety belt.**
-      `storage.Open`-time guard: before applying a pending migration to an
+- [x] SPEC-036 (shipped on 2026-06-12) — **S/M** — **Migration auto-backup
+      safety belt.** `storage.Open`-time guard: before applying a pending migration to an
       existing DB, snapshot it via `VACUUM INTO` through the open *sql.DB,
       then migrate. **DEC-021 emitted** (durability model): trigger
       discriminator `applied>0 && pending>0`; mechanism `VACUUM INTO`
@@ -203,7 +203,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       formula bump; verify (or document the limitation on) a clean
       `brew upgrade` from v0.1.x. No DEC; pure release mechanics.
 
-**Count:** 0 shipped / 0 active / 4 pending
+**Count:** 1 shipped / 0 active / 3 pending
 
 **Complexity check:** 4 specs, all S/M by construction. One above the brief's
 "~2–3 specs" estimate — the extra is the migration safety belt promoted from
