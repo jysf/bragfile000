@@ -7,7 +7,7 @@
 task:
   id: SPEC-033
   type: story                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -1003,10 +1003,22 @@ the `modernc.org/sqlite` driver behavior already exercised by SPEC-027/029:
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing material. The design's `EditLocations` engine (one tx, removes
+   before adds) made `RemoveLocation` a one-line wrapper and gave both
+   single and batch paths one validated route — the right factoring. The
+   design prompt's false premise about the guard-test message was caught at
+   design by running the grep, so the build had no surprise.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Stage-close (Prompt 1d) candidates, NOT mid-stage: flag-default-
+   explicitness is at N=3 (strongest); the injectable-os-var indirection
+   (getCwd/addGetCwd) at N=2; the "design-prompt premise can be wrong —
+   the §9 grep is the source of truth" lesson reinforced here (N=1+).
+   DEC-020 closes the location-editing semantics; no DEC needs amending.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None. SPEC-033 is the last STAGE-007 spec — STAGE-007 is now 7/7.
+   Next is the STAGE-007 close (Prompt 1d), then STAGE-008 (polish, docs
+   sweep, CHANGELOG, v0.2.0 cut). The WAL-safe backup guardrail (parked,
+   PROJ-001 backlog) should land in STAGE-008 — the prod-DB migration
+   incident this session is the motivating evidence.

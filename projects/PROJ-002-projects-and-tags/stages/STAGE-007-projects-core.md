@@ -247,8 +247,8 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       JSON/editor use non-empty). Silent (no stderr). Best-effort: resolver
       error → "". Reuses ProjectForPath + DEC-019; no new DEC, no Store
       method. 11 tests. Per-file `addGetCwd` os-indirection (WATCH: N=2).
-- [~] SPEC-033 (design) — **S/M** — **`brag project edit` location
-      editing.** Peeled from SPEC-029 (the L-watch that fired): repeatable
+- [x] SPEC-033 (shipped on 2026-06-12) — **S/M** — **`brag project edit`
+      location editing.** Peeled from SPEC-029 (the L-watch that fired): repeatable
       `--add-path` / `--remove-path` (StringArray) on `edit` + Store
       `RemoveLocation` + transactional `EditLocations` engine (removes
       before adds, all-or-nothing). **DEC-020 emitted** (0.82): not-attached
@@ -258,7 +258,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       forward-ref rewrite (no test rewrite — guard test asserts ErrUser
       only). 20 tests.
 
-**Count:** 6 shipped / 0 active / 1 pending
+**Count:** 7 shipped / 0 active / 0 pending — STAGE-007 complete
 
 **Complexity check:** 7 specs, all S/M by construction (no L). The split
 preference traded STAGE-006's one-atomic-L approach for a foundation spec
