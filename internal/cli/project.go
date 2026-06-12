@@ -364,24 +364,33 @@ func truncateStateNote(note string) string {
 func newProjectEditCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "edit <name|id>",
-		Short: "Edit a project's name, status, or state note",
-		Long: `Edit a project's scalar fields. The project is resolved by name first, then
-by id. Pass at least one of --name, --status, or --state-note; unspecified
-fields are left unchanged.
+		Short: "Edit a project's name, status, state note, or locations",
+		Long: `Edit a project's fields. The project is resolved by name first, then by id.
+Pass at least one of --name, --status, --state-note, --add-path, or --remove-path;
+unspecified fields are left unchanged.
+
+Locations are edited with --add-path and --remove-path (both repeatable). Paths
+are matched verbatim against what was registered. --remove-path errors if the
+path is not registered to this project; --add-path errors if the path is already
+registered to another project. All location changes in one invocation apply
+atomically (removes before adds), so a path can be removed and re-added at once.
 
 Renaming a project does NOT rewrite the project string on existing brag entries
-— they keep what they were captured with (DEC-017). Editing locations is a
-separate command (a later STAGE-007 spec); this edits scalar fields only.
+— they keep what they were captured with (DEC-017).
 
 Examples:
   brag project edit bragfile --status paused
   brag project edit bragfile --state-note "shipped tags; next: cut v0.2.0"
-  brag project edit bragfile --name brag-cli`,
+  brag project edit bragfile --name brag-cli
+  brag project edit bragfile --add-path ~/code/bragfile --add-path /srv/bragfile
+  brag project edit bragfile --remove-path /srv/old-location`,
 		RunE: runProjectEdit,
 	}
 	cmd.Flags().String("name", "", "new project name (rename; must be unique)")
 	cmd.Flags().String("status", "", "new status (one of: active, paused, done, archived)")
 	cmd.Flags().String("state-note", "", "new state/next-action note")
+	cmd.Flags().StringArray("add-path", nil, "attach a filesystem path to the project (repeatable)")
+	cmd.Flags().StringArray("remove-path", nil, "detach a filesystem path from the project (repeatable)")
 	return cmd
 }
 
@@ -397,8 +406,10 @@ func runProjectEdit(cmd *cobra.Command, args []string) error {
 	nameChanged := cmd.Flags().Changed("name")
 	statusChanged := cmd.Flags().Changed("status")
 	noteChanged := cmd.Flags().Changed("state-note")
-	if !nameChanged && !statusChanged && !noteChanged {
-		return UserErrorf("edit requires at least one of --name, --status, --state-note")
+	addChanged := cmd.Flags().Changed("add-path")
+	removeChanged := cmd.Flags().Changed("remove-path")
+	if !nameChanged && !statusChanged && !noteChanged && !addChanged && !removeChanged {
+		return UserErrorf("edit requires at least one of --name, --status, --state-note, --add-path, --remove-path")
 	}
 
 	dbFlag := getFlagString(cmd, "db")
@@ -420,37 +431,63 @@ func runProjectEdit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("resolve project: %w", err)
 	}
 
-	next := current
-	if nameChanged {
-		name, _ := cmd.Flags().GetString("name")
-		name = strings.TrimSpace(name)
-		if name == "" {
-			return UserErrorf("--name must not be empty")
+	finalName := current.Name
+
+	// Scalar fields first: UpdateProject validates --status/--name and returns
+	// before any write on a bad value, so a typo'd status aborts the whole edit
+	// before any location is touched (DEC-020 scalar-then-locations order).
+	if nameChanged || statusChanged || noteChanged {
+		next := current
+		if nameChanged {
+			name, _ := cmd.Flags().GetString("name")
+			name = strings.TrimSpace(name)
+			if name == "" {
+				return UserErrorf("--name must not be empty")
+			}
+			next.Name = name
 		}
-		next.Name = name
-	}
-	if statusChanged {
-		status, _ := cmd.Flags().GetString("status")
-		next.Status = strings.TrimSpace(status)
-	}
-	if noteChanged {
-		note, _ := cmd.Flags().GetString("state-note")
-		next.StateNote = note
+		if statusChanged {
+			status, _ := cmd.Flags().GetString("status")
+			next.Status = strings.TrimSpace(status)
+		}
+		if noteChanged {
+			note, _ := cmd.Flags().GetString("state-note")
+			next.StateNote = note
+		}
+		updated, err := s.UpdateProject(current.ID, next)
+		if err != nil {
+			switch {
+			case errors.Is(err, storage.ErrProjectExists):
+				return UserErrorf("project %q already exists", next.Name)
+			case errors.Is(err, storage.ErrInvalidStatus):
+				return UserErrorf("invalid status %q (accepted: active, paused, done, archived)", next.Status)
+			case errors.Is(err, storage.ErrNotFound):
+				return UserErrorf("no project named or with id %q", key)
+			}
+			return fmt.Errorf("update project: %w", err)
+		}
+		finalName = updated.Name
 	}
 
-	updated, err := s.UpdateProject(current.ID, next)
-	if err != nil {
-		switch {
-		case errors.Is(err, storage.ErrProjectExists):
-			return UserErrorf("project %q already exists", next.Name)
-		case errors.Is(err, storage.ErrInvalidStatus):
-			return UserErrorf("invalid status %q (accepted: active, paused, done, archived)", next.Status)
-		case errors.Is(err, storage.ErrNotFound):
-			return UserErrorf("no project named or with id %q", key)
+	// Location edits next, applied atomically (removes before adds,
+	// all-or-nothing — DEC-020).
+	if addChanged || removeChanged {
+		adds, _ := cmd.Flags().GetStringArray("add-path")
+		removes, _ := cmd.Flags().GetStringArray("remove-path")
+		if err := s.EditLocations(current.ID, removes, adds); err != nil {
+			switch {
+			case errors.Is(err, storage.ErrLocationNotFound):
+				return UserErrorf("cannot remove a path that is not registered to project %q", finalName)
+			case errors.Is(err, storage.ErrLocationOtherProject):
+				return UserErrorf("cannot remove a path registered to a different project")
+			case errors.Is(err, storage.ErrLocationExists):
+				return UserErrorf("cannot add a path that is already registered")
+			}
+			return fmt.Errorf("edit locations: %w", err)
 		}
-		return fmt.Errorf("update project: %w", err)
 	}
-	fmt.Fprintf(cmd.ErrOrStderr(), "Edited project %q.\n", updated.Name)
+
+	fmt.Fprintf(cmd.ErrOrStderr(), "Edited project %q.\n", finalName)
 	return nil
 }
 

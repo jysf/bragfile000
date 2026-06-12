@@ -7,7 +7,7 @@
 task:
   id: SPEC-033
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -958,27 +958,42 @@ the `modernc.org/sqlite` driver behavior already exercised by SPEC-027/029:
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-033-project-edit-location-editing`
+- **PR (if applicable):** opened after this file is updated
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
   - `DEC-020` — `brag project edit` location-editing semantics *(emitted
-    at design; confirm no build deviation)*
+    at design; confirmed no build deviation — verbatim transcription of all
+    implementation literals)*
 - **Deviations from spec:**
-  - [list]
+  - None. All 20 failing tests written first; all implementation literals
+    transcribed verbatim from `## Notes for the Implementer`. The 11th CLI
+    test (`TestProjectEdit_HelpShowsLocationFlags`) matches the spec's list;
+    the spec heading says "20" but lists 21 — implementation matches the
+    enumerated list, not the summary count.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None beyond the STAGE-007 close (which is the Stage Ship prompt, run
+    separately).
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing slowed the build. The spec's `## Notes for the Implementer`
+   carried verbatim code for every piece; reading the existing `DeleteProject`
+   and `AddLocation` patterns first made the `EditLocations` shape obvious
+   before the transcription confirmed it.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No missing constraints. The spec explicitly noted "no new imports" and
+   confirmed the `no-sql-in-cli-layer` + `StringArray`-not-`StringSlice`
+   choices; both held cleanly at build.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing substantial. The literal-artifact-as-spec pattern made this
+   the cleanest build in STAGE-007: read spec → write tests → transcribe
+   code → run suite. The premise audit's "grep and reconcile" already caught
+   the guard-message-test false assumption at design, so build had zero
+   surprises.
 
 ---
 

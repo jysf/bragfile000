@@ -1050,3 +1050,233 @@ func TestProjectForPath_MultipleProjectsOneMatch(t *testing.T) {
 		t.Errorf("Name = %q, want %q (only A matches; B's /beta/repo is not an ancestor)", got.Name, "A")
 	}
 }
+
+func TestRemoveLocation_RemovesAttachedPath(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	p, err := s.CreateProject(Project{Name: "p"})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	if err := s.AddLocation(p.ID, "/a"); err != nil {
+		t.Fatalf("AddLocation: %v", err)
+	}
+	if err := s.RemoveLocation(p.ID, "/a"); err != nil {
+		t.Fatalf("RemoveLocation: %v", err)
+	}
+	got, err := s.GetProject(p.ID)
+	if err != nil {
+		t.Fatalf("GetProject: %v", err)
+	}
+	if len(got.Locations) != 0 {
+		t.Errorf("Locations = %v, want empty", got.Locations)
+	}
+}
+
+func TestRemoveLocation_NotAttachedErrLocationNotFound(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	p, err := s.CreateProject(Project{Name: "p"})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	err = s.RemoveLocation(p.ID, "/nope")
+	if !errors.Is(err, ErrLocationNotFound) {
+		t.Fatalf("err = %v, want ErrLocationNotFound", err)
+	}
+}
+
+func TestRemoveLocation_OtherProjectErrLocationOtherProject(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	p1, err := s.CreateProject(Project{Name: "p1"})
+	if err != nil {
+		t.Fatalf("CreateProject p1: %v", err)
+	}
+	if err := s.AddLocation(p1.ID, "/a"); err != nil {
+		t.Fatalf("AddLocation: %v", err)
+	}
+	p2, err := s.CreateProject(Project{Name: "p2"})
+	if err != nil {
+		t.Fatalf("CreateProject p2: %v", err)
+	}
+	err = s.RemoveLocation(p2.ID, "/a")
+	if !errors.Is(err, ErrLocationOtherProject) {
+		t.Fatalf("err = %v, want ErrLocationOtherProject", err)
+	}
+	got, err := s.GetProject(p1.ID)
+	if err != nil {
+		t.Fatalf("GetProject p1: %v", err)
+	}
+	if len(got.Locations) != 1 || got.Locations[0] != "/a" {
+		t.Errorf("p1 Locations = %v, want [\"/a\"] (other project's location untouched)", got.Locations)
+	}
+}
+
+func TestRemoveLocation_VerbatimMatch(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	p, err := s.CreateProject(Project{Name: "p"})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	if err := s.AddLocation(p.ID, "/a/b"); err != nil {
+		t.Fatalf("AddLocation: %v", err)
+	}
+	// trailing slash differs from stored "/a/b" — verbatim, not filepath.Clean'd
+	err = s.RemoveLocation(p.ID, "/a/b/")
+	if !errors.Is(err, ErrLocationNotFound) {
+		t.Fatalf("trailing slash: err = %v, want ErrLocationNotFound", err)
+	}
+	// exact stored string succeeds
+	if err := s.RemoveLocation(p.ID, "/a/b"); err != nil {
+		t.Fatalf("RemoveLocation exact: %v", err)
+	}
+}
+
+func TestEditLocations_RepeatableAdds(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	p, err := s.CreateProject(Project{Name: "p"})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	if err := s.EditLocations(p.ID, nil, []string{"/a", "/b"}); err != nil {
+		t.Fatalf("EditLocations: %v", err)
+	}
+	got, err := s.GetProject(p.ID)
+	if err != nil {
+		t.Fatalf("GetProject: %v", err)
+	}
+	if len(got.Locations) != 2 || got.Locations[0] != "/a" || got.Locations[1] != "/b" {
+		t.Errorf("Locations = %v, want [\"/a\",\"/b\"]", got.Locations)
+	}
+}
+
+func TestEditLocations_RemovesBeforeAdds(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	p, err := s.CreateProject(Project{Name: "p"})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	if err := s.AddLocation(p.ID, "/a"); err != nil {
+		t.Fatalf("AddLocation: %v", err)
+	}
+	// remove and re-add /a in same call — no transient UNIQUE collision
+	if err := s.EditLocations(p.ID, []string{"/a"}, []string{"/a"}); err != nil {
+		t.Fatalf("EditLocations: %v", err)
+	}
+	got, err := s.GetProject(p.ID)
+	if err != nil {
+		t.Fatalf("GetProject: %v", err)
+	}
+	if len(got.Locations) != 1 || got.Locations[0] != "/a" {
+		t.Errorf("Locations = %v, want [\"/a\"]", got.Locations)
+	}
+}
+
+func TestEditLocations_AddDuplicateErrLocationExists(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	p1, err := s.CreateProject(Project{Name: "p1"})
+	if err != nil {
+		t.Fatalf("CreateProject p1: %v", err)
+	}
+	if err := s.AddLocation(p1.ID, "/a"); err != nil {
+		t.Fatalf("AddLocation: %v", err)
+	}
+	p2, err := s.CreateProject(Project{Name: "p2"})
+	if err != nil {
+		t.Fatalf("CreateProject p2: %v", err)
+	}
+	err = s.EditLocations(p2.ID, nil, []string{"/a"})
+	if !errors.Is(err, ErrLocationExists) {
+		t.Fatalf("err = %v, want ErrLocationExists", err)
+	}
+}
+
+func TestEditLocations_RollsBackOnOccupiedAdd(t *testing.T) {
+	s, path := newTestStore(t)
+
+	owner, err := s.CreateProject(Project{Name: "owner"})
+	if err != nil {
+		t.Fatalf("CreateProject owner: %v", err)
+	}
+	if err := s.AddLocation(owner.ID, "/occupied"); err != nil {
+		t.Fatalf("AddLocation /occupied: %v", err)
+	}
+	p, err := s.CreateProject(Project{Name: "p"})
+	if err != nil {
+		t.Fatalf("CreateProject p: %v", err)
+	}
+	err = s.EditLocations(p.ID, nil, []string{"/free", "/occupied"})
+	if !errors.Is(err, ErrLocationExists) {
+		t.Fatalf("err = %v, want ErrLocationExists", err)
+	}
+	got, err := s.GetProject(p.ID)
+	if err != nil {
+		t.Fatalf("GetProject p: %v", err)
+	}
+	if len(got.Locations) != 0 {
+		t.Errorf("Locations = %v, want empty (/free was rolled back)", got.Locations)
+	}
+	// confirm via a second sql.Open handle that /free was not committed
+	db2, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open second handle: %v", err)
+	}
+	defer db2.Close()
+	var count int
+	if err := db2.QueryRow(`SELECT COUNT(*) FROM project_locations WHERE path = '/free'`).Scan(&count); err != nil {
+		t.Fatalf("COUNT query: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("COUNT(/free) = %d, want 0 (rollback not persisted)", count)
+	}
+}
+
+func TestEditLocations_RollsBackOnNotAttachedRemove(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	p, err := s.CreateProject(Project{Name: "p"})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	if err := s.AddLocation(p.ID, "/a"); err != nil {
+		t.Fatalf("AddLocation: %v", err)
+	}
+	err = s.EditLocations(p.ID, []string{"/a", "/typo"}, nil)
+	if !errors.Is(err, ErrLocationNotFound) {
+		t.Fatalf("err = %v, want ErrLocationNotFound", err)
+	}
+	got, err := s.GetProject(p.ID)
+	if err != nil {
+		t.Fatalf("GetProject: %v", err)
+	}
+	if len(got.Locations) != 1 || got.Locations[0] != "/a" {
+		t.Errorf("Locations = %v, want [\"/a\"] (first remove rolled back)", got.Locations)
+	}
+}
+
+func TestEditLocations_DoesNotBumpUpdatedAt(t *testing.T) {
+	s, path := newTestStore(t)
+
+	p, err := s.CreateProject(Project{Name: "p"})
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	backdated := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	backdateProject(t, path, p.ID, backdated)
+
+	if err := s.EditLocations(p.ID, nil, []string{"/a"}); err != nil {
+		t.Fatalf("EditLocations: %v", err)
+	}
+	got, err := s.GetProject(p.ID)
+	if err != nil {
+		t.Fatalf("GetProject: %v", err)
+	}
+	if !got.UpdatedAt.Equal(backdated) {
+		t.Errorf("UpdatedAt = %v, want %v (location edit must not bump updated_at)", got.UpdatedAt, backdated)
+	}
+}

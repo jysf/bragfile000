@@ -1312,3 +1312,238 @@ func TestProjectHere_HelpShowsExamples(t *testing.T) {
 		t.Errorf("here --help missing distinctive token 'brag project here --format json', got %q", out)
 	}
 }
+
+func TestProjectEdit_AddPath(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	out, errOut, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--add-path", "/tmp/y")
+	if err != nil {
+		t.Fatalf("edit --add-path: %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+	if !strings.Contains(errOut, `Edited project "bragfile".`) {
+		t.Errorf("expected confirmation on stderr, got %q", errOut)
+	}
+
+	showOut, showErr, showRunErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if showRunErr != nil {
+		t.Fatalf("show: %v", showRunErr)
+	}
+	if showErr != "" {
+		t.Errorf("show: expected empty stderr, got %q", showErr)
+	}
+	if !strings.Contains(showOut, "/tmp/y") {
+		t.Errorf("show: expected /tmp/y in locations, got %q", showOut)
+	}
+	if !strings.Contains(showOut, "/tmp/x") {
+		t.Errorf("show: expected /tmp/x still in locations, got %q", showOut)
+	}
+}
+
+func TestProjectEdit_RemovePath(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+	if _, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--add-path", "/tmp/y"); err != nil {
+		t.Fatalf("add /tmp/y: %v", err)
+	}
+
+	_, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--remove-path", "/tmp/x")
+	if err != nil {
+		t.Fatalf("edit --remove-path: %v", err)
+	}
+
+	showOut, _, showRunErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if showRunErr != nil {
+		t.Fatalf("show: %v", showRunErr)
+	}
+	if strings.Contains(showOut, "/tmp/x") {
+		t.Errorf("show: expected /tmp/x removed, but found in %q", showOut)
+	}
+	if !strings.Contains(showOut, "/tmp/y") {
+		t.Errorf("show: expected /tmp/y still present, got %q", showOut)
+	}
+}
+
+func TestProjectEdit_RepeatableAddPath(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+	if _, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--add-path", "/a", "--add-path", "/b"); err != nil {
+		t.Fatalf("edit --add-path x2: %v", err)
+	}
+
+	showOut, _, showRunErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if showRunErr != nil {
+		t.Fatalf("show: %v", showRunErr)
+	}
+	if !strings.Contains(showOut, "/a") {
+		t.Errorf("show: expected /a in locations, got %q", showOut)
+	}
+	if !strings.Contains(showOut, "/b") {
+		t.Errorf("show: expected /b in locations, got %q", showOut)
+	}
+}
+
+func TestProjectEdit_RemoveNotAttachedErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/tmp/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	_, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--remove-path", "/nope")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser, got %v", err)
+	}
+
+	showOut, _, showRunErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if showRunErr != nil {
+		t.Fatalf("show: %v", showRunErr)
+	}
+	if !strings.Contains(showOut, "/tmp/x") {
+		t.Errorf("show: expected /tmp/x still attached, got %q", showOut)
+	}
+}
+
+func TestProjectEdit_RemoveOtherProjectErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "a", "--path", "/pa"); err != nil {
+		t.Fatalf("new a: %v", err)
+	}
+	if _, _, err := runProjectCmd(t, dbPath, "new", "b", "--path", "/pb"); err != nil {
+		t.Fatalf("new b: %v", err)
+	}
+
+	_, _, err := runProjectCmd(t, dbPath, "edit", "b", "--remove-path", "/pa")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser, got %v", err)
+	}
+
+	showOut, _, showRunErr := runProjectCmd(t, dbPath, "show", "a")
+	if showRunErr != nil {
+		t.Fatalf("show a: %v", showRunErr)
+	}
+	if !strings.Contains(showOut, "/pa") {
+		t.Errorf("show a: expected /pa still attached to a, got %q", showOut)
+	}
+}
+
+func TestProjectEdit_AddDuplicateErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "a", "--path", "/pa"); err != nil {
+		t.Fatalf("new a: %v", err)
+	}
+	if _, _, err := runProjectCmd(t, dbPath, "new", "b", "--path", "/pb"); err != nil {
+		t.Fatalf("new b: %v", err)
+	}
+
+	_, _, err := runProjectCmd(t, dbPath, "edit", "b", "--add-path", "/pa")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser, got %v", err)
+	}
+
+	showOut, _, showRunErr := runProjectCmd(t, dbPath, "show", "a")
+	if showRunErr != nil {
+		t.Fatalf("show a: %v", showRunErr)
+	}
+	if !strings.Contains(showOut, "/pa") {
+		t.Errorf("show a: expected /pa still attached to a, got %q", showOut)
+	}
+}
+
+func TestProjectEdit_AtomicBatchRollsBack(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/x"); err != nil {
+		t.Fatalf("new bragfile: %v", err)
+	}
+	if _, _, err := runProjectCmd(t, dbPath, "new", "other", "--path", "/occupied"); err != nil {
+		t.Fatalf("new other: %v", err)
+	}
+
+	_, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--add-path", "/free", "--add-path", "/occupied")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser, got %v", err)
+	}
+
+	showOut, _, showRunErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if showRunErr != nil {
+		t.Fatalf("show bragfile: %v", showRunErr)
+	}
+	if strings.Contains(showOut, "/free") {
+		t.Errorf("show bragfile: /free should not be attached after rollback, got %q", showOut)
+	}
+}
+
+func TestProjectEdit_ComposesScalarAndLocation(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	_, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--status", "paused", "--add-path", "/y")
+	if err != nil {
+		t.Fatalf("edit --status --add-path: %v", err)
+	}
+
+	showOut, _, showRunErr := runProjectCmd(t, dbPath, "show", "bragfile")
+	if showRunErr != nil {
+		t.Fatalf("show: %v", showRunErr)
+	}
+	if !strings.Contains(showOut, "Status: paused") {
+		t.Errorf("show: expected 'Status: paused', got %q", showOut)
+	}
+	if !strings.Contains(showOut, "/y") {
+		t.Errorf("show: expected /y in locations, got %q", showOut)
+	}
+}
+
+func TestProjectEdit_PathOnlyEditAccepted(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	_, _, err := runProjectCmd(t, dbPath, "edit", "bragfile", "--add-path", "/y")
+	if err != nil {
+		t.Fatalf("path-only edit: expected success, got %v", err)
+	}
+}
+
+func TestProjectEdit_NoFlagsMessageListsLocationFlags(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "new", "bragfile", "--path", "/x"); err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	_, _, err := runProjectCmd(t, dbPath, "edit", "bragfile")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "--add-path") {
+		t.Errorf("error should mention --add-path, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "--remove-path") {
+		t.Errorf("error should mention --remove-path, got %v", err)
+	}
+}
+
+func TestProjectEdit_HelpShowsLocationFlags(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	out, _, _ := runProjectCmd(t, dbPath, "edit", "--help")
+	if !strings.Contains(out, "Examples:") {
+		t.Errorf("edit --help missing 'Examples:', got %q", out)
+	}
+	if !strings.Contains(out, "brag project edit") {
+		t.Errorf("edit --help missing 'brag project edit', got %q", out)
+	}
+	if !strings.Contains(out, "--add-path") {
+		t.Errorf("edit --help missing '--add-path', got %q", out)
+	}
+}
