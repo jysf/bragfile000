@@ -230,6 +230,88 @@ func (s *Store) AddLocation(projectID int64, path string) error {
 	return nil
 }
 
+// RemoveLocation detaches path from the project identified by projectID. It is
+// the single-path counterpart to AddLocation. Paths match VERBATIM against the
+// stored value (storage is verbatim end to end; SPEC-031/DEC-019 own
+// normalization at cwd-resolve time only). Errors:
+//   - ErrLocationNotFound      if path is attached to no project
+//   - ErrLocationOtherProject  if path is attached to a different project
+//
+// (DEC-020). Implemented over the same transactional engine as EditLocations
+// so a single remove and a batch share one validated code path.
+func (s *Store) RemoveLocation(projectID int64, path string) error {
+	return s.EditLocations(projectID, []string{path}, nil)
+}
+
+// EditLocations applies a set of location removals and additions to the project
+// identified by projectID in ONE transaction, all-or-nothing (DEC-020). Removes
+// are applied before adds, so a path may be removed and re-added in the same
+// call without a transient UNIQUE(path) collision. Any failure rolls the whole
+// set back, leaving project_locations unchanged. Per-path rules:
+//   - remove: path must be attached to projectID
+//     (else ErrLocationNotFound / ErrLocationOtherProject)
+//   - add:    path must be free after the removes
+//     (else ErrLocationExists — the same global-uniqueness guard
+//     AddLocation enforces; the in-tx COUNT also catches in-batch dups)
+//
+// Paths match verbatim. updated_at is NOT bumped: location editing is a
+// structural change to project_locations, distinct from the scalar-field
+// recency UpdateProject tracks (DEC-020).
+func (s *Store) EditLocations(projectID int64, remove, add []string) error {
+	ctx := context.Background()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("edit locations: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Removes first — frees any UNIQUE path that a later add re-registers.
+	for _, path := range remove {
+		var ownerID int64
+		err := tx.QueryRowContext(ctx,
+			`SELECT project_id FROM project_locations WHERE path = ?`, path,
+		).Scan(&ownerID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("edit locations: remove %q: %w", path, ErrLocationNotFound)
+		}
+		if err != nil {
+			return fmt.Errorf("edit locations: remove %q: %w", path, err)
+		}
+		if ownerID != projectID {
+			return fmt.Errorf("edit locations: remove %q: %w", path, ErrLocationOtherProject)
+		}
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM project_locations WHERE path = ?`, path,
+		); err != nil {
+			return fmt.Errorf("edit locations: remove %q: %w", path, err)
+		}
+	}
+
+	// Adds — path must be free; the in-tx COUNT also backstops in-batch dups.
+	for _, path := range add {
+		var exists int
+		if err := tx.QueryRowContext(ctx,
+			`SELECT COUNT(*) FROM project_locations WHERE path = ?`, path,
+		).Scan(&exists); err != nil {
+			return fmt.Errorf("edit locations: add %q: %w", path, err)
+		}
+		if exists > 0 {
+			return fmt.Errorf("edit locations: add %q: %w", path, ErrLocationExists)
+		}
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO project_locations (project_id, path) VALUES (?, ?)`,
+			projectID, path,
+		); err != nil {
+			return fmt.Errorf("edit locations: add %q: %w", path, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("edit locations: %w", err)
+	}
+	return nil
+}
+
 // validProjectStatuses is the DEC-017 status enum. Validated in the Store
 // (not a DB CHECK) so adding a value later is an additive change under the
 // forward-only migration regime (DEC-002), mirroring entries.type's

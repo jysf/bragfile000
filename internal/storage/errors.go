@@ -23,6 +23,17 @@ var ErrProjectExists = errors.New("project already exists")
 // already attached to some project (paths are globally unique).
 var ErrLocationExists = errors.New("location already exists")
 
+// ErrLocationNotFound is returned (wrapped) by RemoveLocation/EditLocations
+// when the path to remove is attached to no project (a typo guard — removing
+// a path that was never registered is a user error, not a silent no-op).
+var ErrLocationNotFound = errors.New("location not found")
+
+// ErrLocationOtherProject is returned (wrapped) by RemoveLocation/EditLocations
+// when the path to remove is attached to a DIFFERENT project. Paths are
+// globally unique (UNIQUE(path)); removing another project's location through
+// this project is refused rather than silently deleting it.
+var ErrLocationOtherProject = errors.New("location attached to a different project")
+
 // ErrInvalidStatus is returned (wrapped) by UpdateProject when the given
 // status is not one of the DEC-017 enum values (active|paused|done|
 // archived). Validated in the Store (not a DB CHECK) so adding a value

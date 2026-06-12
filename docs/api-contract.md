@@ -564,26 +564,38 @@ When multiple registered paths are ancestors of the cwd, the most specific
 - Unknown `--format` exits 1 (user error). No positional arguments;
   reads `os.Getwd()` only.
 
-### `brag project edit <name|id>` — edit a project's scalar fields (STAGE-007)
+### `brag project edit <name|id>` — edit a project's fields (STAGE-007)
 
 ```
 brag project edit bragfile --status paused
 brag project edit bragfile --state-note "shipped tags; next: cut v0.2.0"
 brag project edit bragfile --name brag-cli
+brag project edit bragfile --add-path ~/code/bragfile
+brag project edit bragfile --remove-path /srv/old-location
 ```
 
-Edits a project's scalar fields. The argument resolves as a **name first**,
-then as a positive-integer **id**. Pass at least one of `--name`, `--status`,
-or `--state-note`; unspecified fields are unchanged.
+Edits a project's fields. The argument resolves as a **name first**, then as
+a positive-integer **id**. Pass at least one of `--name`, `--status`,
+`--state-note`, `--add-path`, or `--remove-path`; unspecified fields are
+unchanged.
 
 - `--name` — rename (must be unique). Renaming does **not** rewrite the project
   string on existing brag entries (DEC-017); they keep their captured string.
 - `--status` — one of `active`, `paused`, `done`, `archived` (validated).
 - `--state-note` — the free-text state/next-action note.
-- Bumps `updated_at` (so the project rises in `brag project list` recency order).
+- `--add-path` / `--remove-path` (both repeatable) — attach/detach filesystem
+  locations. Paths match **verbatim** against what was registered.
+  `--remove-path` exits 1 if the path is not registered to this project or is
+  registered to a **different** project; `--add-path` exits 1 if the path is
+  already registered. All location changes in one invocation apply
+  **atomically** (removes before adds); a failure leaves locations unchanged.
+  Location edits do **not** change `updated_at` (DEC-020).
+- A scalar edit bumps `updated_at` (so the project rises in `brag project list`
+  recency order); a location-only edit does not.
 - Exits 0 on success; stderr: `Edited project "<name>".` (stdout empty).
-- Exit 1 (user error) if no field flag is given, the project is not found, the
-  new name is already taken, or `--status` is outside the enum.
+- Exit 1 (user error) if no flag is given, the project is not found, the new
+  name is already taken, `--status` is outside the enum, or a location operation
+  is rejected.
 
 ### `brag project archive <name|id>` — archive a project (STAGE-007)
 
@@ -674,3 +686,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-016` — tag mutation semantics: `brag tags` in-use-only taxonomy (count-DESC/name-ASC; `{tag,count}` JSON shape), rename-errors-into-existing, merge via DELETE+INSERT, orphan tags invisible (no GC).
 - `DEC-017` — `entries.project` ↔ `projects` relationship (soft string match) + `projects.status` enum + single `state_note`; the data `brag project show`/`list` render.
 - `DEC-018` — `brag project delete` blast radius: entries untouched (soft match), project_locations deleted manually in-tx (FK off → no cascade), `'project'` taggings cleaned in-tx; archive is the recoverable status flip, delete is irreversible.
+- `DEC-020` — `brag project edit` location editing: `RemoveLocation`/`EditLocations`; remove-not-attached and remove-other-project are user errors; verbatim path matching; one invocation's location changes are atomic (removes before adds); location edits don't bump `updated_at`.
