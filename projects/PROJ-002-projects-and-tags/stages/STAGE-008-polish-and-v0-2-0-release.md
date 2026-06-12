@@ -188,14 +188,16 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       record 015–020); reconcile the stale `[Unreleased]` `completion` line,
       the `[0.1.0]` `YYYY-MM-DD` placeholder, and the compare-link repo slug.
       Literal-artifact-as-spec. No DEC.
-- [ ] SPEC-036 (not yet written) — **S/M** — **Migration auto-backup safety
-      belt.** `storage.Open`-time guard: before applying a schema-bumping
-      migration to a non-empty existing DB, copy it to a timestamped sidecar
-      (`VACUUM INTO` / `.backup`), then migrate. Non-interactive. Tests cover
-      backup-then-migrate, empty-DB no-op, already-current no-op, and the
-      backup-write-failure path. **DEC-021 likely** (the durability decision:
-      auto-backup-then-migrate vs. prompt-and-confirm; where backups land;
-      retention) — see Design Notes; do not pin the number until design.
+- [~] SPEC-036 (design) — **S/M** — **Migration auto-backup safety belt.**
+      `storage.Open`-time guard: before applying a pending migration to an
+      existing DB, snapshot it via `VACUUM INTO` through the open *sql.DB,
+      then migrate. **DEC-021 emitted** (durability model): trigger
+      discriminator `applied>0 && pending>0`; mechanism `VACUUM INTO`
+      (pure-Go, WAL-safe, no sqlite3 CLI); failure ABORTS Open (never
+      migrate un-backed-up); sidecar `<dbpath>.pre-<ver>.<UTC>.backup`;
+      injectable `clock` seam (injectable-os-var WATCH → N=3); keep-all
+      retention; silent. No new migration (schema_migrations stays 4).
+      5 tests. Scaffolded out of plan order (ahead of doc sweep).
 - [ ] SPEC-037 (not yet written) — **S** — **v0.2.0 release cut.**
       `v0.2.0-rc1` smoke → `v0.2.0` per §4 dual-tag rule; goreleaser; Homebrew
       formula bump; verify (or document the limitation on) a clean
