@@ -7,7 +7,7 @@
 task:
   id: SPEC-032
   type: story                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -730,10 +730,20 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing material. The per-path explicit-signal design (LD4) was the
+   one trap — that `cmd.Flags().Changed("project")` is only valid in the
+   flag path, and JSON/editor must use `value != ""`. The spec called it
+   out explicitly and the build got it right first time, confirmed by the
+   dedicated JSON-explicit-wins test. The design-time framing earned its keep.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No new DEC (reuses DEC-019 + DEC-017). The `getCwd`/`addGetCwd`
+   per-file os-indirection pattern has now recurred across SPEC-031 and
+   SPEC-032 — a candidate constraint note ("os-dependent calls go through
+   an injectable package var") for the STAGE-007 close WATCH list, not
+   mid-stage codification.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None beyond the backlog. SPEC-033 (location editing: `--add-path` /
+   `--remove-path` + `RemoveLocation`) is the last STAGE-007 spec and the
+   natural next one.
