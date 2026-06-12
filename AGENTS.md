@@ -353,6 +353,20 @@ ship. The pattern applies where the artifact's shape is design-decidable; it
 does NOT apply where the artifact must be synthesised from constraints (most
 Go code) — there, prose-with-failing-tests stays the right shape.
 
+**Flag-default explicitness in literal-artifact CLI specs.** When a spec
+embeds a cobra command as a literal artifact (a `Long` string plus its flag
+set), state each flag's **default value**, not only its accepted values —
+`--format` accepts `json`, but does it default to `""` (plain) or `"json"`? A
+flag whose default is left implicit is a design-decidable choice off-loaded to
+build, which then guesses; the literal-artifact contract ("build transcribes
+verbatim, verify diffs") holds only if the default rides in the literal. Three
+same-outcome confirming cases: SPEC-026 (`--format ""` default stated
+explicitly, zero-cost), SPEC-028 (LD4 restated the `--format` default per the
+STAGE-006 WATCH item), SPEC-029 (the `edit` / `archive` / `delete` flag
+defaults all stated). Codified at STAGE-007 close (2026-06-12). This is the
+per-flag completeness counterpart to the §12(a) expected-value-literals rule:
+a flag's default is an expected value the spec must pin, not one build infers.
+
 **Design-time pre-flight: run embedded literals through their target tools.**
 When the literal-artifact-as-spec pattern embeds a literal whose validity
 depends on the current behavior of an external tool (a goreleaser config that

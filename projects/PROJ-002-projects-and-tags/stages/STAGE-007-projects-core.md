@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-007                     # stable, zero-padded, repo-global (never reused)
-  status: active                    # proposed | active | shipped | cancelled | on_hold
+  status: shipped                   # proposed | active | shipped | cancelled | on_hold
   priority: high                    # critical | high | medium | low
   target_complete: 2026-06-20       # largest stage of PROJ-002; leaves buffer before project ship 2026-06-26
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-06-08
-shipped_at: null
+shipped_at: 2026-06-12
 ---
 
 # STAGE-007: Projects (core)
@@ -455,13 +455,123 @@ not codify mid-stage without the documented trigger):
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped. Run Prompt 1c (Stage Ship) in
-FIRST_SESSION_PROMPTS.md to draft this.*
+*Drafted at stage close (Prompt 1d, fresh Opus, 2026-06-12); all success
+criteria independently re-verified at close.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes — all seven
+  success criteria met and independently re-verified at close. `go build`,
+  `gofmt -l .`, `go vet ./...`, and `CGO_ENABLED=0 go build ./...` are clean;
+  **531 tests across 8 packages** pass (up from STAGE-006's 401, +130 for the
+  seven specs). Behavioral re-verification against a throwaway DB exercised
+  the full surface: `project new/list/show/edit/archive/delete/status/here`
+  and `add` `--project` auto-fill all behave per spec. DEC-017 soft match is
+  lossless and invisible (`brag list --project` returns the same entries
+  before and after a project delete; the `0004_add_projects` migration reads
+  and rewrites zero `entries` rows). The polymorphic-schema prediction is
+  confirmed empirically: a hand-written `taggable_type='project'` tagging is
+  counted by `brag tags` with **zero code change** (the tag count went 1→2),
+  validating DEC-015/016 forward exactly as STAGE-006 paid for. Projects are
+  first-class, scannable, and cwd-aware; capture knows where it is.
+- **How many specs did it actually take?** **7** (SPEC-027 M, 028 M, 029 M,
+  030 M, 031 S/M, 032 M, 033 S/M) vs. the brief's ~5–6 and the framing-time
+  "framed as six." All S/M by construction — **no L**. The plan grew 6→7 at
+  SPEC-029 design when the L-watch **fired** and peeled location editing into
+  SPEC-033 (the stage-prescribed split), holding SPEC-029 at M. The other
+  watched split — SPEC-027's `entries.project` backfill — did **not** fire,
+  because DEC-017's soft string match needs zero backfill, which is precisely
+  what held the foundation spec at M. One spec above the estimate by a
+  conscious peel, not scope creep. Shipped 2026-06-12, well ahead of
+  `target_complete` 2026-06-20 (and the project's `target_ship` 2026-06-26).
+- **What changed between starting and shipping?** One conscious peel
+  (SPEC-029's L-watch → SPEC-033 location editing); otherwise every DEC held
+  verbatim from design lock to ship — DEC-017 @0.80, DEC-018 @0.85, DEC-019
+  @0.90, DEC-020 @0.82 — with no DEC amended, superseded, or added at build.
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
+  - **Codified at this close:** **flag-default-explicitness (N=3)** — "in a
+    literal-artifact CLI spec, state each flag's *default*, not only its
+    accepted values." Reached N=3 same-outcome mid-stage (SPEC-026 `--format
+    ""` + SPEC-028 LD4 + SPEC-029), so per the codification meta-rule it
+    lands at **this** close. Landed in AGENTS.md **§12 During design**, as a
+    bolded sub-rule appended to the literal-artifact-as-spec family.
+  - **On WATCH (not yet earned), carried to STAGE-008:** injectable-os-var
+    seam (`var getCwd = os.Getwd`) N=2; cobra `SilenceErrors:true` + explicit
+    `Fprintln` example-in-Notes N=2; contamination-heuristic exception for
+    literal-artifact builds N=2 (still *not* codified — see bookkeeping); the
+    SPEC-030 "CLI ordering tests need the §9 no-sleep SQL-backdate" nudge N=1;
+    "AC-says-all-N → test each" N=1; "a design-prompt premise can be wrong —
+    the §9 grep is the source of truth" N=1 (reinforces an already-codified
+    §9 rule). See the WATCH-list update section below for the full ledger.
+  - **Structural (WATCH-list ledger):** the per-stage "WATCH-list update at
+    stage close → Carry-forwards" chain **already is** the ledger, and it
+    worked exactly as designed this stage (flag-default reached its bar
+    mid-stage, was held under the documented "do not codify mid-stage" rule,
+    and codifies here). The parallel learning doc independently downgraded
+    its own "stranded" framing to a low-priority *visibility* nicety. **No
+    new durable artifact created** — a cross-stage roll-up table is larger
+    than a stage-close edit and not warranted; recommended as an optional
+    STAGE-008 convenience only.
+  - **Bookkeeping:** (a) SPEC-027's ship reflection refers to "the codified
+    §12 contamination-exception," but that heuristic was never codified — it
+    sits on WATCH (N=1 at STAGE-006 close, N=2 now). Loose phrasing in an
+    archived spec; noted here, not rewritten (§13). (b) The brief's Stage
+    Plan still reads "0 shipped / 3 pending" with all boxes unchecked;
+    STAGE-006 close left it untouched too, so the brief's progress markers
+    are evidently reconciled at **project** close, not stage close — left
+    as-is for consistency and flagged for the PROJ-002 close.
 - **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <one-line items>
+  - **Promoted + codified:** flag-default-explicitness (SPEC-026/028/029
+    ship Q2 → AGENTS.md §12).
+  - **Promoted to WATCH:** the injectable-os-var seam (SPEC-031/032 ship Q2);
+    the `SilenceErrors` + `Fprintln` example (SPEC-030/031); the
+    design-prompt-premise / grep-is-truth reinforcement (SPEC-033 ship Q1).
+
+### WATCH-list update at stage close (carry into STAGE-008)
+
+- **Flag-default-explicitness in literal-artifact CLI specs — CODIFIED** at
+  this close (AGENTS.md §12, During design). N=3 same-outcome
+  (SPEC-026/028/029). Removed from WATCH.
+- **Injectable-os-var seam (`var getCwd = os.Getwd` / `addGetCwd`)** — N=2
+  (SPEC-031, SPEC-032), same-outcome (both needed a test seam the literal
+  spec omitted). Below the N=3 same-outcome bar; **carry forward.** STAGE-008
+  is docs/release-heavy and may not advance it; a future os-touching CLI spec
+  (or PROJ-003) is the natural N=3. Candidate shape when it lands: a one-line
+  testing-conventions note (§9) or a stack-gotchas checklist entry, *not* a
+  blocking constraint — "os-level calls (`os.Getwd`/`os.Getenv`) go through an
+  injectable package var so tests can substitute them."
+- **cobra `SilenceErrors:true` + explicit `Fprintln` user-error pattern** —
+  N=2 (SPEC-030, SPEC-031); the "SilentErr or equivalent" hint cost a
+  test-run failure to surface twice. Below the N=3 bar; **carry forward.**
+  Cheap fix when earned: a concrete example in Notes for the Implementer
+  (parallel to the existing `"Aborted."` example).
+- **Contamination-heuristic exception for literal-artifact builds** — N=2
+  (SPEC-026 origin; SPEC-027 confirming — verify accepted an
+  honest-frictionless build because the reflection surfaced a *specific*
+  observation, the `errors.go`-vs-`project.go` placement micro-choice).
+  **Carry forward, NOT codified** (despite SPEC-027's loose "codified"
+  phrasing). Discriminator to preserve verbatim: "'nothing was unclear' is
+  the expected honest output of a literal-artifact-as-spec build; distinguish
+  honest-frictionless from mailed-in by whether the reflection surfaces ANY
+  specific observation." Also a paired-opposing candidate (would hit N=2
+  paired) if a future build mails in a contaminated "nothing was unclear"
+  with no specific observation.
+- **CLI recency-ordering tests need the §9 no-sleep SQL-backdate** — N=1
+  (SPEC-030 build). Already implied by the codified §9 monotonic-tie-break /
+  no-sleep rule (which is not storage-specific in principle); **carry
+  forward** as a candidate one-line generalization of that §9 bullet to the
+  CLI test layer if it recurs.
+- **"AC-says-all-N → test each, don't lean on one shared-helper test"** —
+  N=1 (SPEC-029 verify). **Carry forward**; candidate premise-audit / spec-
+  template nudge under Failing Tests.
+- **"A design-prompt premise can be wrong — the §9 grep is the source of
+  truth"** — N=1+ (SPEC-033 caught a false guard-message premise in its own
+  design prompt by running the grep). **Carry forward**; reinforces the
+  already-codified §9 audit-grep family ("enumeration without execution is
+  aspirational — RUN the grep") rather than adding a new rule.
+- **Trust-but-verify agent push reports** — N=2 (SPEC-023); applied as a
+  coordinator reflex throughout STAGE-007 (every "pushed" claim checked via
+  `git ls-remote` / PR state). Variant-specific (matters for
+  `claude-plus-agents`); **carry forward.**
+- **§13 fresh-session working-tree preservation** — N=1 (SPEC-024) → **N=2**
+  with this close: a parallel session's uncommitted
+  `docs/framework-feedback/process-feedback.md` was preserved untouched per
+  §13 while this close ran. Below the N=3 bar; **carry forward.**
