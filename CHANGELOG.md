@@ -7,13 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-12
+
+This release makes **tags** and **projects** first-class. Tags move from
+a comma-joined string to a normalized, shared, rename/merge-able model;
+projects become a managed entity with filesystem locations and cwd-aware
+auto-fill. Schema migrations now snapshot your database before they run.
+
 ### Added
 
-- `brag completion` — generate tab-completion scripts for zsh, bash, and fish
-  via `brag completion <shell>`. Source into your shell rc for `brag <tab>`
-  and flag completion.
+- `brag tags` — list every tag with its usage count.
+- `brag tag rename <old> <new>` and `brag tag merge <src> <dst>` —
+  first-class tag maintenance. `rename` re-labels a tag in place;
+  `merge` folds one tag's entries into another and de-duplicates.
+- `brag project` — manage named projects backed by filesystem paths,
+  with subcommands `new`, `list`, `show`, `edit`, `archive`, `delete`,
+  `status`, and `here`. `brag project here` reports the project owning
+  the current directory; `brag project status` prints a per-project
+  dashboard.
+- `brag project edit` takes `--add-path` / `--remove-path` to attach or
+  detach directories from a project.
+- `brag add` now auto-fills `--project` from the current directory when
+  the cwd sits under a registered project location (nearest-ancestor
+  match). An explicit `--project` always wins.
+- `brag completion <shell>` — generate tab-completion scripts for zsh,
+  bash, and fish. Source into your shell rc for `brag <tab>` and flag
+  completion.
 
-## [0.1.0] - YYYY-MM-DD
+### Changed
+
+- **Tags are now first-class.** They are stored in a normalized
+  `tags` + `taggings` model instead of a comma-joined string, so a tag
+  is shared across entries and can be renamed or merged. Existing
+  entries migrate automatically on first run; the `--tag` filter and
+  every entry command behave the same for users.
+- **Schema migrations back up your database first.** Applying a
+  schema-bumping migration to an existing, non-empty database now writes
+  a timestamped snapshot beside it (via SQLite `VACUUM INTO`, WAL-safe)
+  before the migration runs — so an upgrade can never mutate an
+  un-backed-up database. If the backup fails, the upgrade aborts rather
+  than proceeding. Non-interactive: safe in `brag add --json` and other
+  piped, non-TTY workflows.
+
+### Decisions of record
+
+The following architectural decisions are committed in this release.
+Each decision file under `/decisions/` carries the full rationale.
+
+- DEC-015 — normalize tags into a polymorphic `tags` + `taggings`
+  model (supersedes DEC-004's comma-joined string).
+- DEC-016 — tag mutation semantics: `rename` errors into an existing
+  tag, `merge` de-dups via DELETE+INSERT, orphaned tags are invisible
+  (no garbage collection).
+- DEC-017 — `entries.project` relates to `projects` by soft string
+  match (project stays free text on the entry; no hard foreign key).
+- DEC-018 — `brag project delete` blast radius: what a delete removes
+  and what it leaves behind.
+- DEC-019 — `brag project here` resolves the cwd by nearest-ancestor
+  (longest-prefix) matching.
+- DEC-020 — `brag project edit` location-editing semantics
+  (`--add-path` / `--remove-path`).
+- DEC-021 — migration auto-backup durability model: trigger on
+  pending-migration-meets-non-empty-DB, snapshot via `VACUUM INTO`,
+  abort `storage.Open` if the backup fails.
+
+## [0.1.0] - 2026-05-10
 
 Initial public release of `brag`, a local-first Go CLI for capturing
 and retrieving career-worthy moments. Entries live in an embedded
@@ -98,5 +156,6 @@ Each decision file under `/decisions/` carries the full rationale.
   payload keys; markdown convention reuses DEC-013's provenance
   + summary-block style.
 
-[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/jysf/bragfile000/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jysf/bragfile000/releases/tag/v0.1.0
