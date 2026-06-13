@@ -7,7 +7,7 @@
 task:
   id: SPEC-035
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -385,28 +385,34 @@ pre-existing `test-docs.sh` Group O, not a new failing test.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `spec-035-changelog-0-2-0`
+- **PR (if applicable):** opened against `main` — `docs: CHANGELOG [0.2.0] (SPEC-035)`
+- **All acceptance criteria met?** yes (AC1–AC10 all pass; O1–O5 green)
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+  - none
 - **Deviations from spec:**
-  - [list]
+  - none; CHANGELOG.md transcribed verbatim from the embedded literal
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - `docs/blog/README.md:51` "v0.1.0 history" phrasing (noted in Premise audit as a PROJ-002-close
+    follow-up; not a blocker)
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing slowed me down. The `‹[0.1.0] Added + Decisions-of-record body — unchanged›`
+   placeholder in the embedded literal was immediately clear: touch only the heading date and link
+   refs, leave everything else byte-for-byte.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No missing constraint. The slug-is-intentional note and date-ownership note in "Notes for the
+   Implementer" covered the two edge cases I might otherwise have second-guessed.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing material. The literal-artifact-as-spec format made the edit mechanical and the AC
+   greps made verification fast. Running the AC greps in parallel with `test-docs.sh` saved a
+   round-trip.
 
 ---
 
