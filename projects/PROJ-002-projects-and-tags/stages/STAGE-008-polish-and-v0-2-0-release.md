@@ -186,11 +186,14 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       No DEC (docs of shipped behavior; DEC-017..021 cited of record).
       22 grep-gradeable ACs + `scripts/test-docs.sh` exits 0. README bare-cp
       flagged as out-of-scope follow-up.
-- [ ] SPEC-035 (not yet written) — **S** — **CHANGELOG `[0.2.0]`.** Write the
+- [~] SPEC-035 (design) — **S** — **CHANGELOG `[0.2.0]`.** Write the
       `[0.2.0]` entry (tags normalization / projects / safety belt; DECs of
-      record 015–020); reconcile the stale `[Unreleased]` `completion` line,
-      the `[0.1.0]` `YYYY-MM-DD` placeholder, and the compare-link repo slug.
-      Literal-artifact-as-spec. No DEC.
+      record **015–021** — backlog's "015–020" was short by one, DEC-021
+      landed). Reconcile: `[0.1.0]` date → 2026-05-10; `[Unreleased]`
+      emptied-not-deleted (Keep-a-Changelog + test-docs.sh O5) with
+      `completion` folded into [0.2.0]; compare-links add [0.2.0], repoint
+      [Unreleased]→v0.2.0...HEAD; slug stays `bragfile000` (real remote).
+      Engineered to keep test-docs.sh Group O green. Literal artifact. No DEC.
 - [x] SPEC-036 (shipped on 2026-06-12) — **S/M** — **Migration auto-backup
       safety belt.** `storage.Open`-time guard: before applying a pending migration to an
       existing DB, snapshot it via `VACUUM INTO` through the open *sql.DB,
