@@ -1,8 +1,8 @@
 # Using `brag` — tutorial
 
 > **Scope:** what you can do with `brag` today. See
-> [`projects/PROJ-001-mvp/brief.md`](../projects/PROJ-001-mvp/brief.md)
-> for the full plan.
+> [`docs/api-contract.md`](./api-contract.md) for the full command
+> surface.
 
 ---
 
@@ -430,6 +430,105 @@ brag tag merge auth perf
 - The `auth` tag row is deleted; `perf`'s count rises by the previously
   `auth`-only memberships.
 
+### Projects
+
+A **project** is a first-class, named workspace you register once and
+then attach to brags automatically. Registering a project's directory
+lets `brag add` fill in `--project` for you whenever you work inside it.
+
+Register a project and point it at a directory:
+
+```bash
+brag project new bragfile --path ~/code/bragfile
+# stderr: Created project "bragfile".
+```
+
+`--path` is required and stored verbatim; a path already registered to
+another project is rejected.
+
+Ask which project the current directory belongs to:
+
+```bash
+cd ~/code/bragfile/internal/storage
+brag project here
+# bragfile	active	-
+# name<TAB>status<TAB>state-note. Nearest-ancestor match: any
+# subdirectory of a registered path resolves, not just the exact root.
+```
+
+Outside any registered project, `brag project here` prints `not inside
+any registered project` to stderr and exits 1.
+
+#### Auto-fill `--project` from your working directory
+
+Once a directory is registered, `brag add` fills in `--project` for you
+whenever you don't pass one — in flag, editor, and `--json` modes alike:
+
+```bash
+cd ~/code/bragfile
+brag add -t "shipped the projects walkthrough"
+# the entry's project is auto-set to "bragfile" — no -p needed
+
+brag add -t "a cross-cutting note" -p platform
+# an explicit -p always wins; auto-fill never overrides it
+```
+
+Auto-fill is silent and best-effort: outside any registered project, or
+if the directory can't be resolved, the entry is just saved with no
+project, exactly as before.
+
+#### Review your projects
+
+```bash
+brag project status
+# name<TAB>status<TAB>brag-count<TAB>state-note, most-recent first.
+# Archived projects are hidden. brag-count is how many entries carry
+# that project name (the DEC-017 soft string match).
+
+brag project list
+# name<TAB>status<TAB>locations (comma-joined; "-" when none)
+
+brag project show bragfile          # labeled block: Name / Status / State note / Locations
+brag project show bragfile --format json
+```
+
+`status`, `list`, `show`, and `here` all accept `--format json` for
+scripting.
+
+#### Edit a project
+
+```bash
+brag project edit bragfile --status paused
+brag project edit bragfile --state-note "shipped tags; next: cut v0.2.0"
+brag project edit bragfile --name brag-cli
+brag project edit bragfile --add-path ~/code/bragfile-fork
+brag project edit bragfile --remove-path /srv/old-location
+```
+
+- `--status` is one of `active`, `paused`, `done`, `archived`.
+- `--add-path` / `--remove-path` are repeatable and apply atomically
+  (removes before adds); paths match verbatim against what was
+  registered.
+- Renaming a project does **not** rewrite the project string on existing
+  brags — they keep what they were captured with.
+
+#### Archive vs. delete
+
+```bash
+brag project archive bragfile
+# status → "archived"; recoverable. Restore it with:
+brag project edit bragfile --status active
+
+brag project delete bragfile        # prompts y/N on stdin
+brag project delete bragfile --yes  # skip the prompt
+```
+
+`archive` is a reversible status flip that hides the project from `brag
+project status` but preserves everything. `delete` is **irreversible** —
+it removes the project and its registered locations. **Neither touches
+your brag entries:** an entry keeps its project string, so `brag list
+--project bragfile` still finds those entries afterward.
+
 ---
 
 ## 5. Where the data lives
@@ -439,15 +538,59 @@ ls -la ~/.bragfile/db.sqlite
 ```
 
 That's the default, and **every `brag` invocation from any directory
-uses it** — the path is absolute and home-expanded, so it doesn't
-matter whether you're in the bragfile repo or elsewhere.
+uses it** — the path is absolute and home-expanded, so it doesn't matter
+whether you're in the bragfile repo or elsewhere.
 
-- **Back up** by copying the file.
-- **Move to a new machine** by copying the file.
-- **Version-control your brags?** Just `cp ~/.bragfile/db.sqlite
-  ~/some-private-repo/` and commit.
+### Back up your brags
 
-Peek at raw data (useful until `show` exists):
+The database is a single SQLite file, so a backup is a copy of that file
+— but take the copy with SQLite's own backup command, not a bare `cp`,
+so the snapshot is always transaction-consistent:
+
+```bash
+# preferred — a consistent single-file snapshot via the sqlite3 CLI:
+sqlite3 ~/.bragfile/db.sqlite ".backup '$HOME/brag-backup.db'"
+
+# equivalent, also consistent:
+sqlite3 ~/.bragfile/db.sqlite "VACUUM INTO '$HOME/brag-backup.db'"
+```
+
+The result is a portable `.db` you can copy to another machine, commit
+to a private repo, or stash anywhere:
+
+```bash
+cp ~/brag-backup.db ~/some-private-repo/   # the snapshot is safe to plain-copy
+```
+
+> Why not `cp ~/.bragfile/db.sqlite` directly? `brag` doesn't enable WAL
+> mode, so a bare `cp` of an idle database is *currently* safe — but
+> `.backup` / `VACUUM INTO` stay correct even if that changes or a write
+> is in flight. Prefer them. (You can also `brag export --format json
+> --out backup.json` for a tool-portable dump — see §4.)
+
+### Automatic backup before an upgrade migrates your DB
+
+When a newer `brag` opens your existing database and needs to apply a
+schema migration, it **snapshots the database first** — automatically,
+before touching it. The snapshot lands next to your DB as a timestamped
+sidecar:
+
+```
+~/.bragfile/db.sqlite.pre-0004_add_projects.20260612T093015Z.backup
+```
+
+- It fires **only** when an existing database has pending migrations to
+  apply — a brand-new DB and an already-up-to-date DB are never copied.
+- The copy is a consistent `VACUUM INTO` snapshot of the
+  **pre-migration** state; open it with `sqlite3` to inspect or recover.
+- If the snapshot can't be written, `brag` **aborts** rather than migrate
+  an un-backed-up database (exit 2) — nothing is changed.
+- It's silent and non-interactive, so it never breaks `brag add --json`
+  or other scripted pipelines.
+- Snapshots are **kept, not pruned** — delete old `*.backup` sidecars
+  yourself when you no longer need them.
+
+Peek at raw data:
 
 ```bash
 sqlite3 ~/.bragfile/db.sqlite "select * from entries order by id desc limit 3"
@@ -518,7 +661,7 @@ see §3 above.
 
 ## 9. Power-user escape hatch
 
-Everything in this tutorial is shipped in v0.1.0. For corner cases
+Everything in this tutorial is shipped in v0.2.0. For corner cases
 `brag list` doesn't surface, `sqlite3 ~/.bragfile/db.sqlite` is your
 escape hatch.
 

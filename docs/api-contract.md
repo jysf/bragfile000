@@ -2,7 +2,7 @@
 
 `brag` has no HTTP/RPC API. Its external contract is its argv surface
 and its stdout/stderr behavior. This doc is the frozen spec of that
-contract across PROJ-001: what each command takes, what it prints, and
+contract across PROJ-001 and PROJ-002: what each command takes, what it prints, and
 what it exits with.
 
 ## Overview
@@ -417,7 +417,7 @@ Lists every in-use tag with its total usage count across all entries, one per
 line as `<name>\t<count>`, sorted by count (descending) then name (ascending).
 Tags with no remaining memberships (orphans) are omitted — only in-use tags appear.
 Counts span all taggable object types (only `'entry'` today; `'project'` rows
-fold in automatically in STAGE-007 with no change here).
+fold in automatically with STAGE-007 (shipped), with no change here).
 
 Flags:
 
@@ -473,7 +473,7 @@ brag project new bragfile --path ~/code/bragfile
 
 Registers a new project named `<name>` with one initial filesystem location
 `<dir>`. The project starts with status `active` and an empty state note
-(use `brag project edit` to change them — STAGE-007 later spec). `--path` is
+(use `brag project edit` to change them). `--path` is
 required and stored verbatim (path normalization is `brag project here`'s
 concern, STAGE-007).
 
@@ -686,4 +686,5 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-016` — tag mutation semantics: `brag tags` in-use-only taxonomy (count-DESC/name-ASC; `{tag,count}` JSON shape), rename-errors-into-existing, merge via DELETE+INSERT, orphan tags invisible (no GC).
 - `DEC-017` — `entries.project` ↔ `projects` relationship (soft string match) + `projects.status` enum + single `state_note`; the data `brag project show`/`list` render.
 - `DEC-018` — `brag project delete` blast radius: entries untouched (soft match), project_locations deleted manually in-tx (FK off → no cascade), `'project'` taggings cleaned in-tx; archive is the recoverable status flip, delete is irreversible.
+- `DEC-019` — `brag project here` / `brag add` cwd auto-fill: nearest-ancestor (longest-prefix) match against registered project locations
 - `DEC-020` — `brag project edit` location editing: `RemoveLocation`/`EditLocations`; remove-not-attached and remove-other-project are user errors; verbatim path matching; one invocation's location changes are atomic (removes before adds); location edits don't bump `updated_at`.
