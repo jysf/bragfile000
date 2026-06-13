@@ -186,7 +186,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       No DEC (docs of shipped behavior; DEC-017..021 cited of record).
       22 grep-gradeable ACs + `scripts/test-docs.sh` exits 0. README bare-cp
       flagged as out-of-scope follow-up.
-- [~] SPEC-035 (design) — **S** — **CHANGELOG `[0.2.0]`.** Write the
+- [x] SPEC-035 (shipped on 2026-06-12) — **S** — **CHANGELOG `[0.2.0]`.** Write the
       `[0.2.0]` entry (tags normalization / projects / safety belt; DECs of
       record **015–021** — backlog's "015–020" was short by one, DEC-021
       landed). Reconcile: `[0.1.0]` date → 2026-05-10; `[Unreleased]`
@@ -209,7 +209,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       formula bump; verify (or document the limitation on) a clean
       `brew upgrade` from v0.1.x. No DEC; pure release mechanics.
 
-**Count:** 2 shipped / 0 active / 2 pending
+**Count:** 3 shipped / 0 active / 1 pending
 
 **Complexity check:** 4 specs, all S/M by construction. One above the brief's
 "~2–3 specs" estimate — the extra is the migration safety belt promoted from

@@ -7,7 +7,7 @@
 task:
   id: SPEC-035
   type: story                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -422,10 +422,24 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing material. A clean literal-artifact spec: the full post-edit
+   CHANGELOG was embedded at design, the build transcribed it, and the
+   coordinator verified the substance directly (four edits, date,
+   compare-link, clean diff scope, test-docs.sh Group O green) in lieu of
+   a separate cold-verify session — a scoped, proportionate exception for
+   a tiny well-gated docs transcription. The automated gate (Group O) is
+   what made that exception safe.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No DEC. Process note (carried to PROJ-002 close): for tiny
+   literal-artifact docs specs with an automated content gate, a
+   coordinator direct-verify can stand in for a full cold-verify session
+   — proportionate, not a discipline erosion. The slug decision (clickable
+   compare-links must resolve to the real source remote, not the
+   product/tap name) is a durable bit of release hygiene worth remembering.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None new. SPEC-037 (v0.2.0 release cut) is the LAST STAGE-008 spec,
+   then PROJ-002 close. Out-of-scope follow-ups flagged across the stage:
+   README bare-cp-style backup mention; the blog/README.md "v0.1.0 history"
+   line — both for a future README/blog pass, not this stage.
