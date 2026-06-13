@@ -7,7 +7,7 @@
 task:
   id: SPEC-037
   type: chore                      # release mechanics, not feature code
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: high                   # release-cutting spec; closes STAGE-008 + gates PROJ-002 close
   complexity: S                    # runbook + pre-flight + verification checklist; no code
@@ -537,29 +537,50 @@ single path as expected noise, not a dirty-tree blocker for the release.
 *Filled in at the end of the **build (REHEARSAL)** cycle, before advancing to
 verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** (rehearsal: gates provable without the real
-  cut — P1–P4 green, snapshot version-wired, smoke proven on throwaway targets
-  — yes/no; the cut / post-release / switch-back ACs are coordinator-time)
-- **New decisions emitted:** none expected
+- **Branch:** none — rehearsal produces no committable file changes
+- **PR (if applicable):** none (no branch opened; no code changed; the cycle-advance
+  commit below is the only repo change)
+- **All acceptance criteria met?** YES (rehearsal scope): P1–P4 all green;
+  snapshot version-wired (`0.1.0-SNAPSHOT-c0fd45c`, not `dev`); v0.2.0 surface
+  smoke passed on throwaway DB; DEC-021 safety belt fired on v0.1.x-seeded DB
+  (backup sidecar `db.sqlite.pre-0004_add_projects.20260613T061752Z.backup`
+  appeared; seed entry survived). Cut/post-release/switch-back ACs are
+  coordinator-time.
+- **New decisions emitted:** none
 - **Deviations from spec:**
-  - [list]
+  - Runbook Step 2 (RC SMOKE GATE) uses `--tag demo` for `brag add`; the actual
+    flag is `--tags` (plural, per `brag add --help`). Corrected during rehearsal.
+    The runbook text should read `--tags demo` before the real cut.
+  - Snapshot version string is `0.1.0-SNAPSHOT-c0fd45c` (not `0.2.x-SNAPSHOT-…`)
+    because `v0.2.0` has not been tagged yet. Expected per spec ("P4 assertion is
+    'not dev'"); no fix needed.
+  - `brag project here` returns `smoke	active	-` (three-column output including a
+    `-` path column), not just `smoke`. Minor cosmetic difference from the runbook's
+    prose "→ resolves 'smoke'"; behavior is correct.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - Fix the runbook: `--tag demo` → `--tags demo` in the RC SMOKE GATE block
+    (coordinator edits before the real cut, or a quick chore commit on main).
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the rehearsal go? What friction did the runbook create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — The runbook used `--tag` (singular) in the smoke step; the CLI flag is
+   `--tags` (plural). One failed run was needed to discover this. The spec
+   is otherwise extremely precise — every command ran correctly once the flag
+   was corrected.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — None. DEC-001 (no-cgo) and DEC-021 (safety belt) are the right citations.
+   The `one-spec-per-pr` constraint correctly applies to the P5/P6 release-prep
+   PR. All four constraints listed are exercised.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Run `brag add --help` at the start of the smoke step to confirm exact flag
+   names before transcribing runbook commands. Alternatively, the spec could note
+   that `-T` / `--tags` is the tag flag for `brag add` in the smoke step to
+   prevent the same trip for the real cut.
 
 ---
 
