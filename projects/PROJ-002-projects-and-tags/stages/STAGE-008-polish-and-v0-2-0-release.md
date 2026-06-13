@@ -175,14 +175,17 @@ L — mirroring the STAGE-007 SPEC-029→033 peel discipline.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-034 (not yet written) — **M** *(L-watch: peel architecture into a
-      separate S if tutorial + architecture together read L)* — **Comprehensive
-      doc sweep.** `docs/tutorial.md` projects walkthrough + WAL-safe backup
-      recipe; `docs/architecture.md` diagram + responsibilities refresh
-      (project command group, `0004` migration, `projects`/`project_locations`
-      tables, project Store methods); final `docs/api-contract.md` consistency
-      / stability / version pass. Runs the premise-audit status-change greps.
-      Likely **no DEC** (documentation reflecting shipped behavior).
+- [~] SPEC-034 (design) — **M** *(L-watch RESOLVED: HOLD as one M, no peel —
+      architecture refresh is mechanical)* — **Comprehensive doc sweep.**
+      `docs/tutorial.md` projects walkthrough (as a `### subsection of §4`,
+      NOT a new top-level § — `scripts/test-docs.sh` P7/R1 anchor on §9/§10,
+      so renumbering would break tests; the §9 grep caught this) + §5
+      WAL-safe backup recipe + the SPEC-036 auto-backup behavior;
+      `docs/architecture.md` diagram + responsibilities refresh;
+      `docs/api-contract.md` + `docs/data-model.md` consistency/version pass.
+      No DEC (docs of shipped behavior; DEC-017..021 cited of record).
+      22 grep-gradeable ACs + `scripts/test-docs.sh` exits 0. README bare-cp
+      flagged as out-of-scope follow-up.
 - [ ] SPEC-035 (not yet written) — **S** — **CHANGELOG `[0.2.0]`.** Write the
       `[0.2.0]` entry (tags normalization / projects / safety belt; DECs of
       record 015–020); reconcile the stale `[Unreleased]` `completion` line,
