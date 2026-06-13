@@ -140,6 +140,11 @@ auto-quoting rationale and the rejected alternatives.
   forward migration.
 - **Backward compatibility:** once shipped, a migration file is never
   edited. Errors only get fixed by a follow-up migration.
+- **Snapshot before migrate.** On `storage.Open`, if an existing
+  database has pending migrations, it is copied to a timestamped
+  sidecar (`<db>.pre-<version>.<UTC>.backup`) via `VACUUM INTO`
+  **before** the migration transaction runs; a failed snapshot aborts
+  `Open` rather than migrate an un-backed-up DB (DEC-021, SPEC-036).
 
 ## Indexes
 
@@ -175,11 +180,12 @@ Shipped in STAGE-007 (SPEC-027):
   markdown view, reparses on save, `UPDATE`s the row, bumps
   `updated_at`.
 - **Delete.** `brag delete <id>` issues a `DELETE`. No soft-delete
-  column and no audit trail in v0.1 — the SQLite file is the backup.
+  column and no audit trail in v0.1 — the SQLite file is the source of
+  truth; see the backup recipe below.
 - **Archive / retention.** None. All rows live forever. The user can
   `brag export` their full DB as a Markdown report or as a raw SQLite
   file copy.
-- **Backup.** Copy the file. That is the supported mechanism.
+- **Backup.** Take a consistent snapshot with `sqlite3 ~/.bragfile/db.sqlite ".backup '…'"` or `VACUUM INTO` (preferred over a bare `cp`); a migration-time auto-backup also snapshots before any schema upgrade (DEC-021). See `docs/tutorial.md` §5.
 
 ## Future schema shapes (deferred, not in PROJ-001)
 
@@ -203,6 +209,7 @@ None of them land in PROJ-001.
 - `DEC-015` — normalized tag storage (`tags` + `taggings` join, polymorphic; supersedes DEC-004)
 - `DEC-016` — tag mutation semantics: `brag tags` in-use-only taxonomy, rename-errors-into-existing, merge via DELETE+INSERT de-dup, orphan tags invisible (no GC)
 - `DEC-017` — `entries.project` ↔ `projects` relationship: soft string match (free text, opportunistic join on `projects.name`, zero backfill); `projects.status` Store-validated enum; single `state_note` free-text column
+- `DEC-021` — migration auto-backup durability model (VACUUM INTO snapshot before applying a pending migration; failure aborts Open)
 - `DEC-005` — INTEGER auto-increment primary keys (MVP)
 - `DEC-011` — shared JSON output shape for `brag list --format json` and `brag export --format json`: 9-key naked array mirroring the `entries` column names in order (`id, title, description, tags, project, type, impact, created_at, updated_at`).
 - `DEC-013` — markdown export shape for `brag export --format markdown`: level-1 document heading, provenance block, `**By type**` / `**By project**` summary, entries grouped under `## <project>` (alphabetical-ASC; `(no project)` last) with within-group chronological-ASC ordering; `--flat` swaps the grouping for a single `## Entries (chronological)` wrapper.

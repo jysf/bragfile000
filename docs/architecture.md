@@ -29,6 +29,10 @@ graph TD
     Main --> ExportCmd[Export<br/>export --format md / json]
     Main --> DeleteCmd[Delete<br/>delete + y/N confirm]
     Main --> Completion[Completion<br/>completion zsh / bash / fish]
+    Main --> Tags[Tags<br/>tags / tag rename / tag merge]
+    Main --> Project[Project<br/>project new / list / show / status<br/>/ here / edit / archive / delete]
+    Tags --> Store
+    Project --> Store
 
     Capture --> EditorPkg[internal/editor<br/>$EDITOR launch + tempfile + parse]
     Capture --> Store
@@ -43,26 +47,29 @@ graph TD
     Config -.path.-> Store
     Store[internal/storage.Store<br/>typed API; no SQL leaks upward]
     Store -->|database/sql| Driver[modernc.org/sqlite<br/>pure-Go, no CGO]
-    Driver --> DB[(~/.bragfile/db.sqlite<br/>mode 0600<br/>entries + entries_fts + schema_migrations)]
-    Store -.embeds.-> Migrations[migrations/0001_initial.sql<br/>migrations/0002_add_fts.sql<br/>migrations/0003_normalize_tags.sql<br/>via embed.FS]
+    Driver --> DB[(~/.bragfile/db.sqlite<br/>mode 0600<br/>entries + entries_fts + schema_migrations<br/>+ tags + taggings + projects + project_locations)]
+    Store -.embeds.-> Migrations[migrations/0001_initial.sql<br/>migrations/0002_add_fts.sql<br/>migrations/0003_normalize_tags.sql<br/>migrations/0004_add_projects.sql<br/>via embed.FS]
     Migrations -.applied on Open inside tx.-> DB
+    Store -.snapshots before migrating.-> Backup[internal/storage/backup.go<br/>VACUUM INTO pre-migration sidecar]
+    Backup -.VACUUM INTO.-> DB
 
     classDef cli fill:#e8f4ff,stroke:#5b8dbe,color:#1a3a5c
     classDef helper fill:#fff4d6,stroke:#b8941f,color:#5a4a0a
     classDef storage fill:#ffe8e8,stroke:#bc4a4a,color:#5c1a1a
     classDef external fill:#f0f0f0,stroke:#999,stroke-dasharray:5 5,color:#444
-    class Main,Capture,Retrieve,Digest,ExportCmd,DeleteCmd,Completion cli
+    class Main,Capture,Retrieve,Digest,ExportCmd,DeleteCmd,Completion,Tags,Project cli
     class EditorPkg,Aggregate,ExportPkg,Config helper
-    class Store,Driver,Migrations storage
+    class Store,Driver,Migrations,Backup storage
     class User,Stdin,Editor,DB,Stdout external
 ```
 
 Diagram conventions: blue = CLI command surface (Cobra); yellow =
 internal helper packages; red = storage layer (the I/O boundary);
 grey-dashed = external boundary (user, subprocesses, files, stdin/
-stdout). The twelve subcommands are clustered into six functional
-groups rather than listed individually — see the per-command
-contracts in [./api-contract.md](./api-contract.md).
+stdout). The command surface is clustered into functional groups —
+capture, retrieve, digest, export, delete, tags, projects, completion
+— rather than listed individually; see the per-command contracts in
+[./api-contract.md](./api-contract.md).
 
 ### Responsibilities
 
@@ -71,7 +78,7 @@ contracts in [./api-contract.md](./api-contract.md).
 | `cmd/brag` | Process entrypoint. Constructs the root `*cobra.Command`, wires subcommands, handles top-level flags (`--db`, `--version`), calls `os.Exit` with the right code. Contains no business logic. |
 | `internal/config` | Resolves the DB path from `--db` flag → `BRAGFILE_DB` env → `~/.bragfile/db.sqlite`. Creates parent directory on first use. Single source of truth for path resolution. |
 | `internal/cli` | One file per subcommand. Each exports a `func New<Name>Cmd(deps) *cobra.Command`. Depends on `storage.Store` (an interface or concrete type) for all persistence. Does no SQL. |
-| `internal/storage` | `Store` struct wrapping `*sql.DB`. Embeds migration SQL files and applies them on `Open`. Exposes typed methods (`Add`, `List`, `Get`, `Update`, `Delete`, `Search`, `TagCounts`, `RenameTag`, `MergeTags`) — no SQL leaks upward. Owns the `Entry` and `TagCount` types. Tags are stored in a normalized `tags`/`taggings` join (DEC-015 / SPEC-025); `Entry.Tags` is a reconstructed comma-joined projection. `entries_fts` (regular own-content FTS5) indexes title, description, tags projection, project, impact and stays in sync via 6 SQL triggers. |
+| `internal/storage` | `Store` struct wrapping `*sql.DB`. Embeds migration SQL files and applies them on `Open`. Exposes typed methods for entries (`Add`, `List`, `Get`, `Update`, `Delete`, `Search`), tags (`TagCounts`, `RenameTag`, `MergeTags`), and projects (`CreateProject`, `GetProject`, `GetProjectByName`, `ListProjects`, `ProjectStatuses`, `AddLocation`, `RemoveLocation`, `EditLocations`, `UpdateProject`, `ArchiveProject`, `DeleteProject`, `ProjectForPath`) — no SQL leaks upward. Owns the `Entry`, `TagCount`, `Project`, and `ProjectStatus` types. Projects are a first-class entity (`projects` + `project_locations` tables, DEC-017 / SPEC-027); `entries.project` joins `projects.name` by soft string match. Tags are stored in a normalized `tags`/`taggings` join (DEC-015 / SPEC-025); `Entry.Tags` is a reconstructed comma-joined projection. `entries_fts` (regular own-content FTS5) indexes title, description, tags projection, project, impact and stays in sync via 6 SQL triggers. On `Open`, `backup.go` snapshots an existing DB via `VACUUM INTO` to a timestamped sidecar **before** any pending migration runs and **aborts** the open if that snapshot fails — never migrating an un-backed-up DB (DEC-021). |
 | `internal/editor` | (STAGE-002) Launches `$EDITOR` against a templated markdown buffer; parses front-matter on save. Used by `add` (no-args mode) and `edit`. |
 | `internal/export` | (STAGE-003) Markdown-report and JSON exporters (`brag export --format markdown\|json`). |
 | `internal/aggregate` | (STAGE-004) Rule-based digest helpers — `ByType` / `ByProject` / `GroupEntriesByProject` / `Streak` / `MostCommon` / `Span` / `rangeCutoff`. Shared by `summary`, `review`, and `stats` per DEC-014's rule-based output envelope. No SQL — operates over `[]Entry` returned by `Store`. |
@@ -149,3 +156,8 @@ machine. Distribution (STAGE-005) uses goreleaser to produce macOS
   - `DEC-005` — integer auto-increment primary keys for MVP
   - `DEC-015` — normalized tag storage (`tags` + `taggings`, polymorphic; supersedes DEC-004)
   - `DEC-016` — tag mutation semantics (`brag tags`, `brag tag rename`, `brag tag merge`; merge via DELETE+INSERT, orphans invisible)
+  - `DEC-017` — `entries.project` ↔ `projects` soft string match; project status enum + state_note
+  - `DEC-018` — `brag project delete` blast radius (entries untouched; archive vs delete)
+  - `DEC-019` — `brag project here` / add auto-fill nearest-ancestor resolution
+  - `DEC-020` — `brag project edit` location-editing semantics (atomic, verbatim, no updated_at bump)
+  - `DEC-021` — migration auto-backup durability model (VACUUM INTO snapshot before migrate; failure aborts)

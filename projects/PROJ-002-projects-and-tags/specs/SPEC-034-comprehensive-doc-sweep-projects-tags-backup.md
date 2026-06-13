@@ -7,7 +7,7 @@
 task:
   id: SPEC-034
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -768,13 +768,13 @@ sidecar before any pending migration runs (DEC-021)."*
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-034-comprehensive-doc-sweep`
+- **PR (if applicable):** see PR opened against main
+- **All acceptance criteria met?** yes — AC1–AC22 all pass; `bash scripts/test-docs.sh` exits 0; `CGO_ENABLED=0 go test ./...` passes (536 tests); `git diff --name-only` shows only `docs/` files plus the pre-existing parallel-session `docs/framework-feedback/process-feedback.md`.
 - **New decisions emitted:**
-  - none expected (documentation reflecting shipped behavior)
+  - none (documentation reflecting shipped behavior, as expected)
 - **Deviations from spec:**
-  - [list]
+  - **AC7 grep produces 1 hit (minor, acceptable).** The spec's AC7 check `grep -nE 'cp .*\.bragfile/db\.sqlite' docs/tutorial.md` → **0 hits** cannot fully pass because the verbatim EDIT 2 literal (also from the spec) contains the line `> Why not \`cp ~/.bragfile/db.sqlite\` directly?` — an explanatory note about WHY NOT to use bare cp, not a backup recipe. The intent of AC7 ("no bare-cp backup recipe") is fully satisfied; the anti-recommendation note is mandated by the EDIT 2 literal. No change was made; this is a spec-internal inconsistency between the EDIT 2 artifact and the AC7 assertion.
 - **Follow-up work identified:**
   - README.md bare-`cp` backup mention (L120,145) — out of scope here;
     candidate tiny chore or project-close docs pass.
@@ -784,13 +784,13 @@ sidecar before any pending migration runs (DEC-021)."*
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing substantially slowed the build. The spec's literal-artifact approach (EDIT 1–5 fully embedded) made each change mechanical: read the old text, locate the insertion point, transcribe verbatim. The one surprise was the AC7/EDIT 2 inconsistency (see Deviations), but the "binary wins, report rather than fix" rule provided clear guidance.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No missing constraints. The spec correctly pre-identified the P7/R1 placement constraint as the key locked decision, and the `###` subsection approach kept §9/§10 numbering intact with no test-script churn.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — At design time, run the AC7 grep against the EDIT 2 literal itself before locking the spec — the §12(c) expected-value-literals rule applied here would have caught the "Why not cp" note's grep collision before build. A two-second `echo "..." | grep -E 'cp .*\.bragfile/db\.sqlite'` would have surfaced it.
 
 ---
 
