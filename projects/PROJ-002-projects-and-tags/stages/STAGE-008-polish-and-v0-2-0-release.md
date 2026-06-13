@@ -175,8 +175,8 @@ L — mirroring the STAGE-007 SPEC-029→033 peel discipline.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [~] SPEC-034 (design) — **M** *(L-watch RESOLVED: HOLD as one M, no peel —
-      architecture refresh is mechanical)* — **Comprehensive doc sweep.**
+- [x] SPEC-034 (shipped on 2026-06-12) — **M** *(L-watch RESOLVED: held as
+      one M, no peel — architecture refresh was mechanical)* — **Comprehensive doc sweep.**
       `docs/tutorial.md` projects walkthrough (as a `### subsection of §4`,
       NOT a new top-level § — `scripts/test-docs.sh` P7/R1 anchor on §9/§10,
       so renumbering would break tests; the §9 grep caught this) + §5
@@ -206,7 +206,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       formula bump; verify (or document the limitation on) a clean
       `brew upgrade` from v0.1.x. No DEC; pure release mechanics.
 
-**Count:** 1 shipped / 0 active / 3 pending
+**Count:** 2 shipped / 0 active / 2 pending
 
 **Complexity check:** 4 specs, all S/M by construction. One above the brief's
 "~2–3 specs" estimate — the extra is the migration safety belt promoted from

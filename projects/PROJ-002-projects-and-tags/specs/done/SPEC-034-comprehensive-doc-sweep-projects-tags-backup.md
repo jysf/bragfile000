@@ -7,7 +7,7 @@
 task:
   id: SPEC-034
   type: story                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -800,10 +800,24 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Write doc-sweep ACs as grade-by-intent, not raw greps. AC7's literal
+   grep (`cp .*\.bragfile/db\.sqlite`) flagged the anti-pattern callout
+   ("Why NOT `cp` directly?") as a violation, even though the doc is correct
+   and the callout is good teaching. The intent ("no bare-cp backup recipe")
+   was satisfied; the grep was too blunt. A doc AC should state the intent
+   and offer the grep as a hint, not as the pass/fail gate.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No DEC (docs of shipped behavior). The strongest process lesson:
+   `scripts/test-docs.sh` anchors on tutorial section numbers (§9/§10), so
+   doc structure is test-load-bearing — the §9 status-change grep caught
+   this at design and forced the "subsection not new top-level §" placement.
+   This reinforces the already-codified §9 audit-grep family (run the greps,
+   reconcile against reality); no new codification needed, but a strong
+   confirming case. WATCH (carried): grade-by-intent for doc ACs (N=1).
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — One out-of-scope follow-up flagged at design: README.md still has a
+   bare-`cp`-style backup mention (a JSON-dump line, lower priority) — worth
+   a tiny follow-up or folding into a future README pass, NOT this stage.
+   Remaining STAGE-008: SPEC-035 (CHANGELOG [0.2.0]), SPEC-037 (v0.2.0 cut).
