@@ -302,7 +302,7 @@ mkdir -p /tmp/brag-smoke /tmp/brag-smoke-proj
 /tmp/brag-rc/brag project new smoke --path /tmp/brag-smoke-proj
 ( cd /tmp/brag-smoke-proj && /tmp/brag-rc/brag project here )   # → resolves "smoke"
 /tmp/brag-rc/brag project status
-( cd /tmp/brag-smoke-proj && /tmp/brag-rc/brag add --title "smoke entry" --tag demo )
+( cd /tmp/brag-smoke-proj && /tmp/brag-rc/brag add --title "smoke entry" --tags demo )
 /tmp/brag-rc/brag list --show-project       # → entry auto-filled project=smoke
 /tmp/brag-rc/brag tags                       # → "demo" with count 1
 unset BRAGFILE_DB
