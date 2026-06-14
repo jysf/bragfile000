@@ -123,6 +123,10 @@ JSON dump (for AI piping or backup):
 brag export --format json --since 90d > q-review.json
 ```
 
+To publish a slice of brags to a website (filter, then reshape into
+clean blog prose with `jq`), see the tutorial's
+[Publish your brags to a website](docs/tutorial.md) section.
+
 ## Weekly and monthly digests
 
 Rule-based aggregations of recent entries — no LLM, no network.

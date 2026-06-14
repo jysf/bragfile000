@@ -207,6 +207,54 @@ pull titles from plain output keep working — under `-P`, titles
 shift to field 4 (`cut -f4`) and the project lands at field 3
 (`cut -f3`).
 
+Because the project column is just field 3, you can answer common
+"which projects am I bragging about" questions with `awk`/`sort`/
+`uniq` — no dedicated subcommand needed:
+
+```bash
+# Distinct project names across all entries
+brag list -P | awk -F'\t' 'NF>2 {print $3}' | sort -u
+
+# Same, but ranked by how many entries each project has
+brag list -P | awk -F'\t' 'NF>2 {print $3}' | sort | uniq -c | sort -rn
+```
+
+Always pass `awk -F'\t'` — the default whitespace split only lands
+on the project column by luck (it relies on `created_at` having no
+space). For a format-proof version that survives column reordering,
+parse the JSON instead:
+
+```bash
+brag list -P --format json \
+  | jq -r '.[].project | select(. != "" and . != null)' \
+  | sort -u
+```
+
+These count the free-text `project` field stored **on entries**,
+which is distinct from the project **registry** (`brag project
+list`) — see that command for the registered-projects view.
+
+The same `--format json | jq | sort | uniq -c` shape answers the
+type and tag questions too. `type` is a plain string; `tags` is a
+comma-joined string, so split it before counting:
+
+```bash
+# Entries per type, most common first
+brag list --format json \
+  | jq -r '.[].type | select(. != "" and . != null)' \
+  | sort | uniq -c | sort -rn
+
+# Entries per tag (one entry can carry several tags)
+brag list --format json \
+  | jq -r '.[].tags | select(. != "" and . != null) | split(",")[]' \
+  | sort | uniq -c | sort -rn
+```
+
+The tag count has a built-in shortcut — `brag tags` lists every tag
+with its usage count directly. Reach for the `jq` form when you want
+to combine it with a filter (e.g. tag counts within one project) or
+reshape the output.
+
 ### Machine-readable output: `--format json|tsv`
 
 When you want to pipe entries into `jq`, a spreadsheet, or another
@@ -284,6 +332,58 @@ Filters: --project platform --since 90d
 `## Entries (chronological)` wrapper — useful when you want a pure
 timeline rather than project-axis buckets. The full shape is locked by
 [DEC-013](../decisions/DEC-013-markdown-export-shape.md).
+
+### Publish your brags to a website
+
+To turn a slice of your brags into a post — say, everything you shipped
+on one project — start from the same `export`, filtered to what you want
+to publish:
+
+```bash
+brag export --format markdown --project bragfile --out bragfile.md
+brag export --format markdown --since 90d --out last-quarter.md
+brag export --format markdown --project bragfile --type shipped --out shipped.md
+```
+
+That markdown is valid and pasteable, but the default per-entry field
+table reads like a debug dump. For clean blog prose — a heading, a date
+line, the impact, and the description as body — reshape the JSON export
+with `jq`:
+
+```bash
+brag export --format json --project bragfile --out brags.json
+jq -r 'sort_by(.created_at) | .[] |
+  "## \(.title)\n",
+  "*\(.created_at[0:10])*\(if .tags != "" then " · `\(.tags)`" else "" end)\n",
+  (if .impact != "" then "**Impact:** \(.impact)\n" else empty end),
+  (if .description != "" then .description + "\n" else empty end)
+' brags.json > site.md
+```
+
+Each entry becomes a `## <title>` your site's markdown renderer styles
+natively, with the **impact** — the outcome, the part worth bragging
+about — surfaced under it. Tweak the template freely: drop `tags`, add a
+`"---\n"` line between entries for separators, or filter to `--type
+shipped` for a milestones-only post. Pipe through `pandoc site.md -o
+site.html` if your site wants HTML.
+
+**Slicing by release or time window.** Brags carry a *product* name in
+`project` (e.g. `bragfile`), not a release or milestone label — so to
+post "just what shipped in v1," slice by date. `export` itself only
+filters `--since` (on or after), so add a `jq` upper bound for a closed
+window:
+
+```bash
+# everything before a cutoff date (e.g. one release era)
+jq 'map(select(.created_at < "2026-06-01"))' brags.json > v1.json
+# a closed window: on/after A and before B
+jq 'map(select(.created_at >= "2026-01-01" and .created_at < "2026-04-01"))' \
+  brags.json > q1.json
+```
+
+Then run the prose template above over the sliced file. Pick the cutoff
+from a natural gap in your history (`brag list -P` shows dates) so a
+release boundary lands cleanly between entries.
 
 ### Search your entries
 
