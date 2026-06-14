@@ -670,10 +670,13 @@ cp ~/brag-backup.db ~/some-private-repo/   # the snapshot is safe to plain-copy
 
 ### Automatic backup before an upgrade migrates your DB
 
-When a newer `brag` opens your existing database and needs to apply a
-schema migration, it **snapshots the database first** — automatically,
-before touching it. The snapshot lands next to your DB as a timestamped
-sidecar:
+When you move to a newer `brag` — e.g. `brew upgrade bragfile` — there is
+**no manual migration step**: the first command you run opens your
+existing database, applies any new schema migrations automatically, and
+your entries carry forward (a v0.1.x database upgrades to the v0.2.0
+schema in place, losslessly). Before it applies anything, it **snapshots
+the database first** — automatically, before touching it. The snapshot
+lands next to your DB as a timestamped sidecar:
 
 ```
 ~/.bragfile/db.sqlite.pre-0004_add_projects.20260612T093015Z.backup

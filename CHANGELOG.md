@@ -49,6 +49,18 @@ auto-fill. Schema migrations now snapshot your database before they run.
   than proceeding. Non-interactive: safe in `brag add --json` and other
   piped, non-TTY workflows.
 
+### Upgrading from v0.1.x
+
+No manual steps. `brew upgrade bragfile` (or any newer binary) migrates
+your existing `~/.bragfile` database in place on the first command you
+run — tags and entries carry forward losslessly. The migration writes a
+timestamped `*.backup` snapshot beside your database first, so the
+upgrade is recoverable. The upgrade is one-way: a v0.1.x binary cannot
+read a v0.2.0 database afterward (restore the snapshot if you need to go
+back). On macOS, an unsigned binary may trigger a Gatekeeper prompt on
+first run — see the README's Gatekeeper note for the one-time `xattr`
+clear.
+
 ### Decisions of record
 
 The following architectural decisions are committed in this release.
