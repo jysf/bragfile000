@@ -241,3 +241,149 @@ most of this because they force the test author to reason about the
 actual output rather than the prescribed output. But at scale, a
 second-pass "test quality" review during verify might be worth
 formalizing as its own check.
+
+---
+
+# Learning session — after ~31 specs / 6 stages (2026-06-12)
+
+*Second structured learning session, run during STAGE-007 (PROJ-002).
+Mined all 30 shipped-spec reflections (SPEC-001…031), all 7 stage
+reflections, the session-log and backlog. Same lens as the round above:
+feedback for the template author, not part of `bragfile` itself.*
+
+**Big picture: the reflection→codification loop is working very well.**
+Of ~90 distinct findings across the corpus, the large majority were
+*already* harvested into AGENTS.md §9/§12, the premise-audit sub-template,
+or §4 release ops. The loop the template prescribes (Ship-Q2 "does any
+template/constraint/decision need updating?" → WATCH → codify at a stage
+close) is the engine doing this, and it is genuinely paying. So this round
+is deliberately narrow: (A) lessons that have hit their bar but are
+**stranded**, (B) **structural** gaps that keep regenerating the same class
+of friction, and (C) **reconciling** the first feedback round.
+
+## Headline: WATCH items lack cross-stage visibility (minor — the loop is not losing lessons)
+
+*Note (corrected after author feedback): an earlier draft of this section
+called pending lessons "stranded." That overstated it. The mechanism is
+working as designed — see below.*
+
+Lessons accumulate as "WATCH at N=1 / N=2" notes inside the **stage file**
+that owns them, and are promoted to AGENTS.md at a stage **close**.
+`flag-default-explicitness` is the live example: it reached **N=3**
+(SPEC-026 `--format ""`, SPEC-028, SPEC-029) and is correctly recorded as a
+WATCH item in STAGE-007 and queued to codify at that stage's close —
+SPEC-029's own reflection explicitly says *"do NOT codify mid-stage."*
+STAGE-007's `## Stage-Level Reflection` is blank only because **the stage
+is still open**, which is the expected, correct state. Nothing is lost.
+
+So this is a *visibility* nicety, not a defect: a WATCH item lives in one
+stage file, so there is no single cross-stage view of "what's queued to
+codify and at what N." That only bites in narrow cases — a lesson confirmed
+by specs spanning two stages, or a long-open stage accumulating several
+ready rules.
+
+**Optional recommendation (low priority):** a small roll-up table
+(`lesson | confirming cases | bar | owning stage | status`) in
+`docs/framework-feedback/`, regenerated at each stage close, would give an
+at-a-glance view across stages. Genuinely optional — the per-stage WATCH
+notes already do the load-bearing work; this is convenience, not a fix.
+
+## A. Pending codifications (queued — confirm they land at their stage close)
+
+*These are tracked correctly as per-stage WATCH items; the note here is
+just to make sure they actually get promoted when their stage closes,
+rather than to suggest mid-stage action.*
+
+1. **Flag-default-explicitness (N=3 — queued for STAGE-007 close).** Specs
+   for literal-artifact CLI commands repeatedly name a flag's *accepted
+   values* but not its *default*; build then guesses (`--format` defaulted
+   to `""` vs `"json"`). When STAGE-007 closes, land it: spec template /
+   Prompt 2b should require stating each flag's default, not just its
+   accepted values.
+2. **cobra `SilenceErrors:true` + errBuf-asserting user-error tests
+   (N=2, SPEC-030/031).** Non-obvious pattern; the spec's "SilentErr or
+   equivalent" hint cost a test-run failure to surface twice. A concrete
+   example in Notes (parallel to the existing `"Aborted."` example) removes
+   the round-trip.
+3. **os-dependent test seams (SPEC-031).** Testing `os.Getwd`/`os.Getenv`
+   needs an indirection seam (`var getCwd = os.Getwd`) that the literal
+   spec omitted. When a spec touches os-level calls, Notes should call out
+   the seam explicitly.
+4. **"AC-says-all-N → test each" (SPEC-029).** When an acceptance criterion
+   applies to several commands but coverage leans on one shared-helper
+   test, verify catches the gap. Candidate spec-template nudge under
+   Failing Tests.
+
+## B. Structural gaps (beyond appending more AGENTS.md prose)
+
+1. **Recurring spec-clarity misses cluster on stack specifics.** The same
+   *classes* keep recurring — flag defaults, `SilenceErrors`, os seams,
+   FTS5 hyphen-as-NOT, bm25 ordering nondeterminism, nullable-column scan
+   types. A generic spec template can't encode these, so they re-surface
+   at build/verify each time. **Recommend a stack-specific "gotchas
+   checklist"** (Go + cobra + sqlite/FTS5), a companion to
+   `premise-audit.md`, that the design cycle runs through. Pre-empts the
+   single most common recurring friction at design instead of discovering
+   it downstream.
+2. **AGENTS.md §9/§12 accretion → extract another sub-template.** The
+   premise-audit extraction into a referenced sub-doc was the right move;
+   repeat it for the test-assertion rule family (split-buffer, monotonic
+   tie-break, distinctive-token, heading line-equality, NOT-contains self-
+   audit, fail-first run). It's now large enough to live as a referenced
+   "test-assertion checklist," leaving §9 a pointer — which also relieves
+   the cold-read context cost flagged as friction #6 in the round above.
+3. **Deviations-section noise.** Non-deviations keep landing in the
+   Deviations list (SPEC-014/015, session-log notes it twice). Sharpen the
+   spec template's Deviations prompt to distinguish a *true* deviation from
+   a spec-sanctioned choice, so the section stays a real signal.
+4. **Role-boundary nit (matters most for `claude-plus-agents`).** A build
+   session marked the stage backlog `[x]/shipped` (SPEC-029) — that is the
+   ship step's job. One explicit line in Prompt 3: "do not mark the backlog
+   shipped; leave the in-progress marker."
+5. **trust-but-verify agent reports (N=2, SPEC-023).** Two sub-agent
+   sessions reported "pushed" while `origin` was still at the prior SHA.
+   For the multi-agent variant, a coordinator should `git ls-remote origin
+   <branch>` after any agent reports a push. Carry toward a §13 coordinator-
+   discipline line (variant-specific).
+
+## C. Reconcile the first feedback round (2026-04-20)
+
+Several round-1 recommendations appear **un-adopted**; they deserve an
+explicit accept-or-reject rather than silent drift:
+
+- **Quick-spec / lightweight-verify for chore/XS — not adopted.** Live
+  example *from this very session*: the `just specs-by-stage` name column
+  was a ~40-line tooling change that still ran the full feature-branch +
+  PR + CI path (PR #45). Either adopt a bounded lightweight lane (with the
+  strict boundary round 1 already proposed — "no constraint-touching code,
+  no new cobra command, no new storage method") or explicitly reject it and
+  record why.
+- **Cycle-duration line in Build Completion — not adopted.**
+- **Collapse Build Completion + Build-phase reflection — not adopted**
+  (still two overlapping sections; round 1's friction #5 stands).
+- **archive-spec false "all specs shipped" message** — confirm whether
+  fixed. The empty-`<answer>` ship precondition *did* land (good).
+- **`decisions/_template.md` `<repo-id>` auto-substitution** — confirm
+  whether fixed.
+
+## What's validated and should NOT change
+
+- **literal-artifact-as-spec** is now empirically *format-agnostic* (JSON
+  schema, bash hooks, markdown, YAML workflow, shell scripts, completion
+  scripts — all transcribed with zero drift). It is the highest-leverage
+  pattern in the framework; keep it the default for fixed-shape deliverables.
+- **The codification bar** (N=3 same-outcome / N=2 paired-opposing-outcome)
+  is a genuinely good meta-rule and the right guard against single-
+  observation pattern bloat. Its only weakness is the missing ledger
+  (Headline, above) — fix the visibility, not the bar.
+- **Fresh-session + spec-as-source-of-truth, one-PR-per-spec, DEC
+  confidence values** — all still paying; nothing here argues against them.
+
+## One meta-observation
+
+Round 1's risk was *complacency eroding the rules*. Two stages and ~23
+more specs later, the opposite also shows: the rules are so reliably
+harvested that the bottleneck has moved from "do we codify lessons?" to
+"can we *see* the lessons that are ready to codify?" The discipline
+graduated from a habits problem to a bookkeeping one — which is a good
+problem to have, and the WATCH-list ledger is the cheap fix for it.
