@@ -548,6 +548,155 @@ nothing is lost but the project stays focused.
 
 ---
 
+# Impact & Fun — PROJ-003 candidate cluster
+
+*Captured 2026-06-16 from a brainstorm during the STAGE-008 release hold.
+These are post-v0.2.0 feature ideas, grouped because they share two
+through-lines the user surfaced: (1) **passive surfacing** — the best
+features fire/surface on their own; don't make the user remember to run a
+command; (2) **impact over volume** — reward quality of captured outcomes,
+not raw entry counts. Likely a PROJ-003 ("delight + impact"). The
+polymorphic `taggings` + project substrate from PROJ-002 makes most of
+these cheap. Decide scope at PROJ-003 framing, informed by real v0.2.0
+dogfooding.*
+
+## Milestone notifications on `brag add` (liked — "easy and great")
+
+- **Idea:** When `brag add` crosses a threshold, print one celebratory
+  line. Total count (10 / 25 / 50 / 100 / 250 / 500 / 1000), streak
+  (7 / 30 / 100 days), per-project (10th / 50th brag on a project), and a
+  quiet "first brag this week/today."
+- **Design constraint (load-bearing):** stderr only, **TTY-only** (skip
+  when piped / non-TTY) so `brag add --json` and scripted pipelines stay
+  byte-clean — the project's stdout-is-data/stderr-is-humans spine.
+- **Cheap:** the counts/streaks already live in `internal/aggregate`.
+  Detect "crossed a threshold" from the post-insert total/streak.
+- **Why first:** best delight-to-effort ratio; it is *passive* (fires on
+  an action the user already takes).
+
+## Impact surfacing & the quarterly "super-brag" (IMPORTANT — the headline)
+
+- **The user's core ask:** pull number/date/impact/description over a
+  period and turn it into a *story* for the quarter — gather impact over a
+  month/quarter/year and produce insight / analysis / a synthesized
+  "super-brag." Surfacing impact is "interesting and important."
+- **Why it matters:** `impact` is the most valuable field for perf
+  reviews, promo packets, and self-narrative — but today it is only
+  retrievable via raw `export`. Nothing *synthesizes* it.
+- **Two complementary designs (do both):**
+  1. **Rule-based `brag impact --quarter|--month|--year|--since`** — an
+     impact-axis digest: every entry with a non-empty `impact`, grouped
+     by project/period, rendered as a clean markdown report
+     (date · title · impact · description). Performance-review /
+     promo-packet ready. Mirrors `brag summary`/`review`'s DEC-014
+     envelope, but axis = impact, not project.
+  2. **AI-pipe "super-brag"** — emit a clean impact bundle + a synthesis
+     prompt (exactly the `brag review` pattern) to pipe into an LLM for
+     the narrative quarterly story. Rule-based core, AI via piping —
+     consistent with the existing architecture (no built-in LLM).
+- **Passive angle (per the user's preference):** surface an impact recap
+  automatically — e.g. an end-of-quarter nudge, or an impact summary line
+  folded into `brag stats` (which the user already runs) rather than a
+  command they must remember.
+- **Virtuous loop:** an impact report rewards *filling in* `impact`,
+  which improves capture quality — ties to the stats reframe below.
+- **Related:** pairs with the shipped "publish your brags to a website"
+  tutorial recipe — a quarterly impact post writes itself.
+
+## `brag wrapped [year]` — shareable year-in-review (liked)
+
+- **Idea:** A "Spotify Wrapped"-style annual recap: total brags, top
+  projects/tags, longest streak, activity shape (sparkline), and an
+  impact highlight reel.
+- **Why:** highly shareable; pairs directly with the publish-to-website
+  recipe (a "2026 wrapped" post). Reuses the aggregate + impact work.
+
+## `brag achievements` — badges (liked, keep subtle)
+
+- **Idea:** Earned badges — Prolific (50 brags), Polyglot (5+ projects),
+  Consistent (4-week streak), Marathoner (100-day streak),
+  Impact-Driven (N entries with impact filled). `brag achievements` lists
+  earned + locked.
+- **Caution:** highest gimmick-risk of the cluster. Keep tasteful,
+  opt-in display; lean on *consistency/impact* badges over *volume* ones
+  to stay aligned with quality-over-quantity.
+
+## `brag stats` reframe + activity sparkline (liked, with corrections)
+
+- **Drop the bad metric:** "most brags in a week" / any raw-volume
+  leaderboard. The user is explicit: **quality > quantity** — volume is a
+  bad achievement signal.
+- **Add a sparkline (liked):** a unicode activity sparkline
+  (`▁▂▃▅▇▂▁`) of brags per week/month — it shows *shape of activity*, not
+  a ranked volume metric, so it sidesteps the quantity trap. Usable in
+  `stats` and in `wrapped`.
+- **Reframe stats around quality signals:** consistency (streaks),
+  **impact density** (% of entries with a non-empty `impact`), and
+  project/tag diversity — not totals-as-achievement.
+
+## Resurfacing (`brag random` / `brag on-this-day`) — considered, DEPRIORITIZED
+
+- **Verdict:** rejected as primary features. They require the user to
+  *run* them, and the user values passive surfacing over manual recall.
+- **Salvageable only passively:** if "on this day" appears, it should be
+  surfaced automatically (e.g. a single line in `brag stats`, or a
+  notify), never as a command the user must remember to invoke.
+
+## `brag project` usability (informed by dogfooding)
+
+- **Idea:** make the shipped `project` surface more usable. Confirmed-good
+  from a v0.2.0 pilot; the surface is complete, but ergonomics can grow:
+  - **project → entries shortcut.** Today you read a project's brags via
+    `brag list --project X`; nothing in the `project` command points
+    there. Option: `brag project show X` optionally tails recent entries,
+    or add a `brag project log X`.
+  - **macOS symlink papercut.** `/tmp`→`/private/tmp`-style symlinks can
+    defeat cwd matching (`EvalSymlinks` was deliberately out of scope,
+    DEC-019). Consider an opt-in resolve for symlinked project dirs.
+  - **`project status` plain output** has a trailing empty column when
+    `state_note` is blank (cosmetic).
+  - **auto-fill is silent** by design; consider an opt-in hint.
+- **Explicitly:** the user wants to *use* `brag project` on a real
+  installed v0.2.0 binary before deciding what else it needs. Let
+  dogfooding drive this list.
+
+## Adjacent data — is bragfile a personal work-log substrate? (strategic)
+
+- **The thread:** for an individual contributor who lives in the CLI (or
+  uses AI apps that run the CLI), what accomplishment-adjacent data is
+  *not* served by specialized tools and would be handy in a local SQLite +
+  CLI? bragfile's polymorphic `taggings` + project model is already a
+  generic capture/tag/relate/retrieve substrate; accomplishments are just
+  one axis.
+- **Candidate adjacent capture types:**
+  - **Decisions / ADRs** — a lightweight decision log (this very repo runs
+    on `DEC-NNN` files; dogfood it).
+  - **Learnings / TILs** — things figured out, searchable later.
+  - **Kudos / feedback received** — praise from others; gold for perf
+    reviews (overlaps the parked `peer`/`quote` field idea).
+  - **Metrics snapshots** — e.g. `p99=120ms` at a date; the before/after
+    numbers that make impact stories concrete and quantified.
+  - **Artifact links** — PR / commit / doc URLs tied to a brag for
+    provenance (overlaps the parked `--link`/`--refs` item).
+  - **Blockers / waiting-on**, **open questions / follow-ups**.
+  - **Goals / OKRs** — already paper-sketched as a 2nd/3rd taggable object
+    type; map brags → goals.
+- **For software teams on the CLI:** standup notes, PR-review activity,
+  on-call/incidents handled, mentoring/unblocking others, cross-team
+  collaboration — all accomplishment-adjacent and capturable.
+- **The meta-insight (ties to the passive preference):** the
+  highest-leverage capture is *automatic from the dev/AI workflow*. The
+  repo already ships `scripts/claude-code-post-session.sh` — passive
+  capture of brags / decisions / learnings / metrics from AI coding
+  sessions is the killer adjacency for an AI-CLI user, and it directly
+  answers "don't make me run things."
+- **Strategic question for PROJ-003 framing:** does bragfile stay
+  accomplishment-focused, or become a multi-type local-first work-log
+  substrate? The polymorphic schema already supports the latter cheaply —
+  this is a positioning decision, not a technical blocker.
+
+---
+
 ## Removed / delivered — keep the list honest
 
 *When an item is pulled into a stage and ships, list it here with
