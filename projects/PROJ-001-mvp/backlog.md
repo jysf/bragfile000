@@ -580,6 +580,13 @@ dogfooding.*
   period and turn it into a *story* for the quarter — gather impact over a
   month/quarter/year and produce insight / analysis / a synthesized
   "super-brag." Surfacing impact is "interesting and important."
+- **Distinct from `export` — impact is the LEDE, not a field (2026-06-16).**
+  `export` is good but treats `impact` as one column of nine. This feature
+  must *lean on impact harder*: each entry renders impact-first (the
+  outcome is the headline; title/date are supporting metadata), entries
+  with no `impact` are de-emphasized or dropped, and the report is
+  organized around outcomes — not a per-entry field dump. The test: it
+  should read like an accomplishments narrative, not a table.
 - **Why it matters:** `impact` is the most valuable field for perf
   reviews, promo packets, and self-narrative — but today it is only
   retrievable via raw `export`. Nothing *synthesizes* it.
