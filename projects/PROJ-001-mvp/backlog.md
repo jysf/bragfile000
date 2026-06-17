@@ -802,6 +802,11 @@ interesting / impactful surfaces below are the point, not decoration.
   accomplishment-focused, or become a multi-type local-first work-log
   substrate? The polymorphic schema already supports the latter cheaply —
   this is a positioning decision, not a technical blocker.
+- **Research prompt parked:** `docs/research/adjacent-data-prompt.md` — a
+  self-contained brief for a fresh (or `deep-research`) session to find
+  what developers / CLI types / sales engineers track in random files,
+  including non-project career-relational data (mentoring, kudos, network).
+  Run it, then fold the keepers back into this item.
 
 ---
 
