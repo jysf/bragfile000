@@ -560,6 +560,17 @@ polymorphic `taggings` + project substrate from PROJ-002 makes most of
 these cheap. Decide scope at PROJ-003 framing, informed by real v0.2.0
 dogfooding.*
 
+**Product thesis (why this matters beyond a log).** Recording what you did
+is table stakes. The differentiator — the thing that actually *helps*
+people, not just documents them — is turning that record into **fun,
+interesting, and impactful** output: stories, insight, a mirror on your
+own trajectory. North star: **agent-native accomplishment memory** — agents
+do the work *and* record why it mattered; you (and agents) read stories
+back out. As agents do more of the work, "what got accomplished and why it
+mattered" is exactly what they can capture and what humans most need
+(reviews, promos, identity), and almost no tool is built for it. The fun /
+interesting / impactful surfaces below are the point, not decoration.
+
 ## Milestone notifications on `brag add` (liked — "easy and great")
 
 - **Idea:** When `brag add` crosses a threshold, print one celebratory
@@ -609,6 +620,57 @@ dogfooding.*
   which improves capture quality — ties to the stats reframe below.
 - **Related:** pairs with the shipped "publish your brags to a website"
   tutorial recipe — a quarterly impact post writes itself.
+
+## Storytelling — turn brags into stories (the differentiator)
+
+- **Core reframe:** brags are *atoms*, stories are *molecules*, impact is
+  the *bond*. Storage is solved; the unsolved, interesting problem is
+  **composition** — assembling atoms into narrative.
+- **`brag story` composition axes** (same corpus → different stories):
+  - **project = arc** — a project's brags in time order have narrative
+    shape (setup → friction/`learned`/blockers → `shipped` → impact);
+    render the *journey*, not a list. Detect the genre (turnaround, grind,
+    discovery).
+  - **tag = capability / identity story** — all "performance" brags across
+    projects = "how I became the person who makes things fast." The story
+    people can't see about themselves.
+  - **time = chapter** — quarter/year as a chapter (`wrapped` is really the
+    story of your year).
+  - **audience = reshaping** — `brag story --audience promo|resume|blog|1:1`
+    — one corpus, many altitudes / voices / lengths.
+- **Narrative intelligence / the mirror (the novel bit):** the app
+  *notices things about you and tells you* — "your last 6 brags are all
+  unblocking others — you're operating like a lead"; "this project reads
+  like a turnaround"; "you undersold three of these — impact but no
+  numbers." People forget and undersell their own work; an evidence-backed
+  mirror on trajectory is emotionally resonant and a category most tools
+  don't touch. Promo/review is just the most acute instance of "I can't see
+  my own story."
+- **Build path:** rule-based composition (ordering, grouping, genre
+  heuristics) + AI-pipe for the prose, mirroring `brag review`. No built-in
+  LLM.
+
+## Impact depth — the "so what" ladder, density, compounding
+
+- **The "so what" ladder.** Impact is often stated at the wrong altitude:
+  *fixed the retry bug* → *cut on-call pages 40%* → *freed the team to ship
+  X* → *protected $Y in renewals*. The high-leverage move is *helping climb
+  the ladder* — e.g. an AI pass that keeps asking "and why did that matter?"
+  up to business altitude.
+- **Impact density (maybe the most behavior-changing metric).** Detect
+  which brags carry *quantified* impact (number + unit, ideally
+  before/after) vs. vague, and surface the gap: "12 of 40 brags this quarter
+  are quantified; the other 28 are invisible in a promo packet." Rewards
+  good capture; feeds the `stats` reframe.
+- **Impact matures — make it a living field.** A bug fix's impact is known
+  today; a framework everyone adopts compounds for months. Allow *appending
+  to impact later* ("6 months on, three teams build on this") — compounding
+  impact is the strongest promo evidence and nothing captures it today.
+- **Atoms → molecules (the super-brag umbrella).** Detect clusters of small
+  brags that sum to one headline accomplishment with aggregate impact — the
+  difference between a changelog and a story.
+- **Impact ÷ effort picks the genre.** Capturing rough effort lets the
+  narrative choose its angle (smart-leverage win vs. heroic grind).
 
 ## `brag wrapped [year]` — shareable year-in-review (liked)
 
@@ -666,6 +728,45 @@ dogfooding.*
 - **Explicitly:** the user wants to *use* `brag project` on a real
   installed v0.2.0 binary before deciding what else it needs. Let
   dogfooding drive this list.
+
+## Agent-driven capture — brags as a byproduct of work
+
+- **The unlock (already proven in the user's practice):** the agent that
+  did the work is best-positioned to log it — it holds title, change,
+  project (cwd), tags, and can articulate impact *while context is fresh*.
+  Capture-time impact > recalled-weeks-later impact, so this is where
+  storytelling quality is actually won.
+- **Ask for / confirm impact at capture (near-term, cheap, highest-leverage
+  — user idea).** Update the installed agent assets —
+  `examples/brag-slash-command.md`, the `scripts/claude-code-post-session.sh`
+  hook, and the JSON-schema doc — to instruct the agent to **ask the user
+  for the impact of the work, or confirm the impact, when adding a brag.**
+  Single biggest lever for downstream storytelling; mostly a prompt/asset
+  edit, so it could ship *ahead* of the larger PROJ-003 features.
+- **Auto-derive everything except impact:** project from cwd (shipped),
+  tags from languages/files touched, provenance (PR URL, commit SHA, files)
+  attached automatically — leaving the agent one real job: articulate
+  impact.
+- **Provenance = sourced stories.** Agent-attached links footnote every
+  brag ("shipped X (#123), which cut Y") — perfectly-sourced narrative
+  material. Overlaps the parked `--link` / `--refs` item.
+- **MCP server — OPEN QUESTION, not a slam dunk (user skeptical).**
+  Considered: expose bragfile as a *local* MCP server
+  (`brag_add` / `brag_search` / `brag_recent`) so agents capture via native
+  tool calls. It **runs locally** (a process over stdio against the same
+  `~/.bragfile` SQLite — no cloud). **But for shell-capable agents (Claude
+  Code), `brag add --json` over the shell is already a clean, equivalent
+  interface — the CLI *is* the agent API, which is why `--json` exists.**
+  MCP's real value is narrow: reaching agent surfaces that *can't* run a
+  shell (some sandboxed / desktop / hosted tools), typed tool
+  discoverability, and `brag_search` as a recall tool. **Verdict:** lower
+  priority; only worth building to reach non-shell agents — not a win over
+  the shell for the primary workflow.
+- **Concurrency wrinkle (real, technical).** `brag` runs in default SQLite
+  journal mode — no WAL, no busy-timeout. One human + one agent is fine;
+  *several agents writing at once can hit "database is locked."* If
+  multi-agent capture becomes real, enable WAL + a busy-timeout (interacts
+  with backup semantics — why the safety belt uses `VACUUM INTO`).
 
 ## Adjacent data — is bragfile a personal work-log substrate? (strategic)
 
