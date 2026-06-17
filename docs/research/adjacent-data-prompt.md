@@ -10,6 +10,12 @@ files because no tool serves it well locally. Findings feed the backlog's
 
 ---
 
+**This prompt is self-contained.** You do not need to read any repository, local, or external
+files to do this task — all required context is inline below. Do not attempt to open a codebase or
+local files. If you have web access, use it to ground findings in real public sources; if you do
+not, rely on your own knowledge, mark un-sourced claims clearly, and still produce the full
+analysis.
+
 You are researching ADJACENT DATA that developers and other CLI-oriented knowledge workers
 track in scattered, ad-hoc files — to inform a local-first tool's roadmap.
 
@@ -63,7 +69,10 @@ blockers & "waiting on" · open questions/follow-ups · goals/OKRs · people & r
 snippets · incidents/postmortems · meeting notes · ideas/someday · wins & losses · interview/hiring
 notes · "brag-document"-style work journals.
 
-## Sources worth mining (not exhaustive)
+## Sources worth mining (not exhaustive) — only if you have web access
+
+If you can browse the web, ground findings in real public sources like these. If you cannot,
+draw on what you already know of these communities/artifacts and label the report un-cited.
 
 The "brag document" discourse (Julia Evans et al.); "work journal" / "done list" / "did.txt" tools
 and writeups; public TIL repos (e.g. jbranchaud/til) and "learning in public"; dotfiles repos and
@@ -87,4 +96,6 @@ ADR tooling communities.
 Prefer evidence over speculation — ground categories in real artifacts people actually keep. Be
 honest about which ideas are well-served by existing tools (calendars, task managers, CRMs) and
 therefore NOT worth duplicating. The valuable findings are the underserved, scattered-in-random-files
-data that a local CLI + passive agent capture is uniquely good at.
+data that a local CLI + passive agent capture is uniquely good at. If you ran without web access,
+say so at the top and treat the whole report as lower-confidence / un-cited — still useful as a
+hypothesis set to validate later.
