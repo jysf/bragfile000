@@ -7,8 +7,9 @@ for retros, reviews, and resumes. Entries live in an embedded SQLite
 database at `~/.bragfile/db.sqlite` on your machine. No cloud, no
 sync, no account.
 
-> **Status:** v0.1.0 shipped. Capture, retrieve, search, export, and
-> weekly/monthly digests are all available, and `brew install
+> **Status:** v0.2.0 shipped. Capture, retrieve, search, export, and
+> weekly/monthly digests, plus first-class tags and projects with
+> cwd-aware capture, are all available, and `brew install
 > jysf/bragfile/bragfile` installs the binary on macOS.
 
 ## Install
@@ -33,7 +34,7 @@ The Homebrew install pulls a prebuilt binary — no Go required.
 Requires Go 1.26+ if you build from source instead.
 
 **macOS Gatekeeper note.** The Homebrew-installed binary is not
-Apple-signed/notarized (v0.1.0 ships unsigned to keep the personal
+Apple-signed/notarized (v0.2.0 ships unsigned to keep the personal
 project free of Apple Developer Program dues). The first time you
 run `brag` after `brew install`, macOS may say *"Apple could not
 verify 'brag' is free of malware…"* and refuse to execute it.

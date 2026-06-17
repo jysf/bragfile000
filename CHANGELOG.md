@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.0] - 2026-06-12
+## [0.2.0] - 2026-06-17
 
 This release makes **tags** and **projects** first-class. Tags move from
 a comma-joined string to a normalized, shared, rename/merge-able model;
