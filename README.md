@@ -21,6 +21,15 @@ brew install jysf/bragfile/bragfile
 brag --version
 ```
 
+> **Homebrew 6.0+ note.** bragfile is distributed as a cask from a
+> third-party tap, and newer Homebrew refuses to load such casks until
+> you trust the tap once (you'll see *"Refusing to load cask … from
+> untrusted tap"*). If that happens, run this one-time, per-machine step,
+> then re-run the install:
+> ```bash
+> brew trust --cask jysf/bragfile/bragfile
+> ```
+
 From source (works today):
 
 ```bash

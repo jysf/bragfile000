@@ -435,11 +435,19 @@ nothing is lost but the project stays focused.
 
 ## macOS code signing + notarization (Apple Developer ID)
 
+- **STATUS 2026-06-19: NOW IN SCOPE.** After the v0.2.0 Homebrew release,
+  the user hit the macOS install friction first-hand and decided to address
+  it "even if it means spending $100." Pursue as a standalone effort — a
+  **v0.2.1 "macOS distribution hardening"** mini-stage (or early PROJ-003).
+  External lead time on Apple enrollment, so not coupled to anything else.
+  NOTE: notarization fixes ONLY the Gatekeeper prompt — it does NOT remove
+  the `brew trust --cask` step (see the separate item below); they are
+  distinct frictions.
 - **Source:** 2026-05-11 Phase 2 ship of bragfile v0.1.0 — smoke-test
   install hit `"Apple could not verify 'brag' is free of malware"`
   on macOS Gatekeeper. Workaround documented in README ("macOS
   Gatekeeper note") and AGENTS.md §4 (xattr -dr quarantine).
-- **Reason deferred:** Apple Developer Program is $99/year ongoing
+- **(Historical) Reason deferred:** Apple Developer Program is $99/year ongoing
   + ~half-day of focused work (account approval, Developer ID
   Application certificate, app-specific password, goreleaser
   `signs:`/`notarize:` blocks, release.yml updates to run signing
@@ -478,6 +486,40 @@ nothing is lost but the project stays focused.
      xattr workaround.
   7. Remove the "macOS Gatekeeper note" from README; update the
      AGENTS.md §4 lesson to "no longer applies as of vX.Y.Z."
+
+## Homebrew 6.0 `brew trust --cask` friction (cask from third-party tap)
+
+- **Source:** 2026-06-19 v0.2.0 install. On Homebrew 6.0.2, installing the
+  cask failed with `Refusing to load cask jysf/bragfile/bragfile from
+  untrusted tap jysf/bragfile`; the fix was a one-time
+  `brew trust --cask jysf/bragfile/bragfile`. This is a Homebrew tap-source
+  policy (arbitrary Ruby in cask defs), **distinct from** Gatekeeper/
+  notarization — notarization will NOT remove it.
+- **Done now:** README install section documents the `brew trust` step.
+- **Open question:** is there a way to avoid making users run `brew trust`
+  at all? See the formula-vs-cask item below — switching distribution from
+  a cask to a formula may sidestep this entirely.
+
+## Distribution: Homebrew formula vs. cask — RESOLVED, won't help
+
+- **Question was:** would switching goreleaser from a cask to a formula
+  avoid the Homebrew 6.0 `brew trust` gate?
+- **Answer (researched 2026-06-19): NO.** Homebrew 6.0's tap-trust is a
+  **tap-level** security policy — it applies to *both* tap-qualified
+  formulae AND casks from any third-party tap (a third-party tap can run
+  arbitrary unsandboxed Ruby regardless of artifact type). Switching
+  cask→formula would NOT remove the `brew trust` requirement.
+- **Implication:** the only ways to drop `brew trust` entirely are getting
+  into official `homebrew-core` (high bar) or a non-tap distribution
+  channel — neither worth it for a personal project. **Keep the cask**
+  (goreleaser's recommended vehicle for prebuilt binaries) and document
+  `brew trust` (done in README).
+- **Net macOS-friction plan:** (1) README `brew trust` note [done];
+  (2) ~~formula-vs-cask~~ [dead end — trust is tap-level]; (3) notarization
+  [the $100 item above] still worthwhile — it removes the *Gatekeeper*
+  prompt, a separate friction from `brew trust`.
+- Sources: Homebrew 6.0.0 release notes (brew.sh/2026/06/11) and coverage
+  noting trust covers "tap-qualified formulae and casks."
 
 ## govulncheck CI step
 
