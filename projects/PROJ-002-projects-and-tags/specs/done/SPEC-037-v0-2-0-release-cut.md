@@ -7,7 +7,7 @@
 task:
   id: SPEC-037
   type: chore                      # release mechanics, not feature code
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: ship
   blocked: false
   priority: high                   # release-cutting spec; closes STAGE-008 + gates PROJ-002 close
   complexity: S                    # runbook + pre-flight + verification checklist; no code
@@ -590,10 +590,23 @@ Process-focused: how did the rehearsal go? What friction did the runbook create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Two things. (a) The runbook smoke commands should be transcribed and
+   run verbatim at design — the rehearsal caught a `--tag`→`--tags` typo
+   that a literal pre-flight would have caught earlier. (b) Pin the release
+   *environment*, not just the SHA: the cut hit a brand-new Homebrew 6.0
+   `brew trust --cask` gate (third-party-tap trust) that no prior release
+   saw — worth a "check the package manager's current install policy"
+   pre-flight line for future releases.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — AGENTS.md §4 should gain a one-liner: third-party Homebrew taps now
+   require `brew trust --cask <tap>/<cask>` on Homebrew 6.0+ (tap-level
+   policy; covers formulae and casks alike — a formula switch does NOT
+   avoid it). The README install section already documents the user-facing
+   step. No DEC. The §4 dual-tag Pattern 1 worked exactly as written.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — Not within PROJ-002. macOS notarization is now in-scope but lands as
+   a separate v0.2.1 "distribution hardening" effort (external Apple lead
+   time; a patch release, not v0.2.0). Captured in the PROJ-001 backlog.
+   This spec closes STAGE-008 and gates the PROJ-002 close.

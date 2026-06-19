@@ -204,18 +204,17 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       injectable `clock` seam (injectable-os-var WATCH → N=3); keep-all
       retention; silent. No new migration (schema_migrations stays 4).
       5 tests. Scaffolded out of plan order (ahead of doc sweep).
-- [~] SPEC-037 (design) — **S** — **v0.2.0 release cut.** Executable
-      RUNBOOK (not code): pre-flight P0–P7 (incl. CHANGELOG date reconcile +
-      README status flip on release SHA), `v0.2.0-rc1` prerelease (no tap,
-      per goreleaser `prerelease:auto`+`skip_upload:auto`) → RC smoke gate
-      (throwaway DB; seeds a real v0.1.0 binary to fire the DEC-021 safety
-      belt + prove v0.1.x→v0.2.0 upgrade) → final cut per §4 Pattern 1
-      (delete rc tag+release, tag v0.2.0 at same commit) → tap bump →
-      post-release verify + dev/prod switch-back (`just uninstall`, prod
-      opens with no migration). Build cycle is a REHEARSAL; destructive
-      steps are coordinator-executed with per-step go-ahead. No new DEC.
+- [x] SPEC-037 (shipped on 2026-06-19) — **S** — **v0.2.0 release cut.**
+      Executable RUNBOOK (not code): rc1 prerelease (no tap) → RC smoke gate
+      (throwaway DB; fired the DEC-021 safety belt + proved v0.1.x→v0.2.0
+      upgrade) → final cut per §4 Pattern 1 → full GitHub release (4
+      platforms + checksums) + Homebrew tap bump to 0.2.0 → dev/prod
+      switch-back (bare `brag` = released v0.2.0, prod opens w/ no
+      migration). Surfaced a NEW friction at the cut: Homebrew 6.0
+      `brew trust --cask` for third-party taps (documented in README;
+      §4-note candidate). No new DEC.
 
-**Count:** 3 shipped / 0 active / 1 pending
+**Count:** 4 shipped / 0 active / 0 pending — STAGE-008 complete
 
 **Complexity check:** 4 specs, all S/M by construction. One above the brief's
 "~2–3 specs" estimate — the extra is the migration safety belt promoted from
