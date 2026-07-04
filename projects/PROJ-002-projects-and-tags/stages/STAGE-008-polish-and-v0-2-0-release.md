@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-008                     # stable, zero-padded, repo-global (never reused)
-  status: proposed                  # proposed | active | shipped | cancelled | on_hold
+  status: shipped                   # proposed | active | shipped | cancelled | on_hold
   priority: high                    # release-cutting stage; gates PROJ-002 close (brief target_ship 2026-06-26)
   target_complete: 2026-06-24       # leaves a 2-day buffer before the project's target_ship 2026-06-26
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-06-12
-shipped_at: null
+shipped_at: 2026-06-19
 ---
 
 # STAGE-008: polish and v0.2.0 release
@@ -426,13 +426,139 @@ do not codify mid-stage without the documented trigger. The inherited ledger:
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped. Run Prompt 1c (Stage Ship) in
-FIRST_SESSION_PROMPTS.md to draft this.*
+*Drafted at stage close (Prompt 1d, fresh Opus, 2026-06-19); all success
+criteria independently re-verified at close.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes — all six
+  success criteria met and independently re-verified at close. `CGO_ENABLED=0
+  go test ./...` → **536 tests across 8 packages** pass (up from STAGE-007's
+  531, +5 for SPEC-036's safety-belt tests; the doc/CHANGELOG/release specs add
+  no Go tests); `gofmt -l .` empty; `go vet ./...` clean; `bash
+  scripts/test-docs.sh` exits 0. The release reality is confirmed against
+  GitHub and the tap, not assumed: `gh release view v0.2.0` →
+  `{"isPrerelease":false,"tagName":"v0.2.0"}` (a **full** release, not a
+  prerelease), and `jysf/homebrew-bragfile`'s `Casks/bragfile.rb` is at
+  `version "0.2.0"` with four matching `sha256`s. The doc sweep landed (tutorial
+  projects walkthrough as a §4 subsection, architecture diagram/table refresh,
+  WAL-safe `.backup` recipe); the CHANGELOG `[0.2.0]` is written and the
+  placeholders reconciled; the DEC-021 migration auto-backup safety belt ships
+  and fired on a seeded v0.1.x DB during the RC smoke gate (which simultaneously
+  proved the clean v0.1.x → v0.2.0 upgrade); and the local dev/prod state is
+  reconciled to the released binary (bare `brag` = brew-installed v0.2.0, prod
+  `~/.bragfile` opens with no migration). The feature-complete v0.2.0 codebase
+  is now a released, installable, safe-to-upgrade-into thing.
+- **How many specs did it actually take?** **4** (SPEC-036 S/M, SPEC-034 M,
+  SPEC-035 S, SPEC-037 S) vs. the brief's ~2–3 estimate. The two extras over
+  the brief are conscious, not scope creep: (1) the **migration-safety belt was
+  promoted from the brief's "optional" status to an in-scope stage success
+  criterion** on the strength of this session's prod-DB migration incident
+  (DEC-021); (2) the **release cut was broken out** from the doc/CHANGELOG work
+  it does not naturally combine with. **Sequencing note:** SPEC-036 (the safety
+  belt) was deliberately scaffolded **first, ahead of the doc sweep**, because
+  SPEC-034's tutorial must document the auto-backup behavior — the doc sweep
+  depends on the belt existing, not the reverse. Shipped 2026-06-19 (SPEC-034/
+  035/036 on 2026-06-12; SPEC-037, the release cut, on 2026-06-19), well ahead
+  of `target_complete` 2026-06-24 and the project's `target_ship` 2026-06-26.
+- **What changed between starting and shipping?** Two conscious changes from
+  framing: the migration-safety belt moved from "optional, high
+  safety-vs-cost" to in-scope (the prod-DB incident is the motivating
+  evidence); and macOS notarization, raised to in-scope by the user hitting
+  the install friction first-hand at the cut, was deferred to a separate
+  **v0.2.1 "macOS distribution hardening"** effort (external Apple lead time;
+  a patch release, not part of v0.2.0). Otherwise every DEC held verbatim —
+  DEC-021 @0.86 was the only DEC the stage emitted and it did not move from
+  design lock to ship.
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
+  - **Codified at this close (two items — see the WATCH-list update below):**
+    - **§9 — injectable-os-var seam.** `os`-level calls (`os.Getwd`,
+      `os.Getenv`, the clock) go through an injectable package var so tests can
+      substitute them. Reached **N=3 same-outcome** mid-stage (SPEC-031
+      `getCwd` + SPEC-032 `addGetCwd` + **SPEC-036 `clock`**), so per the
+      codification meta-rule it lands at this close. A one-line §9
+      testing-conventions note, **not** a blocking constraint, exactly as the
+      STAGE-007 close predicted its shape.
+    - **§4 — Homebrew 6.0+ third-party tap trust.** A new release operational
+      note: installing a cask/formula from a third-party tap on Homebrew 6.0+
+      requires a one-time `brew trust --cask <tap>/<cask>`; it is a tap-level
+      policy, so neither notarization nor a cask→formula switch avoids it
+      (researched at the cut). Same class of concrete, mechanical release
+      gotcha as the existing §4 dual-tag and Gatekeeper notes — those each
+      codified at first occurrence (N=1) because they are operational facts,
+      not heuristic patterns; this follows that precedent.
+  - **On WATCH (not yet earned), final disposition at PROJ-002 close:** the
+    full inherited ledger (trust-but-verify push reports N=2; §13 working-tree
+    preservation N=2; contamination-heuristic exception N=2; the grade-by-intent
+    doc-AC nudge N=1; the new SPEC-036 "name the exact dep version in a
+    design-time library pre-flight, re-check at build if deps moved" N=1; and
+    the §9-reinforcing carries) is laid out below.
 - **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <one-line items>
+  - **Promoted + codified:** SPEC-036 ship Q2 (injectable-seam reaches N=3 →
+    AGENTS.md §9); SPEC-037 ship Q2 (the `brew trust` §4 one-liner).
+  - **Promoted to WATCH:** SPEC-034 ship Q1 (grade-by-intent for doc ACs, N=1);
+    SPEC-036 ship Q2 (design-time library pre-flight should name the exact dep
+    version + re-check at build, N=1).
+  - **Noted, not promoted:** SPEC-035 ship Q2 (a coordinator direct-verify can
+    stand in for a full cold-verify session on a tiny literal-artifact docs
+    spec *with an automated content gate* — proportionate, gate-protected, not
+    a discipline erosion). This is a confirming data point for the
+    contamination-heuristic exception, not a new rule; carried, not codified.
+
+### WATCH-list update at stage close
+
+This is the **last stage of PROJ-002.** Per the standing carry-forward rule,
+anything not codified here either codifies at the **PROJECT close** (Part 2 /
+Prompt 1e) or is explicitly dropped — items do not codify mid-stage without a
+documented trigger, and the stage close *is* that trigger for the two items
+below that reached their bar inside STAGE-008.
+
+- **Injectable-os-var seam (`var getCwd = os.Getwd` / `addGetCwd` / `clock`) —
+  CODIFIED** at this close (AGENTS.md §9). N=3 same-outcome (SPEC-031, SPEC-032,
+  SPEC-036 — each needed a test seam the literal spec otherwise omitted).
+  Removed from WATCH.
+- **Homebrew 6.0+ third-party tap trust (`brew trust --cask`) — CODIFIED** at
+  this close (AGENTS.md §4). NEW from SPEC-037's cut; a concrete operational
+  fact (the same codify-at-first-occurrence class as the §4 dual-tag and
+  Gatekeeper notes), not an N-counted heuristic. The README already documents
+  the user-facing step (README:30). Removed from WATCH.
+- **Grade-by-intent for doc ACs** — N=1, NEW (SPEC-034 ship Q1: AC7's literal
+  `cp` grep flagged a correct anti-pattern teaching callout as a violation; the
+  intent "no bare-cp backup recipe" was met but the grep was too blunt). **Carry
+  forward** to PROJ-003 as a candidate spec-template nudge under Failing Tests:
+  state a doc AC's *intent* and offer the grep as a hint, not as the pass/fail
+  gate. Below any codification bar at N=1.
+- **Design-time library pre-flight should name the exact dep version, and be
+  re-checked at build if deps moved** — N=1, NEW (SPEC-036 ship Q1: a
+  dependabot bump of `modernc.org/sqlite` v1.51.0 → v1.52.0 mid-flight silently
+  changed `VACUUM INTO`'s overwrite-a-0-byte-target behavior, forcing a
+  build-time test-setup adaptation; the production invariant held). **Carry
+  forward**; a candidate refinement to the §12(b) design-time pre-flight family
+  (pin the dep version in the pre-flight note) rather than a new rule.
+- **Contamination-heuristic exception for literal-artifact builds** — N=2
+  (SPEC-026 origin; SPEC-027 confirming), with STAGE-008's SPEC-034/035 as
+  further confirming data (both literal-artifact docs builds whose reflections
+  surfaced *specific* observations — grade-by-intent, compare-link slug hygiene
+  — i.e. honest-frictionless, not mailed-in). **Carry forward, NOT codified.**
+  Discriminator to preserve verbatim: "'nothing was unclear' is the expected
+  honest output of a literal-artifact-as-spec build; distinguish
+  honest-frictionless from mailed-in by whether the reflection surfaces ANY
+  specific observation." Still a paired-opposing candidate if a future build
+  mails in a contaminated "nothing was unclear" with no specific observation.
+- **Trust-but-verify agent push reports** — N=2 (SPEC-023); applied directly
+  this stage at the SPEC-037 cut (every "pushed the tag / bumped the formula"
+  claim checked via `gh release view` / `gh api .../commits`, and re-checked at
+  *this* close via `gh release view v0.2.0` + the tap cask read). Variant-specific
+  (matters for `claude-plus-agents`); **carry forward.**
+- **§13 fresh-session working-tree preservation** — N=2 (SPEC-024 + STAGE-007
+  close) → confirmed again here: the parallel session's uncommitted
+  `docs/framework-feedback/process-feedback.md` was preserved untouched across
+  this close. Below the N=3 bar; **carry forward.**
+- **cobra `SilenceErrors:true` + explicit `Fprintln` user-error pattern** —
+  N=2 (SPEC-030, SPEC-031). Did **not** advance this stage (no new CLI command
+  surface). Below the N=3 bar; **carry forward.**
+- **"AC-says-all-N → test each, don't lean on one shared-helper test"** — N=1
+  (SPEC-029 verify). Did not recur this stage; **carry forward.**
+- **"A design-prompt premise can be wrong — the §9 grep is the source of
+  truth"** — reinforced again this stage (SPEC-034's §9 status-change grep
+  caught that `test-docs.sh` anchors on tutorial section numbers, forcing the
+  "subsection not new top-level §" placement). Reinforces the already-codified
+  §9 audit-grep family rather than adding a new rule; **carry forward.**
