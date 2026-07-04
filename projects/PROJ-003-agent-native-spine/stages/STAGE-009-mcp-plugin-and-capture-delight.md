@@ -162,31 +162,14 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       a reference impl at design (no `time.Sleep`; injected `now`). **Blocks
       SPEC-039.** Awaiting build (fresh session).
 
-- [ ] SPEC-039 (design complete 2026-07-03 — awaiting build) — **S —
-      Milestone notifications on `brag add`.** TTY-only stderr celebratory
-      line on crossing total (10/25/50/100/250/500/1000), streak
-      (7/30/100-day), and per-project (10th/50th) thresholds, plus a quiet
-      "first brag today/this week." Silent under `--json`/non-TTY. Reuses
-      `internal/aggregate` (reads the SPEC-038 corrected streak).
-      **Design complete:** spec on `main`'s spec tree;
-      **DEC-023 emitted** (TTY/stderr gate + crossing-not-equality +
-      precedence total→streak→project→first-week→first-today + copy literal
-      + stdlib `os.ModeCharDevice` TTY probe, rejecting a `go-isatty`
-      promotion so *no new dep*). Pure decision function
-      `milestoneLine(milestoneInputs)` (threshold/precedence/copy matrix,
-      DB/clock/TTY-free) + thin Store/clock/TTY glue; both injectable seams
-      (`addClock`, `addStderrIsTTY`) so no `time.Sleep`. **Premise audits
-      resolved at design:** *§9 split-buffer* — `TestAddMilestone_
-      SilentUnderJSON` asserts `errBuf.Len()==0` under `--json` *with TTY
-      forced on*; *NOT-contains (§12)* — the celebratory literals live only
-      in `milestone.go`, never in `runAddJSON`/stdout/`Long` (design grep
-      enumerated); *additive/count-bump* — the three threshold sets are new
-      collections, grep confirmed **zero** existing membership/count
-      assertions; *inversion (doc/harness)* — `docs/api-contract.md:71`
-      "stderr empty" reworded to the TTY-gated contract, and
-      `newRootWithAdd` pins `addStderrIsTTY=false` so existing
-      `errBuf.Len()==0` success tests stay hermetic. **Depends on SPEC-038
-      (shipped).** Awaiting build (fresh session).
+- [x] SPEC-039 (shipped 2026-07-04, PR #59) — **S — Milestone notifications
+      on `brag add`.** TTY-only stderr celebratory line on crossing total
+      (10/25/50/100/250/500/1000), streak (7/30/100-day), and per-project
+      (10th/50th) thresholds, plus a quiet "first brag today/this week."
+      Silent under `--json`/non-TTY. Pure decision function
+      `milestoneLine(milestoneInputs)` + thin glue layer; injectable seams
+      (`addClock`, `addStderrIsTTY`); DEC-023 emitted; stdlib
+      `os.ModeCharDevice` TTY probe (no new dep).
 
 - [ ] SPEC-040 (proposed) — **M/L (the headline) — `brag mcp serve` MCP
       server + provenance.** New `brag mcp serve` subcommand running a
@@ -228,7 +211,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       mechanics* — trust-but-verify the "pushed tag / bumped formula"
       claims via `gh release view` / the tap cask read.
 
-**Count:** 1 shipped / 1 active (SPEC-039, build) / 2 pending
+**Count:** 2 shipped / 0 active / 2 pending
 
 **Complexity check:** four specs, one L-risk (SPEC-040). The plugin +
 release cut are bundled in SPEC-041 because they share the "make the
