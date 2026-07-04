@@ -163,22 +163,39 @@ type CorpusSpan struct {
 	Days  int
 }
 
-// Streak returns (current, longest) streak counts in UTC calendar days.
-// current counts back from now's UTC date while each preceding date has
-// >=1 entry; if now's UTC date has zero entries, current = 0 (NOT "the
-// streak that ended yesterday"). longest is the longest consecutive
-// UTC-date run anywhere in the corpus. Multiple entries on the same UTC
-// date count as one streak day. Empty corpus → (0,0). SPEC-020 §6.
+// Streak returns (current, longest) streak counts in the user's LOCAL
+// calendar day, where "local" is the zone carried by the injected now
+// (now.Location()) — DEC-022. Entries are bucketed by converting each
+// stored UTC instant into now.Location() before taking its date; storage
+// itself stays UTC RFC3339 (only this derived metric localizes).
+//
+// current is the length of the consecutive local-day run that ends on
+// TODAY or YESTERDAY: the streak stays alive through yesterday and is 0
+// only once BOTH today and yesterday are empty (one day of grace, not
+// immortality). longest is the longest consecutive local-day run anywhere
+// in the corpus. Multiple entries on the same local date count as one
+// streak day. Empty corpus → (0,0).
+//
+// All day arithmetic uses calendar operations (AddDate + date-label
+// compare), never instant subtraction, so it is correct across DST
+// transitions. DEC-022; supersedes the UTC-day/requires-today semantics
+// SPEC-020 §6 locked.
 func Streak(entries []storage.Entry, now time.Time) (current, longest int) {
 	if len(entries) == 0 {
 		return 0, 0
 	}
+	loc := now.Location()
 	dates := make(map[string]struct{}, len(entries))
 	for _, e := range entries {
-		dates[e.CreatedAt.UTC().Format("2006-01-02")] = struct{}{}
+		dates[e.CreatedAt.In(loc).Format("2006-01-02")] = struct{}{}
 	}
 
-	cursor := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	// Seed the cursor at today's local date; if today is empty, step back
+	// one calendar day (the alive-through-yesterday grace) before walking.
+	cursor := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	if _, ok := dates[cursor.Format("2006-01-02")]; !ok {
+		cursor = cursor.AddDate(0, 0, -1)
+	}
 	for {
 		if _, ok := dates[cursor.Format("2006-01-02")]; !ok {
 			break
@@ -196,8 +213,9 @@ func Streak(entries []storage.Entry, now time.Time) (current, longest int) {
 	longest = 1
 	for i := 1; i < len(keys); i++ {
 		prev, _ := time.Parse("2006-01-02", keys[i-1])
-		curr, _ := time.Parse("2006-01-02", keys[i])
-		if curr.Sub(prev) == 24*time.Hour {
+		// Calendar adjacency: is keys[i] the day after keys[i-1]? Compare
+		// date labels via AddDate, never Sub == 24h (DST-immune).
+		if prev.AddDate(0, 0, 1).Format("2006-01-02") == keys[i] {
 			run++
 		} else {
 			run = 1

@@ -7,7 +7,7 @@
 task:
   id: SPEC-038
   type: bug                        # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: high
   complexity: S                    # S | M | L  (L means split it)
@@ -499,25 +499,55 @@ audit as required updates.
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** feat/spec-038-streak-fix
-- **PR (if applicable):**
-- **All acceptance criteria met?** <yes/no>
+- **PR (if applicable):** opened at build close (see PR link in the merge notes)
+- **All acceptance criteria met?** yes — all seven boxes hold:
+  current counts the local-day run ending today-or-yesterday
+  (`run_ending_yesterday_now_today` → 2, not 0); 0 only after two empty
+  days (`streak_dead_after_two_empty_days`); local-day bucketing flips the
+  answer vs UTC (`TestStreak_BucketsByLocalDay` 2,2 not 1,1); DST-correct
+  across spring-forward (`TestStreak_CurrentStepsAcrossDSTBoundary` 3,3);
+  `longest` unchanged in contract, now via calendar `AddDate` adjacency;
+  storage untouched (no migration; `timestamps-in-utc-rfc3339` intact);
+  `go test ./...` (541), `gofmt -l .`, `go vet ./...`,
+  `CGO_ENABLED=0 go build ./...` all clean.
 - **New decisions emitted:**
-  - `DEC-022` — streak local-day derived metric (emitted at design)
+  - `DEC-022` — streak local-day derived metric (emitted at design). No
+    new DEC needed at build: `time/tzdata` is stdlib (embedded in the
+    *test* binary only), not a go.mod dependency, so
+    `no-new-top-level-deps-without-decision` does not fire.
 - **Deviations from spec:**
-  - [list]
+  - None. Tests transcribed verbatim; `Streak` rewritten to the locked
+    shape (bucket by `now.Location()`, seed today-else-yesterday, step via
+    `AddDate`, longest via `AddDate` date-label adjacency); the three
+    enumerated doc-text hits corrected; caller flipped to `time.Now()`.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None. SPEC-039 (milestone notifications) is already in the STAGE-009
+    backlog and consumes the corrected streak; no new spec needed.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing material. The fail-first map (▲ vs ●) and the premise-audit
+   table made the expected-fail set and the doc sweep mechanical: the six
+   observed fails and the ● passers (incl. the DST guard) matched the map
+   exactly, so there was no guesswork about whether a green ● was a missed
+   rewrite.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. `references.constraints` (timestamps-in-utc-rfc3339,
+   test-before-implementation, no-cgo, errors-wrap-with-context) and
+   DEC-022/DEC-011 covered everything the build touched. The `time/tzdata`
+   "stdlib, not a dep" carve-out was pre-empted in Notes for the
+   Implementer, so it never became an open question.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing structural. One small note: the calendar-adjacency rewrite of
+   the `longest` sweep (`prev.AddDate(0,0,1).Format(...) == keys[i]`) is the
+   subtle line — worth calling out that the DST guard test only *catches a
+   wrong walk on the current cursor*, not a wrong `longest` adjacency, since
+   both share the same DST hazard; a future refactor of `longest` alone
+   would want its own DST fixture. Recorded here, not acted on (out of
+   scope).
 
 ---
 

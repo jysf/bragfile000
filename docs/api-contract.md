@@ -360,7 +360,8 @@ brag stats --format json          # lifetime corpus, JSON envelope
 
 Lifetime panorama: six aggregations over the entire corpus — total
 entries, entries/week (rolling average over the corpus span), current
-and longest streak (consecutive UTC days with entries), top-5
+and longest streak (consecutive local days with entries; the current
+streak stays alive through yesterday), top-5
 most-common tags, top-5 most-common projects, plus the corpus span
 (first entry, last entry, days). No LLM ships in the binary.
 
