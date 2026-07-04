@@ -7,7 +7,7 @@
 task:
   id: SPEC-039
   type: story                      # epic | story | task | bug | chore
-  cycle: build
+  cycle: ship
   blocked: false
   priority: high
   complexity: S                    # S | M | L  (L means split it)
@@ -857,6 +857,40 @@ audit); no test asserts that prose, so none is added.
 - **Follow-up work identified:**
   - None new. SPEC-040 (MCP) and SPEC-041 (plugin) remain the STAGE-009
     backlog; the milestone is CLI-only and does not touch them.
+
+## Reflection (Ship)
+
+*Appended during the **ship** cycle.*
+
+1. **What would I do differently next time?**
+   — Almost nothing. The pure-function-plus-thin-glue split (decision matrix
+   in `milestoneLine` with no Store/clock/TTY; ~45-line glue layer tested for
+   wiring only) made both build and verify fast and mechanical. The
+   literal-artifact-as-spec pattern for the copy table (Locked decision 5)
+   eliminated all copy-string ambiguity: verify simply diffs against the table.
+   One observation for next time: the process discrepancy (design PR #59 was
+   still open at build start, not merged as the spec assumed) was friction-free
+   in practice because the one-branch-per-spec model meant build simply
+   continued on the existing feat branch — but a single sentence in the spec's
+   preconditions making the "open PR, not merged PR" state explicit would have
+   prevented the need to flag it at all.
+
+2. **Does any template, constraint, or decision need updating?**
+   — No update earned now. DEC-023 is the durable home for the milestone
+   copy/semantics/gating; the pure-function-plus-thin-glue shape is a WATCH
+   item (N=1, per §9 same-outcome N=3 bar). One pattern worth watching:
+   the premise-audit "stays" row discipline — enumerating why a doc/test hit
+   is out of scope, not just that it stays — pre-empted verify ambiguity here
+   the same way it would have in SPEC-038 (noted there as a watch item at N=1).
+   Two cases now. Not yet N=3, but converging; keep watching.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — No new spec needed. SPEC-040 (MCP server) is already in the STAGE-009
+   backlog and is the natural next spec; it consumes the same stdout-is-data
+   spine at a new transport that SPEC-039 exercised at the CLI. No new
+   follow-up beyond what is already planned.
+
+---
 
 ### Build-phase reflection (3 questions, short answers)
 
