@@ -44,6 +44,12 @@ brag add --title "shipped the auth refactor" \
 - `--title` is required. Everything else is optional.
 - Stdout on success: the inserted entry's ID, one line, no prefix (e.g.
   `42`). This keeps piping trivial (`id=$(brag add --title ...)`).
+- **Milestone line (stderr, TTY-only).** When stderr is a terminal, a
+  successful `add` may print one short celebratory line to **stderr** on
+  crossing a total / streak / per-project milestone (or a quiet "first brag
+  today/this week" nudge). It never touches stdout, so `id=$(brag add ...)`
+  is unaffected, and it is **silent** under `--json`, on pipes, and on any
+  non-terminal stderr. See [DEC-023](../decisions/DEC-023-milestone-notifications-copy-and-semantics.md).
 - Exit 0 on success; 1 if `--title` is missing or empty; 2 on storage
   error.
 
@@ -68,7 +74,8 @@ file, and spawns the editor against it. On save:
 
 - Successful save with a valid `Title:` header → row inserted; the
   inserted ID is printed to stdout (mirrors flag-mode contract so
-  `id=$(brag add)` works); stderr empty; exit 0.
+  `id=$(brag add)` works); stderr carries only the TTY-only milestone
+  line (see the flag-mode note above), else empty; exit 0.
 - Saving byte-identical content (SHA-256 comparison — i.e. the
   template was not modified) aborts cleanly: stderr prints
   `Aborted.`, exit 0, DB untouched.
