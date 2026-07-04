@@ -645,10 +645,19 @@ framing prompt was drafted at this review.*
 shakeout); Day 2 SPEC-040 (the L-risk spine — time-box the Go MCP SDK eval, fall
 back to a hand-rolled stdio loop); Day 3 SPEC-041 + v0.3.0 cut + buffer.
 
-**Pre-work (~30 min):** flip `.variant` → `claude-plus-agents` and wire roles —
-the long-deferred variant test; Day 1's small specs are where to shake it out.
-This is a `spec-driven-template` decision to confirm at framing, not a foregone
-scope item.
+**Pre-work — variant flip: HELD (2026-07-03, coordinator).** The framing
+assumed a ~30-min "flip `.variant` → `claude-plus-agents` + wire roles" chore.
+That premise was falsified at PROJ-003 Step-1: `just init` consumed the variant
+scaffold and `rm -rf`'d `variants/`, so there is no `claude-plus-agents` source
+(its variant-specific AGENTS.md / FIRST_SESSION_PROMPTS / `/handoffs/`) to flip
+to; there is no `.claude/agents/` role tooling; `new-spec.sh`'s variant branch
+is a no-op (both arms use the same template); and AGENTS.md is written
+claude-only-specific (title, §13, §2's "frontmatter is informational only"). A
+real flip is scaffold-rebuild + role-authoring + instruction-reconciliation
+work, not pre-build prep. Decision: **stay claude-only** for the SPEC-038/039
+shakeout; the flip is a separately-scoped `spec-driven-template` chore for later,
+gated on those prerequisites. See STAGE-009 Design Notes "Variant flip" for the
+full record.
 
 **Provenance capture — which agent + model drove a brag (2026-06-20, user ask).**
 When a brag is primarily agent-driven, record *which agent + which model*, so
