@@ -171,25 +171,37 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       (`addClock`, `addStderrIsTTY`); DEC-023 emitted; stdlib
       `os.ModeCharDevice` TTY probe (no new dep).
 
-- [ ] SPEC-040 (proposed) — **M/L (the headline) — `brag mcp serve` MCP
-      server + provenance.** New `brag mcp serve` subcommand running a
-      local stdio MCP server exposing `brag_add` / `brag_list` /
-      `brag_search` / `brag_stats` as thin wrappers over the existing
-      `Store`; SQL stays in storage. The MCP `brag_add` stamps the
-      caller's `agent:<name>` / `model:<id>` reserved tags. **DEC expected
-      at design** (the MCP transport + the new top-level Go dependency per
-      `no-new-top-level-deps-without-decision`; subcommand-vs-separate-
-      binary). Time-box the Go MCP SDK eval; fall back to a hand-rolled
-      stdio loop if the SDK doesn't earn its place. **Premise-audit
-      triggers:** *new dep* — the go.mod addition fires the warning-level
-      constraint; the DEC is the gate. *stdout-is-data at a new
-      transport* — the stdio MCP stream carries protocol frames; nothing
-      human-facing may leak onto it (the §9 split-buffer rule generalized
-      to the transport). *§12(b) design-time pre-flight* — stand up the
-      chosen SDK/loop against a real MCP client (or the protocol's own
-      conformance harness) at design and confirm the four tools
-      round-trip before locking. *Additive* — new subcommand surface; grep
-      command-count / help-text assertions.
+- [~] SPEC-040 (design complete 2026-07-04 → build) — **M (headline) — `brag
+      mcp serve` MCP server + provenance.** New `brag mcp serve` subcommand
+      running a local stdio MCP server exposing `brag_add` / `brag_list` /
+      `brag_search` / `brag_stats` as thin wrappers over the existing `Store`;
+      SQL stays in storage. The MCP `brag_add` stamps the caller's
+      `agent:<name>` / `model:<id>` reserved tags. **Design complete:** spec on
+      `feat/spec-040-...` (build to open it); **DEC-024 emitted** (official Go
+      MCP SDK `modelcontextprotocol/go-sdk` v1.6.1 + `brag mcp serve` subcommand
+      + stdio + provenance-via-reserved-tags with explicit params and an
+      `agent`/`clientInfo.Name` fallback; confidence 0.85). **§12(b) pre-flight
+      RUN at design (all green):** four typed tools round-trip over
+      `mcp.NewInMemoryTransports` against a real `mcp.Client`; `tools/list`
+      returns exactly the four with SDK-inferred schemas; `brag_add` w/o title →
+      `IsError=true`; `Out=any`+`TextContent` gives CLI byte-parity (reuse
+      `internal/export`); SDK default logger discards (stdout-clean); pure-Go
+      (`CGO_ENABLED=0`). **Surfaced Q(a) resolved:** subcommand+stdio+SDK (not a
+      separate binary; hand-rolled loop RETIRED by the clean eval). **Surfaced
+      Q(e) resolved:** the MCP transport exposes `clientInfo.Name` (→ `agent:`
+      auto-fill) but **no model** (→ `model:` explicit-param only); provenance is
+      reserved tags riding DEC-015 with zero schema change. Failing tests written
+      (in-memory round-trip = the conformance harness; provenance/tokenizer pure
+      tests; the stdout-purity test = §9 split-buffer generalized to the
+      transport; cli wiring). **Premise audit enumerated + run:** *new dep* fires
+      `no-new-top-level-deps-without-decision` → DEC-024 is the gate; *stdout-at-
+      transport* → the purity test; *additive* → grep found **zero** command-count
+      / help-list assertions and A5 covers 7 verbs (not `mcp`) → nothing to bump.
+      **L-watch:** sized M/L, reads M at design — **no peel** (the pre-flight
+      retired both L-drivers; provenance is ~30 validated lines); scope trimmed at
+      the edges instead (deferred `--since`, cwd auto-fill, shared-query-builder
+      extraction). Doc touch scoped to `docs/api-contract.md` (broad MCP docs are
+      SPEC-041's sweep). **Blocks SPEC-041.** Awaiting build (fresh session).
 
 - [ ] SPEC-041 (proposed) — **S/M — Claude Code plugin packaging + v0.3.0
       cut.** Bundle `brag mcp serve` + `examples/brag-slash-command.md` +
@@ -211,9 +223,10 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       mechanics* — trust-but-verify the "pushed tag / bumped formula"
       claims via `gh release view` / the tap cask read.
 
-**Count:** 2 shipped / 0 active / 2 pending
+**Count:** 2 shipped / 1 in build (SPEC-040) / 1 pending (SPEC-041)
 
-**Complexity check:** four specs, one L-risk (SPEC-040). The plugin +
+**Complexity check:** four specs, one L-risk (SPEC-040 — resized to M at design
+after a clean §12(b) pre-flight retired the SDK/transport risk). The plugin +
 release cut are bundled in SPEC-041 because they share the "make the
 spine installable and shipped" seam; if SPEC-041 reads L at design (the
 manifest pre-flight surprises, or the release cut wants its own runbook
