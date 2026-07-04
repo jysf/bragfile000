@@ -5,9 +5,9 @@
 
 stage:
   id: STAGE-009                     # stable, zero-padded, repo-global (never reused)
-  status: proposed                  # proposed | active | shipped | cancelled | on_hold
+  status: active                    # activated 2026-07-03; SPEC-038 shipped, SPEC-039..041 pending
   priority: high                    # v0.3.0-cutting stage; the project's committed core
-  target_complete: null             # set when the stage activates (~3 working days)
+  target_complete: 2026-07-08       # activated 2026-07-03; ~3 working days (Jul 4 holiday weekend intervening)
 
 project:
   id: PROJ-003                      # parent project

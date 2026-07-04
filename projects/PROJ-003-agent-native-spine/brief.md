@@ -1,9 +1,10 @@
 ---
 project:
   id: PROJ-003
-  status: proposed
+  status: active
   priority: high
-  target_ship: null                 # 3-day core; date set when STAGE-009 activates
+  # activated 2026-07-03 (STAGE-009 selected as core; SPEC-038 shipped)
+  target_ship: 2026-07-08           # ~3 working-day core; Jul 4 holiday weekend intervening
 
 repo:
   id: bragfile
