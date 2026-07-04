@@ -7,7 +7,7 @@
 task:
   id: SPEC-040
   type: story                      # epic | story | task | bug | chore
-  cycle: build
+  cycle: ship
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -776,10 +776,28 @@ lever and keeps the headline whole.
 *Appended during the **ship** cycle.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Embed the test-helper functions (`newTestServer`, `callJSON`,
+   `seedViaStore`, `setNowFunc`) as a locked literal the same way the test
+   bodies were, per the build-phase reflection. Also worth naming at design:
+   the Failing Tests never assert on `brag_add`'s own returned JSON payload
+   (they check side effects via `Store.List` and separately check
+   `brag_list` parity) — the shape is correct by inspection (the local
+   `entryRecord` in `internal/mcpserver/server.go` mirrors
+   `internal/export`'s private `entryRecord` field-for-field, same order,
+   same indent), but a direct assertion on `brag_add`'s return bytes would
+   close a soft spot in the "byte-parity" story.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No template/constraint changes needed. `no-sql-in-cli-layer`'s path
+   glob (`internal/cli/**`) still doesn't cover `internal/mcpserver/**`;
+   this spec closed the gap locally with `TestNoSQLImport`
+   (`import_audit_test.go`) rather than editing `constraints.yaml`. Worth a
+   future constraints-file update if a third package needs the same
+   architecture line, but not urgent with N=1.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — SPEC-041 (Claude Code plugin packaging + v0.3.0 cut) already covers the
+   next planned work — no new spec needed. DEC-024's revisit triggers
+   (provenance-column promotion, networked MCP, third DEC-010 consumer, SDK
+   dependency-weight pain) are the right place to track future follow-ups;
+   none are earned yet.

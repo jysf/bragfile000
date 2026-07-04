@@ -171,7 +171,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       (`addClock`, `addStderrIsTTY`); DEC-023 emitted; stdlib
       `os.ModeCharDevice` TTY probe (no new dep).
 
-- [~] SPEC-040 (design complete 2026-07-04 → build) — **M (headline) — `brag
+- [x] SPEC-040 (shipped 2026-07-04) — **M (headline) — `brag
       mcp serve` MCP server + provenance.** New `brag mcp serve` subcommand
       running a local stdio MCP server exposing `brag_add` / `brag_list` /
       `brag_search` / `brag_stats` as thin wrappers over the existing `Store`;
@@ -223,7 +223,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       mechanics* — trust-but-verify the "pushed tag / bumped formula"
       claims via `gh release view` / the tap cask read.
 
-**Count:** 2 shipped / 1 in build (SPEC-040) / 1 pending (SPEC-041)
+**Count:** 3 shipped / 0 active / 1 pending (SPEC-041)
 
 **Complexity check:** four specs, one L-risk (SPEC-040 — resized to M at design
 after a clean §12(b) pre-flight retired the SDK/transport risk). The plugin +
