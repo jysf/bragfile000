@@ -325,6 +325,48 @@ coordinator call, **not a scope item this stage decides**; it brings the
 trust-but-verify-agent-push-reports WATCH item (N=2) into live relevance
 for every SPEC-040/041 "pushed/bumped" claim.
 
+**RESOLVED — HOLD on claude-only (2026-07-03, coordinator, PROJ-003
+Step-1).** The framing recommendation ("do it, ~30-min pre-work") rested
+on the flip being a flag-flip-plus-wiring chore. Step-1 investigation
+falsified that premise:
+
+1. **The scaffold is gone.** `just init` did `cp -r variants/<chosen>/. .`
+   then `rm -rf variants/` (justfile:41-42). There is no
+   `variants/claude-plus-agents/` in the repo — no variant-specific
+   AGENTS.md, no `FIRST_SESSION_PROMPTS`, no `/handoffs/` directory — to
+   flip *to*.
+2. **No role tooling exists.** No `.claude/agents/` definitions; no
+   handoffs mechanism. `new-spec.sh`'s `if VARIANT = claude-plus-agents`
+   branch (scripts/new-spec.sh:49) is a no-op — both arms select the same
+   `spec.md` template.
+3. **The instruction set is claude-only-specific.** AGENTS.md is titled
+   "Claude-Only Variant", §13 is "Session Hygiene (claude-only specific)",
+   and §2 states the `agents.architect`/`agents.implementer` frontmatter
+   is *informational only* under this variant. Flipping the flag without
+   reconciling these would make every spec's `agents.*` frontmatter imply
+   separate-agent provenance that §2 says must be inferred from
+   commit/session timestamps.
+
+A genuine flip is therefore scaffold-reconstruction + three role-agent
+definitions + an AGENTS.md/prompts reconciliation pass — real
+`spec-driven-template` infrastructure work, not pre-build prep. A
+flag-only "cosmetic flip" was rejected: it makes `.variant` assert a role
+model the repo cannot operate.
+
+**Consequences for STAGE-009:** the whole stage runs `claude-only`; the
+§13 fresh-session-per-cycle discipline (design → build → verify in
+separate sessions) remains the contamination guard. SPEC-038/039 lose
+nothing as designs — they only lose their role as a *variant* shakeout,
+which required an apparatus that does not yet exist. The
+trust-but-verify-agent-push-reports WATCH item stays parked at N=2 (no
+agent push-reports to verify while claude-only). **Future-flip
+prerequisites** (gate any later flip on all three): (a) reconstruct or
+re-author the `claude-plus-agents` scaffold incl. `/handoffs/`; (b) author
+architect/implementer/reviewer agent definitions + make
+`new-spec.sh`/templates actually branch on them; (c) reconcile AGENTS.md
+§2/§13 and the doc titles for the two-role model. Tracked as a
+separately-scoped chore, not owned by any STAGE-009 spec.
+
 ## Dependencies
 
 ### Depends on
