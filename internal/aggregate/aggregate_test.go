@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 	"time"
+	_ "time/tzdata" // embeds the IANA DB in the test binary only, keeping LoadLocation hermetic in CI
 
 	"github.com/jysf/bragfile000/internal/storage"
 )
@@ -291,19 +292,21 @@ func entryAt(year, month, day, hour int) storage.Entry {
 	}
 }
 
-// TestStreak_CurrentAndLongest locks the SPEC-020 streak edge cases
-// per locked decision §6: today-with-entries counts, today-zero yields
-// 0 (NOT "the streak that ended yesterday"), gap-mid-corpus preserves
-// longest, single-entry on today is (1,1), same-day multiple entries
-// dedup to 1.
+// TestStreak_CurrentAndLongest locks the DEC-022 streak semantics:
+// current counts the consecutive local-day run ending on TODAY or
+// YESTERDAY (alive-through-yesterday), 0 only after two empty days;
+// longest is the longest consecutive local-day run; same-day entries
+// dedupe to one day. now is injected (instant + zone); no time.Sleep.
+// These subtests keep now in time.UTC, so local day == UTC day — the
+// alive-through-yesterday axis is exercised here; the local-day and DST
+// axes are exercised by the two dedicated tests below.
 func TestStreak_CurrentAndLongest(t *testing.T) {
 	now := time.Date(2026, 4, 25, 12, 0, 0, 0, time.UTC)
 
+	// ● preservation: today has an entry → count today and walk back.
 	t.Run("today_has_entries", func(t *testing.T) {
 		entries := []storage.Entry{
-			entryAt(2026, 4, 23, 10),
-			entryAt(2026, 4, 24, 10),
-			entryAt(2026, 4, 25, 10),
+			entryAt(2026, 4, 23, 10), entryAt(2026, 4, 24, 10), entryAt(2026, 4, 25, 10),
 		}
 		current, longest := Streak(entries, now)
 		if current != 3 || longest != 3 {
@@ -311,47 +314,75 @@ func TestStreak_CurrentAndLongest(t *testing.T) {
 		}
 	})
 
-	t.Run("today_zero_entries_yields_zero", func(t *testing.T) {
+	// ▲ new: today empty, yesterday (4/24) present → streak ALIVE (was 0).
+	t.Run("today_empty_yesterday_alive", func(t *testing.T) {
 		entries := []storage.Entry{
-			entryAt(2026, 4, 22, 10),
-			entryAt(2026, 4, 23, 10),
-			entryAt(2026, 4, 24, 10),
+			entryAt(2026, 4, 22, 10), entryAt(2026, 4, 23, 10), entryAt(2026, 4, 24, 10),
+		}
+		current, longest := Streak(entries, now)
+		if current != 3 || longest != 3 {
+			t.Errorf("today_empty_yesterday_alive: got (%d,%d), want (3,3)", current, longest)
+		}
+	})
+
+	// ▲ new (the BUG's canonical case): run ending yesterday, now=today,
+	// current == run length (not 0).
+	t.Run("run_ending_yesterday_now_today", func(t *testing.T) {
+		entries := []storage.Entry{entryAt(2026, 4, 23, 10), entryAt(2026, 4, 24, 10)}
+		current, longest := Streak(entries, now)
+		if current != 2 || longest != 2 {
+			t.Errorf("run_ending_yesterday_now_today: got (%d,%d), want (2,2)", current, longest)
+		}
+	})
+
+	// ▲ new: a single entry dated yesterday still reads current 1.
+	t.Run("single_entry_yesterday", func(t *testing.T) {
+		entries := []storage.Entry{entryAt(2026, 4, 24, 10)}
+		current, longest := Streak(entries, now)
+		if current != 1 || longest != 1 {
+			t.Errorf("single_entry_yesterday: got (%d,%d), want (1,1)", current, longest)
+		}
+	})
+
+	// ● preservation: two empty days (4/24 AND 4/25) → current 0. The fix
+	// grants one day of grace, not immortality.
+	t.Run("streak_dead_after_two_empty_days", func(t *testing.T) {
+		entries := []storage.Entry{
+			entryAt(2026, 4, 21, 10), entryAt(2026, 4, 22, 10), entryAt(2026, 4, 23, 10),
 		}
 		current, longest := Streak(entries, now)
 		if current != 0 || longest != 3 {
-			t.Errorf("today_zero_entries_yields_zero: got (%d,%d), want (0,3)", current, longest)
+			t.Errorf("streak_dead_after_two_empty_days: got (%d,%d), want (0,3)", current, longest)
 		}
 	})
 
+	// ▲ changed: today empty, yesterday 4/24 present → current 2 (was 0);
+	// longest preserved at 5 (the 4/10–4/14 run).
 	t.Run("gap_mid_corpus_longest", func(t *testing.T) {
 		entries := []storage.Entry{
-			entryAt(2026, 4, 10, 10),
-			entryAt(2026, 4, 11, 10),
-			entryAt(2026, 4, 12, 10),
-			entryAt(2026, 4, 13, 10),
-			entryAt(2026, 4, 14, 10),
-			entryAt(2026, 4, 23, 10),
-			entryAt(2026, 4, 24, 10),
+			entryAt(2026, 4, 10, 10), entryAt(2026, 4, 11, 10), entryAt(2026, 4, 12, 10),
+			entryAt(2026, 4, 13, 10), entryAt(2026, 4, 14, 10),
+			entryAt(2026, 4, 23, 10), entryAt(2026, 4, 24, 10),
 		}
 		current, longest := Streak(entries, now)
-		if current != 0 || longest != 5 {
-			t.Errorf("gap_mid_corpus_longest: got (%d,%d), want (0,5)", current, longest)
+		if current != 2 || longest != 5 {
+			t.Errorf("gap_mid_corpus_longest: got (%d,%d), want (2,5)", current, longest)
 		}
 	})
 
-	t.Run("single_entry", func(t *testing.T) {
+	// ● preservation.
+	t.Run("single_entry_today", func(t *testing.T) {
 		entries := []storage.Entry{entryAt(2026, 4, 25, 10)}
 		current, longest := Streak(entries, now)
 		if current != 1 || longest != 1 {
-			t.Errorf("single_entry: got (%d,%d), want (1,1)", current, longest)
+			t.Errorf("single_entry_today: got (%d,%d), want (1,1)", current, longest)
 		}
 	})
 
+	// ● preservation: same-day multiple entries dedupe to one streak day.
 	t.Run("multiple_entries_same_day", func(t *testing.T) {
 		entries := []storage.Entry{
-			entryAt(2026, 4, 25, 8),
-			entryAt(2026, 4, 25, 12),
-			entryAt(2026, 4, 25, 16),
+			entryAt(2026, 4, 25, 8), entryAt(2026, 4, 25, 12), entryAt(2026, 4, 25, 16),
 		}
 		current, longest := Streak(entries, now)
 		if current != 1 || longest != 1 {
@@ -359,12 +390,66 @@ func TestStreak_CurrentAndLongest(t *testing.T) {
 		}
 	})
 
+	// ● preservation.
 	t.Run("empty_corpus", func(t *testing.T) {
 		current, longest := Streak(nil, now)
 		if current != 0 || longest != 0 {
 			t.Errorf("empty_corpus: got (%d,%d), want (0,0)", current, longest)
 		}
 	})
+}
+
+// TestStreak_BucketsByLocalDay ▲ proves current-streak buckets by the
+// user's LOCAL day, not UTC. Two entries whose UTC date is 2026-04-25
+// (05:00Z and 16:00Z) fall on DIFFERENT local days in America/Los_Angeles
+// (04-24 22:00 and 04-25 09:00). With now on the local evening of 04-25,
+// the local streak is 2. The OLD code buckets both entries under UTC
+// 04-25 (one day) while seeding its cursor from now's LOCAL day (04-25,
+// since it reads now.Day() directly), so it returns (1,1) — this test
+// fails on old (1,1 != 2,2), passes on new. Offsets verified against
+// tzdata; old/new values confirmed against a reference impl at design.
+func TestStreak_BucketsByLocalDay(t *testing.T) {
+	la, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatalf("load America/Los_Angeles: %v", err)
+	}
+	entries := []storage.Entry{
+		entryAt(2026, 4, 25, 5),  // UTC 05:00Z == 2026-04-24 22:00 PDT
+		entryAt(2026, 4, 25, 16), // UTC 16:00Z == 2026-04-25 09:00 PDT
+	}
+	now := time.Date(2026, 4, 25, 20, 0, 0, 0, la) // 2026-04-25 evening local
+	current, longest := Streak(entries, now)
+	if current != 2 || longest != 2 {
+		t.Errorf("BucketsByLocalDay: got (%d,%d), want (2,2)", current, longest)
+	}
+}
+
+// TestStreak_CurrentStepsAcrossDSTBoundary ● GUARD (not fail-first):
+// locks that the NEW code's LOCAL cursor steps by CALENDAR day (AddDate),
+// not by 24h, across the 2026 US spring-forward (Mar 8, a 23-hour local
+// day). A run on local days Mar 7/8/9 with now on Mar 9 must count 3.
+// This fixture's UTC and local dates coincide, so the OLD code also
+// returns (3,3) — the test does NOT fail on current code (confirmed
+// against a reference impl). Its job is to pair with the calendar-
+// arithmetic decision: if the NEW code stepped with cursor.Add(-24h)
+// instead of AddDate, Mar 9 00:00 local minus 24h lands on Mar 7 23:00
+// (date Mar 7), SKIPPING Mar 8 → current would be 2, and this test would
+// fail. So it guards against a DST-unsafe reimplementation of the walk.
+func TestStreak_CurrentStepsAcrossDSTBoundary(t *testing.T) {
+	la, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatalf("load America/Los_Angeles: %v", err)
+	}
+	entries := []storage.Entry{
+		entryAt(2026, 3, 7, 20), // local noon PST (UTC-8) == 20:00Z, local 03-07
+		entryAt(2026, 3, 8, 19), // local noon PDT (UTC-7) == 19:00Z, local 03-08
+		entryAt(2026, 3, 9, 19), // local noon PDT == 19:00Z, local 03-09
+	}
+	now := time.Date(2026, 3, 9, 18, 0, 0, 0, la) // 2026-03-09 evening local
+	current, longest := Streak(entries, now)
+	if current != 3 || longest != 3 {
+		t.Errorf("CurrentStepsAcrossDSTBoundary: got (%d,%d), want (3,3)", current, longest)
+	}
 }
 
 // TestMostCommon_TopNCapAlphaTiebreakAndEmpty locks the top-N counter

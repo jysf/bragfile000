@@ -146,20 +146,21 @@ discipline STAGE-007/008 used (peel rather than let a spec grow to L).
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-038 (proposed) — **XS/S — Current-streak fix.** `Streak()`
+- [x] SPEC-038 (shipped 2026-07-03, PR #57) — **XS/S — Current-streak fix.** `Streak()`
       keeps the current streak alive through *yesterday* and buckets by
       the user's *local* day (storage stays UTC; only the derived metric
-      goes local). Add the missing test case: a run ending yesterday,
-      `now`=today, expect `Current` = run length (not 0). **Blocks
-      SPEC-039.** Possible small DEC (local-day-vs-UTC semantics for a
-      derived metric — see surfaced question b). **Premise-audit
-      triggers:** *inversion/removal* — `TestStreak_CurrentAndLongest`
-      (`aggregate_test.go`) currently passes a `now` with a same-day
-      entry; its premise shifts, enumerate it as a planned rewrite, not a
-      build-time discovery. *§9 no-sleep* — use the injected clock / fixed
-      `now`, never a real `time.Sleep`, to exercise the day boundary.
-      *§12(a)* — compute the expected `Current`/`Longest` values against
-      the fixture at design, don't hand-type them.
+      goes local). **Design complete (2026-07-03):** spec on
+      `feat/spec-038-streak-fix`; **DEC-022 emitted** (local-day derived
+      metric — settled surfaced question (b): a small DEC, not just an
+      inline note, because it reverses SPEC-020 §6's two *locked* streak
+      decisions and records why localizing a derived metric does not relax
+      the blocking `timestamps-in-utc-rfc3339`). Failing tests written
+      (alive-through-yesterday, still-0-after-two-empty-days, local-day
+      bucketing, DST spring-forward guard); the required run-ending-
+      yesterday case added; premise audit enumerated the two inverting
+      subtests + the doc/help hits; §12(a) expected values verified against
+      a reference impl at design (no `time.Sleep`; injected `now`). **Blocks
+      SPEC-039.** Awaiting build (fresh session).
 
 - [ ] SPEC-039 (proposed) — **S — Milestone notifications on `brag
       add`.** TTY-only stderr celebratory line on crossing total
@@ -216,7 +217,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       mechanics* — trust-but-verify the "pushed tag / bumped formula"
       claims via `gh release view` / the tap cask read.
 
-**Count:** 0 shipped / 0 active / 4 pending
+**Count:** 1 shipped / 0 active / 3 pending
 
 **Complexity check:** four specs, one L-risk (SPEC-040). The plugin +
 release cut are bundled in SPEC-041 because they share the "make the
