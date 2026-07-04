@@ -33,6 +33,7 @@ func main() {
 	root.AddCommand(cli.NewTagCmd())
 	root.AddCommand(cli.NewProjectCmd())
 	root.AddCommand(cli.NewCompletionCmd(root))
+	root.AddCommand(cli.NewMCPCmd())
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "brag: %s\n", err.Error())
