@@ -715,27 +715,59 @@ lever and keeps the headline whole.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-040-mcp-server`
+- **PR (if applicable):** opened against `main` (see PR description for link)
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
   - `DEC-024` — MCP server SDK/transport/provenance (emitted at design; no new
-    DEC expected at build unless the SDK version pin or a tool contract shifts).
+    DEC needed at build — the SDK v1.6.1 pin and all four tool contracts held
+    exactly as pre-flighted).
+  - Confirmed at build: `go mod tidy` pulled in exactly the 6 indirect modules
+    DEC-024's Negative consequence named (`google/jsonschema-go`,
+    `segmentio/asm`, `segmentio/encoding`, `yosida95/uritemplate/v3`,
+    `golang.org/x/oauth2`, `golang.org/x/sys`) — `brag` uses stdio only, but
+    the SDK bundles its HTTP/SSE/streamable transports (hence `x/oauth2` +
+    `segmentio`) unconditionally. Dead weight in the dependency graph exactly
+    as DEC-024 accepted; no new decision needed since this was the deliberate
+    trade-off, not a surprise.
 - **Deviations from spec:**
-  - [list]
+  - None. All Failing Tests transcribed verbatim; `newTestServer`/`callJSON`/
+    `seedViaStore`/`setNowFunc` test helpers were written at build (the spec
+    described their required behavior in prose but didn't embed literal code
+    for them, unlike the locked test bodies).
+  - Added one test not enumerated in the spec's Failing Tests:
+    `internal/mcpserver/import_audit_test.go` (`TestNoSQLImport`) — the spec's
+    Implementation Context explicitly flagged this as "a welcome addition"
+    since the `no-sql-in-cli-layer` constraint's path glob doesn't cover the
+    new package; added it to hold that architecture line by test, not just
+    convention.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None beyond what SPEC-040 already deferred to SPEC-041 (plugin packaging)
+    and the DEC-024 revisit triggers (provenance-column promotion, networked
+    MCP, third DEC-010 consumer, SDK dependency-weight pain).
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing structural. The one small gap: the spec describes `newTestServer`/
+   `callJSON`/`seedViaStore`/`setNowFunc` by behavior/signature in prose (§
+   "Helper `newTestServer(t)`...") rather than embedding them as a literal
+   artifact the way the locked test bodies were embedded. Writing them was
+   quick and unambiguous given the pre-flight's `main.go` shapes, but it's the
+   one place build synthesized code the design didn't hand over verbatim.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No — the spec's own Implementation Context already named the
+   `no-sql-in-cli-layer` path-glob gap for the new package and suggested the
+   import-audit test as a welcome addition, so nothing was missing; that
+   suggestion is exactly what got acted on.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Embed the test-helper functions (`newTestServer`, `callJSON`,
+   `seedViaStore`, `setNowFunc`) as a literal code block under Failing Tests
+   or Notes for the Implementer, the same way the test bodies themselves are
+   locked verbatim — closes the one soft spot named above and makes the
+   harness fully mechanical to transcribe.
 
 ---
 
