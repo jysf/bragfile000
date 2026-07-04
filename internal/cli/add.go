@@ -76,6 +76,10 @@ directory if you are inside a registered project's location (see 'brag
 project here'). An explicit --project always wins, and auto-fill never
 fails the add.
 
+On a terminal, brag add prints a short milestone note to stderr on success;
+scripted (--json), piped, and non-terminal runs stay silent, and stdout
+always carries just the entry ID.
+
 Examples:
   brag add                                          # editor mode
   brag add -t "shipped the auth refactor"
@@ -161,6 +165,7 @@ func runAddFlags(cmd *cobra.Command, _ []string) error {
 	}
 
 	fmt.Fprintln(cmd.OutOrStdout(), inserted.ID)
+	emitMilestone(cmd, s, inserted)
 	return nil
 }
 
@@ -208,6 +213,7 @@ func runAddEditor(cmd *cobra.Command) error {
 	}
 
 	fmt.Fprintln(cmd.OutOrStdout(), inserted.ID)
+	emitMilestone(cmd, s, inserted)
 	return nil
 }
 

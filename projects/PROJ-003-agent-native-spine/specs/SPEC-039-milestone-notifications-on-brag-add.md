@@ -806,3 +806,82 @@ Each behavior decision (1–6) has ≥1 paired test that fails without it (§9).
 `docs/api-contract.md` `brag add` section drops the unqualified "stderr
 empty" for the TTY-gated milestone contract (enumerated in the premise
 audit); no test asserts that prose, so none is added.
+
+---
+
+## Build Completion
+
+*Filled in at the end of the **build** cycle, before advancing to verify.*
+
+- **Branch:** `feat/spec-039-milestone-notifications`
+- **PR (if applicable):** [#59](https://github.com/jysf/bragfile000/pull/59)
+  — carries design + build (see Deviations: the design PR was never merged
+  separately; this repo's house style is one branch/PR per spec, as SPEC-038
+  shipped via a single PR #57).
+- **All acceptance criteria met?** yes — all boxes hold:
+  total/streak/per-project crossings each fire their line on a TTY
+  (`TestAddMilestone_FiresOnTTY`, `_PerProjectFires`, `_StreakEndToEnd`);
+  streak reads the SPEC-038-corrected `aggregate.Streak` (the end-to-end test
+  seeds 6 local days ending yesterday via `Backdate`, adds today → crosses 7);
+  crossing-not-equality (`TestMilestoneLine_StreakThresholds` steady-at-7 →
+  "", `_OrdinaryAddSilentOnTTY`); one line by locked precedence
+  (`_Precedence`, `_FirstBragNudges`); silent under `--json` with TTY forced
+  on (`_SilentUnderJSON`, `errBuf.Len()==0`), non-TTY (`_SilentWhenNotTTY`),
+  and ordinary adds; never on stdout (ID-parses assertions); no new go.mod
+  dep, no migration. Gates green: `go test ./...` (555), `gofmt -l .` empty,
+  `go vet ./...` clean, `CGO_ENABLED=0 go test ./...` green; `scripts/
+  test-docs.sh` ALL OK.
+- **New decisions emitted:**
+  - `DEC-023` — milestone notifications copy & semantics (emitted at design;
+    no new DEC at build). No go.mod change, so
+    `no-new-top-level-deps-without-decision` did not fire (stdlib
+    `os.ModeCharDevice` probe, as locked).
+- **Deviations from spec:**
+  - **None on behavior.** Tests transcribed verbatim; `milestone.go` built to
+    the locked shapes; the copy literals match DEC-023 / Locked decision 5
+    exactly; `emitMilestone` wired into `runAddFlags` + `runAddEditor` (not
+    `runAddJSON`); `newRootWithAdd` pinned `addStderrIsTTY=false`;
+    `docs/api-contract.md` reworded per the premise audit.
+  - **Two mechanical modernizations** (not spec-visible): the spec's
+    `seedEntries` reference used `for i := 0; i < n; i++`; built as
+    `for range n` (Go 1.26 range-over-int) to keep the tree lint-clean. No
+    behavior change.
+  - **Process note (not a code deviation):** the precondition "design PR #59
+    is merged to main" was **false** at build start — #59 was still OPEN and
+    `origin/main` lacked the spec/DEC-023. The feat branch was already
+    correctly based on the current main tip (`59314c6`), matching this repo's
+    one-branch-per-spec model (cf. SPEC-038 / PR #57). Build proceeded on the
+    existing feat branch per the operative rules ("do all work on
+    `feat/spec-039-milestone-notifications`… open/confirm the PR"); main was
+    never touched. Flagged for the coordinator.
+- **Follow-up work identified:**
+  - None new. SPEC-040 (MCP) and SPEC-041 (plugin) remain the STAGE-009
+    backlog; the milestone is CLI-only and does not touch them.
+
+### Build-phase reflection (3 questions, short answers)
+
+1. **What was unclear in the spec that slowed you down?**
+   — Nothing in the spec itself. The only friction was the environment: the
+   "design PR merged" precondition contradicted the actual git state (open
+   #59, one-branch model). The spec's own reference shapes
+   (`computeMilestoneInputs`, `emitMilestone`, `defaultStderrIsTTY`, the copy
+   table) made the implementation a transcription, and the fail-first map
+   correctly predicted the undefined-symbol compile failure as the expected
+   first state.
+
+2. **Was there a constraint or decision that should have been listed but wasn't?**
+   — No. `references.constraints`
+   (stdout-is-for-data-stderr-is-for-humans, test-before-implementation,
+   no-cgo, no-new-top-level-deps-without-decision, errors-wrap-with-context)
+   and DEC-023/022/011/012 covered everything the build touched. The
+   `go-isatty`-vs-stdlib decision was pre-settled in DEC-023 Locked decision
+   6, so the TTY probe was never an open question.
+
+3. **If you did this task again, what would you do differently?**
+   — Nothing structural. One observation worth a WATCH (N=1, not codified):
+   the pure-function-plus-thin-glue split (decision matrix with no
+   Store/clock/TTY, tested exhaustively without a DB; a ~45-line glue layer
+   tested for wiring only) made both the design and the build cheap and is a
+   reusable shape for any "compute-then-render-a-human-line" CLI feature.
+   Parks alongside the existing testing-conventions habits; revisit if a
+   second feature (e.g. an MCP-side or `stats`-side nudge) re-uses it.
