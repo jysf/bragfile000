@@ -7,7 +7,7 @@
 task:
   id: SPEC-038
   type: bug                        # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: S                    # S | M | L  (L means split it)
@@ -556,10 +556,26 @@ audit as required updates.
 *Appended during the **ship** cycle.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Almost nothing — the fail-first map (▲ vs ●) and the premise-audit
+   table made build and verify mechanical. The one friction: verify paused
+   to confirm that `Span`'s residual `.UTC()`/`.Sub()` at
+   `aggregate.go:268–281` was deliberately out of scope (it is — different
+   metric). A one-line "stays" row in the premise audit for the
+   scope-excluded residual pattern *inside a touched file* would have
+   pre-empted that pause, mirroring the doc-hit "stays" rows already there.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No update earned now. DEC-022 is the durable home for the
+   derive-local/store-UTC rule; per this spec's own Out-of-scope note, that
+   rule is promoted to a *constraint* only when a third derived-metric
+   consumer (STAGE-010's `brag impact`) re-derives it — hold until then.
+   One candidate AGENTS.md §9 lesson worth *watching* (N=1, do not codify):
+   "when a fix touches a file that also contains a scope-excluded instance
+   of the very pattern being changed (here `Span`'s UTC/`Sub`), enumerate
+   it as a 'stays' row so verify doesn't re-adjudicate it." Parks alongside
+   the existing premise-audit family; revisit if a second case appears.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No. SPEC-039 (milestone notifications) already exists in the STAGE-009
+   backlog, is unblocked by this ship, and consumes the corrected streak —
+   it is the natural next spec. No new follow-up needed.

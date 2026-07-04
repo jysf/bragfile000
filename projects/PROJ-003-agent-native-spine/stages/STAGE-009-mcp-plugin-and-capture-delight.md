@@ -146,7 +146,7 @@ discipline STAGE-007/008 used (peel rather than let a spec grow to L).
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [x] SPEC-038 (design) — **XS/S — Current-streak fix.** `Streak()`
+- [x] SPEC-038 (shipped 2026-07-03, PR #57) — **XS/S — Current-streak fix.** `Streak()`
       keeps the current streak alive through *yesterday* and buckets by
       the user's *local* day (storage stays UTC; only the derived metric
       goes local). **Design complete (2026-07-03):** spec on
@@ -217,7 +217,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       mechanics* — trust-but-verify the "pushed tag / bumped formula"
       claims via `gh release view` / the tap cask read.
 
-**Count:** 0 shipped / 0 active / 4 pending
+**Count:** 1 shipped / 0 active / 3 pending
 
 **Complexity check:** four specs, one L-risk (SPEC-040). The plugin +
 release cut are bundled in SPEC-041 because they share the "make the
