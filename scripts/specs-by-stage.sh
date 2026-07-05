@@ -38,6 +38,19 @@ spec_name() {
     printf '%s' "${fn#"$id"-}" | tr '-' ' '
 }
 
+# spec_size SPEC-NNN — the authoritative complexity (S/M/L) from the spec
+# file's `complexity:` front-matter (active specs/ or archived specs/done/).
+# Reading front-matter — not the stage backlog prose — is robust: backlog
+# lines wrap across multiple lines and write the size as "**M (headline) —"
+# or "**XS/S —", neither of which is a fixed, greppable token. Prints ""
+# when no spec file exists yet (e.g. a pending/deferred stub).
+spec_size() {
+    local id="$1"
+    local matches=(projects/PROJ-*/specs/"$id"-*.md projects/PROJ-*/specs/done/"$id"-*.md)
+    [ ${#matches[@]} -eq 0 ] && return 0
+    grep -m1 -E '^  complexity:' "${matches[0]}" | sed 's/#.*//' | awk '{print $2}'
+}
+
 if [ ${#stages[@]} -eq 0 ]; then
     echo "No stage files found under projects/PROJ-*/stages/"
     exit 0
@@ -61,8 +74,7 @@ for stage in "${stages[@]}"; do
     while IFS= read -r line; do
         sid=$(echo "$line" | grep -oE 'SPEC-[0-9]+' | head -1)
         shipped=$(echo "$line" | grep -oE '20[0-9][0-9]-[0-9]+-[0-9]+' | head -1)
-        ssize=$(echo "$line" | grep -oE '\*\*[SML]\*\*' | head -1 | sed 's/\*//g')
-        [ -z "$ssize" ] && ssize=$(echo "$line" | grep -oE '\([SML]\)' | head -1 | sed 's/[()]//g')
+        ssize=$(spec_size "$sid")
         [ -z "$ssize" ] && ssize="?"
 
         # Trailing column: just the size, or "size  name" when names are on.
