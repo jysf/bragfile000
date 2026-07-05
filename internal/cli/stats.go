@@ -18,7 +18,7 @@ func NewStatsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stats",
 		Short: "Lifetime stats: six aggregations over the entire corpus",
-		Long: `Print six lifetime aggregations over the entire corpus: total entries, entries/week (rolling average over the corpus span), current and longest streak (consecutive UTC days with entries), top-5 most-common tags, top-5 most-common projects, plus the corpus span (first entry, last entry, days). No LLM ships in the binary.
+		Long: `Print six lifetime aggregations over the entire corpus: total entries, entries/week (rolling average over the corpus span), current and longest streak (consecutive local days with entries; the current streak stays alive through yesterday), top-5 most-common tags, top-5 most-common projects, plus the corpus span (first entry, last entry, days). No LLM ships in the binary.
 
 Output is markdown (default) or a single-object JSON envelope (--format json) per DEC-014. The JSON shape uses arrays of objects for top_tags and top_projects to preserve DESC-by-count ordering; corpus_span is a sub-object with date-or-null fields.
 
@@ -58,8 +58,10 @@ func runStats(cmd *cobra.Command, _ []string) error {
 
 	// Single Now source: locked decision §10. The same value drives the
 	// renderer's Generated: line AND aggregate.Streak's today reference,
-	// avoiding a midnight-UTC race between two time.Now() calls.
-	opts := export.StatsOptions{Now: time.Now().UTC()}
+	// avoiding a midnight race between two time.Now() calls. Kept local
+	// (not .UTC()) so the streak buckets by the user's local day per
+	// DEC-022; the Generated: line re-.UTC()s it in the renderer.
+	opts := export.StatsOptions{Now: time.Now()}
 
 	var body []byte
 	switch format {

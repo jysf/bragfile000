@@ -613,6 +613,116 @@ mattered" is exactly what they can capture and what humans most need
 (reviews, promos, identity), and almost no tool is built for it. The fun /
 interesting / impactful surfaces below are the point, not decoration.
 
+## PROJ-003 3-day core — SELECTED (2026-06-20)
+
+*Selected at the PROJ-002 close review. From this cluster, four items form a
+shippable 3-day "agent-native spine + delight" core; the rest stay menu options
+for a later stage. **Framing pending (Prompt 1a); not yet scaffolded.** A
+framing prompt was drafted at this review.*
+
+**The core — one stage (STAGE-009), SPEC-038..041, cut as v0.3.0:**
+
+- **⑥ SPEC-038 — streak fix (XS/S).** The confirmed `brag stats` current-streak
+  bug (see the BUG entry below): keep the streak alive through *yesterday*,
+  bucket by *local* day. Blocks ⑤. Possible small DEC — local-day vs the
+  `timestamps-in-utc-rfc3339` constraint (storage stays UTC; only the derived
+  metric goes local).
+- **⑤ SPEC-039 — milestone notifications (S).** This cluster's "liked" idea:
+  TTY-only stderr celebratory line on `brag add` thresholds; silent under
+  `--json`/pipes (the stdout-is-data spine). Reuses `internal/aggregate`.
+  Depends on SPEC-038's correct streak.
+- **① SPEC-040 — MCP server (M/L).** `brag mcp serve` stdio server exposing
+  `brag_add` / `brag_list` / `brag_search` / `brag_stats` as thin wrappers over
+  the existing Store (SQL stays in storage). The agent-native delivery vehicle
+  and the claude-plus-agents proving ground. **DEC at design** (MCP transport +
+  the new top-level dep; `no-new-top-level-deps-without-decision`).
+- **② SPEC-041 — plugin packaging (S/M).** Bundle the existing
+  `examples/brag-slash-command.md` + a Stop/SessionEnd capture-nudge hook +
+  `brag mcp serve` into an installable Claude Code plugin. §12(b)-pre-flight the
+  manifest against the current plugin loader. Then cut v0.3.0.
+
+**Sequencing:** Day 1 SPEC-038→039 (small, low-risk; first claude-plus-agents
+shakeout); Day 2 SPEC-040 (the L-risk spine — time-box the Go MCP SDK eval, fall
+back to a hand-rolled stdio loop); Day 3 SPEC-041 + v0.3.0 cut + buffer.
+
+**Pre-work — variant flip: HELD (2026-07-03, coordinator).** The framing
+assumed a ~30-min "flip `.variant` → `claude-plus-agents` + wire roles" chore.
+That premise was falsified at PROJ-003 Step-1: `just init` consumed the variant
+scaffold and `rm -rf`'d `variants/`, so there is no `claude-plus-agents` source
+(its variant-specific AGENTS.md / FIRST_SESSION_PROMPTS / `/handoffs/`) to flip
+to; there is no `.claude/agents/` role tooling; `new-spec.sh`'s variant branch
+is a no-op (both arms use the same template); and AGENTS.md is written
+claude-only-specific (title, §13, §2's "frontmatter is informational only"). A
+real flip is scaffold-rebuild + role-authoring + instruction-reconciliation
+work, not pre-build prep. Decision: **stay claude-only** for the SPEC-038/039
+shakeout; the flip is a separately-scoped `spec-driven-template` chore for later,
+gated on those prerequisites. See STAGE-009 Design Notes "Variant flip" for the
+full record.
+
+**Provenance capture — which agent + model drove a brag (2026-06-20, user ask).**
+When a brag is primarily agent-driven, record *which agent + which model*, so
+multi-agent work is attributable in hindsight. **Recommendation: reserved tag
+namespaces NOW, first-class fields LATER if earned** — folds into SPEC-040/041,
+not a separate spec:
+- **Now (near-zero cost, ships with the spine):** a documented convention of
+  reserved tags `agent:<name>` and `model:<id>` (e.g. `agent:claude-code`,
+  `model:claude-opus-4-8`). Zero schema change — rides the normalized polymorphic
+  tags (STAGE-006); `brag list --tag model:claude-opus-4-8` filters, `brag tags`
+  counts. Emitters: the MCP `brag_add` tool (SPEC-040) passes the caller's
+  agent/model; the Stop-hook + slash-command + BRAG.md (SPEC-041) document the
+  convention so agent-driven captures populate them automatically. Complements the
+  spec front-matter `agents:` block, which already records architect/model for
+  *spec-tracked* work — the tags cover the *ad-hoc / hook / MCP* captures that
+  never go through a spec.
+- **Later (if provenance becomes load-bearing):** promote to first-class `agent` /
+  `model` columns — a DEC + migration extending the DEC-011 JSON envelope (9→11
+  keys, versioned). Same accepted-debt→normalize path as tags themselves
+  (DEC-004→DEC-015). **Revisit trigger:** provenance filtering/reporting becomes a
+  real ask, OR `agent:`/`model:` tags visibly pollute the `brag tags` taxonomy.
+- **Why tags first:** the framework's own philosophy — don't normalize until a
+  second consumer or a real query need appears. Real multi-agent dogfooding (the
+  claude-plus-agents run) reveals which provenance queries actually matter before
+  committing schema. Surface the reserved-namespace convention as a SPEC-040/041
+  design decision at PROJ-003 framing.
+
+**Reserved-namespace convention — draft literal (transcribe/refine at SPEC-041
+design; literal-artifact-as-spec, §12).** Two reserved tag prefixes carry
+provenance; the value follows the colon:
+- `agent:<name>` — the agent/harness that primarily drove the work. Canonical
+  values e.g. `agent:claude-code`, `agent:cursor`, `agent:codex`. Omit for
+  human-authored brags (or `agent:human` to be explicit).
+- `model:<id>` — the exact model ID behind that agent, canonical ID string:
+  `model:claude-opus-4-8`, `model:claude-sonnet-4-6`,
+  `model:claude-haiku-4-5-20251001`, `model:claude-fable-5`.
+
+Rules: lowercase, no spaces; `model:` uses the canonical AGENTS.md model ID;
+normally one `agent:` + one `model:` per entry (multiple only for genuinely
+multi-agent work); `agent`/`model` are RESERVED prefixes — never topic tags;
+auto-populated by agent-driven capture (MCP `brag_add` + the session-end/Stop
+hook), rarely hand-typed.
+
+Example (agent-driven capture):
+```
+brag add --title "Refactored the path resolver" --type shipped --project crustyimg \
+  --tags "rust,refactor,agent:claude-code,model:claude-opus-4-8" \
+  --impact "cut resolve() from O(n^2) to O(n); 40% faster on the hot path"
+```
+DEC-011 JSON envelope is UNCHANGED — provenance rides the comma-joined `tags`
+string: `"tags": "rust,refactor,agent:claude-code,model:claude-opus-4-8"`.
+Query with `brag list --tag model:claude-opus-4-8`; counted in `brag tags`.
+
+**Deferred to a later stage (STAGE-010, stretch):** ③ `brag impact
+--quarter|--month|--year` · ④ AI-pipe super-brag · ⑦ Notion export adapter.
+(`brag_impact` is intentionally NOT a core MCP tool — it depends on ③.)
+
+**Not in PROJ-003:** multi-user / cloud sync (separate concern; DEC-at-need; see
+the adjacent-data item); macOS notarization (v0.2.1); unregistered-project
+consolidation (optional, per the soft-match design being fine).
+
+**IDs:** PROJ-003 · STAGE-009 · SPEC-038..041 · next-free DEC-022 (assigned at
+emission, not pinned). Substrate ready: polymorphic tags + first-class projects
+(PROJ-002) and the SPEC-022 Claude assets (schema / slash-command / hook).
+
 ## Milestone notifications on `brag add` (liked — "easy and great")
 
 - **Idea:** When `brag add` crosses a threshold, print one celebratory
@@ -731,6 +841,35 @@ interesting / impactful surfaces below are the point, not decoration.
 - **Caution:** highest gimmick-risk of the cluster. Keep tasteful,
   opt-in display; lean on *consistency/impact* badges over *volume* ones
   to stay aligned with quality-over-quantity.
+
+## BUG: `brag stats` current-streak reads 0 until you log *today* (confirmed)
+
+- **Status:** CONFIRMED defect, 2026-06-20. Not a deferred idea — a real bug,
+  parked here until PROJ-003 because milestone/streak features depend on it.
+- **Symptom:** `brag stats` showed `Current: 0` despite an unbroken **14-day**
+  run (6/7–6/20). Re-running after that day's first entry landed flipped it to
+  `Current: 14`. So an intact multi-day streak reports 0 for the whole part of
+  the day before you've logged again.
+- **Root cause:** `internal/aggregate/aggregate.go:172` `Streak()` starts its
+  cursor at **today (UTC)** and breaks immediately if there's no entry dated
+  today — so the current streak is 0 every UTC-midnight until you re-log.
+  Two compounding facets:
+  1. **Requires-today.** Standard streak semantics (GitHub/Duolingo) keep the
+     streak alive through *yesterday* and only zero it after a full empty day.
+     Fix: if no entry today, seed the cursor at yesterday and count back; the
+     streak is "alive" when the last entry is today **or** yesterday.
+  2. **UTC vs local day.** `now.UTC()` means evening-Pacific entries fall on
+     what UTC calls a different day; "today" rolls over hours before the user's
+     day ends. Fix: compute the streak in the user's local day (or document the
+     UTC boundary explicitly).
+- **Test gap:** `TestStreak_CurrentAndLongest` (aggregate_test.go:299) passes a
+  fixed `now` that happens to have a same-day entry, so it never exercised the
+  no-entry-yet-today case. Add a case: run ending *yesterday*, `now` = today,
+  expect current == run length (not 0).
+- **Source:** surfaced 2026-06-19/20 during the PROJ-002 close review when the
+  "recent gap" read contradicted real activity. Bundle the fix with PROJ-003
+  milestone-notifications (⑥ in the 3-day core) — that feature is incorrect
+  without it.
 
 ## `brag stats` reframe + activity sparkline (liked, with corrections)
 

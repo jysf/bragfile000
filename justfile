@@ -125,6 +125,10 @@ test:
 test-docs:
     @./scripts/test-docs.sh
 
+# Run the capture-nudge Stop-hook behavior harness (SPEC-041 / DEC-025).
+test-hook:
+    @./scripts/test-capture-nudge.sh
+
 # Run brag without installing. Usage: just run list   |   just run add --title "x"
 run *ARGS:
     @go run ./cmd/brag {{ARGS}}

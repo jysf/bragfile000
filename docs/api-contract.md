@@ -44,6 +44,12 @@ brag add --title "shipped the auth refactor" \
 - `--title` is required. Everything else is optional.
 - Stdout on success: the inserted entry's ID, one line, no prefix (e.g.
   `42`). This keeps piping trivial (`id=$(brag add --title ...)`).
+- **Milestone line (stderr, TTY-only).** When stderr is a terminal, a
+  successful `add` may print one short celebratory line to **stderr** on
+  crossing a total / streak / per-project milestone (or a quiet "first brag
+  today/this week" nudge). It never touches stdout, so `id=$(brag add ...)`
+  is unaffected, and it is **silent** under `--json`, on pipes, and on any
+  non-terminal stderr. See [DEC-023](../decisions/DEC-023-milestone-notifications-copy-and-semantics.md).
 - Exit 0 on success; 1 if `--title` is missing or empty; 2 on storage
   error.
 
@@ -68,7 +74,8 @@ file, and spawns the editor against it. On save:
 
 - Successful save with a valid `Title:` header → row inserted; the
   inserted ID is printed to stdout (mirrors flag-mode contract so
-  `id=$(brag add)` works); stderr empty; exit 0.
+  `id=$(brag add)` works); stderr carries only the TTY-only milestone
+  line (see the flag-mode note above), else empty; exit 0.
 - Saving byte-identical content (SHA-256 comparison — i.e. the
   template was not modified) aborts cleanly: stderr prints
   `Aborted.`, exit 0, DB untouched.
@@ -126,13 +133,20 @@ the cwd. See `brag project here` (SPEC-031) for the shared resolver.
 ### `brag list` — list entries
 
 ```
-brag list [-P|--show-project] [--format json|tsv] [--tag T] [--project P] [--type T] [--since 2026-01-01] [--limit N]
+brag list [-P|--show-project] [--format json|tsv] [--tag T] [--project P] [--type T] [--since 2026-01-01] [--author agent|human] [--limit N]
 ```
 
 - `--tag`, `--project`, `--type` filter on exact field value
   (tags filter uses exact tag-name membership via the normalized
   `taggings` join — DEC-015 / SPEC-025).
 - `--since` accepts `YYYY-MM-DD` or a duration like `7d`, `2w`, `3m`.
+- `--author` distinguishes provenance authorship (SPEC-043): `agent`
+  selects entries carrying a reserved `agent:`/`model:` provenance tag
+  (the namespace the MCP `brag_add` tool stamps — DEC-024), `human`
+  selects entries carrying neither. Prefix-anchored, so a topic tag like
+  `agentic` does not count. Omitting the flag returns both. This is the
+  read half of the agent-native write path: `brag list --author agent
+  --format json | jq length` counts agent-authored entries.
 - `--limit` defaults to unlimited; useful for `brag list --limit 5`.
 - Order: `created_at DESC`.
 - Output (default / plain mode): one line per entry, tab-separated
@@ -360,7 +374,8 @@ brag stats --format json          # lifetime corpus, JSON envelope
 
 Lifetime panorama: six aggregations over the entire corpus — total
 entries, entries/week (rolling average over the corpus span), current
-and longest streak (consecutive UTC days with entries), top-5
+and longest streak (consecutive local days with entries; the current
+streak stays alive through yesterday), top-5
 most-common tags, top-5 most-common projects, plus the corpus span
 (first entry, last entry, days). No LLM ships in the binary.
 
@@ -654,6 +669,51 @@ For permanent setup, add the sourcing line to the shell's startup file
 - No `--db` / `BRAGFILE_DB` dependency — completion generation is stateless.
 - PowerShell is not supported (bragfile distributes for macOS + Linux only).
 
+### `brag mcp serve` — local stdio MCP server (STAGE-009)
+
+```
+brag mcp serve
+```
+
+Runs a local, **stdio-only** Model Context Protocol (MCP) server (no network
+transport, no separate binary/install) exposing four typed tools over the
+same `~/.bragfile/db.sqlite` the CLI uses:
+
+- **`brag_add`** — `title` (required, non-empty, ≤200 chars), optional
+  `description` (≤100000), `tags` (≤64, comma-joined per DEC-004),
+  `project` (≤64), `type` (≤64), `impact` (≤256), plus `agent`/`model`
+  provenance params. Inserts via `Store.Add` and returns the created entry
+  as a single [DEC-011](../decisions/DEC-011-json-output-shape.md) object.
+  A missing/empty `title` is a tool error, never a silent insert. Unlike
+  `brag add`, the MCP tool does **not** emit a SPEC-039 milestone line and
+  does **not** auto-fill `project` from a server-side cwd — the MCP server
+  has no meaningful cwd relative to the calling agent.
+- **`brag_list`** — filters `tag`/`project`/`type`/`limit` (exact match,
+  same semantics as `brag list`, minus `--since`); returns the DEC-011
+  array, byte-identical to `brag list --format json` on the same rows.
+- **`brag_search`** — `query` (required), `limit`; applies the same
+  [DEC-010](../decisions/DEC-010-search-query-syntax.md) whitespace-
+  tokenize + phrase-quote transform as `brag search` and returns the
+  DEC-011 array.
+- **`brag_stats`** — no arguments; returns the
+  [DEC-014](../decisions/DEC-014-rule-based-output-shape.md) envelope,
+  byte-identical to `brag stats --format json` for the same corpus.
+
+**Provenance.** `brag_add` stamps caller-provided `agent`/`model` as
+reserved-namespace tags — `agent:<name>` / `model:<id>` (lowercase,
+whitespace→`-`, commas stripped) — appended after the caller's own `tags`
+and canonicalized by the existing tags path
+([DEC-015](../decisions/DEC-015-tags-taggings-polymorphic-join.md)), with
+**no schema change**. `agent` falls back to the MCP client's
+`clientInfo.Name` when the param is omitted; `model` is **explicit-param
+only** (the MCP transport carries no model identity). Query provenance
+with the existing filters, e.g. `brag list --tag model:claude-opus-4-8`.
+
+**Transport purity.** The stdio stream carries only MCP protocol frames on
+`os.Stdout`; nothing human-facing is ever printed there (the generalized
+form of `stdout-is-for-data-stderr-is-for-humans` at this transport). See
+[DEC-024](../decisions/DEC-024-mcp-server-sdk-transport-and-provenance.md).
+
 ## Error output
 
 All human-readable errors go to stderr with the prefix `brag: `. Example:
@@ -688,3 +748,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-018` — `brag project delete` blast radius: entries untouched (soft match), project_locations deleted manually in-tx (FK off → no cascade), `'project'` taggings cleaned in-tx; archive is the recoverable status flip, delete is irreversible.
 - `DEC-019` — `brag project here` / `brag add` cwd auto-fill: nearest-ancestor (longest-prefix) match against registered project locations
 - `DEC-020` — `brag project edit` location editing: `RemoveLocation`/`EditLocations`; remove-not-attached and remove-other-project are user errors; verbatim path matching; one invocation's location changes are atomic (removes before adds); location edits don't bump `updated_at`.
+- `DEC-024` — `brag mcp serve`: official Go MCP SDK, stdio-only subcommand (not a separate binary), transport-purity generalization of the stdout/stderr spine, and provenance via reserved-namespace tags (explicit `agent`/`model` params with an `agent`/`clientInfo.Name` fallback).

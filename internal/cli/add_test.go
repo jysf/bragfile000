@@ -20,6 +20,12 @@ import (
 // Caller is responsible for setting args, out, err.
 func newRootWithAdd(t *testing.T) (*cobra.Command, string) {
 	t.Helper()
+	// Pin the milestone TTY seam off by default so existing success-path
+	// tests (which assert errBuf empty) stay hermetic regardless of whether
+	// `go test` runs under a terminal. Milestone tests opt in via
+	// setStderrIsTTY(t, true). SPEC-039.
+	addStderrIsTTY = func() bool { return false }
+	t.Cleanup(func() { addStderrIsTTY = defaultStderrIsTTY })
 	root := NewRootCmd("test")
 	root.AddCommand(NewAddCmd())
 	dbPath := filepath.Join(t.TempDir(), "test.db")
@@ -1174,5 +1180,24 @@ func TestAdd_HelpMentionsAutoFill(t *testing.T) {
 	out := outBuf.String()
 	if !strings.Contains(out, "auto-fills --project") {
 		t.Errorf("expected help to contain %q, got %q", "auto-fills --project", out)
+	}
+}
+
+func TestAdd_HelpMentionsMilestone(t *testing.T) {
+	root, _ := newRootWithAdd(t)
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"add", "--help"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("expected stderr empty, got %q", errBuf.String())
+	}
+	out := outBuf.String()
+	if !strings.Contains(out, "milestone") {
+		t.Errorf("expected help to contain %q, got %q", "milestone", out)
 	}
 }

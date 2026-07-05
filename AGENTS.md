@@ -130,6 +130,10 @@ Default to pattern 1 — simpler and matches the common case of "RC validated th
 
 For personal-scale CLI distribution, default to pattern 1.
 
+**Homebrew 6.0+ third-party tap trust** (lesson earned at v0.2.0 cut, 2026-06-19). Starting with Homebrew 6.0, installing a cask *or formula* from a third-party tap fails with `Refusing to load cask <tap>/<cask> from untrusted tap` until the user runs `brew trust --cask <tap>/<cask>` once. This is a **tap-level** trust policy — a third-party tap can execute arbitrary unsandboxed Ruby, so Homebrew gates the tap source itself — which makes it independent of two other frictions it is easy to conflate with: notarizing the binary does **not** remove it (that is a macOS Gatekeeper concern, see above), and switching the goreleaser artifact from a cask to a formula does **not** avoid it either (researched at the v0.2.0 cut — the gate is on the tap source, not the artifact type). For `brag`: the user runs `brew trust --cask jysf/bragfile/bragfile` once, then `brew install jysf/bragfile/bragfile`. Two follow-throughs: document it as a one-time install step in the README (done — README install section), and add a "check the package manager's current install/trust policy" line to the release pre-flight, since this gate appeared between the v0.1.0 and v0.2.0 cuts with no change on our side.
+
+**Release specs must include the runtime/operational pre-flight checklist** (the release-cut spec template, `projects/_templates/spec-release-cut.md`). Every production escape in PROJ-001..003 was operational/runtime (goreleaser dual-tag, Gatekeeper, brew-trust, prod-DB migration); the checklist makes each one a ticked design-time item, not a re-learned prod surprise.
+
 ---
 
 ## 5. Directory Structure
@@ -249,6 +253,7 @@ DECs are stable; specs come and go. DECs don't reciprocally list specs.
 - The additive case also counts: when a spec **adds to a tracked collection** (migrations, DECs, constraints, queued entries, or any fixed-shape structure whose count is asserted in existing tests), grep for literal-count assertions in existing tests and enumerate them as planned updates under `## Outputs`. Example: SPEC-011 added `0002_add_fts.sql` as a second migration; `TestOpen_MigrationsTracked` asserted "exactly 1 row in `schema_migrations`" and was broken by the addition without any behavior being inverted. Concrete heuristic: when adding anything to `schema_migrations`, the DECs list, or `constraints.yaml`, run `grep -rn "<collection>" internal/**/*_test.go` and audit each hit for literal count coupling. Lesson earned in SPEC-011 ship reflection (2026-04-22).
 - The documentation-consistency case also counts: when a spec **changes a feature's shipping status** (e.g., strikes a row from a "not yet shipped" table, introduces a new command, removes a deprecated one), grep all docs for mentions of the feature name and enumerate every hit as a planned update under `## Outputs` — not just the primary status claim. Example: SPEC-012 struck `search` from `docs/tutorial.md` §9's "What's NOT there yet" table (the *primary* status claim) but missed the Scope blurb at line 3 of the same file (a *secondary* status claim). Verify caught the inconsistency. Concrete heuristic: when changing a feature's status, run `grep -rn "<feature-name>" docs/ README.md` and audit each hit for status claims. Lesson earned in SPEC-012 ship reflection (2026-04-22). Completes the three-case premise audit: **inversion/removal → planned test deletion; addition → planned count-bump; status change → planned doc references update.**
 - **Audit-grep cross-check (both sides) — enumeration without execution is aspirational.** *Design-side:* when you write a premise-audit grep in the spec, RUN it against the repo and reconcile actual hits against the spec's enumerated `## Outputs` list. If the grep surfaces hits the enumeration missed, add them to Outputs before locking the spec. *Build-side:* before doing the doc-sweep, re-run the spec's audit greps yourself; treat any delta between actual hits and the spec's enumerated Outputs as a question for the spec author (raise in build-cycle reflection or a quick clarifying check), not as a unilateral expansion of scope. SPEC-018 spec enumerated two greps (`tap.*STAGE-004` scoped to `AGENTS.md`; `STAGE-003.*summary` scoped to `docs/` + `README.md` + `AGENTS.md`) with expected-hit lists, but neither was executed at design — the first against the whole repo would have caught `AGENTS.md:67` (and adjacent `:68`); the second would have caught `docs/architecture.md:24` and `docs/tutorial.md:453`. Build held the line ("if the spec doesn't say it, don't do it") and flagged in reflection; verify caught the gap and recommended the cross-check both ways. Completes the premise-audit family: **design enumerates → design verifies its enumeration → build re-verifies and questions deltas.** Lesson earned in SPEC-018 ship reflection (2026-04-25).
+- **`os`-level calls go through an injectable package var so tests can substitute them.** Any call into process/host state that a test needs to control — `os.Getwd`, `os.Getenv`, the wall clock — is referenced through a package-level `var` (e.g. `var getCwd = os.Getwd`, `var clock = time.Now`), not called directly, so a test can swap it for a deterministic stub and restore it after. This keeps cwd-/env-/time-dependent behavior testable without touching the real working directory, environment, or clock, and without a `t.Chdir`/`os.Setenv` dance that leaks across tests. Three same-outcome confirming cases, each a literal-artifact CLI/storage spec that had to add the seam its prose omitted: SPEC-031 (`getCwd` for `brag project here` cwd resolution), SPEC-032 (`addGetCwd` for `brag add` `--project` auto-fill), and SPEC-036 (`clock` for the migration auto-backup sidecar's UTC timestamp). Codified at STAGE-008 close (2026-06-19), N=3 same-outcome. This is a testing-conventions habit, not a blocking constraint — there is no enforcing check; the payoff is a clean test seam at the moment os-state enters the code.
 
 ---
 
@@ -393,6 +398,20 @@ literal-artifact-as-spec rule above: design-time pre-flight is what makes
 "build transcribes verbatim, verify diffs" actually mechanical, because the
 literal was already validated against external reality at the moment it was
 embedded.
+
+**§12(b) refinement — target the behavioral surface, not the shape
+validator.** When a spec's literal makes a claim about runtime behavior —
+a component registers, a hook fires, a binary resolves on PATH, a server
+answers — the design-time pre-flight must run the literal through the
+tool surface that exercises that behavior, not merely the surface that
+validates the artifact's shape. Shape-validation and behavior-
+registration are different checks; neither substitutes for the other.
+Canonical pair: SPEC-024 ran cobra's actual GenBashCompletion
+(behavioral) and caught the __start_brag marker at design; SPEC-041 ran
+`claude plugin validate --strict` (shape-only) but not
+`claude plugin details` (registration), so a manifest that validated
+still registered zero MCP servers — the defect escaped to build. Earned
+N=2 paired-opposing (2026-07-04).
 
 **Design-time pre-flight covers the test's own expected-value literals, too —
 not just the artifact-under-test.** §12(b) validates the artifact a spec embeds

@@ -1,0 +1,13 @@
+{
+  "name": "bragfile",
+  "description": "The bragfile marketplace — install the brag Claude Code plugin (MCP server + /brag slash-command + capture nudge).",
+  "owner": { "name": "jysf" },
+  "plugins": [
+    {
+      "name": "brag",
+      "source": "./plugin",
+      "description": "Capture and recall career accomplishments — MCP server + /brag slash-command + session-end capture nudge.",
+      "category": "productivity"
+    }
+  ]
+}

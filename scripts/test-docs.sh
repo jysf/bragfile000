@@ -27,6 +27,10 @@ fail() {
     FAIL_COUNT=$((FAIL_COUNT + 1))
 }
 
+skip() {
+    printf 'SKIP: %s: %s\n' "$1" "$2"
+}
+
 # --- helpers ---
 
 assert_file_exists() {
@@ -62,6 +66,15 @@ assert_contains_literal() {
         ok "$name"
     else
         fail "$name" "$path missing literal: $pattern"
+    fi
+}
+
+assert_cmd_ok() {
+    name="$1"; shift
+    if "$@" >/dev/null 2>&1; then
+        ok "$name"
+    else
+        fail "$name" "command failed: $*"
     fi
 }
 
@@ -849,6 +862,143 @@ assert_contains_literal "R3" "docs/tutorial.md" "source <(brag completion bash)"
 
 # R4 — tutorial contains fish sourcing example
 assert_contains_literal "R4" "docs/tutorial.md" "brag completion fish | source"
+
+# ===== Group S — Claude Code plugin packaging (SPEC-041) =====
+#
+# NOTE: SPEC-041 names this "group K" in its own numbering, but the letter K
+# was already taken by the pre-existing "BRAG.md cross-reference" group above
+# (K1-K4). Reusing K here would collide with those assertion names, so this
+# group is lettered S (the next unused letter after R) instead; the test IDs
+# below (S1-S11) map 1:1 to the spec's K1-K11. Deviation recorded in SPEC-041
+# Build Completion.
+
+PLUGIN_MANIFEST="plugin/.claude-plugin/plugin.json"
+MARKETPLACE_MANIFEST=".claude-plugin/marketplace.json"
+
+# S1 — plugin manifest file exists
+assert_file_exists "S1" "$PLUGIN_MANIFEST"
+
+# S2 — claude plugin validate --strict plugin exits 0 (skip if claude CLI absent)
+if command -v claude >/dev/null 2>&1; then
+    assert_cmd_ok "S2" claude plugin validate --strict plugin
+else
+    skip "S2" "claude CLI not installed"
+fi
+
+# S2-jq — structural fallback (always runs, independent of the claude CLI)
+if [ -f "$PLUGIN_MANIFEST" ] && jq -e '.name=="brag" and (.mcpServers.brag.command=="brag")' "$PLUGIN_MANIFEST" >/dev/null 2>&1; then
+    ok "S2-jq"
+else
+    fail "S2-jq" "$PLUGIN_MANIFEST missing name==\"brag\" or mcpServers.brag.command==\"brag\""
+fi
+
+# S3 — marketplace manifest exists + validates strict (skip if claude CLI absent)
+assert_file_exists "S3" "$MARKETPLACE_MANIFEST"
+if command -v claude >/dev/null 2>&1; then
+    assert_cmd_ok "S3" claude plugin validate --strict .
+else
+    skip "S3" "claude CLI not installed"
+fi
+
+# S3-jq — structural fallback (always runs)
+if [ -f "$MARKETPLACE_MANIFEST" ] && jq -e '.description and (.plugins[0].name=="brag") and (.plugins[0].source=="./plugin")' "$MARKETPLACE_MANIFEST" >/dev/null 2>&1; then
+    ok "S3-jq"
+else
+    fail "S3-jq" "$MARKETPLACE_MANIFEST missing description, plugins[0].name==\"brag\", or plugins[0].source==\"./plugin\""
+fi
+
+# S4 — mcpServers.brag runs `brag mcp serve`
+if [ -f "$PLUGIN_MANIFEST" ] && jq -e '.mcpServers.brag.args==["mcp","serve"]' "$PLUGIN_MANIFEST" >/dev/null 2>&1; then
+    ok "S4"
+else
+    fail "S4" "$PLUGIN_MANIFEST missing mcpServers.brag.args==[\"mcp\",\"serve\"]"
+fi
+
+# S5 — slash-command file exists
+assert_file_exists "S5" "plugin/commands/brag.md"
+
+# S6 — slash-command names the approval gate + the tool it gates
+if [ ! -f plugin/commands/brag.md ]; then
+    fail "S6" "plugin/commands/brag.md does not exist"
+else
+    has_gate=no; has_tool=no
+    if grep -F -q 'Do not execute' plugin/commands/brag.md; then has_gate=yes; fi
+    if grep -F -q 'brag add --json' plugin/commands/brag.md; then has_tool=yes; fi
+    if [ "$has_gate" = yes ] && [ "$has_tool" = yes ]; then
+        ok "S6"
+    else
+        fail "S6" "approval gate (gate=$has_gate tool=$has_tool)"
+    fi
+fi
+
+# S7 — Stop hook wired to capture-nudge.sh via ${CLAUDE_PLUGIN_ROOT}
+if [ -f plugin/hooks/hooks.json ] && jq -e '.hooks.Stop[0].hooks[0].command | test("CLAUDE_PLUGIN_ROOT.*capture-nudge.sh")' plugin/hooks/hooks.json >/dev/null 2>&1; then
+    ok "S7"
+else
+    fail "S7" "plugin/hooks/hooks.json missing Stop hook wired to CLAUDE_PLUGIN_ROOT/.../capture-nudge.sh"
+fi
+
+# S8 — provenance convention documented in the shipped hook
+if [ ! -f plugin/hooks/capture-nudge.sh ]; then
+    fail "S8" "plugin/hooks/capture-nudge.sh does not exist"
+else
+    has_agent=no; has_model=no
+    if grep -F -q 'agent:<name>' plugin/hooks/capture-nudge.sh; then has_agent=yes; fi
+    if grep -F -q 'model:<id>' plugin/hooks/capture-nudge.sh; then has_model=yes; fi
+    if [ "$has_agent" = yes ] && [ "$has_model" = yes ]; then
+        ok "S8"
+    else
+        fail "S8" "provenance convention (agent:<name>=$has_agent model:<id>=$has_model)"
+    fi
+fi
+
+# S9 — plugin README documents the PATH prerequisite + provenance
+if [ ! -f plugin/README.md ]; then
+    fail "S9" "plugin/README.md does not exist"
+else
+    has_brew=no; has_agent=no
+    if grep -F -q 'brew install' plugin/README.md; then has_brew=yes; fi
+    if grep -F -q 'agent:' plugin/README.md; then has_agent=yes; fi
+    if [ "$has_brew" = yes ] && [ "$has_agent" = yes ]; then
+        ok "S9"
+    else
+        fail "S9" "plugin/README.md (brew install=$has_brew agent:=$has_agent)"
+    fi
+fi
+
+# S10 — BRAG.md documents both the plugin path and the provenance convention
+if [ ! -f BRAG.md ]; then
+    fail "S10" "BRAG.md does not exist"
+else
+    has_plugin=no; has_agent=no
+    if grep -F -q 'plugin' BRAG.md; then has_plugin=yes; fi
+    if grep -F -q 'agent:<name>' BRAG.md; then has_agent=yes; fi
+    if [ "$has_plugin" = yes ] && [ "$has_agent" = yes ]; then
+        ok "S10"
+    else
+        fail "S10" "BRAG.md (plugin=$has_plugin agent:<name>=$has_agent)"
+    fi
+fi
+
+# S11 — capture-nudge.sh is executable
+if [ -x plugin/hooks/capture-nudge.sh ]; then
+    ok "S11"
+else
+    fail "S11" "plugin/hooks/capture-nudge.sh is not executable (chmod +x)"
+fi
+
+# S12 — plugin/.mcp.json declares the brag MCP server (SPEC-041 punch-list
+# regression guard). `claude plugin validate --strict` and S2/S2-jq/S4 all
+# stayed green while the loader registered 0 MCP servers at runtime, because
+# registration reads plugin/.mcp.json, not the inline plugin.json mcpServers
+# key — this assertion fails loudly if .mcp.json goes missing or drifts.
+PLUGIN_MCP_JSON="plugin/.mcp.json"
+assert_file_exists "S12" "$PLUGIN_MCP_JSON"
+if [ -f "$PLUGIN_MCP_JSON" ] && jq -e '.brag.command=="brag" and (.brag.args==["mcp","serve"])' "$PLUGIN_MCP_JSON" >/dev/null 2>&1; then
+    ok "S12-jq"
+else
+    fail "S12-jq" "$PLUGIN_MCP_JSON missing brag.command==\"brag\" or brag.args==[\"mcp\",\"serve\"]"
+fi
 
 # ===== finalise =====
 

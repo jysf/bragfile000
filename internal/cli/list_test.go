@@ -544,6 +544,54 @@ func TestListCmd_FilterPreservesOrder(t *testing.T) {
 	}
 }
 
+// TestListCmd_FilterByAuthor ▲ SPEC-043 — `--author agent|human` distinguishes
+// agent-authored entries (carrying an agent:/model: provenance tag, DEC-024)
+// from human-authored ones. Default `brag list` (no --author) is unchanged.
+func TestListCmd_FilterByAuthor(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "human-title", "perf", "", "")
+	seedListEntry(t, dbPath, "agent-title", "agent:claude-code,model:claude-opus-4-8", "", "")
+
+	out, errOut, err := runListCmd(t, dbPath, "--author", "agent")
+	if err != nil {
+		t.Fatalf("--author agent: unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("--author agent: expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "agent-title") {
+		t.Errorf("--author agent: expected %q in stdout, got %q", "agent-title", out)
+	}
+	if strings.Contains(out, "human-title") {
+		t.Errorf("--author agent: expected %q NOT in stdout, got %q", "human-title", out)
+	}
+
+	out, _, err = runListCmd(t, dbPath, "--author", "human")
+	if err != nil {
+		t.Fatalf("--author human: unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "human-title") {
+		t.Errorf("--author human: expected %q in stdout, got %q", "human-title", out)
+	}
+	if strings.Contains(out, "agent-title") {
+		t.Errorf("--author human: expected %q NOT in stdout, got %q", "agent-title", out)
+	}
+}
+
+func TestListCmd_InvalidAuthorIsUserError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	out, _, err := runListCmd(t, dbPath, "--author", "robot")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrUser) {
+		t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+}
+
 func TestListCmd_InvalidSinceIsUserError(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	// Need the DB to exist so runList doesn't fail earlier; but the
@@ -602,7 +650,7 @@ func TestListCmd_HelpShowsFilters(t *testing.T) {
 		t.Fatalf("expected empty stderr, got %q", errBuf.String())
 	}
 	out := outBuf.String()
-	for _, needle := range []string{"--tag", "--project", "--type", "--since", "--limit", "Examples:"} {
+	for _, needle := range []string{"--tag", "--project", "--type", "--since", "--limit", "--author", "Examples:"} {
 		if !strings.Contains(out, needle) {
 			t.Errorf("expected help to contain %q, got:\n%s", needle, out)
 		}
