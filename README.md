@@ -58,6 +58,9 @@ once per `brew install` / `brew upgrade`. If you'd rather avoid
 the warning entirely, build from source instead — locally-built
 binaries don't trigger Gatekeeper.
 
+- **Claude Code plugin:** `claude plugin marketplace add jysf/bragfile000`
+  then `claude plugin install brag@bragfile` — see `plugin/README.md`.
+
 ## Capture an entry
 
 The fastest path — one flag:

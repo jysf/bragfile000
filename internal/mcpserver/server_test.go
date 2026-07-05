@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -171,5 +172,54 @@ func TestServer_StatsParityWithCLI(t *testing.T) {
 	want, _ := export.ToStatsJSON(rows, export.StatsOptions{Now: fixed})
 	if got != string(want) {
 		t.Errorf("stats parity:\n got=%s\nwant=%s", got, want)
+	}
+}
+
+// TestServer_AddReturnValueParity ● preservation guard: brag_add's RETURNED
+// JSON is byte-identical, field-for-field, to export.ToJSON's rendering of
+// the same created row. Closes the SPEC-040 verify advisory (only brag_add's
+// side effects, not its literal return value, were asserted). Passes
+// immediately — the local entryRecord mirrors export's field-for-field.
+func TestServer_AddReturnValueParity(t *testing.T) {
+	cs, s := newTestServer(t, "claude-code")
+	got := callJSON(t, cs, "brag_add", map[string]any{
+		"title": "cut p99", "project": "bragfile", "type": "shipped",
+		"tags": "perf", "impact": "-80% p99",
+		"agent": "claude-code", "model": "claude-opus-4-8",
+	})
+	// The created row is the sole row in the store.
+	rows, err := s.List(storage.ListFilter{})
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("expected exactly one created row, got %d (err=%v)", len(rows), err)
+	}
+	// Pinned export call: the per-entry rendering brag_add's return mirrors.
+	arr, err := export.ToJSON([]storage.Entry{rows[0]})
+	if err != nil {
+		t.Fatalf("export.ToJSON: %v", err)
+	}
+	// Compare field-for-field on the RAW value bytes, so array-wrapper and
+	// indentation differences (object vs 1-element array) are irrelevant and
+	// only the per-field serialization is asserted.
+	var wantArr []map[string]json.RawMessage
+	if err := json.Unmarshal(arr, &wantArr); err != nil || len(wantArr) != 1 {
+		t.Fatalf("unmarshal export array: %v (len=%d)", err, len(wantArr))
+	}
+	var gotObj map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(got), &gotObj); err != nil {
+		t.Fatalf("unmarshal brag_add return: %v", err)
+	}
+	want := wantArr[0]
+	if len(gotObj) != len(want) {
+		t.Fatalf("field count: brag_add has %d keys, export has %d", len(gotObj), len(want))
+	}
+	for k, wv := range want {
+		gv, ok := gotObj[k]
+		if !ok {
+			t.Errorf("brag_add return missing key %q present in export", k)
+			continue
+		}
+		if string(gv) != string(wv) {
+			t.Errorf("field %q not byte-identical: brag_add=%s export=%s", k, gv, wv)
+		}
 	}
 }

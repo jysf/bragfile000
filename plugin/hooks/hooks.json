@@ -1,0 +1,16 @@
+{
+  "description": "brag capture-nudge: once per session, after a commit lands, nudge Claude to propose a brag (never auto-posts).",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/capture-nudge.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
