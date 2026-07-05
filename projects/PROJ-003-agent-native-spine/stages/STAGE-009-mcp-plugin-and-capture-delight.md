@@ -254,9 +254,24 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `docs/architecture.md` plugin walkthroughs. **Unblocked** — SPEC-041
       merged to `main` 2026-07-05 (PR #62; the tag is cut from main after the
       plugin lands). Not yet designed — a fresh design session fills it in.
+      Now also adopts the release runtime/operational pre-flight checklist
+      (retro R2, template `projects/_templates/spec-release-cut.md`).
       Mirrors SPEC-037's release-runbook precedent.
 
-**Count:** 4 shipped / 0 active / 1 pending (SPEC-042 stub → design)
+- [ ] SPEC-043 (design+build delivered, awaiting verify — from retro P2) —
+      **S — `brag list --author agent|human` provenance filter.** The **read
+      half** of the agent-native spine: distinguishes agent-authored entries
+      (carrying a reserved `agent:`/`model:` tag, DEC-024) from human-authored
+      ones, making PROJ-003's agent-native thesis measurable. Added because
+      cross-project-retro P2 ("emit provenance from the MCP path") was found
+      already shipped by SPEC-040 (PR #61) — the live gap was the query, not
+      the write. Thin filter on `storage.List` (`ListFilter.Author` +
+      prefix-anchored `LIKE 'agent:%'/'model:%'` `EXISTS`), a validated
+      `--author` cobra flag, migration-free; human `brag add` byte-parity kept.
+      **No new DEC** (rides DEC-024 + DEC-015). Unblocks retro P3
+      (dogfooding-coverage query, STAGE-010).
+
+**Count:** 4 shipped / 1 in-flight (SPEC-043 verify) / 1 pending (SPEC-042 stub → design)
 
 **Complexity check:** **five** specs after the SPEC-041→042 peel; SPEC-040 was
 the one L-risk (resized to M after a clean §12(b) pre-flight retired the

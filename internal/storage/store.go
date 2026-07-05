@@ -297,6 +297,22 @@ func (s *Store) Delete(id int64) error {
 	return nil
 }
 
+// Accepted ListFilter.Author values (DEC-024 provenance classification).
+const (
+	authorAgent = "agent" // has at least one agent:/model: reserved tag
+	authorHuman = "human" // has neither
+)
+
+// provenanceExistsClause is the SQL predicate for "this entry carries a
+// reserved provenance tag" — a prefix-anchored membership test over the
+// normalized taggings join (DEC-015). The `agent:%` / `model:%` LIKE
+// patterns match only the reserved namespace (DEC-024), never a topic tag
+// like "agentic" (no colon). `--author human` is the negation.
+const provenanceExistsClause = `EXISTS (SELECT 1 FROM taggings tg
+	    JOIN tags t ON t.id = tg.tag_id
+	   WHERE tg.taggable_type = 'entry' AND tg.taggable_id = e.id
+	     AND (t.name LIKE 'agent:%' OR t.name LIKE 'model:%'))`
+
 // List returns entries matching the populated fields of f, combined
 // via AND, ordered created_at DESC with id DESC as the tie-break.
 // A zero-value ListFilter returns every row.
@@ -323,6 +339,16 @@ func (s *Store) List(f ListFilter) ([]Entry, error) {
 	if !f.Since.IsZero() {
 		conds = append(conds, "e.created_at >= ?")
 		args = append(args, f.Since.UTC().Format(time.RFC3339))
+	}
+	switch f.Author {
+	case authorAgent:
+		conds = append(conds, provenanceExistsClause)
+	case authorHuman:
+		conds = append(conds, "NOT "+provenanceExistsClause)
+	case "":
+		// no author filter
+	default:
+		return nil, fmt.Errorf("list entries: invalid author filter %q (want %q, %q, or empty)", f.Author, authorAgent, authorHuman)
 	}
 
 	q := `SELECT e.id, e.title, e.description, ` + tagsProjection + `,

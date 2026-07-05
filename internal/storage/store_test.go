@@ -592,6 +592,68 @@ func TestList_FilterByLimit(t *testing.T) {
 	}
 }
 
+// TestList_FilterByAuthor ▲ SPEC-043 — an entry is "agent-authored" iff it
+// carries at least one reserved provenance tag (agent:* or model:*, DEC-024);
+// "human" is the complement. The classifier is prefix-anchored (agent:%,
+// model:%), so a topic tag like "agentic" or "modeling" (no colon) does NOT
+// count — mirrors the TagFilterNoFalsePositive guard.
+func TestList_FilterByAuthor(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	addWithTags(t, s, "human-plain", "perf", "", "")
+	addWithTags(t, s, "human-none", "", "", "")
+	addWithTags(t, s, "human-fp", "agentic,modeling", "", "") // no colon → not provenance
+	addWithTags(t, s, "agent-only", "agent:claude-code", "", "")
+	addWithTags(t, s, "agent-both", "perf,agent:claude-code,model:claude-opus-4-8", "", "")
+
+	got, err := s.List(ListFilter{Author: "agent"})
+	if err != nil {
+		t.Fatalf("Author=agent: %v", err)
+	}
+	if len(got) != 2 || !containsTitle(got, "agent-only") || !containsTitle(got, "agent-both") {
+		t.Errorf("Author=agent: want {agent-only,agent-both}; got %v", titlesOf(got))
+	}
+
+	got, err = s.List(ListFilter{Author: "human"})
+	if err != nil {
+		t.Fatalf("Author=human: %v", err)
+	}
+	if len(got) != 3 || !containsTitle(got, "human-plain") || !containsTitle(got, "human-none") || !containsTitle(got, "human-fp") {
+		t.Errorf("Author=human: want {human-plain,human-none,human-fp}; got %v", titlesOf(got))
+	}
+
+	got, err = s.List(ListFilter{})
+	if err != nil {
+		t.Fatalf("Author unset: %v", err)
+	}
+	if len(got) != 5 {
+		t.Errorf("Author unset: len=%d, want 5 (all) (titles=%v)", len(got), titlesOf(got))
+	}
+
+	// Composes with the tag filter (AND): only agent-both carries both perf and provenance.
+	got, err = s.List(ListFilter{Author: "agent", Tag: "perf"})
+	if err != nil {
+		t.Fatalf("Author=agent+Tag=perf: %v", err)
+	}
+	if len(got) != 1 || got[0].Title != "agent-both" {
+		t.Errorf("Author=agent+Tag=perf: want {agent-both}; got %v", titlesOf(got))
+	}
+
+	// Composes with limit.
+	got, err = s.List(ListFilter{Author: "agent", Limit: 1})
+	if err != nil {
+		t.Fatalf("Author=agent+Limit=1: %v", err)
+	}
+	if len(got) != 1 {
+		t.Errorf("Author=agent+Limit=1: len=%d, want 1", len(got))
+	}
+
+	// Invalid author value is an error, not a silent all-pass.
+	if _, err := s.List(ListFilter{Author: "bogus"}); err == nil {
+		t.Error("Author=bogus: want error, got nil")
+	}
+}
+
 func TestList_FilterCombined(t *testing.T) {
 	s, path := newTestStore(t)
 
