@@ -1,0 +1,26 @@
+dec,project,confidence,supersedes,superseded_by,topic
+DEC-001,PROJ-001,0.90,,,pure-go sqlite driver
+DEC-002,PROJ-001,0.85,,,embedded migrations
+DEC-003,PROJ-001,0.95,,,config resolution order
+DEC-004,PROJ-001,0.65,,DEC-015,tags comma-joined for mvp
+DEC-005,PROJ-001,0.70,,,integer autoincrement ids
+DEC-006,PROJ-001,0.85,,,cobra cli framework
+DEC-007,PROJ-001,0.80,,,required-flag validation in runE
+DEC-008,PROJ-001,0.80,,,since date format
+DEC-009,PROJ-001,0.80,,,editor buffer format
+DEC-010,PROJ-001,0.85,,,search query syntax
+DEC-011,PROJ-001,0.85,,,json output shape
+DEC-012,PROJ-001,0.85,,,brag add json stdin schema
+DEC-013,PROJ-001,0.82,,,markdown export shape
+DEC-014,PROJ-001,0.80,,,rule-based output shape
+DEC-015,PROJ-002,0.80,DEC-004,,polymorphic tags normalization
+DEC-016,PROJ-002,0.82,,,tag mutation semantics
+DEC-017,PROJ-002,0.80,,,entries-project relationship
+DEC-018,PROJ-002,0.85,,,project delete blast radius
+DEC-019,PROJ-002,0.90,,,project here resolution policy
+DEC-020,PROJ-002,0.82,,,project location editing semantics
+DEC-021,PROJ-002,0.86,,,migration auto-backup durability
+DEC-022,PROJ-003,0.88,,,streak local-day derived metric
+DEC-023,PROJ-003,0.80,,,milestone notifications copy+semantics
+DEC-024,PROJ-003,0.85,,,mcp server sdk transport + provenance
+DEC-025,PROJ-003,0.80,,,claude code plugin packaging + capture nudge

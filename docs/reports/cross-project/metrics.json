@@ -1,0 +1,83 @@
+{
+  "report": {
+    "date": "2026-07-04",
+    "scope": ["PROJ-001", "PROJ-002", "PROJ-003"],
+    "method": "read-only fan-out over repo artifacts + read-only db.sqlite copy"
+  },
+  "process": {
+    "stages": {"planned_total": 9, "shipped": 8, "in_progress": 1, "reordered": 0, "cancelled": 0,
+      "per_project": {"PROJ-001": 5, "PROJ-002": 3, "PROJ-003": {"committed": 1, "stretch_uncommitted": 1}}},
+    "specs": {"numbered": 42, "shipped": 40, "deferred": 1, "pending": 1,
+      "deferred_id": "SPEC-016", "pending_id": "SPEC-042",
+      "per_stage_shipped": {"STAGE-001": 4, "STAGE-002": 8, "STAGE-003": 4, "STAGE-004": 3, "STAGE-005": 4,
+        "STAGE-006": 2, "STAGE-007": 7, "STAGE-008": 4, "STAGE-009": 4},
+      "sizing_estimate_vs_actual": {
+        "STAGE-006": {"estimate": "3-4", "actual": 2},
+        "STAGE-007": {"estimate": "5-6", "actual": 7},
+        "STAGE-008": {"estimate": "2-3", "actual": 4}}},
+    "peels": [
+      {"from": "SPEC-029", "to": "SPEC-033", "project": "PROJ-002", "decided_at": "design"},
+      {"from": "SPEC-041", "to": "SPEC-042", "project": "PROJ-003", "decided_at": "design"}],
+    "decs": {"total": 25, "per_project": {"PROJ-001": 14, "PROJ-002": 7, "PROJ-003": 4},
+      "supersessions": [{"from": "DEC-004", "to": "DEC-015", "kind": "planned-trigger-fired"}],
+      "deprecations": 0, "post_lock_drift": 0,
+      "confidence": {"mean": 0.823, "min": 0.65, "max": 0.95, "ge_0_80_count": 17,
+        "distribution": {"0.65": 1, "0.70": 1, "0.80": 8, "0.82": 3, "0.85": 7, "0.86": 1, "0.88": 1, "0.90": 2, "0.95": 1}}},
+    "defect_escape": {
+      "note": "counts of distinct logged notable defects; groupings partly inferred",
+      "design_caught": 4, "build_caught": 8, "verify_caught": 4, "ship_caught": 1, "escaped_to_prod": 6,
+      "escaped_defects": ["streak-utc-vs-local", "goreleaser-dual-tag", "macos-gatekeeper",
+        "homebrew-brew-trust", "prod-db-migration", "mcp-registration-validate-not-details"],
+      "finding": "spec-logic caught early; every prod escape is operational/runtime"},
+    "watch_pipeline": {
+      "meta_rule": {"same_outcome_bar": 3, "paired_opposing_bar": 2, "earned": "PROJ-001-close 2026-05-17"},
+      "open_watch_items": ["validate-neq-registration", "premise-audit-stays-rows",
+        "pure-function-plus-thin-glue", "test-group-letter-collision", "grade-by-intent-doc-acs",
+        "preflight-names-exact-dep-version", "trust-but-verify-agent-push"]},
+    "constraints": {"total": 11, "blocking": 9, "warning": 2, "fired_markers": 0},
+    "questions": {"total": 7, "answered": 3, "open": 4},
+    "tests_go": {"series": [
+      {"anchor": "STAGE-006", "count": 401}, {"anchor": "STAGE-007", "count": 531},
+      {"anchor": "STAGE-008", "count": 536}, {"anchor": "SPEC-038", "count": 541},
+      {"anchor": "SPEC-039", "count": 555}, {"anchor": "SPEC-041", "count": 569}],
+      "test_docs_assertions_stage005": [40, 63, 96, 116]},
+    "releases": [
+      {"version": "v0.1.0", "tag_date": "2026-05-10", "decs": "DEC-001..014",
+        "gotchas": ["goreleaser-dual-tag", "macos-gatekeeper"]},
+      {"version": "v0.2.0", "tag_date": "2026-06-17", "decs": "DEC-015..021",
+        "gotchas": ["homebrew-brew-trust"]},
+      {"version": "v0.3.0", "tag_date": null, "status": "pending", "decs": "DEC-022..025",
+        "spec": "SPEC-042"}]
+  },
+  "corpus": {
+    "source": "read-only copy of ~/.bragfile/db.sqlite (global, all projects)",
+    "entries_live": 181, "projects": 5, "tags": 214, "taggings": 581,
+    "date_range_utc": ["2026-04-20", "2026-07-05"], "span_days": 76,
+    "entries_by_month": {"2026-04": 37, "2026-05": 6, "2026-06": 121, "2026-07": 17},
+    "entries_by_week_last9": [32, 6, 1, 4, 7, 28, 55, 31, 17],
+    "by_project_top": {"crustyimg": 52, "zany-animal-slots": 51, "bragfile": 43,
+      "spec-driven-template": 11, "rspeed": 9, "personal-site": 5, "AI Development Factory": 4,
+      "loomwork": 3, "cli": 1, "null": 2},
+    "by_type": {"shipped": 121, "untyped": 42, "milestone": 5, "learned": 5, "release": 2,
+      "planning": 2, "tooling": 1, "template": 1, "documented": 1, "discipline": 1},
+    "impact_density": {"with_impact": 119, "total": 181, "pct": 65.7, "avg_chars": 277.8},
+    "streak_utc": {"active_days": 36, "span_days": 76, "coverage_pct": 47,
+      "longest_run_days": 15, "longest_run_range": ["2026-06-07", "2026-06-21"],
+      "current_run_days": 3, "current_run_end": "2026-07-05",
+      "caveat": "UTC-derived; local-day per DEC-022 may differ"},
+    "dogfooding": {"self_reference_entries": 154, "self_reference_pct": 85,
+      "bragfile_project_entries": 43},
+    "provenance_tags": {"ai": 4, "claude": 2, "ai-integration": 2, "ai-agents": 2,
+      "ai-tooling": 1, "ai-safety": 1, "agent_prefix": 0, "model_prefix": 0, "mcp_prefix": 0,
+      "note": "DEC-024 reserved agent:/model: namespace in SPEC-040; zero adoption because MCP write path just shipped"},
+    "tag_top10": {"cli": 50, "spec-driven": 30, "rust": 28, "go": 16, "crustyimg": 14,
+      "react": 11, "ui": 11, "bragfile": 9, "framework": 9, "rspeed": 9}
+  },
+  "recommendations": {
+    "agents_md": ["R1-codify-validate-neq-registration", "R2-release-runtime-preflight-checklist",
+      "R3-dev-binary-db-isolation-guardrail", "R4-extend-audit-grep-lettered-harness",
+      "R5-type-on-milestone-streak-writes"],
+    "stage_010": ["P1-productize-impact-digest", "P2-emit-agent-model-provenance-from-mcp",
+      "P3-dogfooding-coverage-query"]
+  }
+}
