@@ -797,6 +797,59 @@ and flags. Run `brag completion --help` for details.
 
 ---
 
+## 11. Agent-native: MCP server, plugin, and provenance
+
+As of v0.3.0, `brag` is usable by an AI agent through native tool calls,
+not just by you at the shell.
+
+### `brag mcp serve` — a local MCP server
+
+```bash
+brag mcp serve
+```
+
+This runs a local [Model Context Protocol](https://modelcontextprotocol.io)
+server over stdio (no network) that exposes four tools —
+`brag_add`, `brag_list`, `brag_search`, `brag_stats` — as thin wrappers over
+your existing database. An MCP-client agent can capture and recall brags
+without spawning a shell. The protocol stream owns stdout; nothing
+human-facing is ever written there.
+
+### The Claude Code plugin
+
+The MCP server, a `/brag` slash-command, and a quiet session-end
+capture-nudge hook are bundled as an installable Claude Code plugin:
+
+```bash
+claude plugin marketplace add jysf/bragfile000
+claude plugin install brag@bragfile
+```
+
+The plugin runs the `brag` binary from your `PATH`, so install it first
+(`brew install jysf/bragfile/bragfile`). The capture-nudge hook only
+suggests a brag after a session that plausibly shipped something, never
+posts on its own, and can be silenced with `BRAG_CAPTURE_NUDGE=off`. See
+[`BRAG.md`](../BRAG.md) and [`plugin/README.md`](../plugin/README.md) for
+the full walkthrough.
+
+### Provenance: who wrote which brag
+
+When an agent captures a brag through the MCP `brag_add` tool, the entry is
+stamped with reserved `agent:<name>` and `model:<id>` tags (for example
+`agent:claude-code`, `model:claude-opus-4-8`). These are a convention over
+the normal tag system — no schema change — so you can tell agent-authored
+entries from your own:
+
+```bash
+brag list --author agent                    # entries an agent captured
+brag list --author human                    # entries you captured
+brag list --author agent --format json | jq length
+```
+
+Your own `brag add` never stamps provenance — only the MCP path does.
+
+---
+
 ## Further reading
 
 - [`docs/api-contract.md`](./api-contract.md) — full CLI surface
