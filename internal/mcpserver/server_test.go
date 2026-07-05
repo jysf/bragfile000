@@ -134,6 +134,37 @@ func TestServer_AddStampsProvenanceAndListParity(t *testing.T) {
 	}
 }
 
+// TestServer_ProvenanceRoundTripToListAuthor ▲ SPEC-043 — the read classifier
+// (storage List with Author="agent", LIKE 'agent:%'/'model:%') must find exactly
+// what the MCP write path (stampProvenance) labels, and exclude a human-seeded
+// row. This is the cross-package drift guard: the agent:/model: literal is
+// hardcoded independently in mcpserver (stamps it) and storage (classifies it)
+// with no shared constant, so a round-trip through both pins them together.
+func TestServer_ProvenanceRoundTripToListAuthor(t *testing.T) {
+	cs, s := newTestServer(t, "claude-code")
+	// Agent-authored via the MCP tool (stamps agent:/model:).
+	callJSON(t, cs, "brag_add", map[string]any{
+		"title": "agent write", "agent": "claude-code", "model": "claude-opus-4-8",
+	})
+	// Human-authored: seeded straight through storage, no provenance stamped.
+	seedViaStore(t, s, "human write")
+
+	agent, err := s.List(storage.ListFilter{Author: "agent"})
+	if err != nil {
+		t.Fatalf("List author=agent: %v", err)
+	}
+	if len(agent) != 1 || agent[0].Title != "agent write" {
+		t.Fatalf("author=agent found %d rows, want [agent write]: %+v", len(agent), agent)
+	}
+	human, err := s.List(storage.ListFilter{Author: "human"})
+	if err != nil {
+		t.Fatalf("List author=human: %v", err)
+	}
+	if len(human) != 1 || human[0].Title != "human write" {
+		t.Fatalf("author=human found %d rows, want [human write]: %+v", len(human), human)
+	}
+}
+
 // TestServer_AddAutoStampsAgentFromClientInfo ▲ omit the agent param → agent:
 // auto-fills from clientInfo.Name; model omitted → no model: tag.
 func TestServer_AddAutoStampsAgentFromClientInfo(t *testing.T) {

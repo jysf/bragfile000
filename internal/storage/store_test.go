@@ -654,6 +654,50 @@ func TestList_FilterByAuthor(t *testing.T) {
 	}
 }
 
+// TestList_AuthorComposesWithOtherFilters ▲ SPEC-043 — Author AND-composes with
+// --project, --type, and --since (the AC claims all of them; this backs the
+// claim beyond the tag+limit cases in TestList_FilterByAuthor).
+func TestList_AuthorComposesWithOtherFilters(t *testing.T) {
+	s, path := newTestStore(t)
+	now := time.Now().UTC()
+
+	a := addWithTags(t, s, "a-agent-plat-ship", "agent:claude-code", "platform", "shipped")     // agent, recent
+	b := addWithTags(t, s, "b-agent-growth-wip", "model:claude-opus-4-8", "growth", "wip")      // agent, recent
+	addWithTags(t, s, "c-human-plat-ship", "perf", "platform", "shipped")                       // human
+	d := addWithTags(t, s, "d-agent-plat-ship-old", "agent:claude-code", "platform", "shipped") // agent, OLD
+
+	mustBackdate(t, path, a.ID, now)
+	mustBackdate(t, path, b.ID, now)
+	mustBackdate(t, path, d.ID, now.Add(-10*24*time.Hour))
+
+	// Author + Project: the two agent+platform rows, human excluded.
+	got, err := s.List(ListFilter{Author: "agent", Project: "platform"})
+	if err != nil {
+		t.Fatalf("Author+Project: %v", err)
+	}
+	if len(got) != 2 || !containsTitle(got, "a-agent-plat-ship") || !containsTitle(got, "d-agent-plat-ship-old") {
+		t.Errorf("Author=agent+Project=platform: want {a,d}; got %v", titlesOf(got))
+	}
+
+	// Author + Type: only the wip agent row.
+	got, err = s.List(ListFilter{Author: "agent", Type: "wip"})
+	if err != nil {
+		t.Fatalf("Author+Type: %v", err)
+	}
+	if len(got) != 1 || got[0].Title != "b-agent-growth-wip" {
+		t.Errorf("Author=agent+Type=wip: want {b}; got %v", titlesOf(got))
+	}
+
+	// Author + Since: the two recent agent rows, the old one excluded.
+	got, err = s.List(ListFilter{Author: "agent", Since: now.Add(-2 * 24 * time.Hour)})
+	if err != nil {
+		t.Fatalf("Author+Since: %v", err)
+	}
+	if len(got) != 2 || !containsTitle(got, "a-agent-plat-ship") || !containsTitle(got, "b-agent-growth-wip") {
+		t.Errorf("Author=agent+Since=2d: want {a,b}; got %v", titlesOf(got))
+	}
+}
+
 func TestList_FilterCombined(t *testing.T) {
 	s, path := newTestStore(t)
 

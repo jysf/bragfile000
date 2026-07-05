@@ -109,6 +109,15 @@ Written during **design**, BEFORE build.
     (incl. the false-positive); unset → all 5; `Author:"agent"`+`Tag:"perf"`
     → the single row with both; `Author:"agent"`+`Limit:1` → 1; and
     `Author:"bogus"` → error.
+  - `TestList_AuthorComposesWithOtherFilters` — backs the AC3 claim in full:
+    `Author` AND-composes with `Project`, `Type`, and `Since` (beyond the
+    `Tag`/`Limit` cases above).
+- **`internal/mcpserver/server_test.go`**
+  - `TestServer_ProvenanceRoundTripToListAuthor` — the cross-package drift
+    guard: an entry written via the MCP `brag_add` tool (which stamps
+    `agent:`/`model:`) is found by `List{Author:"agent"}` and excluded from
+    `List{Author:"human"}`, pinning the stamp literal (mcpserver) to the
+    classifier literal (storage), which share no constant.
 - **`internal/cli/list_test.go`**
   - `TestListCmd_FilterByAuthor` — `--author agent` shows the agent title,
     not the human title (empty stderr); `--author human` the inverse.
