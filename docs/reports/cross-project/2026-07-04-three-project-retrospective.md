@@ -308,6 +308,10 @@ The taxonomy is tech-and-workflow shaped (`cli`, `spec-driven`, `rust`, `go`, `f
 
 ---
 
+## Action register
+
+All recommendations were accepted (coordinator, 2026-07-04) and are turned into self-contained, routable work items — with ready-to-apply artifacts, acceptance criteria, sizes, dependencies, and framework routing — in **[`2026-07-04-action-register.md`](2026-07-04-action-register.md)**. Headline sequencing: **R1** (codify *validate ≠ registration*, at-bar now) and **R2** (release runtime pre-flight checklist) land in the v0.3.0 cut; **P2** (emit `agent:`/`model:` provenance from the MCP path) is the highest-leverage change; **P1/P3** are STAGE-010's read surface.
+
 ## Appendix — machine-readable metrics
 
 See [`metrics.json`](metrics.json) (all figures in this report, keyed), [`specs-by-stage.csv`](specs-by-stage.csv), and [`decs.csv`](decs.csv) alongside this file.
