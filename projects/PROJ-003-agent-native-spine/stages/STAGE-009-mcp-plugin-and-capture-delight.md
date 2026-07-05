@@ -246,32 +246,38 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       regression guard (group-S S12/S12-jq) added. Verify then
       **✅ APPROVED, no punch list**. SPEC-042 unblocked.
 
-- [ ] SPEC-042 (proposed — stub, peeled from SPEC-041) — **S — v0.3.0 release
-      cut.** Cut/tag/publish v0.3.0 per §4: CHANGELOG `[0.3.0]`; optional
+- [ ] SPEC-042 (designed 2026-07-05 — build=rehearsal, ship=the cut) —
+      **S — v0.3.0 release cut.** Cut/tag/publish v0.3.0 per §4: CHANGELOG
+      `[0.3.0]` (authored whole — `[Unreleased]` was empty); optional
       `v0.3.0-rc1` → `v0.3.0` dual-tag rule; Homebrew tap bump; `brew trust
       --cask` + Gatekeeper xattr in the release pre-flight; clean `brew
       upgrade` from v0.2.x verification; the deferred `docs/tutorial.md` +
-      `docs/architecture.md` plugin walkthroughs. **Unblocked** — SPEC-041
-      merged to `main` 2026-07-05 (PR #62; the tag is cut from main after the
-      plugin lands). Not yet designed — a fresh design session fills it in.
-      Now also adopts the release runtime/operational pre-flight checklist
-      (retro R2, template `projects/_templates/spec-release-cut.md`).
-      Mirrors SPEC-037's release-runbook precedent.
+      `docs/architecture.md` plugin walkthroughs. **Design complete** — the
+      §4 runbook, the CHANGELOG `[0.3.0]` literal, observable-end-state ACs
+      (incl. the §12(b)-refinement `claude plugin details` registration
+      check), the rehearsal framing, and the coordinator/human-gated §4
+      Pattern-1 destructive sequence. Adopts the release runtime/operational
+      pre-flight checklist (retro R2, template
+      `projects/_templates/spec-release-cut.md`). **Blocked on** the STAGE-009
+      feature specs on `main` (all merged as of PR #66). Mirrors SPEC-037's
+      release-runbook precedent. Awaiting build (rehearsal, fresh session).
 
-- [ ] SPEC-043 (design+build delivered, awaiting verify — from retro P2) —
-      **S — `brag list --author agent|human` provenance filter.** The **read
-      half** of the agent-native spine: distinguishes agent-authored entries
-      (carrying a reserved `agent:`/`model:` tag, DEC-024) from human-authored
-      ones, making PROJ-003's agent-native thesis measurable. Added because
-      cross-project-retro P2 ("emit provenance from the MCP path") was found
-      already shipped by SPEC-040 (PR #61) — the live gap was the query, not
-      the write. Thin filter on `storage.List` (`ListFilter.Author` +
-      prefix-anchored `LIKE 'agent:%'/'model:%'` `EXISTS`), a validated
-      `--author` cobra flag, migration-free; human `brag add` byte-parity kept.
-      **No new DEC** (rides DEC-024 + DEC-015). Unblocks retro P3
-      (dogfooding-coverage query, STAGE-010).
+- [x] SPEC-043 (merged 2026-07-05, PR #66 — verify ✅ APPROVED — from retro
+      P2) — **S — `brag list --author agent|human` provenance filter.** The
+      **read half** of the agent-native spine: distinguishes agent-authored
+      entries (carrying a reserved `agent:`/`model:` tag, DEC-024) from
+      human-authored ones, making PROJ-003's agent-native thesis measurable.
+      Added because cross-project-retro P2 ("emit provenance from the MCP
+      path") was found already shipped by SPEC-040 (PR #61) — the live gap was
+      the query, not the write. Thin filter on `storage.List`
+      (`ListFilter.Author` + prefix-anchored `LIKE 'agent:%'/'model:%'`
+      `EXISTS`), a validated `--author` cobra flag, migration-free; human
+      `brag add` byte-parity kept. **No new DEC** (rides DEC-024 + DEC-015).
+      A cross-package round-trip test pins the `mcpserver` stamp literal to the
+      `storage` classifier. Unblocks retro P3 (dogfooding-coverage query,
+      STAGE-010).
 
-**Count:** 4 shipped / 1 in-flight (SPEC-043 verify) / 1 pending (SPEC-042 stub → design)
+**Count:** 5 shipped (SPEC-038/039/040/041/043) / 1 designed (SPEC-042 → build=rehearsal → cut)
 
 **Complexity check:** **five** specs after the SPEC-041→042 peel; SPEC-040 was
 the one L-risk (resized to M after a clean §12(b) pre-flight retired the
