@@ -592,6 +592,112 @@ func TestList_FilterByLimit(t *testing.T) {
 	}
 }
 
+// TestList_FilterByAuthor ▲ SPEC-043 — an entry is "agent-authored" iff it
+// carries at least one reserved provenance tag (agent:* or model:*, DEC-024);
+// "human" is the complement. The classifier is prefix-anchored (agent:%,
+// model:%), so a topic tag like "agentic" or "modeling" (no colon) does NOT
+// count — mirrors the TagFilterNoFalsePositive guard.
+func TestList_FilterByAuthor(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	addWithTags(t, s, "human-plain", "perf", "", "")
+	addWithTags(t, s, "human-none", "", "", "")
+	addWithTags(t, s, "human-fp", "agentic,modeling", "", "") // no colon → not provenance
+	addWithTags(t, s, "agent-only", "agent:claude-code", "", "")
+	addWithTags(t, s, "agent-both", "perf,agent:claude-code,model:claude-opus-4-8", "", "")
+
+	got, err := s.List(ListFilter{Author: "agent"})
+	if err != nil {
+		t.Fatalf("Author=agent: %v", err)
+	}
+	if len(got) != 2 || !containsTitle(got, "agent-only") || !containsTitle(got, "agent-both") {
+		t.Errorf("Author=agent: want {agent-only,agent-both}; got %v", titlesOf(got))
+	}
+
+	got, err = s.List(ListFilter{Author: "human"})
+	if err != nil {
+		t.Fatalf("Author=human: %v", err)
+	}
+	if len(got) != 3 || !containsTitle(got, "human-plain") || !containsTitle(got, "human-none") || !containsTitle(got, "human-fp") {
+		t.Errorf("Author=human: want {human-plain,human-none,human-fp}; got %v", titlesOf(got))
+	}
+
+	got, err = s.List(ListFilter{})
+	if err != nil {
+		t.Fatalf("Author unset: %v", err)
+	}
+	if len(got) != 5 {
+		t.Errorf("Author unset: len=%d, want 5 (all) (titles=%v)", len(got), titlesOf(got))
+	}
+
+	// Composes with the tag filter (AND): only agent-both carries both perf and provenance.
+	got, err = s.List(ListFilter{Author: "agent", Tag: "perf"})
+	if err != nil {
+		t.Fatalf("Author=agent+Tag=perf: %v", err)
+	}
+	if len(got) != 1 || got[0].Title != "agent-both" {
+		t.Errorf("Author=agent+Tag=perf: want {agent-both}; got %v", titlesOf(got))
+	}
+
+	// Composes with limit.
+	got, err = s.List(ListFilter{Author: "agent", Limit: 1})
+	if err != nil {
+		t.Fatalf("Author=agent+Limit=1: %v", err)
+	}
+	if len(got) != 1 {
+		t.Errorf("Author=agent+Limit=1: len=%d, want 1", len(got))
+	}
+
+	// Invalid author value is an error, not a silent all-pass.
+	if _, err := s.List(ListFilter{Author: "bogus"}); err == nil {
+		t.Error("Author=bogus: want error, got nil")
+	}
+}
+
+// TestList_AuthorComposesWithOtherFilters ▲ SPEC-043 — Author AND-composes with
+// --project, --type, and --since (the AC claims all of them; this backs the
+// claim beyond the tag+limit cases in TestList_FilterByAuthor).
+func TestList_AuthorComposesWithOtherFilters(t *testing.T) {
+	s, path := newTestStore(t)
+	now := time.Now().UTC()
+
+	a := addWithTags(t, s, "a-agent-plat-ship", "agent:claude-code", "platform", "shipped")     // agent, recent
+	b := addWithTags(t, s, "b-agent-growth-wip", "model:claude-opus-4-8", "growth", "wip")      // agent, recent
+	addWithTags(t, s, "c-human-plat-ship", "perf", "platform", "shipped")                       // human
+	d := addWithTags(t, s, "d-agent-plat-ship-old", "agent:claude-code", "platform", "shipped") // agent, OLD
+
+	mustBackdate(t, path, a.ID, now)
+	mustBackdate(t, path, b.ID, now)
+	mustBackdate(t, path, d.ID, now.Add(-10*24*time.Hour))
+
+	// Author + Project: the two agent+platform rows, human excluded.
+	got, err := s.List(ListFilter{Author: "agent", Project: "platform"})
+	if err != nil {
+		t.Fatalf("Author+Project: %v", err)
+	}
+	if len(got) != 2 || !containsTitle(got, "a-agent-plat-ship") || !containsTitle(got, "d-agent-plat-ship-old") {
+		t.Errorf("Author=agent+Project=platform: want {a,d}; got %v", titlesOf(got))
+	}
+
+	// Author + Type: only the wip agent row.
+	got, err = s.List(ListFilter{Author: "agent", Type: "wip"})
+	if err != nil {
+		t.Fatalf("Author+Type: %v", err)
+	}
+	if len(got) != 1 || got[0].Title != "b-agent-growth-wip" {
+		t.Errorf("Author=agent+Type=wip: want {b}; got %v", titlesOf(got))
+	}
+
+	// Author + Since: the two recent agent rows, the old one excluded.
+	got, err = s.List(ListFilter{Author: "agent", Since: now.Add(-2 * 24 * time.Hour)})
+	if err != nil {
+		t.Fatalf("Author+Since: %v", err)
+	}
+	if len(got) != 2 || !containsTitle(got, "a-agent-plat-ship") || !containsTitle(got, "b-agent-growth-wip") {
+		t.Errorf("Author=agent+Since=2d: want {a,b}; got %v", titlesOf(got))
+	}
+}
+
 func TestList_FilterCombined(t *testing.T) {
 	s, path := newTestStore(t)
 

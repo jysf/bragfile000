@@ -26,6 +26,8 @@ Examples:
   brag list --project platform --since 7d         # last week, one project
   brag list --type shipped --limit 5              # 5 most recent shipped
   brag list --since 2026-01-01                    # since a specific date
+  brag list --author agent                        # only agent-authored (has an agent:/model: tag)
+  brag list --author human                        # only human-authored (has neither)
   brag list -P                                    # include project column
   brag list --format json                         # pretty-printed JSON array
   brag list --format tsv                          # tab-separated with header row`,
@@ -35,6 +37,7 @@ Examples:
 	cmd.Flags().String("project", "", "filter to entries with this project (exact match)")
 	cmd.Flags().String("type", "", "filter to entries with this type (exact match)")
 	cmd.Flags().String("since", "", "filter to entries on or after this point (YYYY-MM-DD or Nd/Nw/Nm)")
+	cmd.Flags().String("author", "", "filter by provenance authorship: 'agent' (has an agent:/model: tag) or 'human' (has neither)")
 	cmd.Flags().Int("limit", 0, "cap the number of rows returned (must be > 0 when set)")
 	cmd.Flags().BoolP("show-project", "P", false, "include project in output (adds column between created_at and title)")
 	cmd.Flags().String("format", "", "output format (one of: json, tsv); default is plain tab-separated")
@@ -72,6 +75,13 @@ func runList(cmd *cobra.Command, _ []string) error {
 			return UserErrorf("invalid --since %q: %v", raw, err)
 		}
 		filter.Since = t
+	}
+	if cmd.Flags().Changed("author") {
+		v, _ := cmd.Flags().GetString("author")
+		if v != "agent" && v != "human" {
+			return UserErrorf("--author must be 'agent' or 'human', got %q", v)
+		}
+		filter.Author = v
 	}
 	if cmd.Flags().Changed("limit") {
 		n, _ := cmd.Flags().GetInt("limit")

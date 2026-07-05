@@ -133,13 +133,20 @@ the cwd. See `brag project here` (SPEC-031) for the shared resolver.
 ### `brag list` — list entries
 
 ```
-brag list [-P|--show-project] [--format json|tsv] [--tag T] [--project P] [--type T] [--since 2026-01-01] [--limit N]
+brag list [-P|--show-project] [--format json|tsv] [--tag T] [--project P] [--type T] [--since 2026-01-01] [--author agent|human] [--limit N]
 ```
 
 - `--tag`, `--project`, `--type` filter on exact field value
   (tags filter uses exact tag-name membership via the normalized
   `taggings` join — DEC-015 / SPEC-025).
 - `--since` accepts `YYYY-MM-DD` or a duration like `7d`, `2w`, `3m`.
+- `--author` distinguishes provenance authorship (SPEC-043): `agent`
+  selects entries carrying a reserved `agent:`/`model:` provenance tag
+  (the namespace the MCP `brag_add` tool stamps — DEC-024), `human`
+  selects entries carrying neither. Prefix-anchored, so a topic tag like
+  `agentic` does not count. Omitting the flag returns both. This is the
+  read half of the agent-native write path: `brag list --author agent
+  --format json | jq length` counts agent-authored entries.
 - `--limit` defaults to unlimited; useful for `brag list --limit 5`.
 - Order: `created_at DESC`.
 - Output (default / plain mode): one line per entry, tab-separated
