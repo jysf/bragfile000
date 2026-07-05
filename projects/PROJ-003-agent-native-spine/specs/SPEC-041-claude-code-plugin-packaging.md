@@ -787,27 +787,113 @@ Under the install section, add one line pointing at the plugin (keep the
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** feat/spec-041-plugin-and-release
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **PR (if applicable):** opened against `main` (see repo PR list)
+- **All acceptance criteria met?** yes — AC1-AC9 all pass. `go test ./...`
+  (569 tests, incl. `TestServer_AddReturnValueParity`), `gofmt -l .` (empty),
+  `go vet ./...` (clean), `CGO_ENABLED=0 go build ./...` (success),
+  `just test-docs` (all OK incl. renamed group S), `just test-hook` (H1-H7
+  all OK), `claude plugin validate --strict plugin` and
+  `claude plugin validate --strict .` (both exit 0, re-verified at build per
+  §12(b)).
 - **New decisions emitted:**
   - `DEC-025` — Plugin packaging layout + capture-nudge delivery model
+    (already emitted at design; no changes made at build)
 - **Deviations from spec:**
-  - [list]
+  1. **Test-group letter collision: spec's "group K" renamed to "group S"
+     in `scripts/test-docs.sh`.** The spec's Failing Tests section names
+     the new plugin-assertion block "group K" with IDs K1-K11, but the
+     letter `K` was already in use by a pre-existing group ("BRAG.md
+     cross-reference", K1-K4, added by a prior spec) that the design
+     session's own file did not check against before locking the IDs. Reusing
+     `K` would have silently produced two same-named-but-different assertion
+     blocks in one script. Resolved by lettering the new block `S` (the next
+     unused letter after the existing `R`) and mapping the spec's K1-K11
+     1:1 onto S1-S11 (S2/S3 additionally split into a CLI-validator check
+     and a `-jq` structural-fallback check, both still under one base ID per
+     the spec's own K2/K3 shape). No test *content* changed — only the
+     group letter. This is exactly the class of premise-audit miss AGENTS.md
+     §9 calls out (design should grep the target file before assigning new
+     IDs); worth folding into the design-time pre-flight checklist.
+  2. **Live-check finding (not a deviation from *this* build's own scope, but
+     a delta from DEC-025's stated Validation bar) — raised per the Out of
+     scope note's instruction, not silently fixed:** installed the plugin
+     end-to-end in a scratch marketplace (`claude plugin marketplace add
+     <scratch-copy-of-.claude-plugin+plugin>` → `claude plugin install
+     brag@bragfile`). The install succeeds and `claude plugin details brag`
+     correctly shows version 0.3.0, the description, 1 Hook (Stop), and 1
+     Skill (the `/brag:brag` command) — but reports **"MCP servers (0)"**
+     instead of listing `brag`. Ruled out a stale-binary explanation:
+     re-tested with a freshly-built dev binary from this branch (which has
+     `mcp serve`, unlike the currently-released Homebrew v0.2.0) shadowed
+     onto `PATH`; the count stayed 0. The manifest shape
+     (`mcpServers.brag.{command,args}`) is structurally the same pattern
+     used by the already-installed `formae-mcp` plugin, which correctly
+     shows "MCP servers (1)" for an equivalent `mcpServers.<name>.command`
+     entry (formae wraps its args into one script path instead of a
+     separate `args` array — not yet isolated as the cause, since further
+     root-causing would have meant editing global `~/.claude` plugin-cache
+     state, which the user did not want touched mid-investigation).
+     `claude plugin validate --strict` (the actual loader gate this spec's
+     §12(b) pre-flight targeted) passes clean for both manifests, and this
+     spec's own AC3 test (S4) asserts the `mcpServers.brag.args` shape
+     structurally via `jq` independent of the `details` display — so no
+     AC-mapped test fails. Per user decision (asked directly): **record as
+     a finding and proceed**, rather than block the PR or rework the
+     manifest shape (DEC-025's locked decision #2 explicitly rejected a
+     wrapper-script shape; changing it now on an unconfirmed-cause display
+     quirk would be premature). DEC-025's "Revisit if" clause (b) already
+     anticipates a live-delivery delta; this finding should be folded in
+     there (or as a new revisit clause) at verify or ship.
+  3. **Hook harness wired as a sibling `just test-hook` recipe**, not
+     appended inside `test-docs.sh`'s group-S block — the spec explicitly
+     offered both as acceptable ("wired into `just test-docs` after the
+     group-K block, or a sibling recipe `just test-hook`"); the sibling form
+     keeps the shell-assertion harness (`test-docs.sh`, `ok`/`fail`/`skip`
+     line-per-assertion style) separate from the hook's own
+     fixture-heavy scenario harness (temp git repo, PATH-shadowed `brag`
+     stub, per-scenario setup), which felt like a different shape of test
+     than the doc-content assertions.
 - **Follow-up work identified:**
   - SPEC-042 (v0.3.0 release cut) — already scaffolded
+  - Root-cause the `claude plugin details` MCP-server-count-0 finding above
+    (may need an upstream claude-code report, or an isolated manifest A/B
+    test in a disposable `~/.claude` profile) before/at SPEC-041 verify or
+    at the SPEC-042 release cut, since DEC-025's Validation section
+    currently claims this passes and it was not fully confirmed live.
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing about the artifacts themselves — every literal transcribed
+   clean and validated on the first try (manifests, hooks.json, the
+   capture-nudge.sh quote-escaping, the slash-command). The one real
+   friction was the test-group letter collision (Deviation 1): the spec
+   was written without re-grepping `scripts/test-docs.sh` for the letter
+   `K`, which was already spoken for. A two-second `grep -E '^# ===== Group'
+   scripts/test-docs.sh` at design time would have caught it, the same
+   audit-grep discipline AGENTS.md §9 already codifies for other artifact
+   classes (just not yet extended to "next free letter in an
+   already-lettered harness").
 
-2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+2. **Was there a constraint or decision that should have been listed but
+   wasn't?**
+   — The spec's Out of scope note framed the live check as "if feasible,"
+   which was the right hedge — a *nested* live Claude Code session
+   confirming a Stop hook's `additionalContext` delivery in real time isn't
+   something this build session could exercise from inside itself. What
+   would have helped: an explicit note that `claude plugin details` is
+   itself part of DEC-025's Validation bar (it is — "lists the MCP server +
+   `/brag:brag` command + Stop hook") and thus in-scope for the live check,
+   not just "does it install." That's what actually surfaced the MCP-count
+   finding.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Grep the test harness for existing group letters before the spec locks
+   IDs (design-time), and treat "does `claude plugin details` list all
+   three components" as an explicit pass/fail live-check line item up front
+   rather than discovering its scope mid-build.
 
 ---
 

@@ -1,0 +1,16 @@
+{
+  "name": "brag",
+  "description": "Capture and recall career accomplishments — bundles the brag MCP server, the /brag slash-command, and a quiet session-end capture nudge.",
+  "version": "0.3.0",
+  "author": { "name": "jysf" },
+  "homepage": "https://github.com/jysf/bragfile000",
+  "repository": "https://github.com/jysf/bragfile000",
+  "license": "MIT",
+  "keywords": ["brag", "accomplishments", "career", "mcp", "productivity"],
+  "mcpServers": {
+    "brag": {
+      "command": "brag",
+      "args": ["mcp", "serve"]
+    }
+  }
+}

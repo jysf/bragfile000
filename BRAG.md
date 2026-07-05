@@ -202,6 +202,29 @@ Both assets honour the approval loop above: they help you draft a
 brag entry, but you still review and approve before `brag add
 --json` executes.
 
+## Install as a Claude Code plugin (recommended)
+
+The three integration pieces above — the slash-command, a session-capture
+nudge, and a typed MCP write surface — ship as one Claude Code plugin:
+
+    brew install jysf/bragfile/bragfile      # the binary the MCP server runs
+    claude plugin marketplace add jysf/bragfile000
+    claude plugin install brag@bragfile
+
+This wires the `brag_add` / `brag_list` / `brag_search` / `brag_stats` MCP
+tools, the `/brag:brag` slash-command, and a quiet capture-nudge Stop hook.
+The loose files above remain for manual/standalone setup.
+
+## Provenance: reserved `agent:` / `model:` tags
+
+Agent-driven brags carry two reserved-namespace tags so multi-agent work is
+attributable in hindsight: `agent:<name>` and `model:<id>` — lowercase, no
+spaces, e.g. `agent:claude-code`, `model:claude-opus-4-8`. `agent` and
+`model` are RESERVED prefixes (never topic tags), normally one of each per
+entry, auto-populated by the MCP `brag_add` tool (rarely hand-typed). They
+ride the normalized tags model (DEC-015) with zero schema change, so
+`brag list --tag model:claude-opus-4-8` filters and `brag tags` counts them.
+
 ## Three good examples
 
 ### Example 1 — shipped
