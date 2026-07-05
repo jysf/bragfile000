@@ -132,6 +132,8 @@ For personal-scale CLI distribution, default to pattern 1.
 
 **Homebrew 6.0+ third-party tap trust** (lesson earned at v0.2.0 cut, 2026-06-19). Starting with Homebrew 6.0, installing a cask *or formula* from a third-party tap fails with `Refusing to load cask <tap>/<cask> from untrusted tap` until the user runs `brew trust --cask <tap>/<cask>` once. This is a **tap-level** trust policy — a third-party tap can execute arbitrary unsandboxed Ruby, so Homebrew gates the tap source itself — which makes it independent of two other frictions it is easy to conflate with: notarizing the binary does **not** remove it (that is a macOS Gatekeeper concern, see above), and switching the goreleaser artifact from a cask to a formula does **not** avoid it either (researched at the v0.2.0 cut — the gate is on the tap source, not the artifact type). For `brag`: the user runs `brew trust --cask jysf/bragfile/bragfile` once, then `brew install jysf/bragfile/bragfile`. Two follow-throughs: document it as a one-time install step in the README (done — README install section), and add a "check the package manager's current install/trust policy" line to the release pre-flight, since this gate appeared between the v0.1.0 and v0.2.0 cuts with no change on our side.
 
+**Release specs must include the runtime/operational pre-flight checklist** (the release-cut spec template, `projects/_templates/spec-release-cut.md`). Every production escape in PROJ-001..003 was operational/runtime (goreleaser dual-tag, Gatekeeper, brew-trust, prod-DB migration); the checklist makes each one a ticked design-time item, not a re-learned prod surprise.
+
 ---
 
 ## 5. Directory Structure
@@ -396,6 +398,20 @@ literal-artifact-as-spec rule above: design-time pre-flight is what makes
 "build transcribes verbatim, verify diffs" actually mechanical, because the
 literal was already validated against external reality at the moment it was
 embedded.
+
+**§12(b) refinement — target the behavioral surface, not the shape
+validator.** When a spec's literal makes a claim about runtime behavior —
+a component registers, a hook fires, a binary resolves on PATH, a server
+answers — the design-time pre-flight must run the literal through the
+tool surface that exercises that behavior, not merely the surface that
+validates the artifact's shape. Shape-validation and behavior-
+registration are different checks; neither substitutes for the other.
+Canonical pair: SPEC-024 ran cobra's actual GenBashCompletion
+(behavioral) and caught the __start_brag marker at design; SPEC-041 ran
+`claude plugin validate --strict` (shape-only) but not
+`claude plugin details` (registration), so a manifest that validated
+still registered zero MCP servers — the defect escaped to build. Earned
+N=2 paired-opposing (2026-07-04).
 
 **Design-time pre-flight covers the test's own expected-value literals, too —
 not just the artifact-under-test.** §12(b) validates the artifact a spec embeds
