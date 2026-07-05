@@ -7,7 +7,7 @@
 task:
   id: SPEC-041
   type: story                      # epic | story | task | bug | chore
-  cycle: build
+  cycle: ship
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it) — see L-watch outcome
@@ -975,10 +975,39 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Shipped: one installable Claude Code plugin bundling the MCP server,
+   the `/brag:brag` slash-command, and the capture-nudge Stop hook, with the
+   provenance convention documented in the shipped assets. The headline
+   lesson is the build→build-fix→verify loop-back: design's §12(b)
+   pre-flight ran the manifest through `claude plugin validate --strict`
+   (the loader's *shape* validator) and it came back all-green, but that
+   green result didn't mean the MCP server would actually register —
+   `claude plugin details` (the loader's *registration* surface) showed
+   "MCP servers (0)" until a post-build punch-list pass root-caused that
+   registration reads from a separate `plugin/.mcp.json` file, not the
+   inline `mcpServers` key `validate --strict` was checking. Verify then
+   passed clean against the fixed manifest. Next time: for a plugin-
+   manifest MCP claim specifically, run *both* tools at design — the
+   validator and `claude plugin details` — because they check different
+   things and neither substitutes for the other.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Not yet at the AGENTS.md level. That validate-≠-registration gap is
+   already flagged WATCH in DEC-025's §12(b) refinement note, correctly
+   held at N=1 pending a second same-mechanism instance per the
+   codification meta-rule — recording it again here rather than folding it
+   into §12(b) proper would jump the bar early. DEC-025 itself is already
+   amended with the correct manifest shape and the confirmed
+   `MCP servers (1)` result, so no decision is stale. One smaller thing to
+   watch, not yet worth codifying: the test-group-letter collision
+   (spec's "K" already taken, renamed to "S" at build) is the same class of
+   premise-audit miss §9 already covers for other artifact classes, just
+   not yet extended to "next free letter in an already-lettered harness."
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No new spec. SPEC-042 (the v0.3.0 release cut) is already scaffolded
+   and is the correct next step — it was peeled from this spec at design
+   for exactly this reason. The only thing to carry forward is the WATCH
+   item itself: if a *second* plugin-manifest spec hits the same
+   validate-≠-registration gap, that's the trigger to codify it into
+   §12(b), not before.
