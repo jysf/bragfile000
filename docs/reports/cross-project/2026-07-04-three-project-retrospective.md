@@ -240,7 +240,7 @@ SPEC-041   569  █   (+14 incl. MCP regression guard)
 | **v0.2.0** | 2026-06-17 *(stage ship 2026-06-19)* | DEC-015–021 | **Homebrew 6.0 `brew trust --cask`** (tap-level gate, not notarization) → AGENTS.md §4 |
 | **v0.3.0** | pending (SPEC-042) | DEC-022–025 | *anticipated:* CHANGELOG `[0.3.0]`, RC→final dual-tag, tap bump, brew-trust + Gatekeeper pre-flight, clean `v0.2.x→v0.3.0` upgrade (migration-free core), plugin `version` pin |
 
-Every release has contributed exactly the operational gotchas predicted by A4: each was **earned in the real runtime and codified into §4 afterward**. SPEC-042's anticipated-gotchas list ([`SPEC-042`](../../../projects/PROJ-003-agent-native-spine/specs/SPEC-042-v0-3-0-release-cut.md):57–81) is the first release spec that carries *all* prior §4 lessons forward as pre-flight items — evidence the codification loop is closing on release mechanics specifically.
+Every release has contributed exactly the operational gotchas predicted by A4: each was **earned in the real runtime and codified into §4 afterward**. SPEC-042's anticipated-gotchas list ([`SPEC-042`](../../../projects/PROJ-003-agent-native-spine/specs/done/SPEC-042-v0-3-0-release-cut.md):57–81) is the first release spec that carries *all* prior §4 lessons forward as pre-flight items — evidence the codification loop is closing on release mechanics specifically.
 
 ---
 

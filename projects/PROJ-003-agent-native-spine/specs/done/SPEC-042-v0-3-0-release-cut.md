@@ -7,7 +7,7 @@
 task:
   id: SPEC-042
   type: story
-  cycle: build                     # designed + build-rehearsed 2026-07-05; ship = the human-gated cut
+  cycle: ship                      # SHIPPED 2026-07-05 — v0.3.0 tagged, released, tap bumped, brew upgrade verified
   blocked: true                    # on the STAGE-009 feature specs merging to main (see Dependencies)
   priority: high
   complexity: S
@@ -423,13 +423,34 @@ per AGENTS.md §4). Concretized for the v0.3.0 `brag` cut.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** (cut) cycle.*
+*Appended during the **ship** (cut) cycle. v0.3.0 cut 2026-07-05.*
+
+**Cut record:** `v0.3.0-rc1` prerelease built (4 archives + checksums, tap
+held) → RC binary smoke gate green (`--version` = `0.3.0-rc1`, `--author`,
+`stats`, and `mcp serve` `tools/list` all passed) → RC deleted (§4 Pattern 1)
+→ `v0.3.0` cut at the same commit (`0b4ed3a`) → GitHub release (not
+prerelease, 4 archives + checksums) + tap bumped to `0.3.0` → `brew upgrade`
+`0.2.0 → 0.3.0` verified, `brag --version` = `0.3.0`, prod `~/.bragfile`
+opened with **no** new migration/backup sidecar (189 entries intact), and
+`brag list --author` on prod reports the **0-agent / 189-human** v0.3.0
+baseline.
 
 1. **What would I do differently next time?**
-   — <answer>
+   — The R2 pre-flight checklist made the cut mechanical — every §4 gotcha
+   (dual-tag, Gatekeeper, brew-trust, prod-DB) was a ticked item, not a
+   surprise. The only friction was self-inflicted and unrelated to the cut:
+   squash-merging a stacked PR's base with `--delete-branch` auto-closed the
+   child (cost PR #67 → rebuilt as #68). Next time, retarget the child to
+   `main` before deleting the base.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. This cut *validated* the new R2 release-cut template and the R1
+   §12(b) refinement (the `claude plugin details` registration check is now an
+   AC). Both earned their place. The `spec-release-cut.md` template is
+   confirmed fit-for-purpose by first real use.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — Already drafted: SPEC-044 (R3 dev-binary DB guardrail) and SPEC-045
+   (P3 dogfooding-coverage query, whose baseline this cut just captured).
+   PROJ-003's committed core is shipped; the STAGE-010 stretch decision is
+   the open item.

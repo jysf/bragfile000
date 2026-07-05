@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-009                     # stable, zero-padded, repo-global (never reused)
-  status: active                    # activated 2026-07-03; SPEC-038/039/040/041 shipped; SPEC-042 stub (peeled from 041)
+  status: shipped                   # SHIPPED 2026-07-05 — all 6 specs done, v0.3.0 cut (SPEC-042)
   priority: high                    # v0.3.0-cutting stage; the project's committed core
   target_complete: 2026-07-08       # activated 2026-07-03; ~3 working days (Jul 4 holiday weekend intervening)
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-07-03
-shipped_at: null
+shipped_at: 2026-07-05
 ---
 
 # STAGE-009: Agent-native spine + capture delight (v0.3.0 core)
@@ -246,21 +246,18 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       regression guard (group-S S12/S12-jq) added. Verify then
       **✅ APPROVED, no punch list**. SPEC-042 unblocked.
 
-- [ ] SPEC-042 (designed 2026-07-05 — build=rehearsal, ship=the cut) —
-      **S — v0.3.0 release cut.** Cut/tag/publish v0.3.0 per §4: CHANGELOG
-      `[0.3.0]` (authored whole — `[Unreleased]` was empty); optional
-      `v0.3.0-rc1` → `v0.3.0` dual-tag rule; Homebrew tap bump; `brew trust
-      --cask` + Gatekeeper xattr in the release pre-flight; clean `brew
-      upgrade` from v0.2.x verification; the deferred `docs/tutorial.md` +
-      `docs/architecture.md` plugin walkthroughs. **Design complete** — the
-      §4 runbook, the CHANGELOG `[0.3.0]` literal, observable-end-state ACs
-      (incl. the §12(b)-refinement `claude plugin details` registration
-      check), the rehearsal framing, and the coordinator/human-gated §4
-      Pattern-1 destructive sequence. Adopts the release runtime/operational
-      pre-flight checklist (retro R2, template
-      `projects/_templates/spec-release-cut.md`). **Blocked on** the STAGE-009
-      feature specs on `main` (all merged as of PR #66). Mirrors SPEC-037's
-      release-runbook precedent. Awaiting build (rehearsal, fresh session).
+- [x] SPEC-042 (SHIPPED 2026-07-05 — v0.3.0 cut) — **S — v0.3.0 release
+      cut.** Cut/tag/published v0.3.0 per §4: CHANGELOG `[0.3.0]` (authored
+      whole — `[Unreleased]` was empty); `v0.3.0-rc1` prerelease smoke →
+      `v0.3.0` under the dual-tag §4 Pattern 1; Homebrew tap bumped to
+      `0.3.0`; `brew upgrade` `0.2.0 → 0.3.0` verified (`brag --version` =
+      `0.3.0`, prod DB migration-free, no new backup sidecar); the deferred
+      `docs/tutorial.md` + `docs/architecture.md` plugin walkthroughs landed
+      (#69). Adopted the R2 release runtime/operational pre-flight checklist
+      (template `projects/_templates/spec-release-cut.md`) and the R1
+      §12(b)-refinement registration AC — this cut was their first real use.
+      Design + build-rehearsal via #68/#69; the cut ran from `main`. Mirrors
+      SPEC-037's release-runbook precedent.
 
 - [x] SPEC-043 (merged 2026-07-05, PR #66 — verify ✅ APPROVED — from retro
       P2) — **S — `brag list --author agent|human` provenance filter.** The
@@ -277,7 +274,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `storage` classifier. Unblocks retro P3 (dogfooding-coverage query,
       STAGE-010).
 
-**Count:** 5 shipped (SPEC-038/039/040/041/043) / 1 designed (SPEC-042 → build=rehearsal → cut)
+**Count:** 6 shipped (SPEC-038/039/040/041/043/042) / 0 remaining — **stage complete, v0.3.0 cut 2026-07-05.**
 
 **Complexity check:** **five** specs after the SPEC-041→042 peel; SPEC-040 was
 the one L-risk (resized to M after a clean §12(b) pre-flight retired the
@@ -459,13 +456,38 @@ separately-scoped chore, not owned by any STAGE-009 spec.
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped. Run Prompt 1c (Stage Ship) in
-FIRST_SESSION_PROMPTS.md to draft this.*
+*Shipped 2026-07-05 with the v0.3.0 cut (SPEC-042).*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
+- **Did we deliver the outcome in "What This Stage Is"?** **Yes.** bragfile
+  has an agent-native write spine (`brag mcp serve` + provenance stamping), a
+  correct streak, milestone notifications, an installable Claude Code plugin,
+  and it shipped as v0.3.0. One addition beyond the framing: the *read* half
+  of provenance (`brag list --author`, SPEC-043) — added mid-stage when the
+  cross-project retro surfaced that the write path (SPEC-040) had shipped but
+  the corpus had no way to *measure* agent-authorship.
+- **How many specs did it actually take?** **6, vs. a 4-spec framing.**
+  SPEC-038/039/040/041 were the plan; SPEC-041 peeled the release cut into
+  SPEC-042 (a release tag can't share a PR with the code it tags —
+  `one-spec-per-pr`); SPEC-043 was added from retro P2. The peel + the
+  retro-driven addition are both healthy, not scope creep.
+- **What changed between starting and shipping?** The retro landed mid-stage
+  and re-pointed one item (P2 "emit provenance" was already shipped by
+  SPEC-040 → the real gap was the read query), which became SPEC-043.
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
+  - The R1 §12(b) "validate ≠ registration" refinement and the R2 release
+    pre-flight checklist/template both **landed and were validated by this
+    stage's own cut** — SPEC-041 earned R1 (0 MCP servers despite a green
+    validate), SPEC-042 exercised R2 and the `claude plugin details`
+    registration AC. Already codified (PR #65).
+  - **Git hygiene (new, not codified):** don't `--delete-branch` when merging
+    the *base* of an open stacked PR — GitHub closes (not retargets) the
+    child, and a closed PR with a deleted base can't be reopened. Retarget the
+    child to `main` first. (Cost PR #67 → rebuilt as #68.) N=1; watch for a
+    second instance before codifying into §10.
 - **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <one-line items>
+  - SPEC-043's cross-package drift-coupling note (the `agent:`/`model:`
+    literal hardcoded in both `mcpserver` and `storage`) is carried into
+    SPEC-045 (P3), which will single-source the classifier. WATCH, N=1.
+  - The "re-read shipped code before treating a retro item's premise as
+    current" lesson (SPEC-043) — a retro and the spec it critiques can land
+    the same day. Worth remembering at the next retrospective, not yet a rule.
