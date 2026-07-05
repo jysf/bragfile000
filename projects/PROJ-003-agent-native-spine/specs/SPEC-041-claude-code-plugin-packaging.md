@@ -787,7 +787,7 @@ Under the install section, add one line pointing at the plugin (keep the
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** feat/spec-041-plugin-and-release
-- **PR (if applicable):** opened against `main` (see repo PR list)
+- **PR (if applicable):** https://github.com/jysf/bragfile000/pull/62
 - **All acceptance criteria met?** yes — AC1-AC9 all pass. `go test ./...`
   (569 tests, incl. `TestServer_AddReturnValueParity`), `gofmt -l .` (empty),
   `go vet ./...` (clean), `CGO_ENABLED=0 go build ./...` (success),
