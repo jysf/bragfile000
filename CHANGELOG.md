@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-05
+
+This release makes bragfile **agent-native**. A local MCP server lets an
+agent capture and recall brags through native tool calls — no shell, no
+network — and agent-written entries label themselves with reserved
+`agent:`/`model:` provenance tags. The whole surface installs as a Claude
+Code plugin. Capture also gets more delightful (milestone notifications),
+and the current-streak metric now reads correctly.
+
+### Added
+
+- `brag mcp serve` — a local stdio MCP server exposing `brag_add`,
+  `brag_list`, `brag_search`, and `brag_stats` as native tools over your
+  existing database (local-only, no network), so an MCP-client agent
+  captures and recalls brags without a shell.
+- **Agent/model provenance.** The MCP `brag_add` tool stamps the calling
+  agent and model as reserved `agent:<name>` / `model:<id>` tags, making
+  agent-authored entries attributable — with no schema change.
+- `brag list --author agent|human` — filter entries by provenance
+  authorship: `agent` selects entries carrying an `agent:`/`model:` tag,
+  `human` selects the rest (`brag list --author agent --format json | jq
+  length` counts agent-authored entries).
+- **Milestone notifications.** `brag add` prints one celebratory line to
+  stderr when you cross a total, streak, or per-project milestone — TTY-only,
+  and silent under `--json` and in pipes.
+- **Claude Code plugin.** bragfile ships as an installable Claude Code plugin
+  bundling `brag mcp serve`, a `/brag` slash-command, and a quiet session-end
+  capture-nudge hook; the plugin documents the reserved provenance convention.
+
+### Fixed
+
+- **Current-streak is correct.** `brag stats` keeps the current streak alive
+  through *yesterday* and buckets by your *local* day, so it reads correctly
+  before the day's first entry (previously it read 0). Storage timestamps
+  stay UTC RFC3339; only the derived metric is localized.
+
+### Upgrading from v0.2.x
+
+No manual steps and **no migration** — v0.3.0 adds no schema changes.
+`brew upgrade jysf/bragfile/bragfile` moves a v0.2.x install to v0.3.0 in
+place; `brag --version` then reports `0.3.0`. Two one-time frictions on
+first tap install: on **Homebrew 6.0+**, run `brew trust --cask
+jysf/bragfile/bragfile` once; on **macOS**, an unsigned binary may trigger a
+Gatekeeper prompt — clear it with `xattr -dr com.apple.quarantine` (see the
+README install note). To use the Claude Code plugin, `brag` must resolve on
+your `PATH` (the plugin runs the Homebrew-installed binary).
+
 ## [0.2.0] - 2026-06-17
 
 This release makes **tags** and **projects** first-class. Tags move from
@@ -168,6 +215,7 @@ Each decision file under `/decisions/` carries the full rationale.
   payload keys; markdown convention reuses DEC-013's provenance
   + summary-block style.
 
-[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/jysf/bragfile000/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/jysf/bragfile000/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jysf/bragfile000/releases/tag/v0.1.0

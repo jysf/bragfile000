@@ -7,7 +7,7 @@
 task:
   id: SPEC-042
   type: story
-  cycle: design                    # designed 2026-07-05; build = rehearsal, ship = the cut
+  cycle: build                     # designed + build-rehearsed 2026-07-05; ship = the human-gated cut
   blocked: true                    # on the STAGE-009 feature specs merging to main (see Dependencies)
   priority: high
   complexity: S
@@ -363,26 +363,61 @@ per AGENTS.md §4). Concretized for the v0.3.0 `brag` cut.
 
 *Filled in at the end of the **build** (rehearsal) cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
-- **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
-- **Deviations from spec:**
-  - [list]
+- **Branch:** `feat/spec-042-v0-3-0-release-cut`
+- **PR (if applicable):** this PR — authors the CHANGELOG `[0.3.0]` + the
+  deferred `docs/tutorial.md` / `docs/architecture.md` agent-native
+  walkthroughs. The **tag cut itself is NOT in this PR** (it is the
+  human-gated ship step, run from `main` after this merges).
+- **All acceptance criteria met?** **Rehearsal ACs green; cut ACs pending
+  the human-gated tag.** Verified in the rehearsal (2026-07-05, against the
+  goreleaser snapshot binary + throwaway DBs, never `~/.bragfile`):
+  - `goreleaser check` passes; `goreleaser build --snapshot --clean` builds
+    all four `darwin/linux × amd64/arm64` targets.
+  - The snapshot host-arch binary reports a **goreleaser-injected** version
+    (`0.2.0-SNAPSHOT-7fdfe29`, NOT `dev`) — the `-X main.version` ldflags
+    wiring is live; it will read `0.3.0` once tagged.
+  - `brag list --author agent|human` and `--format json | jq length` work on
+    the built artifact; `brag stats` renders.
+  - `brag mcp serve` answers `initialize` + `tools/list` over stdio with a
+    protocol-clean stdout (the four tools returned).
+  - **Migration-free upgrade confirmed:** re-opening a seeded DB writes **no**
+    `*.backup` sidecar (DEC-021 trigger `applied>0 && pending>0` is false —
+    v0.3.0 adds no migration).
+  - CHANGELOG `[0.3.0]` authored + link-refs repointed; `test-docs.sh` Group O
+    green.
+  - **Still to verify at the cut** (need the real tag / a plugin install /
+    a TTY): the RC-is-prerelease + no-tap-change gate, the final release's
+    4 archives + checksums, the tap bump to `0.3.0`, `brew upgrade → 0.3.0`,
+    the milestone stderr line (TTY-only), and the §12(b) `claude plugin
+    details brag` → `MCP servers (1) brag` registration check on the built
+    plugin (not run in rehearsal to avoid mutating the user's Claude config;
+    SPEC-041 confirmed it at design).
+- **New decisions emitted:** none.
+- **Deviations from spec:** none. CHANGELOG dated `2026-07-05` (the intended
+  cut date); if the cut slips, bump the date to match (per the AC).
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - The **ship (cut)** step — human-gated `git tag v0.3.0-rc1` → smoke →
+    delete RC → `git tag v0.3.0` (§4 Pattern 1). Then STAGE-009 + PROJ-003
+    close.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing. The embedded CHANGELOG literal transcribed verbatim, and the
+   rehearsal steps were a checklist. The only judgement call was *not* running
+   `claude plugin details` in rehearsal (it mutates the user's Claude config);
+   the spec correctly frames it as a built-artifact check for the cut.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. The `stdout-is-for-data` spine held at the new transport (verified:
+   `mcp serve` stdout was protocol-only, the "closing" line went to stderr).
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing structural. One note: the goreleaser snapshot version reads from
+   the *last* tag (`0.2.0-SNAPSHOT-…`), so the "not `dev`" check proves the
+   ldflags wiring but not the literal `0.3.0` string — that only appears once
+   the tag is cut. Worth stating so a verifier does not expect `0.3.0` in the
+   snapshot.
 
 ---
 

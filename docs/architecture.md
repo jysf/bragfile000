@@ -82,6 +82,7 @@ capture, retrieve, digest, export, delete, tags, projects, completion
 | `internal/editor` | (STAGE-002) Launches `$EDITOR` against a templated markdown buffer; parses front-matter on save. Used by `add` (no-args mode) and `edit`. |
 | `internal/export` | (STAGE-003) Markdown-report and JSON exporters (`brag export --format markdown\|json`). |
 | `internal/aggregate` | (STAGE-004) Rule-based digest helpers — `ByType` / `ByProject` / `GroupEntriesByProject` / `Streak` / `MostCommon` / `Span` / `rangeCutoff`. Shared by `summary`, `review`, and `stats` per DEC-014's rule-based output envelope. No SQL — operates over `[]Entry` returned by `Store`. |
+| `internal/mcpserver` | (STAGE-009 / DEC-024) The `brag mcp serve` local stdio MCP server. Advertises four typed tools — `brag_add` / `brag_list` / `brag_search` / `brag_stats` — as thin wrappers over the same `Store`; SQL stays in `internal/storage`. `brag_add` stamps reserved `agent:<name>` / `model:<id>` provenance tags (DEC-024) so agent-authored entries are attributable with no schema change; `brag list --author agent\|human` reads that provenance back out. The stdio transport owns stdout for protocol frames — the `stdout-is-for-data` spine generalized to a new transport. This is the "another frontend over `Store`" that Key Design Principle 2 anticipated. Bundled — with a `/brag` slash-command and a session-end capture-nudge hook — as an installable Claude Code plugin under `plugin/` (DEC-025). |
 
 ## Key Design Principles
 
