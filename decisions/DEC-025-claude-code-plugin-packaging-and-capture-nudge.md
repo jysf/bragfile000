@@ -58,12 +58,19 @@ STAGE-009 agent surfaces. Three sub-decisions:
    `claude plugin marketplace add jysf/bragfile000` →
    `claude plugin install brag@bragfile`.
 
-2. **MCP server entry = `{command:"brag", args:["mcp","serve"]}`.** The
-   plugin's `mcpServers.brag` runs the released `brag` binary from `PATH`
+2. **MCP server entry = `{command:"brag", args:["mcp","serve"]}`, declared
+   via `plugin/.mcp.json` (bare server-name→config map at the plugin root)
+   — the inline `mcpServers` key inside `plugin/.claude-plugin/plugin.json`
+   is insufficient for registration; it is kept only for parity with the
+   `plugin.json` schema shape (see Amendment below).** The plugin's
+   `.mcp.json` `brag` entry runs the released `brag` binary from `PATH`
    (prerequisite: `brew install jysf/bragfile/bragfile`), not a bundled
    binary or a wrapper script. `brag` is already a Homebrew-distributed
    binary, so a direct entry needs no packaged executable and reuses the one
-   install.
+   install. The loader tolerates a bare (non-`${CLAUDE_PLUGIN_ROOT}`) command
+   string as long as the binary resolves on `PATH` at launch — confirmed
+   behaviorally (`claude plugin details brag` → `MCP servers (1) brag`), not
+   assumed; no launcher/shim script is needed.
 
 3. **The capture-nudge Stop hook: once-per-session, commit-gated,
    agent-facing, never-posts, env-silenceable.** The hook
@@ -185,8 +192,10 @@ at design); the `capture-nudge.sh` behavior harness passes all fire/silence
 paths and the PATH-stub sentinel proves the hook never invokes `brag`; the
 plugin installs via `claude plugin install brag@bragfile` and
 `claude plugin details brag` lists the MCP server + `/brag:brag` command +
-Stop hook; and the shipped hook/command/README/BRAG.md all carry the reserved
-`agent:`/`model:` convention.
+Stop hook (confirmed 2026-07-04 in a scratch marketplace install, post
+Amendment below — `MCP servers (1) brag`, not `(0)`); and the shipped
+hook/command/README/BRAG.md all carry the reserved `agent:`/`model:`
+convention.
 
 Revisit if: (a) the "commit-landed" gate proves too eager or too quiet in
 dogfooding → refine the shipped signal (e.g. commit *count*, or diff size, or
@@ -196,6 +205,61 @@ re-record here; (c) the Claude Code plugin manifest schema changes under us
 (external, moving loader — the §12(b) reason this was pre-flighted) → re-run
 `validate --strict` and update the literals; (d) a bare `/brag` becomes a real
 ask → consider a differently-named plugin or a shipped command alias.
+
+## Amendment (2026-07-04, SPEC-041 build punch-list)
+
+**Correction to sub-decision 2's manifest shape:** the original literal
+declared the MCP server *only* via the inline `mcpServers` key inside
+`plugin/.claude-plugin/plugin.json`. `claude plugin validate --strict`
+passed against that shape (it validates JSON structure, not runtime
+registration), and SPEC-041's own AC3 test (S4, a `jq` structural assertion)
+also passed against it — but a scratch-marketplace install showed
+`claude plugin details brag` → **`MCP servers (0)`**, confirmed as a real bug
+in SPEC-041's Build Completion (Deviation 2) and re-confirmed at this
+amendment via a clean before/after scratch install (before: `.mcp.json`
+absent → `MCP servers (0)`; after: `.mcp.json` added → `MCP servers (1) brag`).
+
+**Root cause:** Claude Code's plugin loader registers MCP servers from a
+separate **`plugin/.mcp.json`** file at the plugin root (a bare
+`{"<name>": {"command": ..., "args": ...}}` map) — not from the
+`mcpServers` key inside `plugin.json`. Every working reference plugin
+inspected (`formae-mcp`) ships a `.mcp.json`; ours did not.
+
+**Fix:** added `plugin/.mcp.json` — `{"brag": {"command": "brag", "args":
+["mcp", "serve"]}}` — as the actual registration source. The inline
+`mcpServers` key in `plugin.json` is **kept** (does not block registration,
+costs nothing, and matches the `formae-mcp` reference plugin, which ships
+both `.mcp.json` and an equivalent inline `plugin.json` key) but is
+documented here as **non-authoritative for registration**.
+
+**PATH dependency, stated explicitly:** `.mcp.json`'s `command:"brag"` is a
+bare command, not `${CLAUDE_PLUGIN_ROOT}`-qualified — it resolves via the
+user's `PATH` at MCP-server launch time, same as the inline key always
+intended. This requires `brag` to already be installed (`brew install
+jysf/bragfile/bragfile`, per `plugin/README.md`'s Prerequisite section) —
+the plugin does not bundle or vendor the binary. Confirmed behaviorally that
+the loader accepts a bare command here (no launcher/shim script needed).
+
+**Process note for the §12(b) family (flagged WATCH, not codified — N=1):**
+the design-time pre-flight ran `claude plugin validate --strict` (the
+loader's manifest validator) but not `claude plugin details` (the loader's
+*registration* surface) against a real install. Validation passing is
+necessary but not sufficient evidence that a manifest's declared components
+actually load. This refines the existing §12(b) "run the literal through its
+target tool" rule: for a plugin manifest, the target tool for the
+MCP-registration claim specifically is `claude plugin details`, not
+`validate --strict` — they check different things. One instance so far;
+AGENTS.md's own codification meta-rule wants N=2 (same-outcome) or a
+paired opposing-outcome N=2 before this earns a codified rule change, so
+this is recorded here as a live instance to watch, not folded into AGENTS.md
+yet.
+
+**Regression guard:** `scripts/test-docs.sh` group S gained `S12`/`S12-jq`,
+asserting `plugin/.mcp.json` exists and declares
+`{"brag": {"command": "brag", "args": ["mcp", "serve"]}}` — a cheap guard
+against this specific shape silently regressing (it cannot, by itself,
+re-prove runtime registration; that still requires the behavioral
+`claude plugin details` check performed at this amendment).
 
 ## References
 

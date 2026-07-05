@@ -1,0 +1,6 @@
+{
+  "brag": {
+    "command": "brag",
+    "args": ["mcp", "serve"]
+  }
+}

@@ -855,11 +855,83 @@ Under the install section, add one line pointing at the plugin (keep the
      than the doc-content assertions.
 - **Follow-up work identified:**
   - SPEC-042 (v0.3.0 release cut) — already scaffolded
-  - Root-cause the `claude plugin details` MCP-server-count-0 finding above
-    (may need an upstream claude-code report, or an isolated manifest A/B
-    test in a disposable `~/.claude` profile) before/at SPEC-041 verify or
-    at the SPEC-042 release cut, since DEC-025's Validation section
-    currently claims this passes and it was not fully confirmed live.
+  - ~~Root-cause the `claude plugin details` MCP-server-count-0 finding
+    above~~ — **resolved below (punch-list fix).**
+
+### Punch-list fix (post-build, pre-verify): MCP-server-count-0 root-caused and fixed
+
+Coordinator-confirmed real bug blocking verify: an installed `brag` plugin
+registered **0 MCP servers** (`claude plugin details brag` → `MCP servers
+(0)`), so the marquee agent-native surface (`brag_add`/`brag_list`/etc. via
+the plugin) was inert, even though `claude plugin validate --strict`, all
+AC-mapped tests, and the hook harness were green.
+
+- **Root cause, confirmed (not assumed):** Claude Code's plugin loader
+  registers MCP servers from a separate **`plugin/.mcp.json`** file at the
+  plugin root (a bare `{"<name>": {command, args?}}` map) — not from the
+  inline `mcpServers` key inside `plugin/.claude-plugin/plugin.json`, which
+  the loader does not read for registration. Confirmed against the cached
+  `formae-mcp` reference plugin, which ships both `.mcp.json` (authoritative)
+  and an equivalent inline `plugin.json` key (parity only).
+- **Fix:** added `plugin/.mcp.json` — `{"brag": {"command": "brag", "args":
+  ["mcp", "serve"]}}`. Kept the inline `mcpServers` key in `plugin.json`
+  unchanged, matching the `formae-mcp` reference (ships both); documented as
+  non-authoritative for registration in DEC-025's amendment.
+- **PATH-vs-launcher question, decided against observed behavior:** tested
+  whether the loader requires a `${CLAUDE_PLUGIN_ROOT}`-qualified launcher
+  (the `formae` shape) or tolerates a bare command. Confirmed via a clean
+  before/after scratch-marketplace install (see behavioral gate below) that
+  a **bare `command:"brag"` works** — no `plugin/scripts/` shim needed. The
+  PATH dependency on an installed `brag` binary (already documented in
+  `plugin/README.md`'s Prerequisite section) is unchanged and is now also
+  stated explicitly in DEC-025.
+- **Behavioral acceptance gate (the actual pass condition, not
+  `validate --strict`):** installed straight from this branch's working
+  tree (`claude plugin marketplace add <repo-path>` →
+  `claude plugin install brag@bragfile`) both **before** the fix (reproduced
+  `MCP servers (0)`) and **after** (confirmed `MCP servers (1) brag`), then
+  uninstalled/removed the scratch marketplace registration to leave no
+  local `~/.claude` state behind. `claude plugin validate --strict` (both
+  manifests) still passes unchanged — it was never the discriminating gate.
+- **Regression guard added:** `scripts/test-docs.sh` group S gained
+  `S12`/`S12-jq` — fails if `plugin/.mcp.json` goes missing or its
+  `brag.command`/`brag.args` drift. This is cheap and structural; it cannot
+  by itself re-prove runtime registration (only the behavioral
+  `claude plugin details` check above does that), so it's a regression
+  guard, not a substitute for the behavioral gate.
+- **DEC-025 amended** (see its new "Amendment (2026-07-04, SPEC-041 build
+  punch-list)" section): corrects sub-decision 2's manifest shape to
+  "declared via `plugin/.mcp.json` (bare map); the inline `plugin.json` key
+  is insufficient for registration," states the PATH dependency explicitly,
+  and updates Validation to record the confirmed `MCP servers (1)` result.
+- **Doc sweep:** checked `plugin/README.md`, `BRAG.md`, `README.md` for
+  MCP-wiring descriptions that would now be wrong — none describe the
+  manifest's internal registration mechanism (they describe user-facing
+  install steps and the PATH prerequisite only, both still accurate), so no
+  changes were needed there. Only `DEC-025` and this Build Completion
+  described the manifest shape at the level of detail that needed
+  correcting.
+- **All gates re-run green post-fix:** `go test ./...` (569 tests),
+  `gofmt -l .` (empty), `go vet ./...` (clean),
+  `CGO_ENABLED=0 go build ./...` (success), `just test-docs` (all OK, incl.
+  new S12/S12-jq), `just test-hook` (H1-H7 all OK),
+  `claude plugin validate --strict plugin` and
+  `claude plugin validate --strict .` (both exit 0).
+
+**§12(b) refinement (flagged WATCH, not codified — this is one instance,
+AGENTS.md's codification meta-rule wants N=2 same-outcome or a paired
+opposing-outcome N=2):** design's §12(b) pre-flight ran the manifest through
+`claude plugin validate --strict` (the loader's manifest-*validator*) but
+not `claude plugin details` (the loader's component-*registration* surface)
+against a real install — so a literal that validated strict still failed to
+register at runtime, and no AC-mapped test caught it because every AC-mapped
+test asserted JSON shape, not the loader's runtime behavior. The refinement
+to "run the literal through its target tool": for a plugin-manifest MCP
+claim specifically, the target tool is `claude plugin details` (does the
+component register?), not `validate --strict` (is the JSON shape well
+formed?) — they check different things and neither substitutes for the
+other. Recorded here as a live instance; do not fold into AGENTS.md's §12(b)
+text yet.
 
 ### Build-phase reflection (3 questions, short answers)
 

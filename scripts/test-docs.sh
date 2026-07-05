@@ -987,6 +987,19 @@ else
     fail "S11" "plugin/hooks/capture-nudge.sh is not executable (chmod +x)"
 fi
 
+# S12 — plugin/.mcp.json declares the brag MCP server (SPEC-041 punch-list
+# regression guard). `claude plugin validate --strict` and S2/S2-jq/S4 all
+# stayed green while the loader registered 0 MCP servers at runtime, because
+# registration reads plugin/.mcp.json, not the inline plugin.json mcpServers
+# key — this assertion fails loudly if .mcp.json goes missing or drifts.
+PLUGIN_MCP_JSON="plugin/.mcp.json"
+assert_file_exists "S12" "$PLUGIN_MCP_JSON"
+if [ -f "$PLUGIN_MCP_JSON" ] && jq -e '.brag.command=="brag" and (.brag.args==["mcp","serve"])' "$PLUGIN_MCP_JSON" >/dev/null 2>&1; then
+    ok "S12-jq"
+else
+    fail "S12-jq" "$PLUGIN_MCP_JSON missing brag.command==\"brag\" or brag.args==[\"mcp\",\"serve\"]"
+fi
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
