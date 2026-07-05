@@ -1,0 +1,10 @@
+project,stage,specs_shipped,size_estimate,notes
+PROJ-001,STAGE-001,4,,foundations
+PROJ-001,STAGE-002,8,,capture-and-retrieval (stage upper bound)
+PROJ-001,STAGE-003,4,,reports+ai-io (SPEC-016 deferred)
+PROJ-001,STAGE-004,3,,rule-based-polish
+PROJ-001,STAGE-005,4,,distribution+cleanup (+6 days over gate; v0.1.0)
+PROJ-002,STAGE-006,2,3-4,tag-normalization (atomic-migration rescope)
+PROJ-002,STAGE-007,7,5-6,projects-core (SPEC-029->033 peel)
+PROJ-002,STAGE-008,4,2-3,polish+v0.2.0 (safety-belt promoted by incident)
+PROJ-003,STAGE-009,4,,mcp+plugin+capture-delight (SPEC-042 pending; SPEC-041->042 peel)
