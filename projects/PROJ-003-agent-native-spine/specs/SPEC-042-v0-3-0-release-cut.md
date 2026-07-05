@@ -154,6 +154,30 @@ necessary during build, create a new spec rather than expanding this one.
 
 Gotchas, style preferences, reuse opportunities.
 
+### Release runtime/operational pre-flight (all must be ticked at design)
+
+Adopted from the release-cut spec template (`projects/_templates/spec-release-cut.md`,
+per AGENTS.md §4). Concretized for the v0.3.0 `brag` cut.
+
+- [ ] Dual-tag-on-same-commit: `v0.3.0-rc1` tag + release deleted before the
+      final `v0.3.0` tag is cut at the same commit (§4 Pattern 1).
+- [ ] macOS Gatekeeper: `xattr -dr com.apple.quarantine <bin>` note present in
+      README §Install.
+- [ ] Homebrew 6.0+: `brew trust --cask jysf/bragfile/bragfile` documented in
+      README and run once at the cut.
+- [ ] Dev/prod DB isolation: the RC smoke test runs against a THROWAWAY DB,
+      never ~/.bragfile; the SPEC-036 auto-backup path is observed to fire.
+- [ ] Clean upgrade: `brew upgrade jysf/bragfile/bragfile` from v0.2.x
+      verified; `brag --version` prints `v0.3.0`; no migration surprise (the
+      core is migration-free).
+- [ ] CHANGELOG: the `[0.3.0]` dated section is moved out of `[Unreleased]`;
+      compare-links repointed.
+- [ ] Plugin version pin (v0.3.0+): `plugin/.claude-plugin/plugin.json`
+      `version` matches the `v0.3.0` tag.
+- [ ] Behavioral surfaces re-checked on the built artifact (per the §12(b)
+      refinement): `claude plugin details` shows the MCP server registered;
+      the Stop hook fires in a throwaway repo.
+
 ---
 
 ## Build Completion
