@@ -240,7 +240,8 @@ jysf/bragfile/bragfile`, per `plugin/README.md`'s Prerequisite section) —
 the plugin does not bundle or vendor the binary. Confirmed behaviorally that
 the loader accepts a bare command here (no launcher/shim script needed).
 
-**Process note for the §12(b) family (flagged WATCH, not codified — N=1):**
+**Process note for the §12(b) family (PROMOTED — codified at N=2
+paired-opposing, 2026-07-04):**
 the design-time pre-flight ran `claude plugin validate --strict` (the
 loader's manifest validator) but not `claude plugin details` (the loader's
 *registration* surface) against a real install. Validation passing is
@@ -248,11 +249,15 @@ necessary but not sufficient evidence that a manifest's declared components
 actually load. This refines the existing §12(b) "run the literal through its
 target tool" rule: for a plugin manifest, the target tool for the
 MCP-registration claim specifically is `claude plugin details`, not
-`validate --strict` — they check different things. One instance so far;
-AGENTS.md's own codification meta-rule wants N=2 (same-outcome) or a
-paired opposing-outcome N=2 before this earns a codified rule change, so
-this is recorded here as a live instance to watch, not folded into AGENTS.md
-yet.
+`validate --strict` — they check different things. When first written this
+was held at N=1, pending a second same-mechanism instance. The
+cross-project retrospective (2026-07-04, action-register R1) paired it
+with SPEC-024's opposing-outcome POSITIVE case (design ran cobra's actual
+`GenBashCompletion` and caught the `__start_brag` marker at design),
+clearing the codification meta-rule's **N=2 paired-opposing** bar. It is
+now codified as the "§12(b) refinement — target the behavioral surface,
+not the shape validator" rule in AGENTS.md §12. Promoted, not carried:
+no longer an open WATCH item.
 
 **Regression guard:** `scripts/test-docs.sh` group S gained `S12`/`S12-jq`,
 asserting `plugin/.mcp.json` exists and declares
