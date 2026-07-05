@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-009                     # stable, zero-padded, repo-global (never reused)
-  status: active                    # activated 2026-07-03; SPEC-038 shipped, SPEC-039..041 pending
+  status: active                    # activated 2026-07-03; SPEC-038/039/040 shipped; SPEC-041 design-complete; SPEC-042 stub (peeled from 041)
   priority: high                    # v0.3.0-cutting stage; the project's committed core
   target_complete: 2026-07-08       # activated 2026-07-03; ~3 working days (Jul 4 holiday weekend intervening)
 
@@ -203,36 +203,61 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       extraction). Doc touch scoped to `docs/api-contract.md` (broad MCP docs are
       SPEC-041's sweep). **Blocks SPEC-041.** Awaiting build (fresh session).
 
-- [ ] SPEC-041 (proposed) — **S/M — Claude Code plugin packaging + v0.3.0
-      cut.** Bundle `brag mcp serve` + `examples/brag-slash-command.md` +
-      a session-end/Stop capture-nudge hook (evolving
-      `scripts/claude-code-post-session.sh`) into an installable Claude
-      Code plugin; document the reserved `agent:`/`model:` provenance
-      convention in the shipped hook/slash-command/BRAG.md (transcribe /
-      refine the backlog draft literal — literal-artifact-as-spec).
-      §12(b)-pre-flight the plugin manifest against the current plugin
-      loader. Then cut v0.3.0 per §4 (CHANGELOG `[0.3.0]`; optional
-      `v0.3.0-rc1` → `v0.3.0` dual-tag rule; tap bump; `brew trust` +
-      Gatekeeper pre-flight; clean-upgrade verification). **Premise-audit
-      triggers:** *§12(b)* — run the manifest through the real loader; the
-      capture-nudge hook + slash-command are literal artifacts, diff
-      against the embedded literals. *status-change (doc)* — the plugin
-      changes the integration story from "copy these files" to "install
-      this plugin"; grep `BRAG.md` / `docs/` / `README.md` for the SPEC-022
-      asset mentions and enumerate each as update-or-stays. *release
-      mechanics* — trust-but-verify the "pushed tag / bumped formula"
-      claims via `gh release view` / the tap cask read.
+- [ ] SPEC-041 (design complete 2026-07-04 → build) — **M — Claude Code
+      plugin packaging.** Bundle `brag mcp serve` + the `/brag:brag`
+      slash-command + a `Stop` capture-nudge hook (evolving
+      `scripts/claude-code-post-session.sh`) into an installable Claude Code
+      plugin (`plugin/` + repo-root `.claude-plugin/marketplace.json`);
+      document the reserved `agent:`/`model:` provenance convention in the
+      shipped hook/slash-command/`plugin/README.md`/BRAG.md; fold in one
+      MCP-surface regression-guard test (`brag_add` return-value byte-parity
+      with `export.ToJSON`). **Design complete:** spec on
+      `feat/spec-041-plugin-and-release`; **DEC-025 emitted** (plugin layout +
+      MCP-on-PATH + capture-nudge delivery model; confidence 0.8).
+      **§12(b) pre-flight RUN at design (all green):** the plugin *and*
+      marketplace manifests were built and run through the **real loader**
+      (`claude plugin validate --strict`, Claude Code 2.1.201) — **caught a
+      real strict-mode drift** (marketplace `description` required for
+      `--strict`; fixed in the embedded literal). The `capture-nudge.sh` hook
+      was exercised against crafted `Stop` payloads across all fire/silence
+      paths + a PATH-shadowing `brag` stub proving it **never invokes `brag`**
+      (approval loop held). **Surfaced Q(c) resolved:** manifest pre-flighted,
+      not memory-transcribed. **Surfaced Q(d) resolved:** the nudge fires on
+      `Stop` (every turn) but **only once per session, only after a commit
+      lands** (the "plausibly shipped" answer), delivered as agent-facing
+      `additionalContext` — a §12(b) *contract discovery* that the Stop-hook
+      surface has **no TTY** (superseding the stage note's "TTY-only" framing).
+      **Premise audit run:** *status-change (doc)* grep enumerated every
+      SPEC-022 asset mention as update-or-stays (loose assets STAY; BRAG.md +
+      README + `plugin/README.md` gain the plugin path). **L-watch: PEEL
+      TAKEN** — the v0.3.0 release cut peeled into **SPEC-042** (release tag is
+      cut from `main` *after* this PR merges → `one-spec-per-pr`; plus the
+      folded-in regression test + the release runbook's distinct kind-of-work,
+      per SPEC-037). **Blocks SPEC-042.** Awaiting build (fresh session).
 
-**Count:** 3 shipped / 0 active / 1 pending (SPEC-041)
+- [ ] SPEC-042 (proposed — stub, peeled from SPEC-041) — **S — v0.3.0 release
+      cut.** Cut/tag/publish v0.3.0 per §4: CHANGELOG `[0.3.0]`; optional
+      `v0.3.0-rc1` → `v0.3.0` dual-tag rule; Homebrew tap bump; `brew trust
+      --cask` + Gatekeeper xattr in the release pre-flight; clean `brew
+      upgrade` from v0.2.x verification; the deferred `docs/tutorial.md` +
+      `docs/architecture.md` plugin walkthroughs. **Blocked on SPEC-041
+      merging to `main`** (the tag is cut from main after the plugin lands).
+      Not yet designed — a fresh design session fills it in once SPEC-041 has
+      merged. Mirrors SPEC-037's release-runbook precedent.
 
-**Complexity check:** four specs, one L-risk (SPEC-040 — resized to M at design
-after a clean §12(b) pre-flight retired the SDK/transport risk). The plugin +
-release cut are bundled in SPEC-041 because they share the "make the
-spine installable and shipped" seam; if SPEC-041 reads L at design (the
-manifest pre-flight surprises, or the release cut wants its own runbook
-spec as SPEC-037 did), peel the v0.3.0 cut into its own S spec rather
-than letting SPEC-041 grow — mirroring the STAGE-007 SPEC-029→033 and
-STAGE-008 doc/release-split discipline.
+**Count:** 3 shipped / 0 active / 2 pending (SPEC-041 design-complete → build;
+SPEC-042 stub → design)
+
+**Complexity check:** **five** specs after the SPEC-041→042 peel; SPEC-040 was
+the one L-risk (resized to M after a clean §12(b) pre-flight retired the
+SDK/transport risk). The plugin + release cut were bundled in the original
+SPEC-041; **at SPEC-041 design the peel WAS taken** — the manifest pre-flight
+retired the manifest's L-risk, but the breadth (packaging + a folded-in MCP
+regression test + a release runbook) plus the structural merge boundary (the
+release tag is cut from `main` after the plugin PR lands, so bundling would
+break `one-spec-per-pr`) read L. The v0.3.0 cut is now SPEC-042 — mirroring the
+STAGE-007 SPEC-029→033 and STAGE-008 doc/release-split discipline, and
+SPEC-037's release-runbook precedent.
 
 ## Design Notes
 
