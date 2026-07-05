@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-009                     # stable, zero-padded, repo-global (never reused)
-  status: active                    # activated 2026-07-03; SPEC-038/039/040 shipped; SPEC-041 design-complete; SPEC-042 stub (peeled from 041)
+  status: active                    # activated 2026-07-03; SPEC-038/039/040/041 shipped; SPEC-042 stub (peeled from 041)
   priority: high                    # v0.3.0-cutting stage; the project's committed core
   target_complete: 2026-07-08       # activated 2026-07-03; ~3 working days (Jul 4 holiday weekend intervening)
 
@@ -203,7 +203,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       extraction). Doc touch scoped to `docs/api-contract.md` (broad MCP docs are
       SPEC-041's sweep). **Blocks SPEC-041.** Awaiting build (fresh session).
 
-- [ ] SPEC-041 (design complete 2026-07-04 → build) — **M — Claude Code
+- [x] SPEC-041 (shipped 2026-07-04, PR #62) — **M — Claude Code
       plugin packaging.** Bundle `brag mcp serve` + the `/brag:brag`
       slash-command + a `Stop` capture-nudge hook (evolving
       `scripts/claude-code-post-session.sh`) into an installable Claude Code
@@ -233,20 +233,30 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       TAKEN** — the v0.3.0 release cut peeled into **SPEC-042** (release tag is
       cut from `main` *after* this PR merges → `one-spec-per-pr`; plus the
       folded-in regression test + the release runbook's distinct kind-of-work,
-      per SPEC-037). **Blocks SPEC-042.** Awaiting build (fresh session).
+      per SPEC-037). **Blocks SPEC-042.** **Build+punch-list+verify:** build
+      shipped all 9 ACs green; a post-build, pre-verify coordinator-confirmed
+      punch-list pass root-caused a real bug — the plugin installed but
+      registered **0 MCP servers**, because Claude Code's loader reads MCP
+      registration from a separate `plugin/.mcp.json` file, not the inline
+      `mcpServers` key in `plugin.json` that `claude plugin validate --strict`
+      was checking (a validate-≠-registration gap, flagged WATCH in DEC-025's
+      §12(b) note at N=1, not yet codified). Fixed by adding
+      `plugin/.mcp.json`; confirmed `MCP servers (1) brag` via a clean
+      before/after scratch-marketplace install; DEC-025 amended; a
+      regression guard (group-S S12/S12-jq) added. Verify then
+      **✅ APPROVED, no punch list**. SPEC-042 unblocked.
 
 - [ ] SPEC-042 (proposed — stub, peeled from SPEC-041) — **S — v0.3.0 release
       cut.** Cut/tag/publish v0.3.0 per §4: CHANGELOG `[0.3.0]`; optional
       `v0.3.0-rc1` → `v0.3.0` dual-tag rule; Homebrew tap bump; `brew trust
       --cask` + Gatekeeper xattr in the release pre-flight; clean `brew
       upgrade` from v0.2.x verification; the deferred `docs/tutorial.md` +
-      `docs/architecture.md` plugin walkthroughs. **Blocked on SPEC-041
-      merging to `main`** (the tag is cut from main after the plugin lands).
-      Not yet designed — a fresh design session fills it in once SPEC-041 has
-      merged. Mirrors SPEC-037's release-runbook precedent.
+      `docs/architecture.md` plugin walkthroughs. **Unblocked** — SPEC-041
+      merged to `main` 2026-07-05 (PR #62; the tag is cut from main after the
+      plugin lands). Not yet designed — a fresh design session fills it in.
+      Mirrors SPEC-037's release-runbook precedent.
 
-**Count:** 3 shipped / 0 active / 2 pending (SPEC-041 design-complete → build;
-SPEC-042 stub → design)
+**Count:** 4 shipped / 0 active / 1 pending (SPEC-042 stub → design)
 
 **Complexity check:** **five** specs after the SPEC-041→042 peel; SPEC-040 was
 the one L-risk (resized to M after a clean §12(b) pre-flight retired the

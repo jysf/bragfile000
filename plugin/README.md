@@ -45,3 +45,8 @@ attributable later: `agent:<name>` (e.g. `agent:claude-code`) and
 Prefer to wire things by hand? Copy `examples/brag-slash-command.md` to
 `~/.claude/commands/brag.md` for a bare `/brag`, and see BRAG.md for the
 `scripts/claude-code-post-session.sh` pipe helper.
+
+## Known issue
+
+`claude plugin uninstall` may leave a stale `~/.claude/plugins/cache/bragfile/`
+directory behind; remove it by hand if a reinstall needs a clean cache.
