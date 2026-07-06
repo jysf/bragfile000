@@ -110,7 +110,9 @@ Ordered; a project typically has 2–5 stages. IDs are the next-free repo-global
 
 - [ ] STAGE-011 (proposed) — **`brag impact` — the digest foundation.** The
       rule-based, time-windowed, initiative-grouped impact aggregation the story
-      reads. Reuses `internal/aggregate`; DEC-014 envelope.
+      reads. Reuses `internal/aggregate`; DEC-014 envelope. Also carries the
+      decoupled **SPEC-046** cost/session/token capture *seed* (a v0.3.x patch;
+      DEC-027) so economics history accrues before PROJ-005 needs it.
 - [ ] STAGE-012 (proposed) — **`brag story --audience` — the narrative surface.**
       The audience taxonomy + shaping rules (a DEC), the LLM-pipe bundle format,
       the framing-directive assets. The headline.
