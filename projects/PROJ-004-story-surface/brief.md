@@ -4,7 +4,7 @@
 
 project:
   id: PROJ-004
-  status: proposed                  # proposed | active | shipped | cancelled
+  status: active
   priority: high
   target_ship: null                 # v0.4.0 (single-user story surface)
 
@@ -114,7 +114,7 @@ IDs are the next-free repo-global (§2).
       the capture-nudge hook `session_id` surfacing, so economics history accrues
       before PROJ-005 needs it. A stage is the atomic ship-unit, so this v0.3.x
       seed got its own stage rather than riding STAGE-011's v0.4.0 backlog.
-- [ ] STAGE-011 (proposed) — **`brag impact` — the digest foundation.** The
+- [ ] STAGE-011 (active) — **`brag impact` — the digest foundation.** The
       rule-based, time-windowed, initiative-grouped impact aggregation the story
       reads. Reuses `internal/aggregate`; DEC-014 envelope. Ships v0.4.0.
 - [ ] STAGE-012 (proposed) — **`brag story --audience` — the narrative surface.**
