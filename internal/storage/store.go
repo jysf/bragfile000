@@ -46,11 +46,19 @@ func Open(path string) (*Store, error) {
 		return nil, fmt.Errorf("open store: %w", err)
 	}
 
+	// Guard: an unreleased/dev build must not migrate the real ~/.bragfile
+	// (DEC-026 / SPEC-044). Checked before the backup + apply below so a dev
+	// binary against prod refuses cleanly rather than snapshot-then-migrate.
+	ctx := context.Background()
+	if err := devProdMigrateGuard(ctx, db, path, sub); err != nil {
+		_ = db.Close()
+		return nil, err // already wrapped with ErrDevProdMigrate (a user error).
+	}
+
 	// Safety belt: snapshot an existing DB before any forward-only,
 	// irreversible migration (DEC-002) mutates it. No-op for a brand-new or
 	// already-current DB. A failed snapshot aborts Open rather than migrate
 	// an un-backed-up DB (DEC-021).
-	ctx := context.Background()
 	if err := backupBeforeMigrations(ctx, db, path, sub); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("open store: %w", err)
