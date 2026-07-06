@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-07-06
+
+A small, additive **patch** that begins seeding per-work economics history. The
+MCP `brag_add` tool now accepts optional `session` / `cost` / `tokens` inputs
+and stamps them as reserved `session:` / `cost:` / `tokens:` tags, and the
+plugin's capture-nudge hook forwards the Claude Code `session_id` so an
+agent-captured entry carries a stable session join-key. No schema change, no CLI
+change — cost/session history simply starts accruing now, ahead of the reporting
+layer that will read it.
+
+### Added
+
+- **Optional cost / session / token capture on `brag_add` (MCP).** The MCP
+  `brag_add` tool accepts three new **optional** inputs — `session`, `cost`,
+  `tokens` — and stamps each as a reserved-namespace tag (`session:<id>`,
+  `cost:<n>`, `tokens:<n>`) alongside the existing `agent:` / `model:`
+  provenance. All three are optional: an omitted input stamps no tag, and
+  bragfile never fabricates a value. `cost` must be a non-negative USD decimal
+  and `tokens` a non-negative integer — a non-numeric or negative value is
+  rejected as a tool error rather than silently stored. Reserved but **not**
+  author-provenance: a `session:` / `cost:` / `tokens:`-only entry still
+  classifies as `human` under `brag list --author` (DEC-027).
+- **Session join-key forwarding in the capture-nudge hook.** The Claude Code
+  plugin's session-end capture-nudge hook now surfaces the Claude Code
+  `session_id` in its agent-facing context and instructs Claude to forward it as
+  the `session` input on `brag_add`, so agent-captured entries carry a stable
+  per-session join-key. The hook still never runs `brag` itself; its
+  silent-degradation and once-per-session contracts are unchanged.
+
+### Upgrading from v0.3.0
+
+No manual steps and **no migration** — v0.3.1 adds no schema changes (the new
+tags ride the existing taggings join) and no CLI changes (the capture is
+MCP-path-only). `brew upgrade jysf/bragfile/bragfile` moves a v0.3.0 install to
+v0.3.1 in place; `brag --version` then reports `0.3.1`. On a first tap install,
+the two one-time frictions still apply: on **Homebrew 6.0+**, run `brew trust
+--cask jysf/bragfile/bragfile` once; on **macOS**, clear an unsigned binary's
+Gatekeeper quarantine with `xattr -dr com.apple.quarantine` (see the README
+install note). To pick up the new capture behavior, reinstall the Claude Code
+plugin so it runs the v0.3.1 binary.
+
 ## [0.3.0] - 2026-07-05
 
 This release makes bragfile **agent-native**. A local MCP server lets an
@@ -215,7 +256,8 @@ Each decision file under `/decisions/` carries the full rationale.
   payload keys; markdown convention reuses DEC-013's provenance
   + summary-block style.
 
-[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/jysf/bragfile000/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/jysf/bragfile000/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/jysf/bragfile000/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jysf/bragfile000/releases/tag/v0.1.0
