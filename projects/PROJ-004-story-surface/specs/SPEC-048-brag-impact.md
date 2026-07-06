@@ -7,7 +7,7 @@
 task:
   id: SPEC-048
   type: story                      # epic | story | task | bug | chore
-  cycle: design
+  cycle: verify
   blocked: false
   priority: high
   complexity: M                    # M — fourth DEC-014 consumer, but adds a NEW window semantics (calendar), a NEW aggregate helper (WithImpact split), one new command, one new render file, and emits DEC-028. More than SPEC-020 (which consumed DEC-014 verbatim); less than SPEC-018 (which created the package + the DEC).
@@ -789,11 +789,70 @@ self-contained; the DEC list in docs is prose, not a count assertion).
 
 ## Build Completion
 
-*(filled during build)*
+All 13 specified failing tests made real and passing; full gate set
+green (`go test ./...` 615 passed; `gofmt -l .` empty; `go vet ./...`
+clean; `CGO_ENABLED=0 go build ./...` success; `just test-docs` ALL OK;
+`just test-hook` ALL OK).
 
-- Deviations from spec:
-- New DEC-* files:
-- Reflection (3 answers):
+- **Deviations from spec:**
+  - **Test 13 error-path assertion adjusted (behavior-preserving).** The
+    spec's Test 13 sketch said a `UserError` run "writes to `errBuf`
+    only." But `NewRootCmd` sets `SilenceErrors: true` — cobra never
+    writes the error to stderr in-process; `main.go` owns stderr
+    formatting + exit-code mapping (same as every other digest command's
+    tests, which assert `errors.Is(err, ErrUser)` on the returned error,
+    not `errBuf`). The test enforces the same contract the spec intends
+    (`stdout-is-for-data`: a failed run writes NOTHING to stdout, and the
+    error is a `UserError` main.go routes to stderr) via the returned
+    error rather than a populated `errBuf`. The stdout-cleanliness half
+    of the separation is asserted exactly as written.
+  - **One extra pure-helper unit test added (additive, not a deviation):**
+    `TestWindowCutoff_CalendarArithmetic` (mirrors summary's
+    `TestRangeCutoff_*` — locks the Q1/Q2/Q3/Q4 + month + year + since
+    boundary math at the unit layer, per the calendar-vs-rolling
+    correctness core). Nothing removed or weakened.
+  - **Test 10 seeding seam:** the CLI test seeds two entries then rewrites
+    their `created_at` via a raw `sql.DB` connection *inside the test
+    file* (`seedImpactEntry`) — `Store.Add` always stamps `time.Now()`
+    and the summary precedent explicitly rejected a
+    `Store.SetCreatedAtForTesting` method. Raw SQL is confined to the
+    `_test.go` file; production `internal/cli/impact.go` imports no
+    `database/sql` (verified — `no-sql-in-cli-layer` holds).
+  - `echoFiltersForImpact` kept local (not lifted to a shared helper) —
+    per DEC-028's Rejected alternative (two callers with an identical
+    three-flag set is below the third-caller lift threshold).
+
+- **New DEC-* files:** none created during build. DEC-028 was drafted in
+  the design cycle and is unchanged; no genuinely-new build decision
+  warranted a DEC-029.
+
+- **`--previous` NOT implemented** (explicitly future scope, per sign-off);
+  the design does not foreclose it. **`brag impact` is TEXT-PURE** — no
+  sparklines/visual columns (that is a separate STAGE-013 visual spec).
+
+- **questions.yaml:** `impact-window-calendar-vs-rolling` marked
+  `resolved` (calendar, current-in-progress-to-date; per orchestrator +
+  user sign-off).
+
+- **Reflection (3 answers):**
+  1. *Did the spec's failing tests fully constrain the build?* Yes,
+     tightly. The two byte-exact goldens (Test 1 markdown, Test 2 JSON)
+     pinned the entire envelope shape — provenance tally line, indented
+     impact rendering, group/within-group order, the 4-key projection,
+     2-space indent — so the renderer had essentially one correct form.
+     The only genuine judgment call was the Test 13 stderr-vs-returned-
+     error framing, resolved by matching the established codebase pattern.
+  2. *Was the calendar-vs-rolling divergence worth the DEC + dedicated
+     test?* Yes. `windowCutoff` is small, but Test 10 (in at the quarter
+     start, out the day before) is the single assertion that would catch
+     a future refactor silently reintroducing `now.AddDate(0,0,-90)`.
+     Without it the divergence would read as drift; with it, it reads as
+     intent.
+  3. *Any friction reusing the DEC-014 machinery?* None — `WithImpact` +
+     `GroupEntriesByProject` composed cleanly (impact-first filter feeds
+     the existing verbatim grouper), and mirroring `summary.go`'s
+     structure meant the renderer was mostly transcription. The
+     fourth-consumer path is now well-worn.
 
 ## Reflection
 

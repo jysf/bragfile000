@@ -151,6 +151,7 @@ brag summary --range week               # 7-day digest, grouped
 brag summary --range month --format json
 brag review --week                      # entries + reflection prompts
 brag stats                              # lifetime metrics
+brag impact --quarter                   # this quarter's impact, by initiative
 ```
 
 ## Where the data lives

@@ -282,6 +282,23 @@ func Span(entries []storage.Entry) CorpusSpan {
 	return CorpusSpan{First: first, Last: last, Days: days}
 }
 
+// WithImpact returns the subset of entries whose Impact field is
+// non-empty, preserving input order. Used by brag impact (SPEC-048):
+// the impact digest is impact-first — impact-less entries are counted
+// in provenance but excluded from the grouped body. Empty input or an
+// all-empty-impact input returns a non-nil empty slice (JSON callers
+// never see null). Order is preserved deliberately: grouping
+// (GroupEntriesByProject) does the sorting, not this filter.
+func WithImpact(entries []storage.Entry) []storage.Entry {
+	out := make([]storage.Entry, 0, len(entries))
+	for _, e := range entries {
+		if e.Impact != "" {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
 // GroupForHighlights returns project groups in alpha-ASC order with
 // NoProjectKey forced last; within each group, entries are sorted
 // ASC by CreatedAt with ID as tie-break (AGENTS.md §9 SPEC-002

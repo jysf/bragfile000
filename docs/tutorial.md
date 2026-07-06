@@ -498,6 +498,32 @@ Stats is corpus-wide — there are no filter or range flags. Use `brag
 summary` for windowed digests, or `brag review` for reflection over
 the last 7 or 30 days.
 
+### Impact by initiative: `brag impact`
+
+When you're writing a review or a quarterly update, `brag impact`
+pulls the entries that carry an `impact` statement, grouped by
+initiative (project), over a **calendar** reporting period — the way
+your manager and skip-level think about time:
+
+```bash
+brag impact --quarter                   # this calendar quarter, by initiative
+brag impact --month                     # this calendar month
+brag impact --year --format json        # this calendar year, JSON envelope
+brag impact --since 2026-01-01          # since a date (YYYY-MM-DD or Nd/Nw/Nm)
+```
+
+Exactly one window is required, and the windows are calendar periods
+(not the rolling windows `brag summary`/`review` use) — "this quarter"
+means the actual calendar quarter, up to today. Only entries with a
+non-empty impact appear in the body; a `<shown>/<in-window> with
+impact` tally keeps you honest about what was left out. Filter flags
+`--tag`/`--project`/`--type` compose with the window. Pipe the JSON
+form into an LLM to draft the narrative:
+
+```bash
+brag impact --quarter --format json | claude "draft my quarterly impact summary"
+```
+
 ### Tag taxonomy
 
 See every tag you've used, with usage counts:

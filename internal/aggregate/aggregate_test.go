@@ -597,3 +597,54 @@ func TestStatsAggregate_EmptyInputContract(t *testing.T) {
 		t.Errorf("Span(nil): got %+v, want zero-value", sp)
 	}
 }
+
+// TestWithImpact_FiltersNonEmptyImpactPreservingOrder pairs SPEC-048
+// locked decision 4 (impact-first): WithImpact returns exactly the
+// entries with non-empty Impact, in input order, dropping the empties.
+func TestWithImpact_FiltersNonEmptyImpactPreservingOrder(t *testing.T) {
+	in := []storage.Entry{
+		{ID: 1, Title: "a", Project: "alpha", Impact: "cut latency"},
+		{ID: 2, Title: "b", Project: "beta", Impact: "onboarding 1 day"},
+		{ID: 3, Title: "c", Project: "gamma", Impact: ""},
+		{ID: 4, Title: "d", Project: "alpha", Impact: "removed cron"},
+		{ID: 5, Title: "e", Impact: ""},
+	}
+	got := WithImpact(in)
+	wantIDs := []int64{1, 2, 4}
+	if len(got) != len(wantIDs) {
+		t.Fatalf("WithImpact: got %d entries, want %d (%v)", len(got), len(wantIDs), wantIDs)
+	}
+	for i, e := range got {
+		if e.ID != wantIDs[i] {
+			t.Errorf("WithImpact[%d].ID: got %d, want %d (order must be preserved)", i, e.ID, wantIDs[i])
+		}
+		if e.Impact == "" {
+			t.Errorf("WithImpact[%d]: empty-impact entry leaked into result", i)
+		}
+	}
+}
+
+// TestWithImpact_EmptyInputAndAllEmptyImpact pairs SPEC-048 locked
+// decision 4: both an empty input and an all-empty-impact input return
+// a non-nil empty slice so JSON callers never see null.
+func TestWithImpact_EmptyInputAndAllEmptyImpact(t *testing.T) {
+	got := WithImpact(nil)
+	if got == nil {
+		t.Errorf("WithImpact(nil): expected non-nil empty slice, got nil")
+	}
+	if len(got) != 0 {
+		t.Errorf("WithImpact(nil): expected len 0, got %d", len(got))
+	}
+
+	allEmpty := []storage.Entry{
+		{ID: 1, Title: "a", Impact: ""},
+		{ID: 2, Title: "b", Impact: ""},
+	}
+	got2 := WithImpact(allEmpty)
+	if got2 == nil {
+		t.Errorf("WithImpact(all-empty): expected non-nil empty slice, got nil")
+	}
+	if len(got2) != 0 {
+		t.Errorf("WithImpact(all-empty): expected len 0, got %d", len(got2))
+	}
+}

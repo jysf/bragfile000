@@ -177,9 +177,24 @@ questions:
   - id: impact-window-calendar-vs-rolling
     question: "Should `brag impact --quarter|--month|--year` use calendar periods (current in-progress quarter/month/year) or rolling windows (now - 90/30/365 days) like `brag summary`?"
     priority: medium
-    status: open
+    status: resolved
     raised_by: claude
     raised_at: 2026-07-06
+    resolved_at: 2026-07-06
+    resolved_by: orchestrator + user sign-off
+    resolution: |
+      CALENDAR periods, current-in-progress-period-to-date. Confirmed at
+      SPEC-048 build by orchestrator sign-off, validated by the user
+      (companies report by calendar quarter). `--quarter`/`--month`/`--year`
+      compute the period start via `time.Date` constructors (never day
+      subtraction), `--since` reuses DEC-008 `ParseSince`. The load-bearing
+      divergence is enforced by TestImpactCmd_CalendarNotRolling (the
+      quarter-start entry is IN, the day-before is OUT — which fails under a
+      rolling now-90d reading). A `--previous` (last-completed-period)
+      modifier is explicitly deferred to FUTURE scope, NOT implemented now,
+      and the design does not foreclose it. Revisit only if STAGE-012's
+      `brag story --audience` needs a trailing-window reading for some
+      audience — add a rolling modifier then rather than flip the default.
     assigned_to: null
     notes: |
       Filed at SPEC-048 design (DEC-028, confidence 0.78 composite; this
