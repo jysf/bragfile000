@@ -703,3 +703,34 @@ mutation check confirms the guard actually protects it.
 
 Cycle advanced to `ship`. PR #79 left open/ready; merge + release cut deferred
 to the separately-orchestrated SHIP cycle.
+
+---
+
+## Reflection (Ship)
+
+*Appended during the ship cycle. Outcome-focused, distinct from the
+process-focused build reflection above.*
+
+1. **What would I do differently next time?**
+   — State the "a stage is the atomic ship-unit" invariant in the design
+   handoff charter up front. The design cycle first folded SPEC-046 into
+   STAGE-011 (the v0.4.0 `brag impact` stage); orchestrator review caught it
+   and re-homed it to its own STAGE-014, because a stage cannot straddle two
+   release lines (SPEC-046 ships v0.3.x, STAGE-011 ships v0.4.0). Naming that
+   invariant in the charter would have avoided the placement round-trip.
+
+2. **Does any template, constraint, or decision need updating?**
+   — Candidate, not yet at bar: the principle "a stage is the atomic
+   ship-unit and cannot straddle release lines; project *lineage* may span
+   releases, a stage may not." It currently lives only in this ship's
+   reasoning. Under the §12 codification meta-rule this is N=1 (one occurrence),
+   below the N=2 paired-opposing / N=3 same-outcome threshold — so it is a
+   watch item, not a codification yet. Revisit if a second cross-release stage
+   placement recurs.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — No. STAGE-014's only feature is SPEC-046; the v0.3.1 release-cut spec
+   (SPEC-047) closes the stage. The deferred work — promoting the stringly
+   `cost:`/`tokens:` tags to typed columns and exact-token reconciliation
+   (join `session:` → provider usage logs) — is already captured as PROJ-005
+   in DEC-027's "Revisit if" and needs no new spec now.

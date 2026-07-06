@@ -86,11 +86,14 @@ them. Update status as specs progress.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-046 (design) — seed cost/session/token capture on the MCP `brag_add`
-      provenance path (reserved tags `session:`/`cost:`/`tokens:`, DEC-027); a
-      v0.3.x patch.
+- [x] SPEC-046 (shipped on 2026-07-06) — seed cost/session/token capture on the
+      MCP `brag_add` provenance path (reserved tags `session:`/`cost:`/`tokens:`,
+      DEC-027); a v0.3.x patch.
+- [ ] SPEC-047 (proposed) — **v0.3.1 release cut** (the stage's closing action):
+      author CHANGELOG `[0.3.1]`, tick the operational pre-flight, tag + publish
+      v0.3.1, verify a clean `brew upgrade` from v0.3.0. Closes STAGE-014.
 
-**Count:** 0 shipped / 0 active / 1 pending
+**Count:** 1 shipped / 0 active / 1 pending
 
 ## Design Notes
 
