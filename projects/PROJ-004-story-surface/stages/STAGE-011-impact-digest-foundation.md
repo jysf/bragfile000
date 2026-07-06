@@ -4,8 +4,8 @@
 # It has a spec backlog and ships as a unit when the backlog is done.
 
 stage:
-  id: STAGE-011                     # stable, zero-padded, repo-global (never reused)
-  status: proposed                  # proposed | active | shipped | cancelled | on_hold
+  id: STAGE-011
+  status: active
   priority: high                    # the digest foundation the story surface reads
   target_complete: null             # optional: YYYY-MM-DD (ships v0.4.0)
 
