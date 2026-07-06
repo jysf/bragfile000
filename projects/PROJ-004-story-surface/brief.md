@@ -108,12 +108,12 @@ the LLM owns *words*.
 Listed in **ship order** (which is not stage-number order — see the note below).
 IDs are the next-free repo-global (§2).
 
-- [ ] STAGE-014 (proposed) — **Seed cost / session / token capture (v0.3.x).**
-      Ships **first**, on its own release line: the MCP `brag_add`
-      session/cost/tokens capture seed (**SPEC-046**; DEC-027) + the
-      capture-nudge hook `session_id` surfacing, so economics history accrues
+- [x] STAGE-014 (shipped 2026-07-06, **v0.3.1**) — **Seed cost / session /
+      token capture (v0.3.x).** Shipped **first**, on its own release line: the
+      MCP `brag_add` session/cost/tokens capture seed (**SPEC-046**; DEC-027) +
+      the capture-nudge hook `session_id` surfacing, so economics history accrues
       before PROJ-005 needs it. A stage is the atomic ship-unit, so this v0.3.x
-      seed gets its own stage rather than riding STAGE-011's v0.4.0 backlog.
+      seed got its own stage rather than riding STAGE-011's v0.4.0 backlog.
 - [ ] STAGE-011 (proposed) — **`brag impact` — the digest foundation.** The
       rule-based, time-windowed, initiative-grouped impact aggregation the story
       reads. Reuses `internal/aggregate`; DEC-014 envelope. Ships v0.4.0.
@@ -131,7 +131,7 @@ IDs are the next-free repo-global (§2).
 > its PROJ-004 lineage but lives in STAGE-014, not STAGE-011, because a stage
 > is the atomic ship-unit and cannot straddle the v0.3.x and v0.4.0 lines.
 
-**Count:** 0 shipped / 0 active / 4 proposed
+**Count:** 1 shipped / 0 active / 3 proposed
 
 ## Dependencies
 

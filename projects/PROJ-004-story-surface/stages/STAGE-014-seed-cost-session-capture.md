@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-014                     # stable, zero-padded, repo-global (never reused)
-  status: proposed                  # proposed | active | shipped | cancelled | on_hold
+  status: shipped                   # proposed | active | shipped | cancelled | on_hold
   priority: high                    # time-sensitive: economics history only accrues forward
   target_complete: null             # optional: YYYY-MM-DD
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-07-06
-shipped_at: null
+shipped_at: 2026-07-06
 ---
 
 # STAGE-014: Seed cost / session / token capture (v0.3.x)
@@ -125,11 +125,29 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped. Run Prompt 1c (Stage Ship) in
-FIRST_SESSION_PROMPTS.md to draft this.*
+*Filled in when status moves to shipped (v0.3.1, 2026-07-06).*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <tbd>
-- **How many specs did it actually take?** <tbd>
-- **What changed between starting and shipping?** <tbd>
-- **Lessons that should update AGENTS.md, templates, or constraints?** <tbd>
-- **Should any spec-level reflections be promoted to stage-level lessons?** <tbd>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes. v0.3.1 ships the
+  seed: the MCP `brag_add` path accepts optional `session`/`cost`/`tokens`,
+  stamped as reserved `session:`/`cost:`/`tokens:` tags (DEC-027), and the
+  capture-nudge hook forwards the Claude Code `session_id`. Cost/session history
+  now accrues going forward — the seed-early goal that motivated ordering this
+  ahead of the v0.4.0 story work.
+- **How many specs did it actually take?** Two: SPEC-046 (the capture feature)
+  and SPEC-047 (the v0.3.1 release cut, the stage's closing action).
+- **What changed between starting and shipping?** The stage itself was created
+  mid-flight — SPEC-046 was first framed under STAGE-011 (the v0.4.0 `brag
+  impact` stage); orchestrator review split it into this dedicated STAGE-014
+  because a stage is the atomic ship-unit and cannot straddle two release lines
+  (v0.3.x vs v0.4.0). The technical design held unchanged: reserved-tags-now,
+  MCP-only, migration-free.
+- **Lessons that should update AGENTS.md, templates, or constraints?** One
+  candidate, held below the codification bar: "a stage is the atomic ship-unit
+  and cannot straddle release lines; project *lineage* may span releases, a
+  stage may not." Under the §12 meta-rule this is N=1 — a watch item, not yet
+  codified. The Gatekeeper `xattr` quarantine friction recurred at this cut
+  exactly as §4 documents (already captured; no change needed).
+- **Should any spec-level reflections be promoted to stage-level lessons?**
+  SPEC-046's placement lesson (state the ship-unit invariant in the design
+  handoff charter up front) IS the stage-level lesson above; no further
+  promotion needed.
