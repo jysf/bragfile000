@@ -1,7 +1,7 @@
 ---
 project:
   id: PROJ-003
-  status: active
+  status: shipped                   # committed core (STAGE-009) shipped as v0.3.0, 2026-07-05
   priority: high
   # activated 2026-07-03 (STAGE-009 selected as core; SPEC-038 shipped)
   target_ship: 2026-07-08           # ~3 working-day core; Jul 4 holiday weekend intervening
@@ -10,7 +10,7 @@ repo:
   id: bragfile
 
 created_at: 2026-07-03
-shipped_at: null
+shipped_at: 2026-07-05
 ---
 
 # PROJ-003: Agent-native spine + capture delight
@@ -212,17 +212,25 @@ work has a home.
 
 Format: `- [status] STAGE-ID — one-line summary`
 
-- [ ] STAGE-009 (proposed) — **Agent-native spine + capture delight.**
-      The v0.3.0 core: streak fix (SPEC-038) → milestone notifications
-      (SPEC-039) → `brag mcp serve` + provenance (SPEC-040) → Claude Code
-      plugin packaging (SPEC-041) → v0.3.0 cut. Four specs, one stage.
-- [ ] STAGE-010 (stretch — not committed) — **Impact story surface.**
-      `brag impact --quarter|--month|--year` (rule-based impact-axis
-      digest) + the AI-pipe super-brag + a Notion export adapter. Framed
-      only if v0.3.0 dogfooding shows the read surface is the next real
-      need. Out of the 3-day core.
+- [x] STAGE-009 (shipped 2026-07-05, v0.3.0) — **Agent-native spine +
+      capture delight.** Delivered as **6 specs**: streak fix (SPEC-038) →
+      milestone notifications (SPEC-039) → `brag mcp serve` + provenance
+      (SPEC-040) → Claude Code plugin packaging (SPEC-041) → `brag list
+      --author` provenance read half (SPEC-043, added from retro P2) →
+      v0.3.0 cut (SPEC-042). Plus a coordinator-directed post-core hardening
+      spec, SPEC-044 (retro R3 dev/prod-migration guardrail, DEC-026), which
+      shipped after the cut (loosely tagged STAGE-010; STAGE-010 was never
+      activated as a formal stage).
+- [ ] STAGE-010 (stretch — **NOT pursued**) — **Impact story surface.**
+      `brag impact --quarter|--month|--year` + the AI-pipe super-brag + a
+      Notion export adapter. Never activated. The read-surface ideas — plus
+      the drafted SPEC-045 (P3 dogfooding-coverage query) — **carry forward
+      to a future project**, decided after the v0.3.x dogfooding + a DuckDB
+      federation spike (see Project-Level Reflection). Note: the single-user
+      impact read surface is additive features → a **v0.4.0**, not a v0.3.1
+      patch.
 
-**Count:** 0 shipped / 0 active / 2 pending (1 committed, 1 stretch)
+**Count:** 1 committed stage shipped (STAGE-009, 6 specs) / STAGE-010 stretch not pursued
 
 ## Dependencies
 
@@ -276,15 +284,51 @@ Format: `- [status] STAGE-ID — one-line summary`
 
 ## Project-Level Reflection
 
-*Filled in when status moves to shipped (Prompt 1e, fresh session).*
+*Shipped 2026-07-05 — committed core (STAGE-009) released as v0.3.0.*
 
-- **Did we deliver the outcome in "What This Project Is"?** <yes/no + notes>
-- **How many stages did it actually take?** <number, compare to plan>
-- **What changed between starting and shipping?** <one or two sentences>
+- **Did we deliver the outcome in "What This Project Is"?** **Yes.** bragfile
+  is now agent-native: `brag mcp serve` exposes brag as typed MCP tools, the
+  Claude Code plugin bundles the MCP server + `/brag` + a capture-nudge hook,
+  agent-written entries self-label with `agent:`/`model:` provenance, and
+  `brag list --author` reads that provenance back — with a corrected streak
+  and milestone notifications for delight. Released and verified as v0.3.0
+  (tap bumped, `brew upgrade` clean, prod migration-free).
+- **How many stages did it actually take?** **1 of 2 framed.** STAGE-009 (the
+  committed core) shipped as 6 specs (vs a 4-spec framing — the SPEC-041→042
+  release peel + the retro-driven SPEC-043). STAGE-010 (stretch) was never
+  activated. One post-core hardening spec (SPEC-044 / R3) shipped outside a
+  formal stage.
+- **What changed between starting and shipping?** The three-project
+  cross-project retrospective landed mid-project (2026-07-04) and reshaped the
+  tail: it added SPEC-043 (its P2 "emit provenance" was already shipped by
+  SPEC-040 — the real gap was the read query) and drove the R1/R2/R3
+  process+hardening work, all of which landed in this project's window.
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
+  - **Already codified and then validated by this project's own v0.3.0 cut:**
+    R1 §12(b) "validate ≠ registration" refinement (AGENTS.md §12) and R2 the
+    release-cut template + pre-flight checklist (`spec-release-cut.md`).
+  - **New, uncodified (WATCH, N=1):** don't `--delete-branch` when merging the
+    *base* of an open stacked PR — GitHub closes (not retargets) the child and
+    it can't be reopened. Retarget the child to `main` first. (Cost PR #67 →
+    rebuilt as #68 during the v0.3.0 work.)
+  - **Retro R5 closed as won't-do:** "set `type` on milestone/auto writes" has
+    no target — bragfile has *no* auto-write path (all `Store.Add` callers are
+    deliberate captures; milestones only notify).
 - **What did we defer to the next project?**
-  - <one-line items>
+  - **The single-user impact read surface** (old STAGE-010: `brag impact`, the
+    super-brag synthesis, Notion export) + the drafted **SPEC-045 (P3
+    dogfooding-coverage query)** and **P1 impact digest**. This is a **v0.4.0**
+    feature wave (additive read commands), best re-chartered as its own
+    project.
+  - **Multi-user / federation** — explicitly out-of-scope here (see Scope).
+    The user's "pull many people's/agents'/machines' brags into one place"
+    goal will be validated by a **DuckDB federation spike** (separate session);
+    the PROJ-004 shape (federated export → warehouse, preserving local-first;
+    *not* a shared remote DB, which would supersede DEC-001) is decided after
+    the spike returns.
+  - First-class `agent`/`model` provenance columns (still the "later, if
+    earned" step); macOS notarization (v0.2.1 track); the wider
+    stats/storytelling cluster.
 
 ### Numbering (at framing)
 
