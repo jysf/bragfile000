@@ -854,6 +854,53 @@ clean; `CGO_ENABLED=0 go build ./...` success; `just test-docs` ALL OK;
      structure meant the renderer was mostly transcription. The
      fourth-consumer path is now well-worn.
 
+## Verify
+
+**Verdict: ✅ APPROVED** (fresh independent VERIFY cycle, 2026-07-06).
+
+Re-derived from SPEC-048 + DEC-028 + DEC-014 + constraints, not the
+build's self-report. Six gates re-run independently, all exit 0:
+`go test ./...` (615 passed), `gofmt -l .` (empty), `go vet ./...`
+(clean), `CGO_ENABLED=0 go build ./...` (success), `just test-docs`
+(ALL OK), `just test-hook` (ALL OK).
+
+- **All 10 acceptance criteria satisfied**, each traced to code+test:
+  windowing + provenance + impact-first body (`internal/export/impact.go`,
+  `internal/cli/impact.go`); the two load-bearing goldens
+  (`TestToImpactMarkdown_DEC014FullDocumentGolden`,
+  `TestToImpactJSON_DEC028ShapeGolden`) pin the full envelope shape and
+  the 4-key projection.
+- **Calendar, not rolling — verified by reading AND exercising.**
+  `windowCutoff` uses `time.Date` calendar constructors (no day
+  subtraction); the `nowFunc` clock seam is threaded once into both
+  `windowCutoff` and `ImpactOptions.Now`. An independent boundary probe
+  confirmed `TestImpactCmd_CalendarNotRolling` genuinely distinguishes
+  calendar from rolling: at `now=Jul-1 12:00` the calendar cutoff is
+  `Jul-1 00:00` (day-before OUT) while a rolling `now-90d` cutoff would
+  be `Apr-2` (day-before IN). Probe reverted; tree clean.
+- **Impact-first confirmed live:** a real `brag impact --quarter` run
+  over a seeded corpus printed `Entries: 2/3 with impact` — the
+  no-impact row counted in `entries_in_window` but excluded from body,
+  `counts_by_project`, and `impact_by_project`.
+- **`--since` reuses DEC-008 `ParseSince`** (not a bespoke parser);
+  scope echoes `since:<raw>`. Bad `--since` → UserError, empty stdout.
+- **Constraints hold:** production `internal/cli/impact.go` imports no
+  `database/sql` (raw SQL confined to `_test.go` seeding helper);
+  live error paths (two windows / none / unknown format / bad since)
+  all exit 1 with empty stdout and the error on stderr.
+- **Documented deviation is legitimate**, not a masked failure: Test 13
+  asserts `errors.Is(err, ErrUser)` + empty stdout rather than a
+  populated `errBuf`, because `NewRootCmd` sets `SilenceErrors: true`
+  (`internal/cli/root.go`) and `main.go` owns stderr — the exact pattern
+  `summary_test.go`/`stats_test.go` use. Verified live: the real binary
+  routes the UserError to stderr.
+- **`--previous` correctly absent** (future scope). NOT-contains
+  self-audit clean: `gamma-noimpact`/`unbound-noimpact` appear only in
+  the spec's own fixture/commentary, never in `Long`, the renderer,
+  docs, README, or DEC-028. No smuggled decision — DEC-028 covers every
+  non-trivial choice; questions.yaml `impact-window-calendar-vs-rolling`
+  is `resolved`. Docs swept (README, tutorial.md, api-contract.md).
+
 ## Reflection
 
 *(filled during ship)*
