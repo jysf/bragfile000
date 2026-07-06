@@ -7,7 +7,7 @@
 task:
   id: SPEC-046
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: S                    # S | M | L  (L means split it)
@@ -670,3 +670,36 @@ That is exactly the `TestNormalizeCost` bad-input set (`1e3`, `$5`, `-1`,
 decision arose, so no DEC-028 and no `questions.yaml` stop. The
 author-classification isolation is the subtle load-bearing point and the
 mutation check confirms the guard actually protects it.
+
+## Verify
+
+**Verdict: ✅ APPROVED** (independent verify cycle, fresh session per §12/§13,
+2026-07-06).
+
+- **All eight acceptance criteria met**, each confirmed against code + tests
+  (not the build's self-report): three optional params (`server.go:61–63`);
+  `session:` stamped/filterable in locked order (`TestServer_AddStampsSeedTags`,
+  `provenance.go:47–55`); valid cost/tokens filterable; bad numeric → tool error
+  with no insert (`TestServer_AddRejectsBadNumeric` asserts `IsError` + 0 rows);
+  append order user→agent→model→session→cost→tokens (`provenance.go:41–55`);
+  author classification unchanged (`store.go:319–322` still `agent:%`/`model:%`-
+  only); hook forwards `session_id` with H1–H7 green; `brag_add` output/read
+  tools unchanged; no new dep, no migration, SQL stays in storage.
+- **Six gates re-run independently, all exit 0:** `go test ./...` (588 pass,
+  9 pkgs), `gofmt -l .` (empty), `go vet ./...` (clean), `CGO_ENABLED=0 go build
+  ./...` (ok), `just test-docs` (ok), `just test-hook` (H1–H7 ok).
+- **DEC-027 drift: none.** Numeric-format rules (`isDecimal`+`ParseFloat` for
+  cost, `ParseUint` for tokens) match the locked bad-input sets verbatim
+  (`1e3`/`$5`/`1.2.3` and `1.5`/`1,000`/`0x10` rejected). `isDecimal` is the one
+  build deviation and is correctly test-driven, not a smuggled DEC.
+- **Author-classification guard independently re-derived:** added
+  `OR t.name LIKE 'session:%'` to `provenanceExistsClause`; the guard test FAILED
+  (`seed-only` mis-classified as agent, both assertions fired); reverted; guard
+  passes; branch clean. The guard genuinely bites.
+- **Constraints clean:** no `database/sql` under `internal/mcpserver` (import-
+  audit test enforces it), numeric validation in mcpserver not cli, no
+  `--session`/`--cost`/`--tokens` CLI flags (Option D stays rejected), tool
+  errors are MCP `IsError` results not raw stdout.
+
+Cycle advanced to `ship`. PR #79 left open/ready; merge + release cut deferred
+to the separately-orchestrated SHIP cycle.
