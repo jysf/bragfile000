@@ -176,6 +176,57 @@ func TestServer_AddAutoStampsAgentFromClientInfo(t *testing.T) {
 	}
 }
 
+// TestServer_AddStampsSeedTags ▲ DEC-027 — brag_add with session/cost/tokens
+// stamps the reserved tags; brag_list --tag session:<id> finds the row; the
+// stored tags carry all three in the locked order after agent:.
+func TestServer_AddStampsSeedTags(t *testing.T) {
+	cs, s := newTestServer(t, "claude-code")
+	callJSON(t, cs, "brag_add", map[string]any{
+		"title": "cut p99", "tags": "perf",
+		"session": "sess-abc", "cost": "0.42", "tokens": "18000",
+	})
+	rows, _ := s.List(storage.ListFilter{Tag: "session:sess-abc"})
+	if len(rows) != 1 || rows[0].Title != "cut p99" {
+		t.Fatalf("session tag not filterable: %+v", rows)
+	}
+	// agent: auto-fills from clientInfo.Name; seed tags follow it in order.
+	if rows[0].Tags != "perf,agent:claude-code,session:sess-abc,cost:0.42,tokens:18000" {
+		t.Errorf("stored tags = %q", rows[0].Tags)
+	}
+}
+
+// TestServer_AddRejectsBadNumeric ▲ DEC-027 — non-numeric cost / tokens is a
+// tool error, not a silent insert.
+func TestServer_AddRejectsBadNumeric(t *testing.T) {
+	cs, s := newTestServer(t, "claude-code")
+	for _, args := range []map[string]any{
+		{"title": "x", "cost": "abc"},
+		{"title": "x", "tokens": "-5"},
+	} {
+		r, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "brag_add", Arguments: args})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !r.IsError {
+			t.Errorf("brag_add %v should be a tool error", args)
+		}
+	}
+	if rows, _ := s.List(storage.ListFilter{}); len(rows) != 0 {
+		t.Errorf("no row should be inserted on bad numeric, got %d", len(rows))
+	}
+}
+
+// TestServer_SeedTagsOmittedWhenAbsent ▲ DEC-027 — omitting session/cost/tokens
+// stamps no seed tag (parity with agent/model omission).
+func TestServer_SeedTagsOmittedWhenAbsent(t *testing.T) {
+	cs, s := newTestServer(t, "claude-code")
+	callJSON(t, cs, "brag_add", map[string]any{"title": "shipped"})
+	rows, _ := s.List(storage.ListFilter{})
+	if rows[0].Tags != "agent:claude-code" {
+		t.Errorf("no seed tags expected, got %q", rows[0].Tags)
+	}
+}
+
 // TestServer_SearchParity ▲ DEC-010 tokenization; brag_search parity with
 // Store.Search on the same query.
 func TestServer_SearchParity(t *testing.T) {

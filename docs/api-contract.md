@@ -682,7 +682,8 @@ same `~/.bragfile/db.sqlite` the CLI uses:
 - **`brag_add`** — `title` (required, non-empty, ≤200 chars), optional
   `description` (≤100000), `tags` (≤64, comma-joined per DEC-004),
   `project` (≤64), `type` (≤64), `impact` (≤256), plus `agent`/`model`
-  provenance params. Inserts via `Store.Add` and returns the created entry
+  and the optional `session`/`cost`/`tokens` seed provenance params
+  (DEC-027). Inserts via `Store.Add` and returns the created entry
   as a single [DEC-011](../decisions/DEC-011-json-output-shape.md) object.
   A missing/empty `title` is a tool error, never a silent insert. Unlike
   `brag add`, the MCP tool does **not** emit a SPEC-039 milestone line and
@@ -708,6 +709,20 @@ and canonicalized by the existing tags path
 `clientInfo.Name` when the param is omitted; `model` is **explicit-param
 only** (the MCP transport carries no model identity). Query provenance
 with the existing filters, e.g. `brag list --tag model:claude-opus-4-8`.
+
+**Seed provenance (DEC-027).** `brag_add` also accepts three optional
+seed params, stamped as reserved tags after `agent:`/`model:` in the order
+`session:` → `cost:` → `tokens:` — all optional (omit → no tag; bragfile
+never fabricates a value). `session:<id>` is an opaque per-session join-key
+(normalized like any reserved tag; the caller forwards the id the
+capture-nudge hook surfaces — the transport carries none). `cost:<n>` is a
+non-negative USD decimal string (e.g. `cost:0.42`); `tokens:<n>` is a
+non-negative integer (e.g. `tokens:18000`). A non-numeric or negative
+`cost`/`tokens` is a **tool error**, never a coerced tag. These are NOT
+author-provenance tags — `brag list --author` classification stays
+`agent:`/`model:`-only, so a `session:`/`cost:`/`tokens:`-only entry is
+`human`. No schema change (rides DEC-015); MCP-path-only (no `brag add`
+CLI flags).
 
 **Transport purity.** The stdio stream carries only MCP protocol frames on
 `os.Stdout`; nothing human-facing is ever printed there (the generalized

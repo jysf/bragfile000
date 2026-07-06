@@ -7,7 +7,7 @@
 task:
   id: SPEC-046
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: high
   complexity: S                    # S | M | L  (L means split it)
@@ -601,3 +601,72 @@ no new dependency, no migration, no new transport surface. The one genuine
 design decision (numeric format + the author-classification isolation) is
 resolved here in prose + paired tests, per the §12(b) "resolve at design"
 discipline.
+
+## Build Completion
+
+*Filled at build (this cycle). The design's plan held; nothing was
+re-litigated. No new DEC was needed and no `questions.yaml` entry was raised.*
+
+### What was implemented
+
+- **`internal/mcpserver/provenance.go`** — `stampProvenance` gained three
+  trailing params (`session, cost, tokens`) appended in the locked order
+  `agent: → model: → session: → cost: → tokens:`; `session:` reuses
+  `reservedTag`, while `cost:`/`tokens:` are appended verbatim from the
+  pre-validated strings. Added `normalizeCost` (plain non-negative decimal;
+  rejects negatives / scientific / currency / thousands separators via a
+  tighter `isDecimal` guard run before `strconv.ParseFloat`), `normalizeTokens`
+  (`strconv.ParseUint`), and the `isDecimal` helper. Errors wrap with context.
+- **`internal/mcpserver/server.go`** — `addIn` gained `Session`/`Cost`/`Tokens`
+  optional string fields (mirroring the `agent`/`model` doc-tag style);
+  `handleAdd` validates the numerics at the boundary (bad → tool error, no
+  insert) and threads all three into the extended `stampProvenance` call. The
+  DEC-011 output shape, milestone-free / cwd-free posture, and length caps are
+  unchanged (the seed params carry no caps — provenance is appended after the
+  `tags` cap, exactly like `agent:`/`model:`).
+- **`plugin/hooks/capture-nudge.sh`** — the fire-path `additionalContext` now
+  passes the already-parsed `$SESSION_ID` into `jq` via `--arg session` and
+  instructs Claude to forward `session:<id>` (plus real-figures-only
+  `cost:`/`tokens:`). Silent-degradation, once-per-session, and never-runs-`brag`
+  contracts untouched; the word "brag" survives (H3).
+- **`docs/api-contract.md`** — the `brag mcp serve` section documents the three
+  seed params, their formats, the tool-error-on-bad-numeric rule, and the
+  author-classification isolation.
+- **Tests added** (all pass): `TestStampProvenance_SeedTags`, `TestNormalizeCost`,
+  `TestNormalizeTokens` (provenance_test.go); `TestServer_AddStampsSeedTags`,
+  `TestServer_AddRejectsBadNumeric`, `TestServer_SeedTagsOmittedWhenAbsent`
+  (server_test.go); `TestList_AuthorIgnoresSeedTags` (store_test.go). The
+  existing `TestStampProvenance` was rewritten to the new arity (enumerated in
+  the premise audit, not a build-time surprise).
+
+### Fail-first + guard verification
+
+- The pure + server tests failed to compile on the pre-build tree (new arity /
+  undefined `normalizeCost`/`normalizeTokens` / missing `addIn` fields), then
+  passed after implementation — the §9 fail-first order held.
+- `TestList_AuthorIgnoresSeedTags` passed immediately (it is a regression
+  guard, not a driver). The §9 mutation check was run: adding
+  `OR t.name LIKE 'session:%'` to `provenanceExistsClause` **failed** the guard
+  (`seed-only` mis-classified as agent), and the change was reverted. The guard
+  bites; the clause stays `agent:%`/`model:%`-only.
+
+### Gate results (all exit 0)
+
+`go test ./...` (588 passed), `gofmt -l .` (empty), `go vet ./...` (no issues),
+`CGO_ENABLED=0 go build ./...` (success), `just test-docs` (OK), `just test-hook`
+(H1–H7 OK).
+
+### Honest reflection
+
+The spec was unusually precise — the sketch in Notes for the Implementer, the
+locked hook literal, and the paired tests left almost no build-time judgment.
+The only deviation from a literal transcription was a defensive one: the spec's
+prose said "parse as a non-negative decimal … reject scientific notation,
+currency symbols, thousands separators, and negatives explicitly," and
+`strconv.ParseFloat` alone accepts `1e3`, `+1`, leading `.`/trailing `.`, and
+leading whitespace, so I added the small `isDecimal` shape-guard to run first.
+That is exactly the `TestNormalizeCost` bad-input set (`1e3`, `$5`, `-1`,
+`1.2.3`), so the guard is test-driven, not speculative. No genuinely new
+decision arose, so no DEC-028 and no `questions.yaml` stop. The
+author-classification isolation is the subtle load-bearing point and the
+mutation check confirms the guard actually protects it.
