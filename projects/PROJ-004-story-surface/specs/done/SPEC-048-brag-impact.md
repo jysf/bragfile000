@@ -901,6 +901,29 @@ build's self-report. Six gates re-run independently, all exit 0:
   non-trivial choice; questions.yaml `impact-window-calendar-vs-rolling`
   is `resolved`. Docs swept (README, tutorial.md, api-contract.md).
 
-## Reflection
+## Reflection (Ship)
 
-*(filled during ship)*
+*Outcome-focused, appended at ship (2026-07-06). Merged to main; no release —
+STAGE-011 rides the v0.4.0 line, cut later at STAGE-013.*
+
+1. **What would I do differently next time?**
+   — Little to change on the cycle itself (design→build→verify ran clean). The
+   one lesson worth repeating: the sparkline/visual question surfaced from the
+   user mid-build, and resolving it as a **scope fork at design altitude**
+   ("impact ships text-pure; visuals get their own spec") kept SPEC-048 clean
+   rather than ballooning it. Surface visual/UX scope forks early and decide
+   them explicitly.
+
+2. **Does any template, constraint, or decision need updating?**
+   — DEC-028 introduced a deliberate **calendar** window semantics that diverges
+   from DEC-014 choice (6)'s rolling windows, scoped to this command. The
+   forward implication: window semantics are now **per-command, not global** —
+   worth remembering when `brag story` (STAGE-012) picks its reading window.
+   Not a codification (N=1); no template change.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — Two, both already captured (memory `project_proj004_v040_direction`), to
+   write at STAGE-013: (a) the **dedicated sparklines/visual spec** (in-terminal
+   Unicode across `stats`/`wrapped`/optionally `impact`); (b) the **`--previous`**
+   window modifier (last-completed period), which DEC-028 left as clean future
+   scope. Neither blocks anything now.
