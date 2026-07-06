@@ -114,15 +114,19 @@ IDs are the next-free repo-global (§2).
       the capture-nudge hook `session_id` surfacing, so economics history accrues
       before PROJ-005 needs it. A stage is the atomic ship-unit, so this v0.3.x
       seed got its own stage rather than riding STAGE-011's v0.4.0 backlog.
-- [ ] STAGE-011 (active) — **`brag impact` — the digest foundation.** The
-      rule-based, time-windowed, initiative-grouped impact aggregation the story
-      reads. Reuses `internal/aggregate`; DEC-014 envelope. Ships v0.4.0.
+- [x] STAGE-011 (shipped 2026-07-06) — **`brag impact` — the digest foundation.**
+      The rule-based, calendar-windowed, initiative-grouped, impact-first digest
+      the story reads (SPEC-048 + DEC-028). Reuses `internal/aggregate`; DEC-014
+      envelope. On main; reaches users in the v0.4.0 release.
 - [ ] STAGE-012 (proposed) — **`brag story --audience` — the narrative surface.**
       The audience taxonomy + shaping rules (a DEC), the LLM-pipe bundle format,
-      the framing-directive assets. The headline.
-- [ ] STAGE-013 (proposed, maybe) — **Polish + v0.4.0 cut.** `brag wrapped`,
-      the P3 personal metric, output adapters if earned, and the v0.4.0 release
-      cut (per the `spec-release-cut` template + §4).
+      the framing-directive assets. The headline. **Open posture call at framing:**
+      pure pipe vs. any CLI→LLM call-out (default: pipe, no call-out).
+- [ ] STAGE-013 (proposed, maybe) — **Polish + v0.4.0 cut.** `brag wrapped`
+      (**year *and* quarter**), a **dedicated sparklines/visual pass** (in-terminal
+      Unicode across `stats`/`wrapped`/optionally `impact`), the `--previous`
+      window modifier, the P3 personal metric, and the v0.4.0 release cut (per the
+      `spec-release-cut` template + §4).
 
 > **Number vs. ship-order:** STAGE-014's number is higher than the v0.4.0
 > stages it ships *before* because it was split out of STAGE-011 after the
@@ -131,7 +135,7 @@ IDs are the next-free repo-global (§2).
 > its PROJ-004 lineage but lives in STAGE-014, not STAGE-011, because a stage
 > is the atomic ship-unit and cannot straddle the v0.3.x and v0.4.0 lines.
 
-**Count:** 1 shipped / 0 active / 3 proposed
+**Count:** 2 shipped / 0 active / 2 proposed
 
 ## Dependencies
 

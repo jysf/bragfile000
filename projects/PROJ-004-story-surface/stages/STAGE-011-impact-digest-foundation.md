@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-011
-  status: active
+  status: shipped
   priority: high                    # the digest foundation the story surface reads
   target_complete: null             # optional: YYYY-MM-DD (ships v0.4.0)
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-07-05
-shipped_at: null
+shipped_at: 2026-07-06             # backlog complete + merged to main; v0.4.0 RELEASE deferred to the STAGE-013 cut
 ---
 
 # STAGE-011: `brag impact` — the digest foundation
@@ -62,10 +62,12 @@ them. Update status as specs progress.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] (not yet written) — `brag impact` — the rule-based, time-windowed,
-      initiative-grouped impact digest (DEC-014 envelope; the STAGE-012 basis).
+- [x] SPEC-048 (shipped on 2026-07-06) — `brag impact` — the rule-based,
+      calendar-windowed, initiative-grouped, impact-first digest (DEC-014
+      envelope + DEC-028 window/shape; the STAGE-012 basis). On main; reaches
+      users in the v0.4.0 release.
 
-**Count:** 0 shipped / 0 active / 1 pending
+**Count:** 1 shipped / 0 active / 0 pending
 
 ## Design Notes
 
@@ -85,11 +87,26 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped. Run Prompt 1c (Stage Ship) in
-FIRST_SESSION_PROMPTS.md to draft this.*
+*Filled at ship (2026-07-06). Backlog complete + merged to main; the v0.4.0
+release that puts it in users' hands is deferred to the STAGE-013 cut.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <tbd>
-- **How many specs did it actually take?** <tbd>
-- **What changed between starting and shipping?** <tbd>
-- **Lessons that should update AGENTS.md, templates, or constraints?** <tbd>
-- **Should any spec-level reflections be promoted to stage-level lessons?** <tbd>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes. `brag impact`
+  ships: a rule-based, calendar-windowed (`--quarter|--month|--year|--since`),
+  initiative-grouped, **impact-first** digest over the DEC-014 envelope,
+  reusing `internal/aggregate`. It's the deterministic foundation STAGE-012's
+  `brag story` will shape per audience.
+- **How many specs did it actually take?** One — SPEC-048 (+ DEC-028).
+- **What changed between starting and shipping?** DEC-028 chose **calendar**
+  windows (current period to date), a deliberate, tested divergence from
+  DEC-014's rolling windows — validated by the user (companies report by
+  calendar quarter). Sparklines were considered and **deferred** to a dedicated
+  visual spec (impact ships text-pure). `--previous` (last-completed period)
+  was left as clean future scope.
+- **Lessons that should update AGENTS.md, templates, or constraints?** Window
+  semantics are now **per-command** (DEC-028 calendar vs DEC-014 rolling), not
+  a single global rule — worth remembering when `brag story` picks its reading
+  window. N=1, below the §12 codification bar; no template change.
+- **Should any spec-level reflections be promoted to stage-level lessons?**
+  SPEC-048's "surface visual/UX scope forks at design altitude, decide them
+  explicitly" — carry it into STAGE-012/013, which hold more shaping/UX
+  decisions.

@@ -173,3 +173,44 @@ questions:
       trigger unchanged: if a future renderer genuinely needs to surface
       "next action" distinctly, it is a cheap additive column + one-shot
       copy superseding DEC-017's note sub-choice.
+
+  - id: impact-window-calendar-vs-rolling
+    question: "Should `brag impact --quarter|--month|--year` use calendar periods (current in-progress quarter/month/year) or rolling windows (now - 90/30/365 days) like `brag summary`?"
+    priority: medium
+    status: resolved
+    raised_by: claude
+    raised_at: 2026-07-06
+    resolved_at: 2026-07-06
+    resolved_by: orchestrator + user sign-off
+    resolution: |
+      CALENDAR periods, current-in-progress-period-to-date. Confirmed at
+      SPEC-048 build by orchestrator sign-off, validated by the user
+      (companies report by calendar quarter). `--quarter`/`--month`/`--year`
+      compute the period start via `time.Date` constructors (never day
+      subtraction), `--since` reuses DEC-008 `ParseSince`. The load-bearing
+      divergence is enforced by TestImpactCmd_CalendarNotRolling (the
+      quarter-start entry is IN, the day-before is OUT — which fails under a
+      rolling now-90d reading). A `--previous` (last-completed-period)
+      modifier is explicitly deferred to FUTURE scope, NOT implemented now,
+      and the design does not foreclose it. Revisit only if STAGE-012's
+      `brag story --audience` needs a trailing-window reading for some
+      audience — add a rolling modifier then rather than flip the default.
+    assigned_to: null
+    notes: |
+      Filed at SPEC-048 design (DEC-028, confidence 0.78 composite; this
+      window-semantics sub-choice is the piece below 0.8 that drags the
+      average — the envelope-inheritance sub-choices are 0.85-0.9). DEC-028
+      locks CALENDAR periods, deliberately diverging from DEC-014 choice (6)
+      which locks ROLLING windows for `brag summary`/`review`. Rationale:
+      `brag impact` feeds the v0.4.0 story surface (STAGE-012 `brag story
+      --audience`), whose audiences (manager/skip/exec) think in reporting
+      periods — "what did you ship this quarter?" means the calendar
+      quarter, not a trailing 90 days. Rolling is defensible and simpler;
+      a user could reasonably expect either. Resolve/confirm when STAGE-012
+      wires the story surface onto this digest: if `brag story` needs the
+      trailing-window reading for any audience, revisit (add a rolling
+      modifier rather than flip the default). Second, related soft spot:
+      DEC-028 chose the CURRENT in-progress period (up to now), not the
+      previous COMPLETE one; a `--previous` modifier is the clean future
+      addition if the complete-period workflow materializes. Neither
+      changes the schema — both are flag/semantics-only.

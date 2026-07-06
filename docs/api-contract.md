@@ -421,6 +421,71 @@ Unknown `--format` values exit 1 (user error). Undeclared flags
 (`--tag`, `--project`, `--type`, `--out`, `--range`, `--since`,
 `--week`, `--month`) surface as cobra `unknown flag` errors.
 
+### `brag impact --quarter|--month|--year|--since <date>` (STAGE-011)
+
+```
+brag impact --quarter                              # this calendar quarter, markdown
+brag impact --year --format json                   # this calendar year, JSON envelope
+brag impact --since 2026-01-01 --project alpha     # since a date, one initiative
+```
+
+Rule-based impact digest for a calendar reporting period: the in-window
+entries that carry a non-empty `impact` statement, grouped by initiative
+(= the `project` field), with each impact rendered in full. The fourth
+DEC-014 consumer; the deterministic data foundation the v0.4.0 story
+surface reads. No LLM ships in the binary.
+
+Document structure:
+
+- **Provenance:** `Generated:` (RFC3339), `Scope:`
+  (`quarter`|`month`|`year`|`since:<raw>`), `Filters:` (echoed flags or
+  `(none)`), and an `Entries: <shown>/<in-window> with impact` tally so
+  impact-less in-window rows are counted, never silently dropped.
+- **Impact body** (markdown; omitted when zero with-impact entries per
+  [DEC-014](../decisions/DEC-014-rule-based-output-shape.md)): under
+  `## Impact`, per-project `### <project>` groups (alpha-ASC,
+  `(no project)` last; chrono-ASC + ID-tiebreak within group), each
+  entry as `- <id>: <title>` followed by an indented `  <impact>` line.
+
+Flags:
+
+- Exactly one window is REQUIRED and the four are MUTUALLY EXCLUSIVE
+  (passing two exits 1, user error):
+  - `--quarter` = the current calendar quarter (Jan-Mar / Apr-Jun /
+    Jul-Sep / Oct-Dec), `[quarter-start 00:00:00 UTC, now]`.
+  - `--month` = the current calendar month, `[first-of-month, now]`.
+  - `--year` = the current calendar year, `[Jan-1, now]`.
+  - `--since <date>` = entries on or after `<date>` (`YYYY-MM-DD` or
+    `Nd`/`Nw`/`Nm`, DEC-008's `ParseSince`), up to now.
+  Windows are CALENDAR periods, NOT rolling — a deliberate, tested
+  divergence from `brag summary`/`review` (whose windows are rolling),
+  because the story surface reports by the calendar periods audiences
+  name. Locked by
+  [DEC-028](../decisions/DEC-028-impact-digest-window-and-shape.md).
+- `--format markdown|json` defaults to `markdown`. JSON is the
+  single-object envelope locked by
+  [DEC-014](../decisions/DEC-014-rule-based-output-shape.md). Top-level
+  keys: `generated_at`, `scope`, `filters`, `entries_in_window`,
+  `entries_with_impact`, `counts_by_project` (a `map[string]int` over
+  the with-impact subset, alpha-ASC by key under `encoding/json`), and
+  `impact_by_project` (an array of `{project, entries:[...]}` groups in
+  group order). Each entry inside `impact_by_project[].entries` is a
+  deliberately NARROW 4-key projection `{id, title, project, impact}` —
+  NOT DEC-011's 9-key shape — locked by
+  [DEC-028](../decisions/DEC-028-impact-digest-window-and-shape.md).
+- `--tag <token>`, `--project <name>`, `--type <name>` compose with the
+  window and echo into `filters` exactly as `brag summary` does. The
+  filter narrows the in-window set before the impact-first split.
+- Output goes to stdout. Redirect with `>` if you want a file.
+
+Empty-window / no-impact: provenance always renders (both tally counts
+`0`); the `## Impact` body is omitted from markdown; JSON renders
+`entries_in_window`/`entries_with_impact` as `0`, `counts_by_project` as
+`{}`, `impact_by_project` as `[]`.
+
+Unknown or missing window flags, or an unknown `--format` value, exit 1
+(user error).
+
 ### `brag tags` — tag taxonomy view (STAGE-006)
 
 ```
@@ -757,10 +822,11 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-011` — shared JSON output shape for `brag list --format json` and `brag export --format json`
 - `DEC-013` — markdown export shape for `brag export --format markdown` (+`--flat`)
 - `DEC-012` — stdin-JSON schema for `brag add --json` (single object, title required, server-owned fields tolerated-and-ignored)
-- `DEC-014` — rule-based output shape for `brag summary`, `brag review`, and `brag stats`: single-object JSON envelope with `generated_at` / `scope` / `filters` provenance + per-spec payload keys; markdown convention reuses DEC-013's provenance + summary-block style.
+- `DEC-014` — rule-based output shape for `brag summary`, `brag review`, `brag stats`, and `brag impact`: single-object JSON envelope with `generated_at` / `scope` / `filters` provenance + per-spec payload keys; markdown convention reuses DEC-013's provenance + summary-block style.
 - `DEC-016` — tag mutation semantics: `brag tags` in-use-only taxonomy (count-DESC/name-ASC; `{tag,count}` JSON shape), rename-errors-into-existing, merge via DELETE+INSERT, orphan tags invisible (no GC).
 - `DEC-017` — `entries.project` ↔ `projects` relationship (soft string match) + `projects.status` enum + single `state_note`; the data `brag project show`/`list` render.
 - `DEC-018` — `brag project delete` blast radius: entries untouched (soft match), project_locations deleted manually in-tx (FK off → no cascade), `'project'` taggings cleaned in-tx; archive is the recoverable status flip, delete is irreversible.
 - `DEC-019` — `brag project here` / `brag add` cwd auto-fill: nearest-ancestor (longest-prefix) match against registered project locations
 - `DEC-020` — `brag project edit` location editing: `RemoveLocation`/`EditLocations`; remove-not-attached and remove-other-project are user errors; verbatim path matching; one invocation's location changes are atomic (removes before adds); location edits don't bump `updated_at`.
 - `DEC-024` — `brag mcp serve`: official Go MCP SDK, stdio-only subcommand (not a separate binary), transport-purity generalization of the stdout/stderr spine, and provenance via reserved-namespace tags (explicit `agent`/`model` params with an `agent`/`clientInfo.Name` fallback).
+- `DEC-028` — `brag impact`: fourth DEC-014 consumer. CALENDAR time windows (`--quarter`/`--month`/`--year`, current in-progress period; `--since` via ParseSince) deliberately diverging from summary/review's rolling windows; initiative = the `project` axis (reuses `GroupEntriesByProject`); impact-first body (only entries with a non-empty `impact`, plus a `<shown>/<in-window>` tally); a narrow 4-key `{id,title,project,impact}` per-entry JSON projection.
