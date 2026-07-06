@@ -319,6 +319,43 @@ must be materialize-then-union, not attach-and-union.
 
 ---
 
+## Scope boundaries & open questions for framing
+
+**Settled going into framing** (pre-frame direction, 2026-07-05 — recorded so
+the framing session doesn't re-litigate them):
+
+- **Version skew — parked.** Assume everyone runs the latest release (0.3.0+);
+  drift is possible but not designed-for now. If it bites, harmonize the
+  systems as needed rather than build tolerance up front. (The spike's three
+  sources were same-version, so this was never exercised anyway.)
+- **Local day — keep it simple: store UTC, shift in reporting.** Consistent
+  with DEC-022's *derive-local, store-UTC*. No per-user timezone matrix for the
+  org rollup now; a single reporting-time shift is enough. DEC-022's
+  "revisit if multi-host makes the local day ambiguous" is acknowledged but
+  intentionally deferred.
+- **SaaS / hosted multi-user — explicit non-goal now.** A hosted version could
+  be a genuinely useful product, but it is its own future release; nothing in
+  this spike locks us in or out. Local-first federation (DEC-001) is the frame
+  we're validating.
+- **Ingest bugs (DuckDB multi-attach, schema drift) — assume harmonizable.** We
+  control the systems end to end; work through issues as needed. The chosen
+  materialize-per-source design already sidesteps the multi-attach bug, so it's
+  not load-bearing on the verdict.
+
+**Still genuinely open — the real substance of PROJ-004** (the spike validated
+mechanics, not these):
+
+1. **Share-scoping.** Which entries are shareable — all / opt-in per entry / by
+   project / by tag? The spike assumed each source exports its *full* corpus.
+   The project's own name (`read-and-share-**scoping**`) suggests this is the
+   actual core, and it's untouched here.
+2. **Transport.** Where exports physically meet (shared dir / a git repo of
+   exports / object store) and the trust/consent model that comes with it — a
+   new surface local-first hasn't had before.
+3. **Identity: content-hash vs capture-time UUID.** Hash = MVP, zero schema
+   change, but splits on a post-sync `brag edit`. UUID = deterministic, its own
+   DEC + migration. Decide which the federation MVP ships on.
+
 ## Appendix — repro (scratch only; not committed)
 
 Scripts in the session scratchpad (`scratchpad/duckdb-spike/`):
