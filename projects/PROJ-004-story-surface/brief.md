@@ -105,12 +105,18 @@ the LLM owns *words*.
 
 ## Stage Plan
 
-Ordered; a project typically has 2–5 stages. IDs are the next-free repo-global
-(§2): STAGE-011+, SPEC-046+, DEC-027+.
+Listed in **ship order** (which is not stage-number order — see the note below).
+IDs are the next-free repo-global (§2).
 
+- [ ] STAGE-014 (proposed) — **Seed cost / session / token capture (v0.3.x).**
+      Ships **first**, on its own release line: the MCP `brag_add`
+      session/cost/tokens capture seed (**SPEC-046**; DEC-027) + the
+      capture-nudge hook `session_id` surfacing, so economics history accrues
+      before PROJ-005 needs it. A stage is the atomic ship-unit, so this v0.3.x
+      seed gets its own stage rather than riding STAGE-011's v0.4.0 backlog.
 - [ ] STAGE-011 (proposed) — **`brag impact` — the digest foundation.** The
       rule-based, time-windowed, initiative-grouped impact aggregation the story
-      reads. Reuses `internal/aggregate`; DEC-014 envelope.
+      reads. Reuses `internal/aggregate`; DEC-014 envelope. Ships v0.4.0.
 - [ ] STAGE-012 (proposed) — **`brag story --audience` — the narrative surface.**
       The audience taxonomy + shaping rules (a DEC), the LLM-pipe bundle format,
       the framing-directive assets. The headline.
@@ -118,7 +124,14 @@ Ordered; a project typically has 2–5 stages. IDs are the next-free repo-global
       the P3 personal metric, output adapters if earned, and the v0.4.0 release
       cut (per the `spec-release-cut` template + §4).
 
-**Count:** 0 shipped / 0 active / 3 proposed
+> **Number vs. ship-order:** STAGE-014's number is higher than the v0.4.0
+> stages it ships *before* because it was split out of STAGE-011 after the
+> original STAGE-011/012/013 were framed — §2 stage IDs track creation order,
+> not ship order (cf. STAGE-010, created-but-never-activated). SPEC-046 keeps
+> its PROJ-004 lineage but lives in STAGE-014, not STAGE-011, because a stage
+> is the atomic ship-unit and cannot straddle the v0.3.x and v0.4.0 lines.
+
+**Count:** 0 shipped / 0 active / 4 proposed
 
 ## Dependencies
 
@@ -156,3 +169,11 @@ Highest consumed: PROJ-003, STAGE-010 (referenced/never-activated), SPEC-045
 (P3 draft), DEC-026. Next free (repo-global monotonic, §2): **PROJ-004**,
 **STAGE-011**, **SPEC-046**, **DEC-027** — the first DEC (likely the audience
 taxonomy) is assigned at emission, not pinned here.
+
+**Post-framing update (2026-07-06):** SPEC-046 (the v0.3.x capture seed) was
+split into its **own** stage, **STAGE-014**, when its distinct release line
+made clear a stage — the atomic ship-unit — cannot straddle v0.3.x and v0.4.0.
+STAGE-014 takes the next-free stage number (higher than the v0.4.0 stages it
+ships before; §2 tracks creation order, not ship order). Consumed so far in
+PROJ-004: STAGE-011 (`brag impact`), STAGE-014 (seed capture), SPEC-046,
+DEC-027. STAGE-012 (story) / STAGE-013 (polish) earmarks are unchanged.
