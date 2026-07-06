@@ -232,10 +232,11 @@ tag.
 ## References
 
 - Related specs: SPEC-046 (emits + implements this DEC — the seed capture on
-  the MCP `brag_add` path + the hook `session_id` surfacing), SPEC-040 (the
-  provenance path this extends), SPEC-041 (the plugin + capture-nudge hook this
-  edits), the future `brag impact` spec (STAGE-011) and PROJ-005 economics work
-  (the reconciliation consumer)
+  the MCP `brag_add` path + the hook `session_id` surfacing; PROJ-004 /
+  STAGE-014, a v0.3.x patch), SPEC-040 (the provenance path this extends),
+  SPEC-041 (the plugin + capture-nudge hook this edits), the future
+  `brag impact` spec (STAGE-011) and PROJ-005 economics work (the
+  reconciliation consumer)
 - Related decisions: **DEC-024** (the reserved-namespace + `stampProvenance`
   path this **extends**, not supersedes — `agent:`/`model:` via explicit params
   with an `agent`/`clientInfo.Name` fallback; the stdio transport carries no
