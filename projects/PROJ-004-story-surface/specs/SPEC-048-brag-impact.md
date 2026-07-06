@@ -7,7 +7,7 @@
 task:
   id: SPEC-048
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M                    # M — fourth DEC-014 consumer, but adds a NEW window semantics (calendar), a NEW aggregate helper (WithImpact split), one new command, one new render file, and emits DEC-028. More than SPEC-020 (which consumed DEC-014 verbatim); less than SPEC-018 (which created the package + the DEC).
