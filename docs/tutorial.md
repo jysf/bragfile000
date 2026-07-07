@@ -536,6 +536,7 @@ session) writes the prose:
 
 ```bash
 brag story --audience me                          # candid reflection, this year
+brag story --audience manager --month             # tactical 1:1 update, this month
 brag story --audience exec --quarter              # impact-forward, this quarter
 brag story --audience exec --year --format json   # arc-aware JSON envelope
 brag story --audience me --theme perf             # add a cross-project perf arc
@@ -543,13 +544,17 @@ brag story --audience exec --print-directive      # just the framing directive
 ```
 
 `--audience` is required. The same corpus tells a **different story** per
-audience, rule-driven not just toned: `me` keeps every thread and the
-messy middle (impact-less beats included, low altitude); `exec` surfaces
-only impact-bearing threads, drops impact-less beats, and leads with the
-highest-impact arc. Each audience carries a default window (`me` → year,
-`exec` → quarter) that an explicit window flag overrides. Audiences are
-extensible profiles, not a fixed list — drop a `<name>.yaml` in your
-story-profiles directory to add one. Pipe it into an LLM to finish:
+audience, rule-driven not just toned. There are four built-ins along a
+gradient: `me` keeps every thread and the messy middle (impact-less beats
+included, low altitude); `manager` also keeps everything but on a tighter
+monthly cadence with a tactical (shipped / blockers / next) voice; `skip`
+surfaces only impact-bearing initiatives yet keeps their supporting beats,
+grouped by initiative for the "so what"; `exec` surfaces only impact-bearing
+threads, drops impact-less beats, and leads with the highest-impact arc.
+Each audience carries a default window (`me` → year, `manager` → month,
+`skip` → quarter, `exec` → quarter) that an explicit window flag overrides.
+Audiences are extensible profiles, not a fixed list — drop a `<name>.yaml`
+in your story-profiles directory to add one. Pipe it into an LLM to finish:
 
 ```bash
 brag story --audience exec --quarter | claude "weave these threads into one headline arc"

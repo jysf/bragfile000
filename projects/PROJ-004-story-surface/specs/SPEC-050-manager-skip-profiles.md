@@ -5,7 +5,7 @@
 task:
   id: SPEC-050
   type: task                       # epic | story | task | bug | chore
-  cycle: design
+  cycle: verify
   blocked: false
   priority: high                   # completes v0.4.0's audience gradient + the extensibility proof
   complexity: S                    # S — two bundled asset pairs (config only) + one Go test; ZERO production-Go change to the mechanism.
@@ -1097,7 +1097,84 @@ the 1:1 audience — recorded in Rejected alternatives).
 
 ## Build Completion
 
-*Filled during build.*
+Built on `feat/spec-050-manager-skip-profiles` (fresh session). The
+mechanism required ZERO code change to accept the two new profiles — the
+shipped `//go:embed profiles/*.yaml directives/*.md` glob, by-name
+`LoadProfile`, the no-allowlist `--audience` validation, and data-driven
+`BuildThreads` all accept `manager`/`skip` unmodified. The trace held under
+build.
+
+### Files changed
+
+**New bundled assets (config only):**
+- `internal/story/profiles/manager.yaml` — transcribed verbatim from the
+  spec literal (name/month/all-false/initiative/candid/manager.md).
+- `internal/story/profiles/skip.yaml` — verbatim (name/quarter/
+  impact_threads_only+fold true, drop_impactless false/initiative/
+  promotional/skip.md).
+- `internal/story/directives/manager.md` — verbatim (tactical 1:1 voice).
+- `internal/story/directives/skip.md` — verbatim (outcomes-by-initiative).
+
+**New tests (test-only):**
+- `internal/story/bundle_empty_directive_test.go` — Test E1
+  (`TestToStory_EmptyDirectiveOmitsSection`).
+- `internal/story/manager_skip_test.go` — Tests P1–P4
+  (`TestLoadProfile_Manager`, `TestLoadProfile_Skip`,
+  `TestProfiles_FourWayGradientDivergence`,
+  `TestDirectives_ManagerSkip_ResolveAndVoice`) + the three tiny P3 helpers
+  (`findThread`, `beatCount`, `assertEqualSlice`).
+- `internal/cli/story_help_test.go` — Test H1
+  (`TestStoryCmd_HelpListsAllBuiltInAudiences`). Placed in a dedicated file
+  because the shipped `story_test.go` does not import `strings`; a separate
+  file keeps the LD4 contract isolated and reviewable.
+
+**The one production-`.go` diff (LD4, help-only):**
+- `internal/cli/story.go` — the `Long` audience mini-table went 2 rows → 4
+  (me / manager / skip / exec, aligned to the shipped column style), one
+  `--audience manager --month` example added, and the `--audience`
+  flag-usage string updated to `one of: me, manager, skip, exec, or a user
+  profile`. Line 40's extensibility sentence and line 92's required-error
+  are unchanged. `git diff --stat` confirms `story.go` is the ONLY non-test
+  `.go` file changed (6 insertions, 3 deletions — all help strings).
+
+**Docs:**
+- `docs/api-contract.md` — added manager/skip audience bullets, the manager
+  example, and the manager→month / skip→quarter default-window note.
+- `docs/tutorial.md` — extended the four-audience gradient explanation +
+  the manager example + the default-window line.
+
+`README.md`/`BRAG.md` left as-is (illustrative `--audience exec` examples,
+not an audience taxonomy — the premise-audit grep confirmed no stale status
+claim). No new DEC. `go.mod`/`go.sum` byte-unchanged (no new dependency).
+
+### Gate results (all green)
+
+| Gate | Exit |
+|---|---|
+| `go test ./...` | 0 (all pass, incl. E1/P1–P4/H1 + the full SPEC-049 suite) |
+| `gofmt -l .` | 0 (empty output) |
+| `go vet ./...` | 0 |
+| `CGO_ENABLED=0 go build ./...` | 0 |
+| `just test-docs` | 0 (ALL OK) |
+| `just test-hook` | 0 (ALL OK) |
+
+### Live smoke (throwaway DB, gradient over one corpus)
+
+Corpus: auth (1 impact + 1 impact-less), billing (1 impact), one
+`(no project)` impact-less note. Over `--year`:
+
+- **me**: 3 threads, 4/4 beats (keeps everything, incl. `(no project)`).
+- **manager**: 3 threads, 4/4 beats — body identical to me (diverges on
+  default window + directive, exactly as designed).
+- **skip**: 2 threads, **3/4** beats — folds `(no project)` but KEEPS
+  auth's impact-less beat (the midpoint), initiative order.
+- **exec**: 2 threads, **2/4** beats — folds `(no project)` AND drops the
+  impact-less beat, impact-desc order.
+
+skip sits strictly between me and exec (3/4, keeps the messy beat exec
+drops). `brag story --help` lists all four built-ins + the new usage
+string. The extensibility proof holds: adding two audiences was four asset
+files + a help-string refresh + tests + docs — no mechanism code touched.
 
 ## Verify
 

@@ -1,0 +1,8 @@
+name: skip
+default_window: quarter
+impact_threads_only: true
+drop_impactless_beats: false
+fold_small_threads: true
+thread_order: initiative
+candor: promotional
+directive: skip.md

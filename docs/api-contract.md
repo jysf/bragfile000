@@ -490,6 +490,7 @@ Unknown or missing window flags, or an unknown `--format` value, exit 1
 
 ```
 brag story --audience me                                   # candid, this year (me's default window)
+brag story --audience manager --month                      # tactical update for a 1:1, this month
 brag story --audience exec --quarter                       # exec, this calendar quarter
 brag story --audience exec --year --format json            # arc-aware JSON envelope
 brag story --audience me --theme perf                      # add a cross-project perf arc
@@ -531,10 +532,19 @@ Audiences are **data-driven shaping profiles**, NOT a Go enum: `me`/`exec`
 load from bundled `embed.FS` assets; a user `<name>.yaml` in the
 story-profiles override directory shadows a bundled default by name
 (override-wins). A profile is a flat `key: value` file (selection +
-threading + altitude + directive pointer). The two shipped endpoints:
+threading + altitude + directive pointer). The four bundled built-ins
+span the audience gradient (`me`/`exec` are the endpoints; `manager`/`skip`
+are the middle):
 
 - `me` — candid reflection: every thread, impact-less beats KEPT, low
   altitude; default window `year`.
+- `manager` — tactical 1:1 / weekly: keep-all body like `me` (every thread
+  and beat, including the blocked/in-progress work), but a tighter reporting
+  cadence and a tactical directive voice; default window `month`.
+- `skip` — skip-level / director: fold zero-impact threads (like `exec`) but
+  KEEP the non-impact beats inside surfaced initiatives (unlike `exec`),
+  grouped by initiative; outcomes-by-initiative "so what"; default window
+  `quarter`.
 - `exec` — impact-forward promotion: impact-bearing threads only,
   impact-less beats DROPPED, small threads folded, one headline arc
   (threads ordered impact-beat-count DESC); default window `quarter`.
@@ -546,7 +556,8 @@ Flags:
 - Window flags (`--quarter`/`--month`/`--year`/`--since`) are the same
   CALENDAR periods as `brag impact` and MUTUALLY EXCLUSIVE. With no
   window flag, the audience profile's DEFAULT window applies (`me` →
-  `year`, `exec` → `quarter`); `scope` echoes the resolved token.
+  `year`, `manager` → `month`, `skip` → `quarter`, `exec` → `quarter`);
+  `scope` echoes the resolved token.
 - `--theme <tag>` appends exactly ONE cross-project thread (kind `theme`)
   after the initiative threads, grouping every in-window entry carrying
   that tag, time-ordered. Not subject to fold/drop (an explicit opt-in).
