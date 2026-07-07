@@ -7,7 +7,7 @@
 task:
   id: SPEC-052
   type: feature
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M
@@ -654,3 +654,49 @@ func Line(vals []int) string {
    structural. Implementing + running the `spark` package in isolation
    FIRST (before any renderer wiring) was the right order — it de-risked the
    goldens before they were embedded in the wrapped tests.
+
+---
+
+## Verify
+
+*Fresh, independent verify session per AGENTS.md §12/§13 — re-derived from the
+spec + DEC-031 + constraints, not the build's self-report.*
+
+**Verdict: ✅ APPROVED.**
+
+- **Six gates (independently re-run):** `go test ./...` PASS (700 tests, 11
+  packages, exit 0); `gofmt -l .` empty (exit 0); `go vet ./...` clean (exit 0);
+  `CGO_ENABLED=0 go build ./...` clean (exit 0); `just test-docs` ALL OK (exit
+  0); `just test-hook` ALL OK (exit 0).
+- **Acceptance criteria:** all eight met. Primitive is min→max/`math.Round`/
+  `▁▂▃▄▅▆▇█` one-glyph-per-element (`internal/spark/spark.go:18-44`); edge cases
+  empty/nil→`""`, flat/all-zero/single→all `▁`, ramp `0..7`→`▁▂▃▄▅▆▇█`; pure,
+  `math`-only, `go.mod`/`go.sum` byte-unchanged vs main. The `Cadence: <glyphs>`
+  line renders inside `## Cadence` between `Busiest month:` and the per-month
+  list (`internal/export/wrapped.go:71-77`); year fixture → `Cadence: ▅▅▁█▁▁█▁▁▁▅▁`,
+  quarter → `Cadence: █▁▁` (byte-exact goldens). `--no-spark` OR present
+  `NO_COLOR` each suppress independently (`internal/cli/wrapped.go:214-216`).
+  JSON unchanged; empty period has no cadence section hence no glyph line;
+  `stats`/`impact` untouched.
+- **Independent normalization re-derivation:** a from-scratch transcription of
+  the DEC-031 algorithm (NOT importing the repo's `spark`) reproduced every
+  golden byte-for-byte, including the load-bearing year/quarter/ramp rows;
+  output length == input length; only block glyphs or empty. No mis-normalized
+  golden (SPEC-049 lesson clean).
+- **JSON invariant:** `TestToWrappedJSON_DEC030ShapeGolden` is byte-identical to
+  main (function-body diff empty); zero glyphs in the runtime JSON envelope; no
+  glyph literal in `wrapped.go`'s JSON path. The two markdown goldens each gained
+  exactly one inserted `Cadence:` line — no other line touched, no glyph line
+  removed.
+- **Live default-on + suppression:** built binary, seeded corpus. Default
+  `brag wrapped 2026` → `Cadence: ▁▁▁▁▁▁█▁▁▁▁▁`; `--no-spark` → no glyph line,
+  per-month list intact; `NO_COLOR=1` → no glyph line; `NO_COLOR=` (empty but
+  present) → no glyph line (present-at-all semantics); piping default to a file
+  → glyph line survives (NOT TTY-gated); `--format json` → zero glyphs.
+- **No new dependency / no smuggled decision:** `internal/spark` imports only
+  stdlib `math`; `go.mod`/`go.sum` byte-unchanged; DEC-031 covers the decision,
+  no DEC-032; the `guidance/questions.yaml` sparkline question is `status:
+  resolved` linking DEC-031. No `database/sql` in `internal/spark` or the wrapped
+  renderer.
+
+Advancing to **ship** (merge orchestrated separately; PR #90 stays open).
