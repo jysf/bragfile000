@@ -90,14 +90,20 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       thread-definition choice). The headline spec. **Assessed L → split taken
       (orchestrator APPROVED):** SPEC-049 shipped the mechanism + the gradient
       ENDPOINTS (`me`/`exec`); SPEC-050 adds `manager`/`skip` config-only.
-- [ ] SPEC-050 (pending, planned in SPEC-049's split) — `manager` (and
-      optionally `skip`) audience profiles + directive assets, shipped as
-      bundled defaults with ZERO Go change — the proof that DEC-029's
-      profiles-as-data mechanism is extensible. Plus: a dedicated test for
-      AC-8's empty-directive omission branch (the coverage gap verify flagged),
-      and any polish (per-profile fold thresholds, doc/tutorial pass).
+- [ ] SPEC-050 (design, in progress) — `manager` AND `skip` audience
+      profiles + directive assets, shipped as bundled defaults with ZERO
+      production-Go change — the proof that DEC-029's profiles-as-data
+      mechanism is extensible. Ships BOTH middle-gradient audiences (config
+      only: four asset files). Plus: a dedicated test for AC-8's
+      empty-directive omission branch (the coverage gap verify flagged) +
+      a doc/tutorial audience pass. **Zero-Go-change trace CONFIRMED
+      (design):** the `//go:embed` glob auto-discovers the assets,
+      `LoadProfile` resolves by-name, `--audience` has no hard-coded
+      allowlist — one finding: the `story.go` help text still reads "one of:
+      me, exec" (cosmetic doc-freshness lag, deliberately NOT edited to keep
+      the zero-Go-change proof clean; docs carry the current list). No new DEC.
 
-**Count:** 1 shipped / 0 active / 1 pending
+**Count:** 1 shipped / 1 in design / 0 pending
 
 ## Design Notes
 
