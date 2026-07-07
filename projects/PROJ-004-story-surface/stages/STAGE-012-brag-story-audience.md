@@ -84,20 +84,20 @@ Ordered list of specs composing this stage. Add specs as identified.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-049 (design) — `brag story --audience` — the extensible
-      shaping-profile mechanism, the coalesce-into-arcs bundle, and the
-      framing-directive assets (emits DEC-029, the audience taxonomy + the
-      thread-definition choice). The headline spec. **Assessed L → split
-      taken:** SPEC-049 = the mechanism + the gradient ENDPOINTS
-      (`me`/`exec`); SPEC-050 = `manager`/`skip` as config-only additions
-      (the extensibility proof). Split needs orchestrator sign-off.
+- [x] SPEC-049 (shipped on 2026-07-06) — `brag story --audience` — the
+      extensible shaping-profile mechanism, the coalesce-into-arcs bundle, and
+      the framing-directive assets (emitted DEC-029, the audience taxonomy +
+      thread-definition choice). The headline spec. **Assessed L → split taken
+      (orchestrator APPROVED):** SPEC-049 shipped the mechanism + the gradient
+      ENDPOINTS (`me`/`exec`); SPEC-050 adds `manager`/`skip` config-only.
 - [ ] SPEC-050 (pending, planned in SPEC-049's split) — `manager` (and
       optionally `skip`) audience profiles + directive assets, shipped as
       bundled defaults with ZERO Go change — the proof that DEC-029's
-      profiles-as-data mechanism is extensible. Plus any polish
-      (per-profile fold thresholds, doc/tutorial pass).
+      profiles-as-data mechanism is extensible. Plus: a dedicated test for
+      AC-8's empty-directive omission branch (the coverage gap verify flagged),
+      and any polish (per-profile fold thresholds, doc/tutorial pass).
 
-**Count:** 0 shipped / 0 active / 2 pending
+**Count:** 1 shipped / 0 active / 1 pending
 
 ## Design Notes
 

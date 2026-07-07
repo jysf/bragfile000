@@ -1367,6 +1367,32 @@ Test 4 (directive renders on empty *corpus*) and Test 1; Test 4 covers the
 primary AC-8 assertion. Coverage thinness, not a defect — noted for a
 future tightening, does not gate ship.
 
-## Reflection
+## Reflection (Ship)
 
-*(Filled during ship.)*
+*Outcome-focused, appended at ship (2026-07-06). Merged to main; no release —
+STAGE-012 rides the v0.4.0 line, cut later at STAGE-013. SPEC-050 (manager/skip)
+remains, so STAGE-012 stays active.*
+
+1. **What would I do differently next time?**
+   — Run a "do all goldens agree on the thread set?" self-check at design. The
+   design initially shipped a knowingly-wrong load-bearing `me` golden (dropped
+   the `gamma` thread, `Beats: 6/6` while showing 5) and rationalized it as a
+   "planted defect for build to catch." Orchestrator review caught it and it was
+   corrected at design. A load-bearing golden is correct-at-design-time (§9) —
+   never a place to punt a known error.
+
+2. **Does any template, constraint, or decision need updating?**
+   — DEC-029 is the reusable win: the pipe's clean split (bragfile assembles
+   deterministic threads + a throughline *skeleton*; the caller's LLM finds the
+   throughline) and **profiles-as-data** (`embed.FS` defaults + a user-override
+   file, parsed by a hand-rolled flat `key:value` scanner — no new dependency).
+   The hand-rolled-parser-over-a-YAML-dep move is worth remembering. N=1, below
+   the §12 codification bar; no template change.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — **SPEC-050** (already in the STAGE-012 backlog): `manager`/`skip` as
+   config-only profile additions — the zero-Go-change proof that the
+   profiles-as-data mechanism is extensible. Fold in the one coverage gap verify
+   flagged: a dedicated test that the `## Framing directive` section is OMITTED
+   when the directive is empty (AC-8's omission branch). Both are captured; no
+   forgotten work.
