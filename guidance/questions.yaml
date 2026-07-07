@@ -354,3 +354,67 @@ questions:
       unaffected). Recorded so the default choice is explicit, not silent.
       (Above §14's 0.7 hard threshold, filed proactively per DEC-028's
       precedent of recording the softest sub-choice.)
+
+  - id: sparkline-default-on-and-flat-nonzero-convention
+    question: "Is default-on cadence sparkline (block glyphs in the shareable digest, escaped only by --no-spark/NO_COLOR) the right ergonomics across users' real terminals, and is rendering a flat NON-zero series identically to a flat zero one (both all ▁) acceptable, or does min→max need a magnitude-aware variant?"
+    priority: medium
+    status: resolved
+    raised_by: claude
+    raised_at: 2026-07-06
+    resolved_at: 2026-07-06
+    resolved_by: orchestrator sign-off (SPEC-052 build)
+    assigned_to: null
+    resolution: |
+      RESOLVED at SPEC-052 build per orchestrator sign-off:
+      DEFAULT-ON WITH ESCAPE. The cadence sparkline renders by default in
+      markdown, suppressed by `--no-spark` OR a present `NO_COLOR` env var
+      (no-color.org "set-to-any-value" semantics, present-at-all), read
+      through the injectable `lookupSparkEnv` package var (DEC-023 LD6
+      precedent). Deliberately NOT TTY-gated (DEC-031 D3): the wrapped
+      digest is meant to be captured/piped/pasted, so a TTY gate would
+      wrongly strip the visual on the non-TTY paths that matter most. The
+      FLAT-NONZERO CONVENTION is ACCEPTED as standard sparkline behavior:
+      `[3,3,3]` renders `▁▁▁` like `[0,0,0]` — min→max has no magnitude
+      reference and the adjacent per-month counts disambiguate; NO
+      magnitude-aware variant is added. Both remain reversible ergonomics
+      bets, not correctness ones. Paired tests (all green):
+      TestWrappedCmd_SparkDefaultOn / _NoSparkFlagSuppresses /
+      _NoColorEnvSuppresses / _NoColorEnvEmptyValueSuppresses /
+      _JSONHasNoGlyphs / _NoSparkHelpListed, plus the spark package's
+      TestLine_NormalizationTable (flat-nonzero row pins the convention).
+      Revisit trigger unchanged: if v0.4.0 dogfooding shows real-terminal
+      mojibake the escape did not cover, or the flat-nonzero-looks-empty
+      case bites in practice, revisit (a TTY-aware default with an explicit
+      override, or a magnitude-aware normalization variant) — both are
+      localized, additive changes leaving the primitive signature and the
+      JSON envelope unaffected.
+    notes: |
+      Filed at SPEC-052 design (DEC-031, confidence 0.78). The primitive,
+      normalization, placement, and JSON-stays-raw are LOCKED and
+      byte-verified. Two residual soft spots drag the composite below 0.8:
+
+      (1) DEFAULT-ON ERGONOMICS. Unicode block glyphs (U+2581..U+2588) are
+      broadly supported, and default-on is the "fun" the user asked for;
+      the escape is `--no-spark` OR a present `NO_COLOR` env var (no-color.org
+      "set-to-any-value" semantics), read through the injectable
+      `lookupSparkEnv` package var (DEC-023 LD6 precedent). The risk is a
+      glyph-hostile terminal rendering mojibake for a user who does not know
+      the escape. Deliberately NOT TTY-gated (DEC-031 D3): the wrapped digest
+      is meant to be captured/piped/pasted — non-TTY paths where a TTY gate
+      would wrongly strip the visual. Reversible and escape-hatched, so this
+      is an ergonomics bet, not a correctness one.
+
+      (2) FLAT-NONZERO CONVENTION. min→max normalization has no magnitude
+      reference, so a flat non-zero series (e.g. [3,3,3]) renders all ▁ —
+      identical to a flat zero series. Rare over a real year/quarter, and the
+      adjacent per-month counts disambiguate it, but a user could read a
+      steady-3-a-month cadence as "empty." A magnitude-aware variant (absolute
+      scale, or flat-nonzero → mid glyph) is the alternative — deferred because
+      it needs a second rule min→max deliberately lacks.
+
+      Resolve/harden when the sparkline is dogfooded in the v0.4.0 wrapped
+      digest: if a real terminal shows mojibake that the escape did not cover,
+      or the flat-nonzero-looks-empty case bites in practice, revisit (add a
+      TTY-aware DEFAULT with an explicit override, or a magnitude-aware
+      normalization variant). Both are localized, additive changes — the
+      primitive's signature and the JSON envelope are unaffected either way.

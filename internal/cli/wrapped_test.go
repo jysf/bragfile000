@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -66,6 +68,129 @@ func seedWrappedEntry(t *testing.T, dbPath string, e storage.Entry, createdAt ti
 		ts, ts, added.ID,
 	); err != nil {
 		t.Fatalf("rewrite created_at for id %d: %v", added.ID, err)
+	}
+}
+
+// withLookupSparkEnv swaps the NO_COLOR env seam for a test, returning the
+// given (value, ok) for any lookup and restoring the real os.LookupEnv on
+// cleanup. Same shape as withNowFunc (AGENTS.md §9 os-state-via-var).
+func withLookupSparkEnv(t *testing.T, value string, ok bool) {
+	t.Helper()
+	prev := lookupSparkEnv
+	lookupSparkEnv = func(string) (string, bool) { return value, ok }
+	t.Cleanup(func() { lookupSparkEnv = prev })
+}
+
+func TestWrappedCmd_SparkDefaultOn(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, time.Date(2027, 6, 1, 12, 0, 0, 0, time.UTC))
+	withLookupSparkEnv(t, "", false) // NO_COLOR unset
+
+	seedWrappedEntry(t, dbPath, storage.Entry{
+		Title: "jan", Project: "alpha", Type: "shipped",
+	}, time.Date(2026, 1, 10, 10, 0, 0, 0, time.UTC))
+
+	out, errStr, err := runWrappedCmd(t, dbPath, "2026", "--format", "markdown")
+	if err != nil {
+		t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+	}
+	if !sparkLineRE.MatchString(out) {
+		t.Errorf("default-on must render a Cadence: <glyphs> line:\n%s", out)
+	}
+}
+
+func TestWrappedCmd_NoSparkFlagSuppresses(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, time.Date(2027, 6, 1, 12, 0, 0, 0, time.UTC))
+	withLookupSparkEnv(t, "", false)
+
+	seedWrappedEntry(t, dbPath, storage.Entry{
+		Title: "jan", Project: "alpha", Type: "shipped",
+	}, time.Date(2026, 1, 10, 10, 0, 0, 0, time.UTC))
+
+	out, errStr, err := runWrappedCmd(t, dbPath, "2026", "--no-spark")
+	if err != nil {
+		t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+	}
+	assertNoGlyphLine(t, out)
+	if !bytes.Contains([]byte(out), []byte("- 2026-01: 1")) {
+		t.Errorf("--no-spark must remove only the glyph line, per-month counts must remain:\n%s", out)
+	}
+}
+
+func TestWrappedCmd_NoColorEnvSuppresses(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, time.Date(2027, 6, 1, 12, 0, 0, 0, time.UTC))
+	withLookupSparkEnv(t, "1", true) // NO_COLOR present
+
+	seedWrappedEntry(t, dbPath, storage.Entry{
+		Title: "jan", Project: "alpha", Type: "shipped",
+	}, time.Date(2026, 1, 10, 10, 0, 0, 0, time.UTC))
+
+	out, errStr, err := runWrappedCmd(t, dbPath, "2026")
+	if err != nil {
+		t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+	}
+	assertNoGlyphLine(t, out)
+}
+
+func TestWrappedCmd_NoColorEnvEmptyValueSuppresses(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, time.Date(2027, 6, 1, 12, 0, 0, 0, time.UTC))
+	withLookupSparkEnv(t, "", true) // NO_COLOR set-but-empty (present-at-all)
+
+	seedWrappedEntry(t, dbPath, storage.Entry{
+		Title: "jan", Project: "alpha", Type: "shipped",
+	}, time.Date(2026, 1, 10, 10, 0, 0, 0, time.UTC))
+
+	out, errStr, err := runWrappedCmd(t, dbPath, "2026")
+	if err != nil {
+		t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+	}
+	assertNoGlyphLine(t, out)
+}
+
+func TestWrappedCmd_JSONHasNoGlyphs(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, time.Date(2027, 6, 1, 12, 0, 0, 0, time.UTC))
+	withLookupSparkEnv(t, "", false) // spark defaulted on
+
+	seedWrappedEntry(t, dbPath, storage.Entry{
+		Title: "jan", Project: "alpha", Type: "shipped",
+	}, time.Date(2026, 1, 10, 10, 0, 0, 0, time.UTC))
+
+	out, errStr, err := runWrappedCmd(t, dbPath, "2026", "--format", "json")
+	if err != nil {
+		t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+	}
+	for _, glyph := range "▁▂▃▄▅▆▇█" {
+		if strings.ContainsRune(out, glyph) {
+			t.Errorf("JSON must stay raw — found glyph %q:\n%s", glyph, out)
+		}
+	}
+}
+
+func TestWrappedCmd_NoSparkHelpListed(t *testing.T) {
+	root, outBuf, _ := newWrappedTestRoot(t)
+	root.SetArgs([]string{"wrapped", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !bytes.Contains(outBuf.Bytes(), []byte("--no-spark")) {
+		t.Errorf("expected --no-spark in help:\n%s", outBuf.String())
+	}
+}
+
+// sparkLineRE matches a full Cadence: <glyphs> line (block glyphs only).
+var sparkLineRE = regexp.MustCompile(`(?m)^Cadence: [▁▂▃▄▅▆▇█]+$`)
+
+// assertNoGlyphLine fails if any output line begins with "Cadence: ".
+func assertNoGlyphLine(t *testing.T, out string) {
+	t.Helper()
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "Cadence: ") {
+			t.Errorf("expected no Cadence: glyph line, found: %q\n%s", line, out)
+		}
 	}
 }
 

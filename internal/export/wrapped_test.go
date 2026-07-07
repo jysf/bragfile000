@@ -50,6 +50,7 @@ func TestToWrappedMarkdown_DEC014FullDocumentGolden(t *testing.T) {
 		FiltersJSON: nil,
 		ScopeMonths: yearMonths,
 		Now:         wrappedYearNow,
+		Spark:       true,
 	}
 	got, err := ToWrappedMarkdown(wrappedYearFixture, opts)
 	if err != nil {
@@ -65,6 +66,7 @@ Entries: 7
 ## Cadence
 
 Busiest month: 2026-04 (2)
+Cadence: ▅▅▁█▁▁█▁▁▁▅▁
 
 - 2026-01: 1
 - 2026-02: 1
@@ -294,6 +296,7 @@ func TestToWrappedMarkdown_QuarterGolden(t *testing.T) {
 		ScopeMonths: q3Months,
 		Filters:     "(none)",
 		Now:         time.Date(2026, 9, 30, 23, 59, 59, 0, time.UTC),
+		Spark:       true,
 	}
 	got, err := ToWrappedMarkdown(entries, opts)
 	if err != nil {
@@ -309,6 +312,7 @@ Entries: 2
 ## Cadence
 
 Busiest month: 2026-07 (2)
+Cadence: █▁▁
 
 - 2026-07: 2
 - 2026-08: 0
@@ -345,6 +349,122 @@ Longest streak: 2 days
 - Active days: 2`
 	if string(got) != want {
 		t.Errorf("quarter markdown golden mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestToWrappedMarkdown_NoSparkOmitsGlyphLine (LOAD-BEARING — the escape
+// path). With Spark: false the rendered markdown is byte-identical to the
+// SPEC-051 (pre-sparkline) document: no Cadence: glyph line, everything
+// else unchanged. Proves the Spark gate actually gates.
+func TestToWrappedMarkdown_NoSparkOmitsGlyphLine(t *testing.T) {
+	opts := WrappedOptions{
+		Scope:       "2026",
+		Filters:     "(none)",
+		FiltersJSON: nil,
+		ScopeMonths: yearMonths,
+		Now:         wrappedYearNow,
+		Spark:       false,
+	}
+	got, err := ToWrappedMarkdown(wrappedYearFixture, opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := `# Bragfile Wrapped
+
+Generated: 2026-12-31T23:59:59Z
+Scope: 2026
+Filters: (none)
+Entries: 7
+
+## Cadence
+
+Busiest month: 2026-04 (2)
+
+- 2026-01: 1
+- 2026-02: 1
+- 2026-03: 0
+- 2026-04: 2
+- 2026-05: 0
+- 2026-06: 0
+- 2026-07: 2
+- 2026-08: 0
+- 2026-09: 0
+- 2026-10: 0
+- 2026-11: 1
+- 2026-12: 0
+
+## Top initiatives
+
+- alpha: 3
+- beta: 2
+- gamma: 1
+
+## Impact moments
+
+### alpha
+
+- 1: kickoff
+  cut p95 login latency 40%
+- 3: migration
+  removed the nightly cron entirely
+
+### beta
+
+- 5: launch
+  onboarding time down to 1 day
+
+## Rhythm
+
+Longest streak: 2 days
+
+**Top tags**
+- api: 3
+- auth: 2
+- docs: 2
+- process: 2
+- db: 1
+
+**Top types**
+- shipped: 4
+- learned: 2
+- fixed: 1
+
+## Span
+
+- First entry: 2026-01-15
+- Last entry: 2026-11-30
+- Active days: 320`
+	if string(got) != want {
+		t.Errorf("no-spark markdown golden mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+	for _, line := range strings.Split(string(got), "\n") {
+		if strings.HasPrefix(line, "Cadence: ") {
+			t.Errorf("Spark: false must omit the glyph line, found: %q", line)
+		}
+	}
+}
+
+// TestToWrappedMarkdown_EmptyPeriodNoGlyphLine: over nil entries with
+// Spark: true, the markdown is provenance-only (through Entries: 0) and
+// contains neither ## Cadence nor a Cadence: glyph line (DEC-014 part-4
+// body omission leaves no cadence section to decorate).
+func TestToWrappedMarkdown_EmptyPeriodNoGlyphLine(t *testing.T) {
+	opts := WrappedOptions{
+		Scope:       "2026-Q3",
+		ScopeMonths: q3Months,
+		Filters:     "(none)",
+		Now:         time.Date(2026, 9, 30, 23, 59, 59, 0, time.UTC),
+		Spark:       true,
+	}
+	got, err := ToWrappedMarkdown(nil, opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(string(got), "## Cadence") {
+		t.Errorf("empty period must omit ## Cadence:\n%s", got)
+	}
+	if strings.Contains(string(got), "Cadence: ") {
+		t.Errorf("empty period must have no Cadence: glyph line:\n%s", got)
 	}
 }
 
