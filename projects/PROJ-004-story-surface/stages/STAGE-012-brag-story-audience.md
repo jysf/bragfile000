@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-012
-  status: active
+  status: shipped
   priority: high                    # the narrative headline of v0.4.0
   target_complete: null             # optional: YYYY-MM-DD (ships v0.4.0)
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-07-06
-shipped_at: null
+shipped_at: 2026-07-06             # backlog complete + merged to main; v0.4.0 RELEASE deferred to the STAGE-013 cut
 ---
 
 # STAGE-012: `brag story --audience` — the narrative surface
@@ -90,14 +90,17 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       thread-definition choice). The headline spec. **Assessed L → split taken
       (orchestrator APPROVED):** SPEC-049 shipped the mechanism + the gradient
       ENDPOINTS (`me`/`exec`); SPEC-050 adds `manager`/`skip` config-only.
-- [ ] SPEC-050 (pending, planned in SPEC-049's split) — `manager` (and
-      optionally `skip`) audience profiles + directive assets, shipped as
-      bundled defaults with ZERO Go change — the proof that DEC-029's
-      profiles-as-data mechanism is extensible. Plus: a dedicated test for
-      AC-8's empty-directive omission branch (the coverage gap verify flagged),
-      and any polish (per-profile fold thresholds, doc/tutorial pass).
+- [x] SPEC-050 (shipped on 2026-07-06) — `manager` AND `skip` audience
+      profiles + directive assets, shipped as bundled defaults — the proof
+      that DEC-029's profiles-as-data mechanism is extensible. Shipped BOTH
+      middle-gradient audiences (four asset files) + the AC-8 empty-directive
+      omission test + the in-binary `--help` refresh (+ a help-freshness test).
+      **Extensibility PROVEN (verify):** adding two audiences = 4 asset files +
+      a 9-line help-strings-only diff in `story.go` (the ONLY non-test `.go`
+      change) + tests; `go.mod`/`go.sum` byte-unchanged; zero loader/resolver/
+      shaping-code change. No new DEC.
 
-**Count:** 1 shipped / 0 active / 1 pending
+**Count:** 2 shipped / 0 active / 0 pending
 
 ## Design Notes
 
@@ -141,8 +144,25 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
 *Filled in when status moves to shipped.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <tbd>
-- **How many specs did it actually take?** <tbd>
-- **What changed between starting and shipping?** <tbd>
-- **Lessons that should update AGENTS.md, templates, or constraints?** <tbd>
-- **Should any spec-level reflections be promoted to stage-level lessons?** <tbd>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes. `brag story
+  --audience <me|manager|skip|exec>` coalesces the corpus into audience-shaped
+  narrative arcs (threads + throughline skeleton), as a pure pipe — no model /
+  no network / no new dependency in the binary; the LLM is optional and the
+  bundle is useful standalone. The full four-point gradient ships, demonstrably
+  divergent (me 6/6 → skip 5/6 → exec 4/6 beats on the same corpus).
+- **How many specs did it actually take?** Two (SPEC-049 the mechanism +
+  me/exec endpoints; SPEC-050 the manager/skip config-only middle), plus
+  DEC-029. The L-split was the right call.
+- **What changed between starting and shipping?** The posture settled to pure
+  pipe (LLM optional), and the core capability sharpened from "filter/group" to
+  "**coalesce a set of brags into arcs**" (the user's insight). DEC-029 locked
+  deterministic initiative threads + a throughline skeleton, LLM finds the arc.
+- **Lessons that should update AGENTS.md, templates, or constraints?** Two
+  review catches worth remembering (both N=1, below the §12 bar): (a) a
+  load-bearing golden must be correct at design time — never a "planted defect
+  for build to catch" (SPEC-049); (b) scope an "extensibility proof" as
+  *mechanism = zero code*, not *zero `.go` diff* — don't let a vanity metric
+  ship stale user-facing help (SPEC-050). If either recurs, codify.
+- **Should any spec-level reflections be promoted to stage-level lessons?** The
+  two above are the stage-level lessons; the "profiles-as-data = new audience is
+  data + a help row + tests, zero mechanism code" pattern is the reusable win.

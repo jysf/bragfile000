@@ -31,8 +31,10 @@ func NewStoryCmd() *cobra.Command {
 		Long: `Emit an audience-shaped narrative bundle: your brags coalesced into threads (initiatives, time-ordered, with impact beats marked) plus a throughline skeleton and a per-audience framing directive. bragfile shapes the data; an LLM (already in your session, or a paste-in) writes the prose. No model, no network in the binary — the bundle is a complete, readable artifact on its own; the LLM is an optional upgrade.
 
 --audience is required and selects a shaping profile (selection + threading + altitude + framing directive):
-  me     candid reflection — every thread, the messy middle and lessons kept, low altitude
-  exec   impact-forward promotion — impact-bearing threads only, one headline arc, terse
+  me       candid reflection — every thread, the messy middle and lessons kept, low altitude
+  manager  tactical 1:1 / weekly — what shipped, blockers, and what's next; complete, monthly cadence
+  skip     skip-level / director — outcomes grouped by initiative, less detail, more "so what"; quarterly
+  exec     impact-forward promotion — impact-bearing threads only, one headline arc, terse
 
 Each audience carries a default window; an explicit window flag overrides it. Windows are CALENDAR periods (like brag impact), mutually exclusive:
   --quarter / --month / --year / --since D   (D: YYYY-MM-DD or Nd/Nw/Nm)
@@ -43,13 +45,14 @@ Output is markdown (default) or a JSON envelope (--format json). --theme <tag> a
 
 Examples:
   brag story --audience me                                   # candid, this year (me's default window)
+  brag story --audience manager --month                      # tactical update for a 1:1, this month
   brag story --audience exec --quarter                       # exec, this calendar quarter
   brag story --audience exec --year --format json            # arc-aware JSON envelope
   brag story --audience me --theme perf                      # add a cross-project perf arc
   brag story --audience exec --print-directive               # just the framing directive`,
 		RunE: runStory,
 	}
-	cmd.Flags().String("audience", "", "shaping profile (required; one of: me, exec, or a user profile)")
+	cmd.Flags().String("audience", "", "shaping profile (required; one of: me, manager, skip, exec, or a user profile)")
 	cmd.Flags().Bool("quarter", false, "window: the current calendar quarter (overrides the profile default)")
 	cmd.Flags().Bool("month", false, "window: the current calendar month (overrides the profile default)")
 	cmd.Flags().Bool("year", false, "window: the current calendar year (overrides the profile default)")
