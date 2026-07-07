@@ -903,8 +903,24 @@ constraints per AGENTS.md §12/§13). Verdict: **✅ APPROVED**.*
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+*Appended at ship (2026-07-06). Merged to main; no release — STAGE-013's
+release cut (SPEC-054) ships wrapped as part of v0.4.0.*
 
-1. **What would I do differently next time?** — <answer>
-2. **Does any template, constraint, or decision need updating?** — <answer>
-3. **Is there a follow-up spec I should write now before I forget?** — <answer>
+1. **What would I do differently next time?** — Little. The design→build→verify
+   ran clean, and the golden-faithfulness-first discipline added after SPEC-049
+   paid off: the design computed the goldens against the real `aggregate`
+   helpers before locking, and build/verify both confirmed byte-exact matches on
+   first implementation. Repeat that discipline for every byte-exact golden.
+2. **Does any template, constraint, or decision need updating?** — An
+   observation worth tracking, not yet a codification: **window semantics are
+   now per-command, chosen by the command's meaning** — rolling (`summary`,
+   DEC-014), calendar-to-now (`impact`, DEC-028), and now bounded-calendar
+   `[start, next-boundary)` (`wrapped`, DEC-030, because a named past period has
+   a real end). That's three deliberate variants. If a reader ever assumes a
+   single global window rule, codify "windows are per-command" in AGENTS.md;
+   until then it's captured here and in each DEC.
+3. **Is there a follow-up spec I should write now before I forget?** — No new
+   ones — STAGE-013's remaining backlog already holds them: SPEC-052 (sparklines
+   — `cadence.series` is left sparkline-ready), SPEC-053 (`--previous`, which
+   resolves wrapped's default-period revisit), SPEC-045 (P3 agent-assist metric),
+   SPEC-054 (the v0.4.0 cut).

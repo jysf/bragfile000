@@ -73,13 +73,14 @@ the feature specs land on main).
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-051 (verify) — **`brag wrapped [year|quarter]`** — the shareable
-      year/quarter-in-review digest (text-first; DEC-014 envelope). The headline
-      polish feature. Build complete; both byte-goldens matched the real
-      aggregate/renderer output first-try.
+- [x] SPEC-051 (shipped on 2026-07-06) — **`brag wrapped [year|quarter]`** — the
+      shareable year/quarter-in-review digest (text-first; DEC-014 envelope +
+      DEC-030). The headline polish feature. Both byte-goldens verified faithful
+      against the real aggregate output; `cadence.series` left sparkline-ready
+      for SPEC-052.
 - [ ] SPEC-052 (planned) — **the sparklines/visual pass** — an in-terminal
       Unicode sparkline primitive (local-first, no dep) adopted by `stats` /
-      `wrapped` (and optionally `impact`). Its own small DEC likely (DEC-030:
+      `wrapped` (and optionally `impact`). Its own small DEC likely (DEC-031:
       metric + width normalization).
 - [ ] SPEC-053 (planned) — **`--previous`** — the last-completed-period window
       modifier for `impact`/`story`/`wrapped` (DEC-028 foresaw it).
@@ -88,7 +89,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 - [ ] SPEC-054 (planned) — **the v0.4.0 release cut** — the stage's closing
       action (RC → Pattern 1 → final; CHANGELOG `[0.4.0]`; brew verify).
 
-**Count:** 0 shipped / 0 active / 5 pending
+**Count:** 1 shipped / 0 active / 4 pending
 
 ## Design Notes
 
