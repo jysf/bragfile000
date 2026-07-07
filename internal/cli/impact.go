@@ -34,8 +34,11 @@ Output is markdown (default) or a single-object JSON envelope (--format json) pe
 
 Windows are CALENDAR periods, not rolling — this differs from brag summary on purpose (the story surface reports by quarter/month/year). Only entries with a non-empty impact appear in the body; the provenance line tallies how many in-window entries had one. Filter flags --tag/--project/--type compose with the window.
 
+--previous shifts the selected window to the last-completed period (bounded on both ends): --quarter --previous is the whole previous calendar quarter, --month --previous the previous month, --year --previous the previous year. It requires a window flag (a modifier is not a window) and is incompatible with --since.
+
 Examples:
   brag impact --quarter                              # this calendar quarter, markdown
+  brag impact --quarter --previous                   # the whole previous calendar quarter
   brag impact --year --format json                   # this calendar year, JSON envelope
   brag impact --since 2026-01-01 --project alpha     # since a date, one initiative`,
 		RunE: runImpact,
@@ -44,6 +47,7 @@ Examples:
 	cmd.Flags().Bool("month", false, "impact for the current calendar month")
 	cmd.Flags().Bool("year", false, "impact for the current calendar year")
 	cmd.Flags().String("since", "", "impact since a date (YYYY-MM-DD or Nd/Nw/Nm)")
+	cmd.Flags().Bool("previous", false, "shift the window to the last-completed period")
 	cmd.Flags().String("format", "markdown", "output format (one of: markdown, json)")
 	cmd.Flags().String("tag", "", "filter to entries whose tags contain this token")
 	cmd.Flags().String("project", "", "filter to entries with this project (exact match)")
@@ -63,8 +67,12 @@ func runImpact(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	previous, _ := cmd.Flags().GetBool("previous")
+	if previous && window == "since" {
+		return UserErrorf("--previous cannot be combined with --since (--since is an explicit anchor, not a calendar period)")
+	}
 	sinceRaw, _ := cmd.Flags().GetString("since")
-	cutoff, scope, err := windowCutoff(window, sinceRaw, now)
+	cutoff, end, scope, err := windowCutoff(window, sinceRaw, now, previous)
 	if err != nil {
 		return err
 	}
@@ -112,6 +120,22 @@ func runImpact(cmd *cobra.Command, _ []string) error {
 	entries, err := s.List(filter)
 	if err != nil {
 		return fmt.Errorf("list entries: %w", err)
+	}
+
+	// Bounded-window upper edge for --previous (DEC-032 choice 1): a non-zero
+	// end is the current-period start (the exclusive upper bound of the
+	// last-completed period). ListFilter.Since is the SQL lower bound; the
+	// created_at < end filter runs here in Go so no-sql-in-cli-layer stays
+	// intact (ListFilter has no Until). A zero end (the current-period path)
+	// skips the filter, preserving [cutoff, now] byte-for-byte.
+	if !end.IsZero() {
+		bounded := entries[:0]
+		for _, e := range entries {
+			if e.CreatedAt.Before(end) {
+				bounded = append(bounded, e)
+			}
+		}
+		entries = bounded
 	}
 
 	filtersMD, filtersJSON := echoFiltersForImpact(cmd)

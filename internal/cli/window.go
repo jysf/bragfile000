@@ -12,36 +12,69 @@ import (
 // shared by `brag impact` and `brag story`.
 var windowFlagNames = []string{"quarter", "month", "year", "since"}
 
-// windowCutoff computes the inclusive lower bound and scope token for the
-// selected window. Pure and deterministic given (window, sinceRaw, now).
-// CALENDAR periods (time.Date constructors), NEVER day subtraction — this
-// is the correctness core of the calendar-vs-rolling divergence (DEC-028
-// choice 1). now is UTC; the period end is always "now" (implicit — every
-// stored created_at <= now, so the lower bound alone bounds the window).
+// windowCutoff computes the inclusive lower bound, the exclusive upper
+// bound, and the scope token for the selected window. Pure and
+// deterministic given (window, sinceRaw, now, previous). CALENDAR periods
+// (time.Date constructors), NEVER day subtraction — this is the
+// correctness core of the calendar-vs-rolling divergence (DEC-028 choice
+// 1). now is UTC.
+//
+// The `end` return is the load-bearing addition for `--previous` (DEC-032
+// / SPEC-053):
+//
+//   - previous == false: the CURRENT period. start is the current-period
+//     cutoff (math unchanged); end is the ZERO time.Time SENTINEL meaning
+//     "open upper edge / up to now" (every stored created_at <= now, so the
+//     lower bound alone bounds the window). Callers treat a zero end as "no
+//     upper-bound filter", preserving the [cutoff, now] behavior
+//     byte-for-byte. scope is today's token ("quarter" / "since:<raw>" …).
+//   - previous == true: the LAST-COMPLETED period, a bounded
+//     [prev-start, prev-end) window. start is the current-period start
+//     shifted back one period via AddDate (never day subtraction — rolls
+//     year boundaries: a January --month --previous lands in the prior
+//     December of the prior year). end is the CURRENT period's start (the
+//     exclusive upper boundary between the completed period and the
+//     in-progress one). scope is "<window>:previous".
+//
+// `--previous` is undefined for --since (an explicit anchor, not a calendar
+// period): windowCutoff returns a UserError, the helper-level guard backing
+// up the CLI's flag-combo check (DEC-032 choice 4 / LD3).
 //
 // Lifted verbatim from impact.go at SPEC-049 (the third-caller threshold,
 // SPEC-018) so `impact` and `story` share one calendar core; impact's
-// existing tests stay green byte-for-byte.
-func windowCutoff(window, sinceRaw string, now time.Time) (cutoff time.Time, scope string, err error) {
+// existing tests stay green byte-for-byte on the current-period path.
+func windowCutoff(window, sinceRaw string, now time.Time, previous bool) (start, end time.Time, scope string, err error) {
 	switch window {
 	case "quarter":
 		qStartMonth := ((int(now.Month())-1)/3)*3 + 1 // 1, 4, 7, 10
-		cutoff = time.Date(now.Year(), time.Month(qStartMonth), 1, 0, 0, 0, 0, time.UTC)
-		return cutoff, "quarter", nil
-	case "month":
-		cutoff = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-		return cutoff, "month", nil
-	case "year":
-		cutoff = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
-		return cutoff, "year", nil
-	case "since":
-		cutoff, err = ParseSince(sinceRaw)
-		if err != nil {
-			return time.Time{}, "", UserErrorf("invalid --since value: %v", err)
+		curStart := time.Date(now.Year(), time.Month(qStartMonth), 1, 0, 0, 0, 0, time.UTC)
+		if previous {
+			return curStart.AddDate(0, -3, 0), curStart, "quarter:previous", nil
 		}
-		return cutoff, "since:" + sinceRaw, nil
+		return curStart, time.Time{}, "quarter", nil
+	case "month":
+		curStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+		if previous {
+			return curStart.AddDate(0, -1, 0), curStart, "month:previous", nil
+		}
+		return curStart, time.Time{}, "month", nil
+	case "year":
+		curStart := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
+		if previous {
+			return curStart.AddDate(-1, 0, 0), curStart, "year:previous", nil
+		}
+		return curStart, time.Time{}, "year", nil
+	case "since":
+		if previous {
+			return time.Time{}, time.Time{}, "", UserErrorf("--previous cannot be combined with --since (--since is an explicit anchor, not a calendar period)")
+		}
+		start, err = ParseSince(sinceRaw)
+		if err != nil {
+			return time.Time{}, time.Time{}, "", UserErrorf("invalid --since value: %v", err)
+		}
+		return start, time.Time{}, "since:" + sinceRaw, nil
 	default:
-		return time.Time{}, "", fmt.Errorf("windowCutoff: unhandled window %q", window)
+		return time.Time{}, time.Time{}, "", fmt.Errorf("windowCutoff: unhandled window %q", window)
 	}
 }
 

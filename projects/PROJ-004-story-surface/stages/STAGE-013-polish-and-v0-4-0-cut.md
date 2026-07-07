@@ -84,14 +84,17 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `Cadence: <glyphs>` line (escaped by `--no-spark`/`NO_COLOR`); JSON stays
       raw. DEC-031 (min→max normalization, placement, default-on-with-escape);
       `stats`/`impact` deferred. Normalization goldens faithful; JSON byte-unchanged.
-- [ ] SPEC-053 (planned) — **`--previous`** — the last-completed-period window
-      modifier for `impact`/`story`/`wrapped` (DEC-028 foresaw it).
+- [x] SPEC-053 (shipped on 2026-07-07) — **`--previous`** — the last-completed-
+      period window modifier for `impact`/`story`/`wrapped` (DEC-032, extends
+      DEC-028; shared `windowCutoff`, bounded, no regression). Surfaced a
+      follow-up: the `created_at < end` filter is now a 3rd consumer → a
+      `ListFilter.Until` storage promotion (backlog, not blocking v0.4.0).
 - [ ] SPEC-045 (adopt draft) — **the P3 agent-assist metric** — complete the
       drafted provenance-share read ("how much of my work was agent-assisted").
 - [ ] SPEC-054 (planned) — **the v0.4.0 release cut** — the stage's closing
       action (RC → Pattern 1 → final; CHANGELOG `[0.4.0]`; brew verify).
 
-**Count:** 2 shipped / 0 active / 3 pending
+**Count:** 3 shipped / 0 active / 2 pending
 
 ## Design Notes
 

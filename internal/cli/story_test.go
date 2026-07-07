@@ -332,3 +332,113 @@ func TestStoryCmd_StdoutStderrSeparation(t *testing.T) {
 		}
 	})
 }
+
+// storyScopeFromJSON unmarshals the scope from a story JSON envelope.
+func storyScopeFromJSON(t *testing.T, out string) string {
+	t.Helper()
+	var env struct {
+		Scope string `json:"scope"`
+	}
+	if err := json.Unmarshal([]byte(out), &env); err != nil {
+		t.Fatalf("json unmarshal: %v\n%s", err, out)
+	}
+	return env.Scope
+}
+
+// TestStoryCmd_PreviousExplicitWindowBounded: story --quarter --previous at
+// spec53Now → scope "quarter:previous", a prev-Q2 entry IN and a current-Q3
+// entry OUT. Proves --previous shifts an explicit window flag AND applies the
+// bounded upper edge on the story path (SPEC-053).
+func TestStoryCmd_PreviousExplicitWindowBounded(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withStoryNowFunc(t, time.Date(2026, 7, 6, 12, 0, 0, 0, time.UTC))
+
+	seedStoryEntry(t, dbPath, storage.Entry{
+		Title: "prev-q2-may", Project: "alpha", Type: "shipped", Impact: "in prev Q2",
+	}, time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC))
+	seedStoryEntry(t, dbPath, storage.Entry{
+		Title: "cur-q3-jul", Project: "alpha", Type: "shipped", Impact: "current Q3",
+	}, time.Date(2026, 7, 3, 10, 0, 0, 0, time.UTC))
+
+	out, _, err := runStoryCmd(t, dbPath, "--audience", "exec", "--quarter", "--previous", "--format", "json")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := storyScopeFromJSON(t, out); got != "quarter:previous" {
+		t.Errorf("scope: got %q, want %q", got, "quarter:previous")
+	}
+	if !bytes.Contains([]byte(out), []byte("prev-q2-may")) {
+		t.Errorf("prev-Q2 entry must be IN the bundle:\n%s", out)
+	}
+	if bytes.Contains([]byte(out), []byte("cur-q3-jul")) {
+		t.Errorf("current-Q3 entry must be OUT (bounded upper edge):\n%s", out)
+	}
+}
+
+// TestStoryCmd_PreviousShiftsProfileDefault: story --audience me --previous
+// (no window flag) → the me profile default (year) shifted back one, bounded;
+// scope "year:previous". A 2025 entry IN, a current-2026 entry OUT.
+func TestStoryCmd_PreviousShiftsProfileDefault(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withStoryNowFunc(t, time.Date(2026, 7, 6, 12, 0, 0, 0, time.UTC))
+
+	seedStoryEntry(t, dbPath, storage.Entry{
+		Title: "y2025-jun", Project: "alpha", Type: "shipped", Impact: "in prev year",
+	}, time.Date(2025, 6, 1, 10, 0, 0, 0, time.UTC))
+	seedStoryEntry(t, dbPath, storage.Entry{
+		Title: "y2026-feb", Project: "alpha", Type: "shipped", Impact: "current year",
+	}, time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC))
+
+	out, _, err := runStoryCmd(t, dbPath, "--audience", "me", "--previous", "--format", "json")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := storyScopeFromJSON(t, out); got != "year:previous" {
+		t.Errorf("scope: got %q, want %q", got, "year:previous")
+	}
+	if !bytes.Contains([]byte(out), []byte("y2025-jun")) {
+		t.Errorf("prev-year entry must be IN the bundle:\n%s", out)
+	}
+	if bytes.Contains([]byte(out), []byte("y2026-feb")) {
+		t.Errorf("current-year entry must be OUT (bounded upper edge):\n%s", out)
+	}
+}
+
+// TestStoryCmd_PreviousWithSinceIsUserError: --since + --previous → UserError,
+// stdout empty (LD3, story path).
+func TestStoryCmd_PreviousWithSinceIsUserError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withStoryNowFunc(t, time.Date(2026, 7, 6, 12, 0, 0, 0, time.UTC))
+	out, _, err := runStoryCmd(t, dbPath, "--audience", "me", "--since", "2026-01-01", "--previous")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrUser) {
+		t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+	}
+	for _, needle := range []string{"--previous", "--since"} {
+		if !bytes.Contains([]byte(err.Error()), []byte(needle)) {
+			t.Errorf("expected error to name %q, got %q", needle, err.Error())
+		}
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+}
+
+// TestStoryCmd_HelpShowsPrevious: --help contains --previous and a
+// distinctive example line.
+func TestStoryCmd_HelpShowsPrevious(t *testing.T) {
+	root, outBuf, _ := newStoryTestRoot(t)
+	root.SetArgs([]string{"story", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out := outBuf.String()
+	if !bytes.Contains([]byte(out), []byte("--previous")) {
+		t.Errorf("expected --previous in help:\n%s", out)
+	}
+	if !bytes.Contains([]byte(out), []byte("brag story --audience me --previous")) {
+		t.Errorf("expected example line 'brag story --audience me --previous' in help:\n%s", out)
+	}
+}

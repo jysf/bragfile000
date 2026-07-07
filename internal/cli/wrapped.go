@@ -40,10 +40,13 @@ The period is named positionally. With no argument it covers the current calenda
 
 The window is bounded on both ends: a named period covers only entries created within it, so a completed year or quarter does not spill past its end. This differs from brag impact, which reports the current period up to now.
 
+--previous (no positional period) covers the last-completed calendar year — brag wrapped --previous in 2026 is identical to brag wrapped 2025. It is valid only with no positional period: pairing it with an explicit year/quarter (brag wrapped 2026 --previous) is an error, since the positional arg already names a bounded period (name the one you want directly, e.g. brag wrapped 2025).
+
 Output is markdown (default) or a single-object JSON envelope (--format json). The digest renders these sections: Cadence (busiest month + per-month counts), Top initiatives, Impact moments, Rhythm (longest streak, top tags, top types), and Span. Filter flags --tag/--project/--type compose with the period.
 
 Examples:
   brag wrapped                                # the current calendar year, markdown
+  brag wrapped --previous                     # the last-completed calendar year
   brag wrapped 2026 --format json            # calendar year 2026, JSON envelope
   brag wrapped 2026 Q3 --project alpha       # one quarter, one initiative`,
 		RunE: runWrapped,
@@ -53,6 +56,7 @@ Examples:
 	cmd.Flags().String("project", "", "filter to entries with this project (exact match)")
 	cmd.Flags().String("type", "", "filter to entries with this type (exact match)")
 	cmd.Flags().Bool("no-spark", false, "suppress the in-terminal cadence sparkline")
+	cmd.Flags().Bool("previous", false, "cover the last-completed calendar year (only with no positional period)")
 	return cmd
 }
 
@@ -63,14 +67,28 @@ Examples:
 // (DEC-030 choice 3). All period math uses time.Date calendar
 // constructors, never day subtraction (inheriting DEC-028's rule).
 //
-//   - 0 args → current calendar year (now.Year()).
+//   - 0 args → current calendar year (now.Year()), or the last-completed
+//     year (now.Year()-1) when previous is set (DEC-032 choice 5 / LD6).
 //   - 1 arg  → a 4-digit year in [2000,2999]; anything else is a UserError.
 //   - 2 args → year + quarter token Q<1..4> (case-insensitive).
 //   - 3+ args → UserError (extra tokens).
-func parseWrappedPeriod(args []string, now time.Time) (scope string, months []string, start, nextBoundary time.Time, err error) {
+//
+// previous is valid ONLY with no positional period: it shifts the annual
+// default to the last-completed year via the same year path (scope is the
+// concrete year, e.g. "2025", NOT "year:previous" — wrapped names a concrete
+// period, so its scope already says which one). Combining previous with an
+// explicit positional period is a UserError (the positional arg already
+// names a bounded period; shifting it is redundant and ambiguous).
+func parseWrappedPeriod(args []string, now time.Time, previous bool) (scope string, months []string, start, nextBoundary time.Time, err error) {
+	if previous && len(args) > 0 {
+		return "", nil, time.Time{}, time.Time{}, UserErrorf("--previous is only valid with no positional period (the argument already names a bounded period; name the year directly, e.g. `brag wrapped 2025`)")
+	}
 	switch len(args) {
 	case 0:
 		year := now.Year()
+		if previous {
+			year--
+		}
 		start = time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
 		nextBoundary = start.AddDate(1, 0, 0)
 		return fmt.Sprintf("%04d", year), monthLabels(year, 1, 12), start, nextBoundary, nil
@@ -145,7 +163,8 @@ func monthLabels(year, startMonth, count int) []string {
 func runWrapped(cmd *cobra.Command, args []string) error {
 	now := nowFunc()
 
-	scope, months, start, nextBoundary, err := parseWrappedPeriod(args, now)
+	previous, _ := cmd.Flags().GetBool("previous")
+	scope, months, start, nextBoundary, err := parseWrappedPeriod(args, now, previous)
 	if err != nil {
 		return err
 	}

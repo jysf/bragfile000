@@ -39,14 +39,18 @@ func NewStoryCmd() *cobra.Command {
 Each audience carries a default window; an explicit window flag overrides it. Windows are CALENDAR periods (like brag impact), mutually exclusive:
   --quarter / --month / --year / --since D   (D: YYYY-MM-DD or Nd/Nw/Nm)
 
+--previous shifts the window to the last-completed period (bounded on both ends). It composes with an explicit window flag (--quarter --previous) AND with the audience profile's default (--previous alone shifts that default back one period). It is incompatible with --since.
+
 Audiences are extensible profiles, not a fixed list: drop a <name>.yaml in your story-profiles override directory to add or reshape one.
 
 Output is markdown (default) or a JSON envelope (--format json). --theme <tag> adds a cross-project thread for that tag. --print-directive prints only the audience's framing directive.
 
 Examples:
   brag story --audience me                                   # candid, this year (me's default window)
+  brag story --audience me --previous                        # me, the last-completed default period
   brag story --audience manager --month                      # tactical update for a 1:1, this month
   brag story --audience exec --quarter                       # exec, this calendar quarter
+  brag story --audience exec --quarter --previous            # exec, the whole previous quarter
   brag story --audience exec --year --format json            # arc-aware JSON envelope
   brag story --audience me --theme perf                      # add a cross-project perf arc
   brag story --audience exec --print-directive               # just the framing directive`,
@@ -57,6 +61,7 @@ Examples:
 	cmd.Flags().Bool("month", false, "window: the current calendar month (overrides the profile default)")
 	cmd.Flags().Bool("year", false, "window: the current calendar year (overrides the profile default)")
 	cmd.Flags().String("since", "", "window: entries since a date (YYYY-MM-DD or Nd/Nw/Nm)")
+	cmd.Flags().Bool("previous", false, "shift the window to the last-completed period")
 	cmd.Flags().String("theme", "", "add a cross-project thread grouping entries with this tag")
 	cmd.Flags().String("format", "markdown", "output format (one of: markdown, json)")
 	cmd.Flags().Bool("print-directive", false, "print only the audience's framing directive and exit")
@@ -66,19 +71,29 @@ Examples:
 	return cmd
 }
 
-// resolveWindow returns the (cutoff, scope) for story. An explicit window
-// flag overrides the profile default; the window flags are mutually
+// resolveWindow returns the (cutoff, end, scope) for story. An explicit
+// window flag overrides the profile default; the window flags are mutually
 // exclusive (reusing impact's selectedWindow). With no window flag set,
 // the profile's DefaultWindow applies. selectedWindow's zero-flag
 // UserError is avoided via windowFlagsSet — story supplies the default.
-func resolveWindow(cmd *cobra.Command, profile story.Profile, now time.Time) (time.Time, string, error) {
+//
+// --previous (DEC-032) shifts whichever window is resolved — the explicit
+// flag OR the profile default — to the last-completed period, returning a
+// non-zero exclusive upper bound (end). It is incoherent with --since (an
+// explicit anchor, not a calendar period) and rejected as a UserError at
+// both this composition point and inside windowCutoff (defense in depth).
+func resolveWindow(cmd *cobra.Command, profile story.Profile, now time.Time) (time.Time, time.Time, string, error) {
+	previous, _ := cmd.Flags().GetBool("previous")
 	if windowFlagsSet(cmd) {
 		window, err := selectedWindow(cmd)
 		if err != nil {
-			return time.Time{}, "", err
+			return time.Time{}, time.Time{}, "", err
+		}
+		if previous && window == "since" {
+			return time.Time{}, time.Time{}, "", UserErrorf("--previous cannot be combined with --since (--since is an explicit anchor, not a calendar period)")
 		}
 		sinceRaw, _ := cmd.Flags().GetString("since")
-		return windowCutoff(window, sinceRaw, now)
+		return windowCutoff(window, sinceRaw, now, previous)
 	}
 	// No window flag → the profile default. A "since:<raw>" default carries
 	// the raw after the colon; the plain tokens carry no sinceRaw.
@@ -87,7 +102,10 @@ func resolveWindow(cmd *cobra.Command, profile story.Profile, now time.Time) (ti
 	if raw, ok := strings.CutPrefix(window, "since:"); ok {
 		window, sinceRaw = "since", raw
 	}
-	return windowCutoff(window, sinceRaw, now)
+	if previous && window == "since" {
+		return time.Time{}, time.Time{}, "", UserErrorf("--previous cannot be combined with a --since profile default (--since is an explicit anchor, not a calendar period)")
+	}
+	return windowCutoff(window, sinceRaw, now, previous)
 }
 
 func runStory(cmd *cobra.Command, _ []string) error {
@@ -124,7 +142,7 @@ func runStory(cmd *cobra.Command, _ []string) error {
 	}
 
 	now := storyNowFunc()
-	cutoff, scope, err := resolveWindow(cmd, profile, now)
+	cutoff, end, scope, err := resolveWindow(cmd, profile, now)
 	if err != nil {
 		return err
 	}
@@ -175,6 +193,22 @@ func runStory(cmd *cobra.Command, _ []string) error {
 	entries, err := s.List(filter)
 	if err != nil {
 		return fmt.Errorf("list entries: %w", err)
+	}
+
+	// Bounded-window upper edge for --previous (DEC-032 choice 1): a non-zero
+	// end is the current-period start (the exclusive upper bound of the
+	// last-completed period). ListFilter.Since is the SQL lower bound; the
+	// created_at < end filter runs here in Go so no-sql-in-cli-layer stays
+	// intact. A zero end (the current-period path) skips the filter,
+	// preserving [cutoff, now] byte-for-byte.
+	if !end.IsZero() {
+		bounded := entries[:0]
+		for _, e := range entries {
+			if e.CreatedAt.Before(end) {
+				bounded = append(bounded, e)
+			}
+		}
+		entries = bounded
 	}
 
 	threads := story.BuildThreads(entries, story.ThreadOptionsFromProfile(profile, theme))
