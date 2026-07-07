@@ -317,10 +317,24 @@ questions:
   - id: wrapped-default-current-vs-last-completed
     question: "Should bare `brag wrapped` (no argument) default to the CURRENT calendar year, or to the LAST-COMPLETED year the way a 'wrapped' idiomatically means a finished period?"
     priority: medium
-    status: open
+    status: resolved
+    resolution: current-calendar-year
     raised_by: claude
     raised_at: 2026-07-06
+    resolved_at: 2026-07-07
     assigned_to: null
+    resolution_notes: |
+      RESOLVED at SPEC-051 build per orchestrator sign-off: bare `brag
+      wrapped` defaults to the CURRENT calendar year (DEC-030 choice 2
+      holds as designed). The retrospective/last-completed framing is
+      named explicitly by the period argument (`brag wrapped 2025`), and
+      `--previous` will add last-completed uniformly across year/quarter
+      in SPEC-053 — keeping the "which period" logic in one place rather
+      than split between the default and a flag. `TestWrappedCmd_DefaultsToCurrentYear`
+      locks the behavior. The DEC-030 revisit trigger stays live: if
+      SPEC-053 design or user feedback shows the bare command is expected
+      to be retrospective, the default is a localized flip (the
+      bounded-window machinery is unaffected).
     notes: |
       Filed at SPEC-051 design (DEC-030 choice 2, confidence 0.72). The
       DEC locks the default to the CURRENT calendar year, leaving the

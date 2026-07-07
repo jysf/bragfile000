@@ -524,6 +524,31 @@ form into an LLM to draft the narrative:
 brag impact --quarter --format json | claude "draft my quarterly impact summary"
 ```
 
+### Your year in brags: `brag wrapped`
+
+`brag wrapped` is the shareable, celebratory counterpart to `brag
+impact` — a year- or quarter-in-review over a **named** calendar period.
+Where `impact` reports the current period up to now, `wrapped` names a
+bounded period the way you say it out loud:
+
+```bash
+brag wrapped                            # the current calendar year
+brag wrapped 2026                       # calendar year 2026
+brag wrapped 2026 Q3                    # calendar quarter Q3 2026 (case-insensitive q3)
+brag wrapped 2026 --format json         # the JSON envelope
+```
+
+With no argument it covers the current calendar year. Because a named
+period has a real end, the window is **bounded on both ends** — `brag
+wrapped 2026` run in 2027 covers Jan–Dec 2026 and does not spill into
+2027. The digest renders a celebratory arc: **Cadence** (busiest month +
+a per-month count series), **Top initiatives** (your top projects),
+**Impact moments** (entries with an impact statement, in full),
+**Rhythm** (longest streak, top tags, top types), and **Span** (first
+and last entry + active days). Filter flags `--tag`/`--project`/`--type`
+compose with the period. It is text-first today; the `cadence.series`
+data slot is ready for a later visual pass.
+
 ### Tell your story: `brag story`
 
 Where `brag impact` gives you the grouped data, `brag story` shapes it

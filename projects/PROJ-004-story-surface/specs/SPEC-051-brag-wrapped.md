@@ -7,7 +7,7 @@
 task:
   id: SPEC-051
   type: story
-  cycle: design
+  cycle: verify
   blocked: false
   priority: high
   complexity: M
@@ -775,20 +775,83 @@ cycle.*
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** feat/spec-051-brag-wrapped
-- **PR (if applicable):**
-- **All acceptance criteria met?** <tbd>
+- **PR (if applicable):** #89 (draft → ready-for-review at build close)
+- **All acceptance criteria met?** Yes. All 10 acceptance criteria verified by
+  the Failing Tests (all passing) plus a live smoke of `brag wrapped 2026` /
+  `brag wrapped 2026 Q3` (year JSON + malformed `Q5` → user error). Every golden
+  matched the REAL `aggregate`/renderer output on FIRST implementation — no
+  golden was edited, no escalation needed (a pre-build scratch test confirmed the
+  span=320, longest-streak=2, top-tags/types/initiatives orders, quarter span=2,
+  and `fixed`-before-`shipped` tie-break all come from the real helpers before a
+  line of renderer was written).
 - **New decisions emitted:**
-  - `DEC-030` — wrapped period selection + section taxonomy + envelope (emitted at design)
+  - `DEC-030` — wrapped period selection + section taxonomy + envelope (emitted
+    at design; no new DEC needed at build — DEC-031 stays free).
+- **Files changed:**
+  - `internal/aggregate/aggregate.go` — `CadenceBucket{Period,Count}` (with
+    `json:"period"/"count"` tags — see Deviations) + `Cadence(entries, months)`.
+  - `internal/export/wrapped.go` (new) — `WrappedOptions`, `ToWrappedMarkdown`,
+    `ToWrappedJSON`, `extractTypes`.
+  - `internal/export/wrapped_test.go` (new) — the two byte-goldens + quarter +
+    empty + impact-in-full + filters-echoed + `TestCadence_ZeroFilledAndBusiest`.
+  - `internal/cli/wrapped.go` (new) — `NewWrappedCmd`, `runWrapped`,
+    `parseWrappedPeriod`, `parseYearArg`, `parseQuarterArg`, `monthLabels`,
+    `echoFiltersForWrapped`.
+  - `internal/cli/wrapped_test.go` (new) — the 9 CLI-level tests incl.
+    `TestWrappedCmd_BoundedWindow`.
+  - `cmd/brag/main.go` — registered `NewWrappedCmd()`.
+  - `docs/api-contract.md` — added the `brag wrapped` section.
+  - `docs/tutorial.md` — added the `### Your year in brags: brag wrapped` section.
+  - `README.md` — added `brag wrapped` to the digest command list.
+  - `AGENTS.md` — added the `wrapped` §11 glossary term.
+  - `guidance/questions.yaml` — resolved `wrapped-default-current-vs-last-completed`
+    (current-calendar-year, per orchestrator sign-off).
+- **Docs sweep (§9 status-change / §12 audit-grep cross-check):** grepped
+  `docs/ README.md AGENTS.md` for the digest-family enumeration. The command-list
+  hits that get `wrapped` added: `README.md` command block, `docs/tutorial.md`
+  digest section (new subsection between `impact` and `story`),
+  `docs/api-contract.md` command sections (new `### brag wrapped` section),
+  `AGENTS.md` §11 glossary. NOT touched: the DEC-014 *inventory* sentences in
+  `docs/api-contract.md:916` and `docs/data-model.md:217` enumerate the DEC-014
+  consumers as of DEC-014's authorship (`summary/review/stats/impact`) — those
+  are historical DEC-provenance lines, not a live "current command family" list,
+  so adding `wrapped` there would misattribute it to DEC-014's era. Left as-is;
+  `test-docs`/`test-hook` both green.
 - **Deviations from spec:**
-  - [list]
+  - The JSON `{period,count}` key casing lives as struct tags on
+    `aggregate.CadenceBucket` itself, not on a separate `export`-side projection.
+    The spec (LD8 / Notes) locks the bucket in `aggregate` AND locks the golden
+    to lowercase `period`/`count`; since `export` embeds the aggregate struct
+    directly (rather than reprojecting), the tags must ride on the aggregate
+    struct for the golden to hold. This is the minimal faithful reading of both
+    locks together; the alternative (a parallel export-side bucket type) would
+    duplicate the shape SPEC-052 is meant to reuse, defeating LD8. Not a
+    semantic deviation — same wire shape the golden specifies.
+  - No other deviations. Section order, envelope keys, empty-state, bounded
+    window, and both byte-goldens are exactly as specified.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None new. SPEC-052 (sparklines over `cadence.series`) and SPEC-053
+    (`--previous`) were already foreseen; the slot + bounded-window machinery
+    they need are in place.
 
 ### Build-phase reflection (3 questions, short answers)
 
-1. **What was unclear in the spec that slowed you down?** — <answer>
-2. **Was there a constraint or decision that should have been listed but wasn't?** — <answer>
-3. **If you did this task again, what would you do differently?** — <answer>
+1. **What was unclear in the spec that slowed you down?** — Almost nothing. The
+   one thing that surfaced at first `go test` was the JSON key casing: the spec
+   locks the cadence bucket in `aggregate` (LD8) and locks the golden to
+   lowercase `period`/`count`, but doesn't say where the json tags live. Because
+   the renderer embeds the aggregate struct directly, the tags had to go on the
+   aggregate struct — a two-second fix, but the spec could have named it.
+2. **Was there a constraint or decision that should have been listed but
+   wasn't?** — No. The reference set (DEC-014/028/030/022/007/013, the five
+   constraints) was complete; `impact.go`/`stats.go` gave the exact renderer +
+   CLI shape to mirror, and the `nowFunc`/`seedImpactEntry`/`withNowFunc` test
+   harness copied over cleanly.
+3. **If you did this task again, what would you do differently?** — Add the json
+   struct tags to `CadenceBucket` in the same edit that creates it, instead of
+   discovering the casing at the first golden run. The design-time faithfulness
+   pass (the removed scratch program) had already computed the values; running a
+   scratch *marshal* of the bucket too would have caught the casing before build.
 
 ---
 

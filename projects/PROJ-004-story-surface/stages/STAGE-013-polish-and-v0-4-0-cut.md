@@ -73,9 +73,10 @@ the feature specs land on main).
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-051 (planned) — **`brag wrapped [year|quarter]`** — the shareable
+- [ ] SPEC-051 (verify) — **`brag wrapped [year|quarter]`** — the shareable
       year/quarter-in-review digest (text-first; DEC-014 envelope). The headline
-      polish feature.
+      polish feature. Build complete; both byte-goldens matched the real
+      aggregate/renderer output first-try.
 - [ ] SPEC-052 (planned) — **the sparklines/visual pass** — an in-terminal
       Unicode sparkline primitive (local-first, no dep) adopted by `stats` /
       `wrapped` (and optionally `impact`). Its own small DEC likely (DEC-030:

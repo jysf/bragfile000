@@ -299,6 +299,50 @@ func WithImpact(entries []storage.Entry) []storage.Entry {
 	return out
 }
 
+// CadenceBucket is one month's entry count in a cadence series: Period
+// is the "YYYY-MM" label, Count the number of entries whose created_at
+// falls in that month. SPEC-051. SPEC-052 renders series[].Count as a
+// sparkline, so this shape must not change without a paired test.
+// The json tags are the on-the-wire shape the wrapped envelope (and
+// SPEC-052) consume: series[].period / series[].count. They live on the
+// aggregate struct because the struct itself is the sparkline-ready slot
+// (LD8) — the export renderer embeds it directly rather than reprojecting.
+type CadenceBucket struct {
+	Period string `json:"period"`
+	Count  int    `json:"count"`
+}
+
+// Cadence buckets entries by UTC calendar month, then emits one
+// CadenceBucket per label in months order (zero-filled for months with
+// no entries), plus the busiest-month label. months is the ordered set
+// of "YYYY-MM" labels in scope (12 for a year, 3 for a quarter); the CLI
+// derives it from the period so the series is always fully present, even
+// on an empty period (every bucket zero, busiest ""). This is the
+// sparkline-ready data slot (SPEC-052 reads series[].Count); it lives in
+// aggregate — SQL-free, pure — so SPEC-052 and any future stats cadence
+// reuse it (DEC-030 choice 5, LD8).
+//
+// The busiest month is the first label (in months order) whose count is
+// the maximum; ties break toward the earlier month. An all-zero series
+// (empty period) returns "" for busiest so the caller renders null.
+func Cadence(entries []storage.Entry, months []string) (series []CadenceBucket, busiest string) {
+	counts := make(map[string]int, len(months))
+	for _, e := range entries {
+		counts[e.CreatedAt.UTC().Format("2006-01")]++
+	}
+	series = make([]CadenceBucket, 0, len(months))
+	maxCount := 0
+	for _, label := range months {
+		c := counts[label]
+		series = append(series, CadenceBucket{Period: label, Count: c})
+		if c > maxCount {
+			maxCount = c
+			busiest = label
+		}
+	}
+	return series, busiest
+}
+
 // GroupForHighlights returns project groups in alpha-ASC order with
 // NoProjectKey forced last; within each group, entries are sorted
 // ASC by CreatedAt with ID as tie-break (AGENTS.md §9 SPEC-002
