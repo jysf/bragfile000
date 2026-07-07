@@ -313,3 +313,44 @@ questions:
       `manager` forward into SPEC-049 (it is additive config; it does not
       change the mechanism or the bundle shape). Recorded so the
       slice-vs-whole call is explicit, not silent.
+
+  - id: wrapped-default-current-vs-last-completed
+    question: "Should bare `brag wrapped` (no argument) default to the CURRENT calendar year, or to the LAST-COMPLETED year the way a 'wrapped' idiomatically means a finished period?"
+    priority: medium
+    status: resolved
+    resolution: current-calendar-year
+    raised_by: claude
+    raised_at: 2026-07-06
+    resolved_at: 2026-07-07
+    assigned_to: null
+    resolution_notes: |
+      RESOLVED at SPEC-051 build per orchestrator sign-off: bare `brag
+      wrapped` defaults to the CURRENT calendar year (DEC-030 choice 2
+      holds as designed). The retrospective/last-completed framing is
+      named explicitly by the period argument (`brag wrapped 2025`), and
+      `--previous` will add last-completed uniformly across year/quarter
+      in SPEC-053 — keeping the "which period" logic in one place rather
+      than split between the default and a flag. `TestWrappedCmd_DefaultsToCurrentYear`
+      locks the behavior. The DEC-030 revisit trigger stays live: if
+      SPEC-053 design or user feedback shows the bare command is expected
+      to be retrospective, the default is a localized flip (the
+      bounded-window machinery is unaffected).
+    notes: |
+      Filed at SPEC-051 design (DEC-030 choice 2, confidence 0.72). The
+      DEC locks the default to the CURRENT calendar year, leaving the
+      last-completed variant to the planned `--previous` modifier
+      (SPEC-053, foreseen by DEC-028). Rationale: (1) current-year mirrors
+      DEC-028 choice 1's current-in-progress default, keeping the digest
+      family consistent; (2) baking last-completed into the default now
+      would preempt SPEC-053 and split the period-selection logic across
+      two specs. The soft spot: "wrapped" idiomatically evokes the
+      finished period (Spotify Wrapped is last year's), so a user could
+      reasonably expect bare `brag wrapped` to show the completed year.
+      This is DEC-030's first revisit trigger. Resolve when SPEC-053
+      (`--previous`) is designed: if `--previous` makes last-completed a
+      one-flag away, the current-year default holds; if user feedback
+      shows the bare command is expected to be retrospective, flip the
+      default there (a localized change — the bounded-window machinery is
+      unaffected). Recorded so the default choice is explicit, not silent.
+      (Above §14's 0.7 hard threshold, filed proactively per DEC-028's
+      precedent of recording the softest sub-choice.)

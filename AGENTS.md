@@ -286,6 +286,7 @@ DECs are stable; specs come and go. DECs don't reciprocally list specs.
 - **summary** — a rule-based (non-LLM) aggregation of entries grouped by project/type over a rolling 7- or 30-day time window (`brag summary --range week|month`). STAGE-004.
 - **stats** — `brag stats`: six lifetime aggregations (total entries, entries/week rolling average, current streak, longest streak, top-5 most-common tags, top-5 most-common projects, corpus span). STAGE-004 (SPEC-020).
 - **tap** — a homebrew tap repo (`github.com/jysf/homebrew-bragfile`) hosting the `bragfile.rb` formula. Created in STAGE-005.
+- **wrapped** — `brag wrapped [<year>] [Q<n>]`: a shareable, celebratory year- or quarter-in-review digest over a **named** calendar period (default: the current calendar year). The fifth DEC-014 consumer. Unlike `impact`'s `[cutoff, now]` window, `wrapped`'s window is BOUNDED on both ends (`[period-start, next-boundary)`) so a completed year/quarter does not spill past its end. Section arc: Cadence (busiest month + per-month `series`) → Top initiatives → Impact moments → Rhythm (longest streak, top tags/types) → Span. The `cadence.series` slot is sparkline-ready for SPEC-052 (text-first here, no visual rendering). PROJ-004 STAGE-013 (SPEC-051), DEC-030.
 
 ---
 

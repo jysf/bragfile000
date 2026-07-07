@@ -486,6 +486,76 @@ Empty-window / no-impact: provenance always renders (both tally counts
 Unknown or missing window flags, or an unknown `--format` value, exit 1
 (user error).
 
+### `brag wrapped [<year>] [Q<n>]` (STAGE-013)
+
+```
+brag wrapped                                       # the current calendar year, markdown
+brag wrapped 2026 --format json                    # calendar year 2026, JSON envelope
+brag wrapped 2026 Q3 --project alpha               # one quarter, one initiative
+```
+
+Shareable, celebratory year- or quarter-in-review digest over a **named**
+calendar period: your year in brags. The fifth DEC-014 consumer, the
+shareable counterpart to `brag impact`. Rule-based, deterministic, no
+LLM.
+
+Document structure:
+
+- **Provenance:** `Generated:` (RFC3339), `Scope:` (`<year>` or
+  `<year>-Q<n>`, e.g. `2026` / `2026-Q3`), `Filters:` (echoed flags or
+  `(none)`), and a headline `Entries: N` count.
+- **Body** (markdown; omitted entirely on an empty period per
+  [DEC-014](../decisions/DEC-014-rule-based-output-shape.md)), the
+  celebratory section arc:
+  - `## Cadence` — a `Busiest month: <YYYY-MM> (N)` line, then a
+    per-month `- <YYYY-MM>: N` bucket **series** (12 buckets for a year,
+    3 for a quarter, zero-filled).
+  - `## Top initiatives` — top-5 projects by count, `- <project>: N`,
+    excluding `(no project)`.
+  - `## Impact moments` — with-impact entries grouped by initiative
+    (`### <project>`), each as `- <id>: <title>` plus an indented
+    `  <impact>` line, impact text in full.
+  - `## Rhythm` — `Longest streak: N days`, then `**Top tags**` (top-5)
+    and `**Top types**` (top-3) count lists.
+  - `## Span` — `- First entry:` / `- Last entry:` (`YYYY-MM-DD`) and
+    `- Active days: N`.
+
+Period selection:
+
+- The period is named **positionally** (deliberately NOT `impact`'s
+  `--year`/`--quarter` flags, which mean "current period up to now"):
+  - no argument = the **current calendar year**;
+  - `<year>` = a 4-digit year in `[2000,2999]` = that whole calendar year;
+  - `<year> Q<n>` = a case-insensitive quarter token (`Q1`..`Q4`, `q3`
+    accepted) = that calendar quarter.
+- The window is **bounded on both ends** — `[period-start, next-boundary)`
+  — so a completed year/quarter does not spill past its end (`brag
+  wrapped 2026` run in 2027 covers Jan–Dec 2026 only). This is the
+  deliberate divergence from `impact`'s `[cutoff, now]`, locked by
+  [DEC-030](../decisions/DEC-030-wrapped-period-selection-and-section-taxonomy.md).
+  The lower bound is a `Since` SQL filter; the exclusive upper bound is
+  applied in Go in the CLI layer (SQL-free).
+
+Flags:
+
+- `--format markdown|json` defaults to `markdown`. JSON is the
+  single-object envelope. Top-level keys: `generated_at`, `scope`,
+  `filters`, `total_entries`, `cadence` (`{busiest_month, series:[{period,
+  count}]}`), `top_initiatives` (`[{project, count}]`), `impact_moments`
+  (`[{project, entries:[{id, title, project, impact}]}]`),
+  `longest_streak`, `top_tags` (`[{name, count}]`), `top_types`
+  (`[{name, count}]`), `span` (`{first_entry_date, last_entry_date,
+  active_days}`). On an empty period arrays are `[]`,
+  `busiest_month`/date fields are `null`, numbers `0` — but
+  `cadence.series` is still the full zero-filled month series so the
+  sparkline slot is present.
+- `--tag <token>`, `--project <name>`, `--type <name>` compose with the
+  period and echo into `filters` exactly as `brag impact` does.
+- Output goes to stdout. Redirect with `>` if you want a file.
+
+A malformed period (bad year, `Q0`/`Q5`, extra tokens) or an unknown
+`--format` value exits 1 (user error), stdout empty.
+
 ### `brag story --audience <name> [window] [--theme <tag>]` (STAGE-012)
 
 ```
