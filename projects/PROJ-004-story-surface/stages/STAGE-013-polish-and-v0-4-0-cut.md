@@ -89,8 +89,13 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       DEC-028; shared `windowCutoff`, bounded, no regression). Surfaced a
       follow-up: the `created_at < end` filter is now a 3rd consumer → a
       `ListFilter.Until` storage promotion (backlog, not blocking v0.4.0).
-- [ ] SPEC-045 (adopt draft) — **the P3 agent-assist metric** — complete the
-      drafted provenance-share read ("how much of my work was agent-assisted").
+- [ ] SPEC-045 (design) — **`brag coverage` — the P3 agent-assist metric** —
+      the drafted provenance-share read ("how much of my work was
+      agent-assisted"), re-homed here from PROJ-003/STAGE-010 and designed as a
+      standalone sixth DEC-014 digest: monthly agent-vs-human share + an
+      agent-share sparkline + self-reference density, with `IsAgentAuthored`
+      single-sourcing the SPEC-043 classifier (DEC-033). Design cycle open on
+      `feat/spec-045-coverage`.
 - [ ] SPEC-054 (planned) — **the v0.4.0 release cut** — the stage's closing
       action (RC → Pattern 1 → final; CHANGELOG `[0.4.0]`; brew verify).
 
