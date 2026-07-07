@@ -700,3 +700,25 @@ spec + DEC-031 + constraints, not the build's self-report.*
   renderer.
 
 Advancing to **ship** (merge orchestrated separately; PR #90 stays open).
+
+## Reflection (Ship)
+
+*Appended at ship (2026-07-07). Merged to main; no release — ships in the v0.4.0
+cut (SPEC-054).*
+
+1. **What would I do differently next time?** — Nothing notable. Deferring the
+   sparkline out of `impact`/`wrapped` into a dedicated pass (with `wrapped`
+   pre-shaping a sparkline-ready `cadence.series`) paid off: this spec was a
+   clean, additive, one-inserted-line-per-golden change with a self-contained
+   pure primitive. Pre-shaping the data slot in the earlier spec is the reusable
+   move.
+2. **Does any template, constraint, or decision need updating?** — No. The
+   `internal/spark` primitive is pure/stdlib-only and the visual stayed
+   markdown-only with JSON untouched — no constraint tension. The
+   default-on-with-`NO_COLOR`-escape pattern reused DEC-023's injectable-env
+   precedent cleanly.
+3. **Is there a follow-up spec I should write now before I forget?** — No new
+   ones. The foreseen `stats` cadence-sparkline (needs a new data-shape decision,
+   not a visual one) is documented in DEC-031 as a clean future follow-up, not
+   forgotten. STAGE-013's remaining backlog (`--previous`, P3 metric, the v0.4.0
+   cut) is intact.
