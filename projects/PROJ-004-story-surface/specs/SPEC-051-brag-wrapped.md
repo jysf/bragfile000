@@ -7,7 +7,7 @@
 task:
   id: SPEC-051
   type: story
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M
@@ -852,6 +852,52 @@ cycle.*
    discovering the casing at the first golden run. The design-time faithfulness
    pass (the removed scratch program) had already computed the values; running a
    scratch *marshal* of the bucket too would have caught the casing before build.
+
+---
+
+## Verify
+
+*Independent VERIFY cycle (fresh session, re-derived from spec + DEC-030 +
+constraints per AGENTS.md §12/§13). Verdict: **✅ APPROVED**.*
+
+- **Six gates (re-run independently, all exit 0):** `go test ./...` (679 passed,
+  10 packages), `gofmt -l .` (empty), `go vet ./...` (0), `CGO_ENABLED=0 go build
+  ./...` (0), `just test-docs` (ALL OK), `just test-hook` (ALL OK).
+- **Golden faithfulness (adversarial re-derivation):** both byte-exact goldens
+  re-derived by hand against the REAL aggregate helpers and confirmed
+  internally consistent — cadence sums to `total_entries` (year: 1+1+2+2+1=7;
+  quarter: 2), `busiest_month` is the first-max bucket in month order (`2026-04`
+  at count 2 for the year, `2026-07` for the quarter), top-tags/types/initiatives
+  orders match `MostCommon` (DESC + alpha-ASC tie: `api,auth,docs,process,db`;
+  `shipped,learned,fixed`; quarter tie `fixed` before `shipped`), impact-moments
+  match `WithImpact`+`GroupEntriesByProject` (alpha[1,3], beta[5]), `Span` days
+  320 (year) / 2 (quarter) and streak 2 all reproduced. No golden defect —
+  unlike SPEC-049, these match real output.
+- **Bounded window (load-bearing) — verified by code AND live:** upper edge is
+  the exclusive next-boundary computed via `time.Date`+`AddDate`, filtered in Go
+  (`e.CreatedAt.Before(nextBoundary)`) in the CLI layer (SQL-free). Live probe
+  with entries at 2025-12-31 / 2026-06-15 / 2027-01-01: `wrapped 2026` → Entries:
+  1 (mid only), `2025`/`2027` each pick up their own entry, `2026 Q2`→1 /
+  `2026 Q3`→0. `TestWrappedCmd_BoundedWindow` genuinely bites (asserts Entries: 1
+  + NOT-contains before/after, `now` frozen at 2027-06-01). Upper bound is the
+  period end, not now — the DEC-030 divergence from impact's `[cutoff, now]`.
+- **DEC-030 drift:** none. Period surface (year / case-insensitive quarter /
+  current-year default), section taxonomy (Cadence→Top initiatives→Impact
+  moments→Rhythm→Span), and JSON keys all match. `cadence.series` present as
+  zero-filled data in both renderers even on empty period; no sparkline rendered
+  (SPEC-052's job). Malformed `Q5` / unknown `--format yaml` → UserError to
+  stderr, empty stdout, exit 1 (live-confirmed).
+- **Lowercase-JSON-tags deviation:** legitimate. `{period,count}` tags ride on
+  `aggregate.CadenceBucket` (the LD8 sparkline slot the renderer embeds
+  directly); wire shape is exactly `{count,period}` (live-confirmed) matching the
+  golden. Clean structural choice, no leak — a parallel export projection would
+  duplicate the shape SPEC-052 reuses.
+- **Constraints:** no `database/sql` in non-test `internal/cli`; stdout/stderr
+  separated; `go.mod`/`go.sum` unchanged vs main; no DEC-031 smuggled (DEC-030
+  covers it); `wrapped-default-current-vs-last-completed` resolved
+  (current-calendar-year) in `guidance/questions.yaml`.
+- **Clean tree:** all probes used temp DBs (`--db`) + a throwaway binary; repo
+  `git status` clean before advancing. PR #89 left open/ready; not merged.
 
 ---
 
