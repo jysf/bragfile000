@@ -705,3 +705,25 @@ DEC-032 (7 locked choices) fully covers `--previous`; no smuggled DEC-033.
 `wrapped-default-current-vs-last-completed` confirmed RESOLVED in questions.yaml.
 
 Working tree clean; probe reverted.
+
+## Reflection (Ship)
+
+*Appended at ship (2026-07-07). Merged to main; ships in the v0.4.0 cut.*
+
+1. **What would I do differently next time?** — Nothing notable. Extending the
+   shared `windowCutoff` with a zero-`end` sentinel (rather than forking a
+   parallel window path) kept the current-period behavior byte-for-byte and made
+   `--previous` a small, uniform addition across three commands — the right
+   reuse call, and `TestImpactCmd_NoPreviousUnchanged` made the no-regression
+   guarantee a tested contract.
+2. **Does any template, constraint, or decision need updating?** — No update
+   now, but a real signal surfaced: the `created_at < end` upper-bound filter is
+   now duplicated in `impact.go` + `story.go` + `wrapped.go` — the **third
+   consumer**, the classic "promote to storage" trigger (like DEC-004→015). A
+   `ListFilter.Until` promotion (moving the bounded upper edge into the storage
+   layer) is the clean follow-up; captured as backlog, out of scope for this
+   additive spec.
+3. **Is there a follow-up spec I should write now before I forget?** — The
+   `ListFilter.Until` promotion above (a small storage refactor, not blocking
+   v0.4.0). STAGE-013's remaining backlog: the P3 agent-assist metric (SPEC-045)
+   and the v0.4.0 cut (SPEC-054).
