@@ -392,7 +392,7 @@ Generated: 2026-07-06T12:00:00Z
 Scope: year
 Audience: me
 Filters: (none)
-Threads: 3
+Threads: 4
 Beats: 6/6
 
 ## Threads
@@ -410,6 +410,11 @@ Beats: 6/6
 - ★ 4: beta-two
   removed the nightly cron entirely
 
+### gamma
+
+- ★ 6: perf-sweep
+  shaved 200ms off cold start
+
 ### (no project)
 
 - · 5: loose-note
@@ -418,6 +423,7 @@ Beats: 6/6
 
 - alpha [initiative]: 2 beats, 1 with impact (2026-02-01 → 2026-04-01)
 - beta [initiative]: 2 beats, 2 with impact (2026-03-01 → 2026-05-01)
+- gamma [initiative]: 1 beat, 1 with impact (2026-06-15 → 2026-06-15)
 - (no project) [initiative]: 1 beat, 0 with impact (2026-06-01 → 2026-06-01)
 
 ## Framing directive
@@ -425,19 +431,23 @@ Beats: 6/6
 <the full literal text of internal/story/directives/me.md, verbatim>
 ```
 
-Locks (me): every thread surfaces including `(no project)`; impact-less
-beats KEPT (`· 2: alpha-messy`, `· 5: loose-note`) with no impact line;
-impact beats show `★` + the indented impact line rendered in full; thread
-order alpha, beta, (no project)-last; within alpha id 1 (Feb) before id 2
-(Apr); the throughline skeleton lists all three threads with counts + span;
-the directive appended verbatim; no trailing newline. **Note the 6th entry
-(gamma/perf) is ABSENT with no `--theme`** — a theme cross-cut is opt-in;
-without `--theme`, gamma is its own initiative thread? — NO: gamma has a
-project, so it IS an initiative thread. **Design-time correction (see
-below): the golden must include gamma.** (Resolved in the §12b pre-flight
-note; the literal above is the SPEC's expected value and build diffs it —
-if design got the thread set wrong, that is a spec defect caught at build's
-first run. See the §12b note under Implementation Context.)
+Locks (me): every thread surfaces — **all four initiatives**: alpha, beta,
+gamma (a valid initiative thread — entry 6 `perf-sweep` has a project and
+an impact beat), and `(no project)` last. `Threads: 4`; `Beats: 6/6` (me
+shows all six in-window beats — impact-less beats KEPT). Impact-less beats
+render `· <id>: <title>` with no impact line (`· 2: alpha-messy`,
+`· 5: loose-note`); impact beats render `★ <id>: <title>` + the indented
+impact line in full. Thread order is `GroupEntriesByProject`'s alpha-ASC
+with `(no project)` last (alpha, beta, gamma, then (no project)); within
+alpha id 1 (Feb) before id 2 (Apr). The throughline skeleton lists all
+four threads with counts + span. The directive is appended verbatim; no
+trailing newline. **gamma is present without `--theme`** because a project
+value makes it an initiative thread — `--theme` adds a *cross-project*
+cross-cut (Test 7), it is not what surfaces a project's own thread. This
+golden's thread set is `GroupEntriesByProject(storyFixture)` under the
+`me` keep-all policy: {alpha, beta, gamma, (no project)} — and it agrees
+with Test 2's exec thread set (beta, alpha, gamma — same four minus the
+folded impact-less (no project)) and Test 3's JSON (same four threads).
 
 #### Test 2 — `TestToStoryMarkdown_ExecProfile_FullDocumentGolden` (LOAD-BEARING — write SECOND)
 
@@ -495,9 +505,11 @@ survives (alpha has 1 impact beat); threads ordered by impact-beat count
 DESC (beta=2 first, then alpha=1 and gamma=1 tie broken alpha-ASC); the
 `Beats: 4/6` tally (4 impact beats shown of 6 in-window); the exec
 directive appended. This golden vs Test 1's golden IS the "same corpus,
-different story, rule-driven not tone" proof (AC-2). **§12b: the exec
-thread set + order is COMPUTED from the fixture + the exec profile's
-threading policy at design, not hand-typed — reconcile before locking.**
+different story, rule-driven not tone" proof (AC-2): exec = me's four
+threads minus the folded impact-less `(no project)` thread, minus dropped
+impact-less beats, reordered impact-desc. The exec thread set + order was
+computed from the fixture + the exec profile's threading policy and
+reconciled against Test 1/3's `me` set at design (§12b below).
 
 #### Test 3 — `TestToStoryJSON_MeProfile_ShapeGolden` (LOAD-BEARING — write THIRD)
 
@@ -537,14 +549,25 @@ is locked here):
 }
 ```
 
+> Only the `alpha` thread + its arc are shown in full above to keep the
+> literal readable; the `me` bundle carries **all four** threads. Build
+> writes the complete byte-exact golden: `threads` = `[alpha, beta,
+> gamma, (no project)]` (each a full `threadJSON` with its beats), and
+> `throughline.arcs` = the matching four arcs. The elided threads' shapes
+> follow the `alpha` shape exactly:
+> - `beta`: beats `[{id:3, is_impact_beat:true}, {id:4, is_impact_beat:true}]`, span `2026-03-01…2026-05-01`, arc `beat_count 2, impact_beat_count 2`.
+> - `gamma`: beats `[{id:6, title:"perf-sweep", project:"gamma", type:"shipped", impact:"shaved 200ms off cold start", is_impact_beat:true, created_at:"2026-06-15T10:00:00Z"}]`, span `2026-06-15…2026-06-15`, arc `beat_count 1, impact_beat_count 1`.
+> - `(no project)`: beats `[{id:5, title:"loose-note", project:"(no project)", type:"fixed", impact:"", is_impact_beat:false, created_at:"2026-06-01T10:00:00Z"}]`, span `2026-06-01…2026-06-01`, arc `beat_count 1, impact_beat_count 0`. (The `(no project)` group key is `aggregate.NoProjectKey`; a beat under it carries `"project": "(no project)"`.)
+
 Locks: top-level key order (`generated_at`, `scope`, `audience`,
 `filters`, `threads`, `throughline`, `framing_directive`); the 7-key beat
 projection (`id, title, project, type, impact, is_impact_beat,
 created_at` — a deliberate subset+2 of DEC-011, not the 9-key shape); the
 `span` object shape; `throughline.arcs` with counts; `framing_directive`
-as a JSON string; 2-space indent; `filters` `{}` when absent. Build fills
-the elided beta / (no project) threads to full byte-exactness from the
-fixture (all three threads present for `me`).
+as a JSON string; 2-space indent; `filters` `{}` when absent. The thread
+set is the SAME four threads as Test 1's markdown golden (`me` keep-all
+policy over `GroupEntriesByProject(storyFixture)`): alpha, beta, gamma,
+(no project) — the two goldens agree by construction.
 
 #### Test 4 — `TestToStory_EmptyWindow`
 
@@ -1041,40 +1064,35 @@ two directive `.md` assets, the markdown goldens, the flag help) for each:
 
 ### §12b design-time pre-flight (embedded-literal + expected-value)
 
-Two design-time reconciliations MUST run before build locks:
-1. **The two markdown goldens' thread SETS + ORDER are computed, not
-   hand-typed.** For `me` (Order=initiative, keep-all): threads =
-   {alpha, beta, gamma, (no project)} in alpha-ASC with (no project) last
-   → `alpha, beta, gamma, (no project)`. **The Test-1 golden literal above
-   currently OMITS gamma — that is a deliberate planted defect flagged
-   inline for build to correct: gamma has a project, so it IS an
-   initiative thread and MUST appear in the me golden.** Build's FIRST run
-   of Test 1 will fail on the missing gamma thread; build corrects the
-   golden to include `### gamma\n\n- ★ 6: perf-sweep\n  shaved 200ms off
-   cold start` in alpha-ASC position (after beta, before (no project)),
-   and adds gamma's throughline line. *(This is the §12b lesson applied:
-   the expected value is design-decidable from the fixture + profile; it
-   is reconciled at build's first run against the real
-   `GroupEntriesByProject` output. The exec golden (Test 2) DID include
-   gamma — cross-check the two goldens against each other, per SPEC-023's
-   contradiction lesson.)* For `exec` (Order=impact-desc, impact-threads-
-   only): threads = {beta(2), alpha(1), gamma(1)} → beta, then alpha &
-   gamma tie at 1 broken alpha-ASC → `beta, alpha, gamma`; (no project)
-   folded. Reconciled.
-2. **The directive assets are byte-embedded in the goldens.** Test 1/3
-   splice `me.md`'s full text; Test 2 splices `exec.md`. Build loads the
-   asset bytes and asserts equality rather than hand-copying (the golden's
-   directive section = `directiveAsset("me.md")`), so the two literals
-   (asset file + golden) cannot silently diverge.
+The goldens above are **correct at design time** (§9: a write-first
+load-bearing golden must be right, not aspirational). Their thread sets +
+order were computed from `GroupEntriesByProject(storyFixture)` under each
+profile's policy and reconciled against each other before locking — build
+makes the code produce these goldens, it does not "fix" them:
 
-> **Design self-note (honesty):** the Test-1 golden above is intentionally
-> left with gamma OMITTED to make the §12b reconciliation a real build
-> step rather than a rubber stamp, AND to model the SPEC-023
-> golden-vs-golden contradiction check (Test 2 includes gamma; Test 1 must
-> too). Build MUST NOT transcribe Test 1 verbatim — it must reconcile
-> against `GroupEntriesByProject(storyFixture)` first. If a reviewer wants
-> the planted defect removed, that is a fine punch-list item; it is
-> documented here so it is not mistaken for a design error.
+1. **`me` (Order=initiative, keep-all):** threads =
+   {alpha, beta, gamma, (no project)} in alpha-ASC with `(no project)`
+   last → **alpha, beta, gamma, (no project)** (4 threads, all 6 beats
+   shown, `Beats: 6/6`). gamma is present because entry 6 (`perf-sweep`)
+   has a `project` value, so it is a valid initiative thread; `--theme`
+   is NOT what surfaces it (that adds a *cross-project* cross-cut, Test 7).
+2. **`exec` (Order=impact-desc, impact-threads-only, drop-impactless):**
+   threads = {beta(2 impact beats), alpha(1), gamma(1)} → beta first, then
+   alpha & gamma tie at 1 broken alpha-ASC → **beta, alpha, gamma** (3
+   threads, 4 impact beats shown of 6, `Beats: 4/6`); `(no project)` folded
+   (0 impact beats), `alpha-messy` dropped (impact-less).
+3. **Golden agreement (SPEC-023 golden-vs-golden cross-check):** Test 1
+   (me markdown), Test 3 (me JSON), and Test 5 (me `BuildThreads`) all
+   assert the SAME four-thread `me` set. Test 2 (exec markdown) and Test 6
+   (exec `BuildThreads`) assert the SAME three-thread exec set. The two
+   sets are consistent (exec = me minus the folded impact-less `(no
+   project)` thread, minus dropped impact-less beats, reordered by
+   impact-desc). Verified at design; no golden contradicts another.
+4. **The directive assets are byte-embedded in the goldens, not
+   hand-copied.** Tests 1/3 splice `me.md`'s full text; Test 2 splices
+   `exec.md`. Build loads the asset bytes and asserts the golden's
+   directive section == `directiveAsset("me.md")` / `("exec.md")`, so the
+   asset file and the golden cannot silently diverge.
 
 ### Registration
 
