@@ -7,7 +7,7 @@
 task:
   id: SPEC-049
   type: story                      # epic | story | task | bug | chore
-  cycle: design
+  cycle: verify
   blocked: false
   priority: high                   # the narrative headline of v0.4.0
   complexity: L                    # L — split recommended and taken: SPEC-049 = the profile mechanism + arc-aware bundle + framing-directive asset convention + the me/exec gradient endpoints; SPEC-050 = manager/skip (config-only) + polish. See "Complexity + split" below.
@@ -1245,11 +1245,60 @@ in the new `internal/story` package; the DEC list in docs is prose).
 
 ## Build Completion
 
-*(Filled during build.)*
+Built to the design as specified. All 18 failing tests pass; all six gates
+green (`go test ./...` = 647 passed, `gofmt -l .` empty, `go vet ./...`
+clean, `CGO_ENABLED=0 go build ./...` success, `just test-docs` ALL OK,
+`just test-hook` ALL OK). The me/exec byte-exact goldens (Tests 1/2/3) and
+the live me-vs-exec divergence (Test 15) match the design verbatim; the
+windowCutoff/selectedWindow lift to `internal/cli/window.go` kept impact's
+existing tests green byte-for-byte (349 CLI tests pass).
 
-- Deviations from spec:
-- New DEC-* files:
-- Reflection (3 answers):
+**Files changed:**
+- New: `internal/story/{embed,profile,thread,bundle}.go` +
+  `{thread,bundle,profile}_test.go`; assets
+  `internal/story/profiles/{me,exec}.yaml`,
+  `internal/story/directives/{me,exec}.md`.
+- New: `internal/cli/{story.go,story_test.go}`,
+  `internal/cli/window.go` (the lifted shared helper).
+- Edited: `internal/cli/impact.go` (removed the lifted funcs; behavior
+  preserved), `cmd/brag/main.go` (registered `NewStoryCmd`),
+  `docs/api-contract.md` (story section + DEC-029 list entry),
+  `docs/tutorial.md`, `README.md`, `BRAG.md` (command-surface additions),
+  `guidance/questions.yaml` (both SPEC-049 questions resolved).
+
+- **Deviations from spec:** None material. Two build-time helper
+  additions the spec pre-authorized: (1) `windowFlagsSet(cmd)` in
+  `window.go` gating `selectedWindow` so `story`'s no-window default path
+  never trips `selectedWindow`'s zero-flag `UserError` (spec Implementation
+  Context named this as the clean alternative — added it). (2)
+  `story.ResolveDirective(Profile)` as the public directive-text resolver
+  the CLI calls (a bare basename resolves against the embedded assets; a
+  path-separator'd `Directive` reads a user file), plus
+  `bundledProfileNames()` used by Test 9 to prove the audience set is FS-
+  derived, not a Go enum. The hand-rolled profile parser rejects unknown
+  keys and non-boolean booleans (beyond the ≈30-line sketch — cheap typo
+  protection, no schema change). No `gopkg.in/yaml.v3`; go.mod unchanged.
+- **New DEC-* files:** None beyond DEC-029 (emitted during the design
+  cycle, already on the branch). No DEC-030 was needed — every build
+  decision fell inside DEC-029's locked envelope.
+- **Reflection (3 answers):**
+  1. *Did the goldens hold?* Yes, byte-for-byte, with one test-only
+     nuance: the directive assets end with a trailing newline, but the
+     bundle's whole-document trailing-newline trim (matching
+     `ToImpactMarkdown`) drops the final one, so the markdown goldens
+     splice a `strings.TrimRight(directive, "\n")` tail while the JSON /
+     `--print-directive` paths keep the directive verbatim. The renderer
+     logic is unchanged; only the golden's spliced tail reflects the trim.
+  2. *Was the window lift risky for one-spec-per-pr?* No. The move was
+     mechanical (verbatim functions to `window.go`), and impact's existing
+     `TestWindowCutoff_*` / `TestImpactCmd_CalendarNotRolling` /
+     `_RequiresExactlyOneWindow` stayed green with zero edits — the
+     refactor-safety audit's enumerated tests confirmed no behavior change.
+  3. *Did two audiences prove divergence?* Yes — the live smoke (me: 4
+     threads / 6-6 beats / (no project) kept; exec: 3 threads / 4-6 beats /
+     impact-desc / (no project) folded) is the same-corpus-different-story
+     proof, rule-driven in the deterministic body, not tone. Recorded in
+     the resolved `story-two-audience-slice-proves-divergence` question.
 
 ## Verify
 

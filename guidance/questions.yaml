@@ -218,11 +218,35 @@ questions:
   - id: story-profile-override-file-format
     question: "What is the exact file format, config path, and precedence for user-defined `brag story` audience shaping profiles (the override layer over the bundled defaults)?"
     priority: medium
-    status: open
+    status: resolved
     raised_by: claude
     raised_at: 2026-07-06
+    resolved_at: 2026-07-06
+    resolved_by: orchestrator sign-off (SPEC-049 build)
     assigned_to: null
-    resolution: null
+    resolution: |
+      LOCKED at SPEC-049 build by orchestrator sign-off. (a) Format: a
+      flat `key: value` file with no nesting/lists, parsed by a hand-rolled
+      stdlib `bufio` parser (≈30 lines) — NO new YAML dependency
+      (`no-new-top-level-deps-without-decision` kept clean; go.mod carries
+      no YAML dep). Keys: name, default_window, impact_threads_only,
+      drop_impactless_beats, fold_small_threads, thread_order, candor,
+      directive. Unknown keys and non-boolean booleans are errors (typo
+      protection). (b) Path: `~/.bragfile/story-profiles/<name>.yaml`,
+      resolved through an injectable package-var seam (`story.overrideDir`)
+      for tests. (c) Precedence: OVERRIDE-WINS by name — a user
+      `<name>.yaml` fully shadows the bundled default of the same name (no
+      field-merge). (d) Malformed handling: REJECT with an error naming the
+      file — NO silent fallback to the bundled default (AC-9). Paired
+      tests: TestLoadProfile_BundledDefaults / _UserOverrideShadowsBundled
+      / _UnknownAndMalformed (all green). The override path stays lightly
+      exercised until a genuine third-party profile appears (SPEC-050's
+      manager/skip ship as bundled defaults, not user-override files);
+      revisit the merge-vs-replace + nested-config question only if a real
+      profile needs nested/list config, which then requires a DEC for a
+      YAML dep. The extension file suffix stays `.yaml` even though the
+      parser is a subset — a real YAML file with only flat keys parses
+      identically, so upgrading to a YAML engine later is non-breaking.
     notes: |
       Filed at SPEC-049 design (DEC-029, composite confidence 0.72). The
       profiles-as-DATA *mechanism* is high-confidence and locked (DEC-029
@@ -249,11 +273,29 @@ questions:
   - id: story-two-audience-slice-proves-divergence
     question: "Do the two shipped audiences (`me`, `exec`) prove `brag story`'s 'same in theory, diverge in practice' thesis convincingly, or does the release need `manager` too to be persuasive?"
     priority: medium
-    status: open
+    status: resolved
     raised_by: claude
     raised_at: 2026-07-06
+    resolved_at: 2026-07-06
+    resolved_by: orchestrator sign-off (SPEC-049 build)
     assigned_to: null
-    resolution: null
+    resolution: |
+      RESOLVED at SPEC-049 build by orchestrator sign-off: ship the
+      gradient ENDPOINTS `me` and `exec` now; the middle (`manager`/`skip`)
+      lands in SPEC-050 as config-only bundled defaults (the zero-Go-change
+      extensibility proof). The endpoints prove the thesis convincingly —
+      the live me-vs-exec run over the SAME corpus produces demonstrably
+      different bundles by RULE, not tone: `me` = 4 threads / Beats 6/6 /
+      impact-less beats + the (no project) thread KEPT / alpha-ASC order;
+      `exec` = 3 threads / Beats 4/6 / impact-less beats DROPPED + the
+      (no project) thread FOLDED / impact-beat-count-DESC order (beta
+      leads). That divergence lives in the deterministic body (threads,
+      beats, throughline), not only the framing directive, and is locked by
+      byte-exact goldens (Tests 1/2/3) + the live-DB assertion (Test 15).
+      The mechanism is data-driven, so pulling `manager` forward would have
+      been additive config with zero mechanism change — deferring it does
+      not weaken the headline. `manager` in SPEC-050 then demonstrates the
+      extensibility claim explicitly (adding an audience touches no Go).
     notes: |
       Filed at SPEC-049 design (DEC-029 choice 4). SPEC-049 ships the
       gradient ENDPOINTS — `me` (candid / every thread / impact-less beats

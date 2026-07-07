@@ -524,6 +524,37 @@ form into an LLM to draft the narrative:
 brag impact --quarter --format json | claude "draft my quarterly impact summary"
 ```
 
+### Tell your story: `brag story`
+
+Where `brag impact` gives you the grouped data, `brag story` shapes it
+into a **narrative arc for a specific audience**. It coalesces your brags
+into **threads** (initiatives, time-ordered, with impact beats marked
+`★`), assembles a **throughline skeleton**, and appends a per-audience
+**framing directive** — a complete artifact you can paste into an LLM, or
+read as-is. No model ships in the binary; the LLM (already in your
+session) writes the prose:
+
+```bash
+brag story --audience me                          # candid reflection, this year
+brag story --audience exec --quarter              # impact-forward, this quarter
+brag story --audience exec --year --format json   # arc-aware JSON envelope
+brag story --audience me --theme perf             # add a cross-project perf arc
+brag story --audience exec --print-directive      # just the framing directive
+```
+
+`--audience` is required. The same corpus tells a **different story** per
+audience, rule-driven not just toned: `me` keeps every thread and the
+messy middle (impact-less beats included, low altitude); `exec` surfaces
+only impact-bearing threads, drops impact-less beats, and leads with the
+highest-impact arc. Each audience carries a default window (`me` → year,
+`exec` → quarter) that an explicit window flag overrides. Audiences are
+extensible profiles, not a fixed list — drop a `<name>.yaml` in your
+story-profiles directory to add one. Pipe it into an LLM to finish:
+
+```bash
+brag story --audience exec --quarter | claude "weave these threads into one headline arc"
+```
+
 ### Tag taxonomy
 
 See every tag you've used, with usage counts:

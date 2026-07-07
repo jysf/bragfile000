@@ -1,0 +1,8 @@
+name: exec
+default_window: quarter
+impact_threads_only: true
+drop_impactless_beats: true
+fold_small_threads: true
+thread_order: impact-desc
+candor: promotional
+directive: exec.md

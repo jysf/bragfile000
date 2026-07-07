@@ -152,6 +152,7 @@ brag summary --range month --format json
 brag review --week                      # entries + reflection prompts
 brag stats                              # lifetime metrics
 brag impact --quarter                   # this quarter's impact, by initiative
+brag story --audience exec --quarter    # audience-shaped narrative bundle for an LLM
 ```
 
 ## Where the data lives

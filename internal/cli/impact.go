@@ -51,58 +51,10 @@ Examples:
 	return cmd
 }
 
-// windowCutoff computes the inclusive lower bound and scope token for
-// the selected window. Pure and deterministic given (window, sinceRaw,
-// now). CALENDAR periods (time.Date constructors), NEVER day
-// subtraction — this is the correctness core of the calendar-vs-rolling
-// divergence (DEC-028 choice 1). now is UTC; the period end is always
-// "now" (implicit — every stored created_at <= now, so the lower bound
-// alone bounds the window).
-func windowCutoff(window, sinceRaw string, now time.Time) (cutoff time.Time, scope string, err error) {
-	switch window {
-	case "quarter":
-		qStartMonth := ((int(now.Month())-1)/3)*3 + 1 // 1, 4, 7, 10
-		cutoff = time.Date(now.Year(), time.Month(qStartMonth), 1, 0, 0, 0, 0, time.UTC)
-		return cutoff, "quarter", nil
-	case "month":
-		cutoff = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-		return cutoff, "month", nil
-	case "year":
-		cutoff = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
-		return cutoff, "year", nil
-	case "since":
-		cutoff, err = ParseSince(sinceRaw)
-		if err != nil {
-			return time.Time{}, "", UserErrorf("invalid --since value: %v", err)
-		}
-		return cutoff, "since:" + sinceRaw, nil
-	default:
-		return time.Time{}, "", fmt.Errorf("windowCutoff: unhandled window %q", window)
-	}
-}
-
-// selectedWindow returns the single set window flag's canonical name,
-// or a UserError if zero or two-plus are set (mutually exclusive +
-// required, DEC-028 choice 1 / DEC-007). Cobra's
-// MarkFlagsMutuallyExclusive handles pairs but not "exactly one
-// required" cleanly across a bool+string mix and routes its error off
-// the UserError→stderr path, so the check is explicit here.
-func selectedWindow(cmd *cobra.Command) (string, error) {
-	var set []string
-	for _, name := range []string{"quarter", "month", "year", "since"} {
-		if cmd.Flags().Changed(name) {
-			set = append(set, name)
-		}
-	}
-	switch len(set) {
-	case 0:
-		return "", UserErrorf("one of --quarter, --month, --year, --since is required")
-	case 1:
-		return set[0], nil
-	default:
-		return "", UserErrorf("--quarter, --month, --year, --since are mutually exclusive (got --%s)", strings.Join(set, ", --"))
-	}
-}
+// windowCutoff + selectedWindow were lifted verbatim to window.go at
+// SPEC-049 (the third-caller threshold, SPEC-018) so `impact` and `story`
+// share one calendar core. This is a behavior-preserving refactor —
+// impact's existing tests stay green byte-for-byte.
 
 func runImpact(cmd *cobra.Command, _ []string) error {
 	now := nowFunc()
