@@ -1242,6 +1242,29 @@ No smuggled decision (no new DEC; DEC-029 covers it); no `database/sql` in
 `internal/cli/story.go`; NOT-contains self-audit clean; working tree clean.
 Shipping SPEC-050 closes STAGE-012.
 
-## Reflection
+## Reflection (Ship)
 
-*Filled at ship.*
+*Outcome-focused, appended at ship (2026-07-06). Merged to main; no release —
+STAGE-012 rides the v0.4.0 line, cut later at STAGE-013. Closes STAGE-012.*
+
+1. **What would I do differently next time?**
+   — Scope the "extensibility proof" claim as *mechanism = zero code*, not
+   *zero `.go` diff*, from the start. The design first refused to update the
+   `--help` audience table to protect a zero-`.go`-diff talking point — shipping
+   help that hid two built-in audiences (a real discoverability defect).
+   Orchestrator review reversed it: the mechanism needing no code IS the proof;
+   refreshing the help enumeration of built-in *defaults* is an expected doc
+   surface, orthogonal to extensibility. Don't let a vanity metric override
+   correct user-facing behavior.
+
+2. **Does any template, constraint, or decision need updating?**
+   — No. DEC-029 already locks the mechanism; SPEC-050 added only data + a help
+   refresh. The demonstrated pattern — a new audience = two asset files, a help
+   row, and tests, with zero loader/resolver/shaping change — is the reusable
+   lesson, captured here and in the STAGE-012 reflection.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — No. The four-point audience gradient (me/manager/skip/exec) is complete and
+   the AC-8 empty-directive coverage gap is closed (Test E1). Remaining v0.4.0
+   work (`brag wrapped`, the sparklines/visual pass, `--previous`, the P3 metric,
+   the release cut) is STAGE-013, already scoped in the brief.

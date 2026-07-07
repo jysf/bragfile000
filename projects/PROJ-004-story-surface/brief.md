@@ -118,12 +118,11 @@ IDs are the next-free repo-global (§2).
       The rule-based, calendar-windowed, initiative-grouped, impact-first digest
       the story reads (SPEC-048 + DEC-028). Reuses `internal/aggregate`; DEC-014
       envelope. On main; reaches users in the v0.4.0 release.
-- [ ] STAGE-012 (active) — **`brag story --audience` — the narrative surface.**
-      The audience taxonomy + shaping rules (a DEC), the LLM-pipe bundle format,
-      the framing-directive assets. The headline. **Posture settled: pure pipe,
-      LLM optional.** Core capability: *coalesce a set of brags into narrative
-      arcs* (not just filter/group); audience sets how-many-arcs + altitude.
-      Open DEC-029 fork: what defines a thread (initiative / theme-tag / time).
+- [x] STAGE-012 (shipped 2026-07-06) — **`brag story --audience` — the narrative
+      surface.** The full four-point gradient (me/manager/skip/exec) as data-driven
+      shaping profiles + the LLM-pipe arc bundle + framing-directive assets
+      (SPEC-049 + SPEC-050 + DEC-029). Pure pipe, LLM optional; coalesces a set of
+      brags into narrative arcs. On main; reaches users in the v0.4.0 release.
 - [ ] STAGE-013 (proposed, maybe) — **Polish + v0.4.0 cut.** `brag wrapped`
       (**year *and* quarter**), a **dedicated sparklines/visual pass** (in-terminal
       Unicode across `stats`/`wrapped`/optionally `impact`), the `--previous`
@@ -137,7 +136,7 @@ IDs are the next-free repo-global (§2).
 > its PROJ-004 lineage but lives in STAGE-014, not STAGE-011, because a stage
 > is the atomic ship-unit and cannot straddle the v0.3.x and v0.4.0 lines.
 
-**Count:** 2 shipped / 1 active / 1 proposed
+**Count:** 3 shipped / 0 active / 1 proposed
 
 ## Dependencies
 
