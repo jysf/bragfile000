@@ -7,7 +7,7 @@
 task:
   id: SPEC-049
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high                   # the narrative headline of v0.4.0
   complexity: L                    # L — split recommended and taken: SPEC-049 = the profile mechanism + arc-aware bundle + framing-directive asset convention + the me/exec gradient endpoints; SPEC-050 = manager/skip (config-only) + polish. See "Complexity + split" below.
@@ -1302,7 +1302,70 @@ existing tests green byte-for-byte (349 CLI tests pass).
 
 ## Verify
 
-*(Filled during verify.)*
+**Verdict: ✅ APPROVED** (fresh independent verify, re-derived from spec +
+DEC-029 + constraints; not trusting the build self-report).
+
+**Six gates (verifier's own run, all exit 0):**
+- `go test ./...` → 647 passed (exit 0)
+- `gofmt -l .` → empty (exit 0)
+- `go vet ./...` → no issues (exit 0)
+- `CGO_ENABLED=0 go build ./...` → success (exit 0)
+- `just test-docs` → ALL OK (exit 0)
+- `just test-hook` → ALL OK (exit 0)
+
+**Load-bearing posture (no network / no model / no dependency) — proven:**
+`internal/story/*` + `internal/cli/story.go` + `window.go` grep clean of
+`net/http`/network client/`database/sql`/SQL driver/LLM-or-model call.
+Imports are stdlib + `internal/aggregate` + `internal/storage` (the story
+package uses `storage.Entry` as a TYPE only — no DB access; the CLI reads
+via the sanctioned `Store.List`). Assets embed via stdlib `embed.FS`
+(`//go:embed profiles/*.yaml directives/*.md`). Profile parser is
+hand-rolled `bufio` (rejects unknown keys + non-boolean bools) — no
+`gopkg.in/yaml.v3`. **`go.mod`/`go.sum` byte-unchanged vs main.**
+
+**DEC-029 drift — none.** Threads = initiative axis via
+`aggregate.GroupEntriesByProject`, impact marking mirrors `WithImpact`
+(`IsImpactBeat == Impact != ""`); `--theme` opt-in cross-cut appended after
+initiatives (kind `theme`); throughline is a deterministic SKELETON. The
+**gamma-golden fix stuck**: `me` golden = alpha, beta, gamma, (no project)
+last, `Threads: 4`, `Beats: 6/6`, impact-less beats KEPT; `exec` golden =
+beta, alpha, gamma (impact-desc), (no project) folded, impact-less dropped,
+`Threads: 3`, `Beats: 4/6`. Markdown + JSON + `BuildThreads` goldens agree
+on the four/three-thread sets by construction (verified byte-exact).
+Profiles data-driven (bundled + override-wins + malformed-rejected, no Go
+enum — `bundledProfileNames` proves the set is FS-derived). Bundle extends
+DEC-014 with arc-aware keys; useful standalone.
+
+**Live divergence (same seeded corpus, `--year`):** `me` → 4 threads / 6-6
+beats / keeps `alpha-messy`+`loose-note` / (no project) present; `exec` → 3
+threads / 4-6 beats / impact-desc (beta headline) / `alpha-messy` dropped /
+(no project) folded. Rule-driven in the deterministic body, not tone.
+Default-window resolution confirmed live (`me`→year, `exec`→quarter scope
+echo). `--theme perf` appends the `perf` theme thread (alpha-early +
+perf-sweep) after initiatives. JSON key order + 7-key beat projection exact.
+
+**Trailing-newline deviation — legitimate + intentional:** markdown splices
+a `\n`-trimmed directive because the whole document is
+`trimTrailingNewline`'d (matching `ToImpactMarkdown`); JSON
+(`FramingDirective: opts.Directive`) and `--print-directive`
+(`Fprintln(directive)`) keep it verbatim. Consistent normalization of the
+final section terminator, not corruption.
+
+**Constraints:** no `database/sql` in `internal/cli`; stdout/stderr
+separation (Test 18 + live: bundle to stdout, errs to stderr, clean
+`UserError` stdout); NOT-contains self-audit clean (`nope`/`alpha-messy`/
+`loose-note` appear only in fixtures/tests). `manager`/`skip` correctly
+NOT implemented (no assets, no code refs — SPEC-050). No DEC-030 smuggled;
+every build choice inside DEC-029's envelope. All 18 failing tests present
+and green.
+
+**Minor observation (non-blocking):** AC-8's empty-directive omission
+branch (`bundle.go`: `if opts.Directive != ""`) is present and trivially
+correct but has no dedicated test asserting the section is OMITTED when
+`Directive == ""`. The design's paired-test mapping (Locked #5) only cites
+Test 4 (directive renders on empty *corpus*) and Test 1; Test 4 covers the
+primary AC-8 assertion. Coverage thinness, not a defect — noted for a
+future tightening, does not gate ship.
 
 ## Reflection
 
