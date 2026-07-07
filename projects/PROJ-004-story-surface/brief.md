@@ -123,11 +123,12 @@ IDs are the next-free repo-global (§2).
       shaping profiles + the LLM-pipe arc bundle + framing-directive assets
       (SPEC-049 + SPEC-050 + DEC-029). Pure pipe, LLM optional; coalesces a set of
       brags into narrative arcs. On main; reaches users in the v0.4.0 release.
-- [ ] STAGE-013 (proposed, maybe) — **Polish + v0.4.0 cut.** `brag wrapped`
+- [ ] STAGE-013 (active) — **Polish + v0.4.0 cut.** `brag wrapped`
       (**year *and* quarter**), a **dedicated sparklines/visual pass** (in-terminal
       Unicode across `stats`/`wrapped`/optionally `impact`), the `--previous`
-      window modifier, the P3 personal metric, and the v0.4.0 release cut (per the
-      `spec-release-cut` template + §4).
+      window modifier, the P3 personal metric (adopt draft SPEC-045), and the
+      v0.4.0 release cut (per the `spec-release-cut` template + §4). **Scoping
+      decision (2026-07-06): bundle the polish, then cut one richer v0.4.0.**
 
 > **Number vs. ship-order:** STAGE-014's number is higher than the v0.4.0
 > stages it ships *before* because it was split out of STAGE-011 after the
@@ -136,7 +137,7 @@ IDs are the next-free repo-global (§2).
 > its PROJ-004 lineage but lives in STAGE-014, not STAGE-011, because a stage
 > is the atomic ship-unit and cannot straddle the v0.3.x and v0.4.0 lines.
 
-**Count:** 3 shipped / 0 active / 1 proposed
+**Count:** 3 shipped / 1 active / 0 proposed
 
 ## Dependencies
 
