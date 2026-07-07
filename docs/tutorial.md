@@ -560,6 +560,33 @@ compose with the period. The cadence sparkline is on by default in
 markdown; suppress it with `--no-spark` or a `NO_COLOR` env var (it never
 enters the JSON envelope, which keeps raw counts).
 
+### Measure agent adoption: `brag coverage`
+
+`brag coverage` answers a different question from the celebratory digests:
+*how much of my work is agent-authored, and is that share growing?* It reads
+the reserved `agent:`/`model:` provenance tags the MCP write path stamps and
+reports the agent-vs-human split over a calendar window, a per-month trend,
+and a self-reference (dogfooding) density.
+
+```bash
+brag coverage --year                    # this calendar year, markdown
+brag coverage --quarter                 # this calendar quarter
+brag coverage --quarter --previous      # the whole PREVIOUS calendar quarter
+brag coverage --since 2026-01-01        # since a date (YYYY-MM-DD or Nd/Nw/Nm)
+brag coverage --year --format json      # the JSON envelope
+```
+
+Exactly one window flag is required (they are the same CALENDAR windows as
+`brag impact`), and `--previous` shifts to the last-completed period. The
+digest renders **Provenance share** (agent vs human counts + %), a
+**Monthly trend** (a per-month agent-share Unicode block-glyph sparkline
+`▁▂▃▄▅▆▇█`, then a zero-filled per-month `agent / human (%)` series), and
+**Self-reference** (entries mentioning `brag`). The sparkline is on by
+default in markdown; suppress it with `--no-spark` or a `NO_COLOR` env var
+(it never enters the JSON envelope, which keeps raw counts and shares).
+Filter flags `--tag`/`--project`/`--type` compose with the window. The
+agent/human classifier means exactly what `brag list --author` means.
+
 ### Tell your story: `brag story`
 
 Where `brag impact` gives you the grouped data, `brag story` shapes it

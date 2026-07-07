@@ -7,7 +7,7 @@
 task:
   id: SPEC-045
   type: story
-  cycle: design
+  cycle: verify
   blocked: false
   priority: medium
   complexity: M
@@ -973,3 +973,95 @@ collection is touched (each digest golden is self-contained).
   (the renderer imports `aggregate` already). If build prefers, an exported
   `aggregate.Share(num, den int) float64` is acceptable — but keep ONE rounding
   definition so per-month and overall shares round identically.
+
+## Build Completion
+
+*Filled in at the end of the **build** cycle, before advancing to verify.*
+
+- **Branch:** feat/spec-045-coverage
+- **PR:** #92 (ready for review, not merged).
+- **All acceptance criteria met?** Yes — all eleven AC. `brag coverage --year`
+  renders the full markdown digest (provenance block → `## Provenance share`
+  → `## Monthly trend` with the agent-share sparkline → `## Self-reference`);
+  `--quarter`/`--month`/`--since`/`--previous` behave per DEC-028/DEC-032
+  (exactly-one-required + mutually-exclusive via `selectedWindow`; `--previous
+  --since` and `--previous`-with-no-window are `UserError`s); classification is
+  single-sourced and the Go predicate matches the SQL clause (the drift-guard
+  test); `--format` defaults to markdown, unknown → `UserError`; the JSON
+  envelope carries the flat keys in order with a 4-key per-month projection and
+  2-space indent; the monthly series is present + zero-filled in both renderers;
+  the sparkline is markdown-only over share×100, escaped by `--no-spark`/
+  `NO_COLOR`, and glyph-free in JSON; self-reference is case-insensitive
+  substring `brag`; the empty window omits the markdown body but renders every
+  JSON key; filters echo like `impact`; the CLI layer is SQL-free with the
+  digest on stdout and errors on stderr.
+- **GOLDEN FAITHFULNESS (first step, per the build brief):** both load-bearing
+  goldens matched real output **byte-exact on the first `go test`** — the
+  markdown golden (including the trend sparkline `▁▁▁▁▁▁▅▁█▁▅▅`, independently
+  reconfirmed against real `spark.Line([]int{0,0,0,0,0,0,50,0,100,0,50,50})`
+  before writing the renderer) and the JSON DEC-033 shape golden. No golden was
+  edited; no code was contorted to fit a golden.
+- **Classifier agreement + no `--author` regression:** the Go
+  `aggregate.IsAgentAuthored` predicate and storage's SQL
+  `provenanceExistsClause` classify the same seeded corpus **identically** —
+  confirmed by `TestProvenanceClassifier_GoPredicateMatchesSQLClause`
+  (`internal/storage`, external `storage_test` package to avoid the
+  aggregate→storage import cycle): 4 agent of 7, the `agentic,modeling`
+  false-positive correctly excluded, both agent-sets and human-sets equal by
+  ID. `brag list --author` is unchanged — it still uses the SQL clause;
+  `internal/storage`'s `TestList_FilterByAuthor` stays green.
+- **New decisions emitted:** DEC-033 (emitted at design; implemented verbatim).
+- **Files changed:**
+  - `internal/aggregate/aggregate.go` — added `IsAgentAuthored`,
+    `CoverageBucket`, `CoverageByMonth`, `SelfReferenceCount`, the unexported
+    `shareRound` + its exported alias `Share` (one rounding definition); added
+    `math` + `strings` imports.
+  - `internal/aggregate/aggregate_test.go` — appended `TestIsAgentAuthored_*`,
+    `TestCoverageByMonth_*`, `TestSelfReferenceCount_*` + a local fixture.
+  - `internal/export/coverage.go` (new) — `CoverageOptions`,
+    `ToCoverageMarkdown`, `ToCoverageJSON`, the `coverageEnvelope` /
+    `selfReferenceRecord` structs, `partitionProvenance`, `pct`.
+  - `internal/export/coverage_test.go` (new) — Tests 1–5 (the two byte-goldens
+    + empty-shape + sparkline-markdown-only-and-escaped + filters-echoed).
+  - `internal/cli/coverage.go` (new) — `NewCoverageCmd`, `runCoverage`,
+    `monthLabelsBetween` (coverage-local), `echoFiltersForCoverage`.
+  - `internal/cli/coverage_test.go` (new) — Tests 10–15.
+  - `internal/storage/provenance_agreement_test.go` (new, `package
+    storage_test`) — the drift-guard (Test 9).
+  - `cmd/brag/main.go` — registered `NewCoverageCmd()` after `NewWrappedCmd()`.
+  - `docs/api-contract.md` (new `brag coverage` section mirroring `brag
+    impact` + a DEC-033 line), `docs/tutorial.md` (new subsection),
+    `README.md` (command-list line), `AGENTS.md` §11 (`coverage` glossary
+    term + refreshed `sparkline`/`--previous` terms).
+  - `guidance/questions.yaml` — `coverage-sparkline-metric-choice` resolved
+    (status → answered, share per the orchestrator sign-off).
+- **Docs sweep (§9 / §12 audit-grep cross-check):** re-ran the Premise-Audit
+  grep (`brag summary\|review\|stats\|impact\|wrapped`) — the digest family is
+  documented in `docs/api-contract.md`, `docs/tutorial.md`, `README.md`, and
+  `AGENTS.md` §11 exactly as enumerated; each got a `brag coverage` addition.
+  The DEC-014 *inventory* sentence (api-contract line 1109, "for summary,
+  review, stats, and impact") was left untouched — it is a historical
+  provenance line for DEC-014's authorship, not a live command list (the
+  SPEC-051 build precedent). NOT-contains self-audit: the block glyphs
+  `▁▂▃▄▅▆▇█` appear only in the markdown golden + Test 4 — never in the `Long`
+  string, the JSON envelope, or any other production string (grep-confirmed).
+- **Deviations from spec:** One structural deviation, in-spirit: Test 9 lives
+  in an **external** `package storage_test` file
+  (`provenance_agreement_test.go`) rather than appended to the in-package
+  `store_test.go`. The spec placed it "in `internal/storage`", which it is —
+  but an in-package (`package storage`) test importing `internal/aggregate`
+  (which imports `internal/storage`) forms an import cycle Go rejects. The
+  external test package is the standard Go resolution and uses only the
+  exported API + the literal `"agent"`/`"human"` author tokens; the test's
+  intent (real SQL path vs Go predicate over one seeded corpus) is unchanged.
+  Also, per the spec's own offered option, the renderer's overall-share uses
+  the exported `aggregate.Share` alias of `shareRound` (kept as ONE rounding
+  definition) since `shareRound` is unexported.
+- **Gate results:** `go test ./...` PASS; `gofmt -l .` empty; `go vet ./...`
+  clean; `CGO_ENABLED=0 go build ./...` clean; `just test-docs` ALL OK; `just
+  test-hook` ALL OK.
+- **Follow-up work identified:** The `coverage-sparkline-metric-choice`
+  residual (the single-entry-month = 100% spike) is parked in questions.yaml
+  for a post-v0.4.0 dogfooding re-check — no wire change needed to re-render
+  the trend (JSON already carries raw counts+shares). No other follow-up
+  surfaced during build.

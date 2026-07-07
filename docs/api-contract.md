@@ -591,6 +591,84 @@ Flags:
 A malformed period (bad year, `Q0`/`Q5`, extra tokens) or an unknown
 `--format` value exits 1 (user error), stdout empty.
 
+### `brag coverage --quarter|--month|--year|--since <date>` (STAGE-013)
+
+```
+brag coverage --year                               # this calendar year, markdown
+brag coverage --quarter --previous                 # the whole previous quarter
+brag coverage --since 2026-01-01 --format json     # since a date, JSON envelope
+```
+
+Rule-based, calendar-windowed digest of **provenance share** — how much of
+your work over the period was agent-authored vs human-authored, and how
+that share is trending month by month. The **sixth** DEC-014 consumer;
+rule-based, deterministic, no LLM, no schema change. An entry counts as
+**agent-authored** iff it carries a reserved `agent:`/`model:` provenance
+tag ([DEC-024](../decisions/DEC-024-agent-provenance-namespace.md)); the
+classifier is single-sourced with `brag list --author` — `aggregate.IsAgentAuthored`
+(Go) is kept in agreement with storage's `provenanceExistsClause` (SQL) by
+a cross-package drift-guard test. Locked by
+[DEC-033](../decisions/DEC-033-coverage-metric-definition-and-surface.md).
+
+Document structure:
+
+- **Provenance:** `Generated:` (RFC3339), `Scope:` (the DEC-028/DEC-032
+  window token — `year`, `quarter:previous`, `since:<raw>`, …),
+  `Filters:` (echoed flags or `(none)`), and a headline `Entries: N`
+  count.
+- **Body** (markdown; omitted entirely on an empty window per
+  [DEC-014](../decisions/DEC-014-rule-based-output-shape.md)):
+  - `## Provenance share` — `- Agent-authored: N (P%)` and
+    `- Human-authored: N (P%)` (one-decimal `%`).
+  - `## Monthly trend` — (in markdown, default-on) an
+    `Agent share: <glyphs>` Unicode block-glyph **sparkline** over the
+    per-month agent share (share×100, min→max normalized), then a per-month
+    `- <YYYY-MM>: <a> agent / <h> human (P%)` **series** (one bucket per
+    scope month, zero-filled, whole-percent share). The sparkline is
+    markdown-only — JSON stays raw counts+shares (no glyphs).
+  - `## Self-reference` — `- Entries mentioning brag/bragfile: N (P%)`:
+    a dogfooding-density proxy (entries whose title or description contains
+    `brag`, case-insensitive substring).
+
+Window selection:
+
+- Exactly ONE of `--quarter`/`--month`/`--year`/`--since` is **required**
+  and they are **mutually exclusive** — the same CALENDAR windows as `brag
+  impact` (`[cutoff, now]`, current in-progress period; `--since` via
+  ParseSince). Locked by
+  [DEC-028](../decisions/DEC-028-impact-calendar-windows.md).
+- `--previous` shifts the selected window to the **last-completed period**,
+  bounded `[prev-start, prev-end)` (same semantics as `brag impact
+  --previous`). It requires a window flag and is incompatible with
+  `--since` (an explicit anchor, not a calendar period). Locked by
+  [DEC-032](../decisions/DEC-032-previous-window-modifier.md).
+
+Flags:
+
+- `--format markdown|json` defaults to `markdown`. JSON is the
+  single-object envelope. Top-level keys: `generated_at`, `scope`,
+  `filters`, `total_entries`, `agent_entries`, `human_entries`,
+  `agent_share` (4-decimal fraction), `by_month` (`[{period, agent, human,
+  share}]`, always the full zero-filled month series), `self_reference`
+  (`{count, share}`). On an empty window numbers are `0`, `filters` `{}`,
+  and `by_month` is still the full zero-filled series.
+- `--tag <token>`, `--project <name>`, `--type <name>` compose with the
+  window and echo into `filters` exactly as `brag impact` does.
+- `--no-spark` suppresses the markdown agent-share sparkline (the
+  `Agent share: <glyphs>` line); the rest of the digest is unchanged. A
+  present `NO_COLOR` env var (any value, per no-color.org) suppresses it
+  too — either signal alone is enough. The sparkline is markdown-only and
+  never enters the JSON envelope, so `--no-spark`/`NO_COLOR` have no effect
+  on `--format json` ([DEC-031](../decisions/DEC-031-sparkline-primitive.md)
+  choice f).
+- Output goes to stdout. Redirect with `>` if you want a file.
+
+Coverage reads all in-window rows once and classifies in Go (it needs both
+classes to compute a share), so it does NOT set `ListFilter.Author` — but
+its classifier means exactly what `brag list --author` means. Zero windows,
+two windows, `--previous --since`, or an unknown `--format` value exits 1
+(user error), stdout empty.
+
 ### `brag story --audience <name> [window] [--theme <tag>]` (STAGE-012)
 
 ```
@@ -1036,4 +1114,5 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-020` — `brag project edit` location editing: `RemoveLocation`/`EditLocations`; remove-not-attached and remove-other-project are user errors; verbatim path matching; one invocation's location changes are atomic (removes before adds); location edits don't bump `updated_at`.
 - `DEC-024` — `brag mcp serve`: official Go MCP SDK, stdio-only subcommand (not a separate binary), transport-purity generalization of the stdout/stderr spine, and provenance via reserved-namespace tags (explicit `agent`/`model` params with an `agent`/`clientInfo.Name` fallback).
 - `DEC-028` — `brag impact`: fourth DEC-014 consumer. CALENDAR time windows (`--quarter`/`--month`/`--year`, current in-progress period; `--since` via ParseSince) deliberately diverging from summary/review's rolling windows; initiative = the `project` axis (reuses `GroupEntriesByProject`); impact-first body (only entries with a non-empty `impact`, plus a `<shown>/<in-window>` tally); a narrow 4-key `{id,title,project,impact}` per-entry JSON projection.
+- `DEC-033` — `brag coverage`: sixth DEC-014 consumer. Provenance-share metric — per-month agent-vs-human split + share, an agent-share sparkline (DEC-031, markdown-only), and a self-reference density measure — over the shared DEC-028/DEC-032 calendar window. The classifier is single-sourced: a pure `aggregate.IsAgentAuthored` Go predicate kept in agreement with storage's `provenanceExistsClause` SQL clause by a cross-package drift-guard test (`brag list --author` stays SQL, unregressed).
 - `DEC-029` — `brag story --audience`: deterministic threads (initiative = the `project` axis, time-ordered, impact beats marked via `WithImpact`; an opt-in `--theme` cross-project cross-cut) + a throughline SKELETON that bragfile assembles and the caller's LLM weaves into an arc — the pure-pipe posture (no model/network in the binary) preserved. Audiences are DATA-DRIVEN shaping profiles (bundled `embed.FS` defaults + user override, override-wins, a flat `key: value` schema parsed by a hand-rolled stdlib parser — no new YAML dep), not a Go enum. The bundle EXTENDS DEC-014's envelope with an arc-aware body (`audience`/`threads`/`throughline`/`framing_directive`; a 7-key beat projection); framing directives ship as bundled per-audience assets, printable via `--print-directive`. Ships the gradient endpoints `me`/`exec` (`manager`/`skip` deferred to SPEC-050 as config-only).

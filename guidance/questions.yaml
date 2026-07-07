@@ -19,17 +19,21 @@ questions:
   - id: coverage-sparkline-metric-choice
     question: "Should brag coverage's monthly trend sparkline encode agent SHARE (share×100, the adoption trend) or agent COUNT (volume) — and does the single-entry-month = 100% spike read misleadingly in practice?"
     priority: medium
-    status: open
+    status: answered
     raised_by: claude-opus-4-8
     raised_at: 2026-07-07
     assigned_to: null
+    answered_by: SPEC-045 build (2026-07-07), per orchestrator sign-off — DEC-033
     notes: |
-      Filed at SPEC-045 design (DEC-033, confidence 0.76). SPEC-045 LOCKS the
-      sparkline over agent SHARE (share×100, min→max normalized via spark.Line):
-      the command's thesis is agent-native ADOPTION over time, not entry volume,
-      so the share is the honest series. The raw per-month agent/human counts are
+      RESOLVED to agent SHARE (share×100, min→max normalized via spark.Line),
+      per the DEC-033 sign-off, and SHIPPED that way in SPEC-045 build. The
+      command's thesis is agent-native ADOPTION over time, not entry volume, so
+      the share is the honest series; the raw per-month agent/human counts are
       printed directly beneath the glyph line, which disambiguates any
-      flat/ambiguous stretch.
+      flat/ambiguous stretch. The residual single-entry-month = 100% soft spot
+      (below) is parked for a post-v0.4.0 dogfooding re-check — no wire change is
+      needed to re-render the trend differently, since the JSON already carries
+      raw counts + shares.
 
       The residual soft spot: a month with a single entry that happens to be
       agent-authored renders 100% (a full-height glyph), which can OVERSTATE

@@ -153,6 +153,7 @@ brag review --week                      # entries + reflection prompts
 brag stats                              # lifetime metrics
 brag impact --quarter                   # this quarter's impact, by initiative
 brag wrapped 2026                       # shareable year-in-review; also: brag wrapped 2026 Q3
+brag coverage --year                    # agent-vs-human provenance share + monthly trend
 brag story --audience exec --quarter    # audience-shaped narrative bundle for an LLM
 ```
 
