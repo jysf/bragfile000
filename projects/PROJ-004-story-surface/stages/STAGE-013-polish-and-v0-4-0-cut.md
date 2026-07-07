@@ -78,10 +78,12 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       DEC-030). The headline polish feature. Both byte-goldens verified faithful
       against the real aggregate output; `cadence.series` left sparkline-ready
       for SPEC-052.
-- [ ] SPEC-052 (planned) — **the sparklines/visual pass** — an in-terminal
-      Unicode sparkline primitive (local-first, no dep) adopted by `stats` /
-      `wrapped` (and optionally `impact`). Its own small DEC likely (DEC-031:
-      metric + width normalization).
+- [ ] SPEC-052 (build) — **the sparklines/visual pass** — an in-terminal
+      Unicode sparkline primitive (`internal/spark`, local-first, no dep)
+      rendered into `wrapped`'s `## Cadence` markdown as a default-on
+      `Cadence: <glyphs>` line (escaped by `--no-spark`/`NO_COLOR`); JSON
+      stays raw. DEC-031 emitted at design (min→max normalization,
+      placement, default-on-with-escape); `stats`/`impact` deferred.
 - [ ] SPEC-053 (planned) — **`--previous`** — the last-completed-period window
       modifier for `impact`/`story`/`wrapped` (DEC-028 foresaw it).
 - [ ] SPEC-045 (adopt draft) — **the P3 agent-assist metric** — complete the

@@ -541,13 +541,15 @@ brag wrapped 2026 --format json         # the JSON envelope
 With no argument it covers the current calendar year. Because a named
 period has a real end, the window is **bounded on both ends** — `brag
 wrapped 2026` run in 2027 covers Jan–Dec 2026 and does not spill into
-2027. The digest renders a celebratory arc: **Cadence** (busiest month +
-a per-month count series), **Top initiatives** (your top projects),
+2027. The digest renders a celebratory arc: **Cadence** (busiest month, a
+Unicode block-glyph sparkline `▁▂▃▄▅▆▇█` over the per-month counts, and
+the per-month count series), **Top initiatives** (your top projects),
 **Impact moments** (entries with an impact statement, in full),
 **Rhythm** (longest streak, top tags, top types), and **Span** (first
 and last entry + active days). Filter flags `--tag`/`--project`/`--type`
-compose with the period. It is text-first today; the `cadence.series`
-data slot is ready for a later visual pass.
+compose with the period. The cadence sparkline is on by default in
+markdown; suppress it with `--no-spark` or a `NO_COLOR` env var (it never
+enters the JSON envelope, which keeps raw counts).
 
 ### Tell your story: `brag story`
 

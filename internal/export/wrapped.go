@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jysf/bragfile000/internal/aggregate"
+	"github.com/jysf/bragfile000/internal/spark"
 	"github.com/jysf/bragfile000/internal/storage"
 )
 
@@ -30,6 +31,10 @@ type WrappedOptions struct {
 	FiltersJSON map[string]string
 	ScopeMonths []string
 	Now         time.Time
+	// Spark, when true and rendering markdown, prints the cadence
+	// sparkline line inside ## Cadence (SPEC-052). JSON ignores it — a
+	// sparkline is a lossy visual of cadence.series[].count, not data.
+	Spark bool
 }
 
 // ToWrappedMarkdown renders the in-period entries as the celebratory
@@ -62,6 +67,13 @@ func ToWrappedMarkdown(entries []storage.Entry, opts WrappedOptions) ([]byte, er
 			fmt.Fprintf(&buf, "Busiest month: %s (%d)\n", b.Period, b.Count)
 			break
 		}
+	}
+	if opts.Spark {
+		counts := make([]int, len(series))
+		for i, b := range series {
+			counts[i] = b.Count
+		}
+		fmt.Fprintf(&buf, "Cadence: %s\n", spark.Line(counts))
 	}
 	fmt.Fprintln(&buf)
 	for _, b := range series {

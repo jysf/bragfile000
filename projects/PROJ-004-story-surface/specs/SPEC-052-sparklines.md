@@ -7,7 +7,7 @@
 task:
   id: SPEC-052
   type: feature
-  cycle: design
+  cycle: verify
   blocked: false
   priority: high
   complexity: M
@@ -584,16 +584,73 @@ func Line(vals []int) string {
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** feat/spec-052-sparklines
-- **PR (if applicable):** <tbd>
-- **All acceptance criteria met?** <tbd>
+- **PR (if applicable):** #90 (ready for review, not merged).
+- **All acceptance criteria met?** Yes — all eight AC boxes. The primitive
+  is min→max/`round`/`▁▂▃▄▅▆▇█`, one glyph per element; edge cases
+  (empty→`""`, flat/all-zero/single→all `▁`, ramp `0..7`→`▁▂▃▄▅▆▇█`) pass;
+  the year fixture renders `Cadence: ▅▅▁█▁▁█▁▁▁▅▁` and the quarter `Cadence:
+  █▁▁` byte-exact; `--no-spark`/`NO_COLOR` each suppress independently; the
+  JSON golden is byte-unchanged; the empty period has no cadence section
+  hence no glyph line; `stats`/`impact` untouched. `go.mod`/`go.sum` are
+  byte-identical to main and `CGO_ENABLED=0 go build ./...` is clean.
 - **New decisions emitted:** DEC-031 (emitted at design).
-- **Files changed:** <tbd>
-- **Docs sweep (§9 status-change / §12 audit-grep cross-check):** <tbd>
-- **Deviations from spec:** <tbd>
-- **Follow-up work identified:** <tbd>
+- **Files changed:**
+  - Created `internal/spark/spark.go` (the `Line` primitive + `levels`
+    table, verbatim from the spec's literal artifact) and
+    `internal/spark/spark_test.go` (the normalization table + length +
+    glyph-table tests, 13 subtests).
+  - `internal/export/wrapped.go` — `Spark bool` on `WrappedOptions`; the
+    `Cadence: <glyphs>` line inside `## Cadence` under `if opts.Spark`;
+    `internal/spark` import. `ToWrappedJSON` unchanged.
+  - `internal/export/wrapped_test.go` — the two SPEC-051 markdown goldens
+    now run with `Spark: true` + the inserted glyph line; new
+    `TestToWrappedMarkdown_NoSparkOmitsGlyphLine` (byte-identical to the
+    pre-sparkline document) and `TestToWrappedMarkdown_EmptyPeriodNoGlyphLine`.
+    The JSON golden is untouched.
+  - `internal/cli/wrapped.go` — `--no-spark` flag; `lookupSparkEnv`
+    package-var env seam (`os.LookupEnv`); `sparkOn := !noSpark &&
+    !noColorSet` set into `opts.Spark`.
+  - `internal/cli/wrapped_test.go` — `withLookupSparkEnv` helper +
+    `TestWrappedCmd_SparkDefaultOn` / `_NoSparkFlagSuppresses` /
+    `_NoColorEnvSuppresses` / `_NoColorEnvEmptyValueSuppresses` /
+    `_JSONHasNoGlyphs` / `_NoSparkHelpListed`.
+  - `docs/api-contract.md`, `docs/tutorial.md`, `AGENTS.md` §11
+    (`sparkline` term + refreshed `wrapped` term), `guidance/questions.yaml`
+    (question resolved).
+- **Docs sweep (§9 status-change / §12 audit-grep cross-check):**
+  `grep "WrappedOptions{"` → only `runWrapped` sets `Spark` in production;
+  every test site zero-values it except the four that explicitly opt in.
+  `grep "wrapped" docs/ README.md AGENTS.md` → api-contract's `## Cadence`
+  description + flags list, tutorial's wrapped subsection (its stale
+  "text-first, ready for a later visual pass" tail replaced), and AGENTS
+  §11 all updated. README lists `wrapped` only as a single illustrative
+  example line (flags not enumerated there, matching every other command),
+  so `--no-spark` was intentionally not added — no flag inventory to keep in
+  sync. The `Long` string was grepped for `Cadence: ` (no glyph-literal
+  example) before locking the NOT-contains tests.
+- **Deviations from spec:** None material. Two minor, in-spirit choices:
+  (1) added `TestWrappedCmd_NoColorEnvEmptyValueSuppresses` (the spec's
+  optional `("", true)` set-but-empty row) to fully pin the present-at-all
+  `NO_COLOR` reading; (2) used the spec's preferred simpler
+  `sparkOn := !noSpark && !noColorSet` form (the `_, ok := lookupSparkEnv`
+  present-at-all reading) rather than the longer intermediate expression.
+- **Follow-up work identified:** The DEC-031 deferral stands — a `stats`
+  lifetime-cadence data slot + its sparkline is the foreseen clean
+  follow-up (the same primitive renders it once a slot exists). No new
+  follow-up surfaced during build.
 
 ### Build-phase reflection (3 questions, short answers)
 
-1. **What was unclear in the spec that slowed you down?** <tbd>
-2. **Was there a constraint or decision that should have been listed but wasn't?** <tbd>
-3. **If you did this task again, what would you do differently?** <tbd>
+1. **What was unclear in the spec that slowed you down?** Nothing slowed the
+   build — the spec was unusually complete. The literal `spark.Line`
+   artifact, the byte-exact normalization table, and the two enumerated
+   golden diffs meant the primitive matched every golden first-try; the
+   golden-faithfulness step confirmed rather than corrected.
+2. **Was there a constraint or decision that should have been listed but
+   wasn't?** No. The README "flags enumerated?" conditional was the one
+   judgment call left to build, and the spec framed it correctly as
+   conditional — README carries only an example line, so nothing to add.
+3. **If you did this task again, what would you do differently?** Nothing
+   structural. Implementing + running the `spark` package in isolation
+   FIRST (before any renderer wiring) was the right order — it de-risked the
+   goldens before they were embedded in the wrapped tests.

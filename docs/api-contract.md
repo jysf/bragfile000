@@ -507,9 +507,12 @@ Document structure:
 - **Body** (markdown; omitted entirely on an empty period per
   [DEC-014](../decisions/DEC-014-rule-based-output-shape.md)), the
   celebratory section arc:
-  - `## Cadence` — a `Busiest month: <YYYY-MM> (N)` line, then a
-    per-month `- <YYYY-MM>: N` bucket **series** (12 buckets for a year,
-    3 for a quarter, zero-filled).
+  - `## Cadence` — a `Busiest month: <YYYY-MM> (N)` line, then (in
+    markdown, default-on) a `Cadence: <glyphs>` Unicode block-glyph
+    **sparkline** (`▁▂▃▄▅▆▇█`, one glyph per bucket, min→max normalized)
+    over the same counts, then a per-month `- <YYYY-MM>: N` bucket
+    **series** (12 buckets for a year, 3 for a quarter, zero-filled). The
+    sparkline is markdown-only — JSON stays raw counts (no glyphs).
   - `## Top initiatives` — top-5 projects by count, `- <project>: N`,
     excluding `(no project)`.
   - `## Impact moments` — with-impact entries grouped by initiative
@@ -551,6 +554,12 @@ Flags:
   sparkline slot is present.
 - `--tag <token>`, `--project <name>`, `--type <name>` compose with the
   period and echo into `filters` exactly as `brag impact` does.
+- `--no-spark` suppresses the markdown cadence sparkline (the
+  `Cadence: <glyphs>` line); the rest of the digest is unchanged. A
+  present `NO_COLOR` env var (any value, per no-color.org) suppresses it
+  too — either signal alone is enough. The sparkline is markdown-only and
+  never enters the JSON envelope, so `--no-spark`/`NO_COLOR` have no
+  effect on `--format json`.
 - Output goes to stdout. Redirect with `>` if you want a file.
 
 A malformed period (bad year, `Q0`/`Q5`, extra tokens) or an unknown

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -16,6 +17,11 @@ import (
 // ([2000,2999]) are checked separately after the shape match (DEC-030
 // choice 1 / LD3).
 var yearArgPattern = regexp.MustCompile(`^\d{4}$`)
+
+// lookupSparkEnv reads the NO_COLOR opt-out (no-color.org). Package var
+// so tests inject it deterministically without touching the real env
+// (AGENTS.md §9 os-state-via-var; DEC-023 LD6 precedent).
+var lookupSparkEnv = os.LookupEnv
 
 // NewWrappedCmd returns the `brag wrapped` subcommand (SPEC-051), the
 // fifth DEC-014 consumer: a shareable, celebratory year- or quarter-in-
@@ -46,6 +52,7 @@ Examples:
 	cmd.Flags().String("tag", "", "filter to entries whose tags contain this token")
 	cmd.Flags().String("project", "", "filter to entries with this project (exact match)")
 	cmd.Flags().String("type", "", "filter to entries with this type (exact match)")
+	cmd.Flags().Bool("no-spark", false, "suppress the in-terminal cadence sparkline")
 	return cmd
 }
 
@@ -200,6 +207,14 @@ func runWrapped(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Sparkline is default-on in markdown, suppressed by --no-spark OR a
+	// present NO_COLOR env var. NO_COLOR uses "present-at-all" semantics
+	// (no-color.org): set to ANY value (including empty) opts out. Either
+	// signal alone suffices (DEC-031 LD7/LD8).
+	noSpark, _ := cmd.Flags().GetBool("no-spark")
+	_, noColorSet := lookupSparkEnv("NO_COLOR")
+	sparkOn := !noSpark && !noColorSet
+
 	filtersMD, filtersJSON := echoFiltersForWrapped(cmd)
 	opts := export.WrappedOptions{
 		Scope:       scope,
@@ -207,6 +222,7 @@ func runWrapped(cmd *cobra.Command, args []string) error {
 		FiltersJSON: filtersJSON,
 		ScopeMonths: months,
 		Now:         now,
+		Spark:       sparkOn,
 	}
 
 	var body []byte
