@@ -7,7 +7,7 @@
 task:
   id: SPEC-053
   type: story
-  cycle: design
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S
@@ -574,17 +574,70 @@ cycle.*
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** feat/spec-053-previous
-- **PR (if applicable):** (draft opened at design)
-- **All acceptance criteria met?** (build fills in)
+- **PR (if applicable):** #91 (opened as draft at design; marked ready at build).
+- **All acceptance criteria met?** Yes — all 11 boxes. Boundary math
+  (`time.Date`+`AddDate`, year-roll), bounded upper edge (current-period
+  entries excluded), `--previous` on impact/story/wrapped, the incoherent-combo
+  UserErrors (`--since`, wrapped explicit-period, impact no-window), and the
+  `<window>:previous` / concrete-year scope tokens all verified by test + live
+  smoke.
 - **New decisions emitted:** DEC-032 (emitted at design).
-- **Files changed:** (build enumerates after the docs-sweep audit-grep)
-- **Docs sweep (§9 status-change / §12 audit-grep cross-check):** (build fills in)
-- **Deviations from spec:** (build fills in)
-- **Follow-up work identified:** (build fills in)
+- **Files changed:**
+  - `internal/cli/window.go` — `windowCutoff` gains `previous bool` +
+    exclusive-`end` return (zero sentinel = current-period path unchanged); the
+    previous-period `AddDate` shift + the `--since --previous` helper-level
+    guard.
+  - `internal/cli/impact.go` — `--previous` flag; `--since`+`--previous` guard;
+    the Go `created_at < end` upper-bound filter (skipped on zero `end`); help
+    text + example.
+  - `internal/cli/story.go` — `--previous` flag; `resolveWindow` threads
+    `previous` through both the explicit-flag and profile-default paths + the
+    `--since` guards (defense in depth); the Go upper-bound filter; help text +
+    examples.
+  - `internal/cli/wrapped.go` — `--previous` flag; `parseWrappedPeriod` gains a
+    `previous` param (`now.Year()-1` on the 0-arg year path; explicit-period +
+    `--previous` → UserError); help text + example.
+  - `internal/cli/{impact,story,wrapped}_test.go` — the Failing Tests (18 new
+    test functions) + the mechanical `windowCutoff` 4-arg signature update in
+    the existing `TestWindowCutoff_CalendarArithmetic` (existing cutoff/scope
+    assertions byte-unchanged; added zero-`end` sentinel assertions).
+  - `docs/api-contract.md`, `docs/tutorial.md`, `AGENTS.md` §11 — the docs
+    sweep (see below).
+  - `guidance/questions.yaml` — build-confirmation note on the
+    `wrapped-default-current-vs-last-completed` entry (stays RESOLVED).
+- **Docs sweep (§9 status-change / §12 audit-grep cross-check):** grepped
+  `docs/ README.md AGENTS.md` for the window-flag enumerations. Added
+  `--previous` to: `docs/api-contract.md` (impact/story/wrapped flag tables +
+  example lines, each referencing DEC-032), `docs/tutorial.md` (impact/story/
+  wrapped prose + example blocks), `AGENTS.md` §11 (new `--previous` glossary
+  term). README.md left unchanged — its impact/story lines are single
+  illustrative examples, not flag enumerations, so a `--previous` line there
+  would be gold-plating rather than closing a documentation gap.
+- **Deviations from spec:** one — the spec's window-helper tests said "assert
+  via `errors.As`" for the UserError, but `UserError` in this codebase is a
+  sentinel (`ErrUser` wrapped via `fmt.Errorf("%w")`), not a struct type, so
+  `errors.As(&*UserError)` is impossible. Used `errors.Is(err, ErrUser)`
+  instead (the codebase's established idiom, matching every other UserError
+  test). Same signal, correct mechanism. No behavioral deviation.
+- **Follow-up work identified:** none new. The two DEC-032-noted future
+  triggers stand: `--previous N` (repeat count) and promoting the Go
+  upper-bound filter to `ListFilter.Until` if a third bounded-window consumer
+  appears (impact/story now join wrapped as the second — still below the bar).
 
 ### Build-phase reflection (3 questions, short answers)
 
-1. **What was unclear in the spec that slowed you down?** —
+1. **What was unclear in the spec that slowed you down?** — Almost nothing;
+   the spec was unusually precise (frozen `spec53Now`, faithful boundary tables,
+   per-command wiring in LD1/LD6). The only friction was the `errors.As` vs
+   `errors.Is` mismatch — a design-time assumption about the `UserError` type
+   that the actual code contradicts.
 2. **Was there a constraint or decision that should have been listed but
-   wasn't?** —
-3. **If you did this task again, what would you do differently?** —
+   wasn't?** — No. The zero-`end` sentinel discipline (the no-regression core)
+   was called out explicitly and made the additive extension safe; the
+   `no-sql-in-cli-layer` Go-filter reuse was already proven by wrapped.
+3. **If you did this task again, what would you do differently?** — Extract the
+   `created_at < end` upper-bound filter loop into one shared CLI helper the
+   first time rather than writing the identical 8-line block in both impact.go
+   and story.go — it is now duplicated in two (plus wrapped's inline copy),
+   which is exactly the "third consumer" signal DEC-030/DEC-032 flagged for a
+   future `ListFilter.Until` promotion.

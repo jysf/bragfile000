@@ -409,6 +409,108 @@ func TestWrappedCmd_HelpShowsExamples(t *testing.T) {
 	}
 }
 
+// TestWrappedCmd_PreviousDefaultsToLastYear (LOAD-BEARING for wrapped).
+// At spec53Now (2026), wrapped --previous (no positional arg) → scope "2025"
+// (the concrete year, NOT a :previous suffix), bounded [2025-01-01,
+// 2026-01-01). A 2025 entry IN, a 2024 and a 2026 entry OUT; Entries: 1.
+// Identical to brag wrapped 2025 at the same now.
+func TestWrappedCmd_PreviousDefaultsToLastYear(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, time.Date(2026, 7, 6, 12, 0, 0, 0, time.UTC))
+
+	seedWrappedEntry(t, dbPath, storage.Entry{
+		Title: "y2024", Project: "alpha", Type: "shipped",
+	}, time.Date(2024, 12, 31, 10, 0, 0, 0, time.UTC))
+	seedWrappedEntry(t, dbPath, storage.Entry{
+		Title: "y2025", Project: "alpha", Type: "shipped",
+	}, time.Date(2025, 6, 15, 10, 0, 0, 0, time.UTC))
+	seedWrappedEntry(t, dbPath, storage.Entry{
+		Title: "y2026", Project: "alpha", Type: "shipped",
+	}, time.Date(2026, 3, 1, 10, 0, 0, 0, time.UTC))
+
+	out, errStr, err := runWrappedCmd(t, dbPath, "--previous")
+	if err != nil {
+		t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+	}
+	if !bytes.Contains([]byte(out), []byte("Scope: 2025")) {
+		t.Errorf("wrapped --previous must resolve to the concrete year 2025:\n%s", out)
+	}
+	if !bytes.Contains([]byte(out), []byte("Entries: 1")) {
+		t.Errorf("bounded 2025 window must contain exactly the 2025 entry:\n%s", out)
+	}
+	if bytes.Contains([]byte(out), []byte("y2024")) || bytes.Contains([]byte(out), []byte("y2026")) {
+		t.Errorf("2024 and 2026 entries must be excluded from the 2025 window:\n%s", out)
+	}
+}
+
+// TestWrappedCmd_PreviousWithExplicitPeriodIsUserError (LD4). --previous with
+// an explicit positional period is a UserError.
+func TestWrappedCmd_PreviousWithExplicitPeriodIsUserError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, time.Date(2026, 7, 6, 12, 0, 0, 0, time.UTC))
+
+	cases := [][]string{
+		{"2026", "--previous"},
+		{"2026", "Q3", "--previous"},
+	}
+	for _, args := range cases {
+		t.Run(joinArgs(args), func(t *testing.T) {
+			out, _, err := runWrappedCmd(t, dbPath, args...)
+			if err == nil {
+				t.Fatalf("expected error for args %v, got nil", args)
+			}
+			if !errors.Is(err, ErrUser) {
+				t.Errorf("expected a UserError for args %v, got %v", args, err)
+			}
+			if !bytes.Contains([]byte(err.Error()), []byte("--previous")) {
+				t.Errorf("expected error to name --previous, got %q", err.Error())
+			}
+			if out != "" {
+				t.Errorf("expected empty stdout for args %v, got %q", args, out)
+			}
+		})
+	}
+}
+
+// TestWrappedCmd_PreviousQuarterlessStillYear (scope-consistency guard).
+// wrapped --previous resolves to a YEAR (scope "2025"), not a quarter —
+// the annual-retrospective path (DEC-030 choice 2 / DEC-032 LD6).
+func TestWrappedCmd_PreviousQuarterlessStillYear(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, time.Date(2026, 7, 6, 12, 0, 0, 0, time.UTC))
+
+	out, _, err := runWrappedCmd(t, dbPath, "--previous", "--format", "json")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var env struct {
+		Scope string `json:"scope"`
+	}
+	if err := json.Unmarshal([]byte(out), &env); err != nil {
+		t.Fatalf("json unmarshal: %v\n%s", err, out)
+	}
+	if env.Scope != "2025" {
+		t.Errorf("wrapped --previous scope: got %q, want %q (annual, not a quarter)", env.Scope, "2025")
+	}
+}
+
+// TestWrappedCmd_HelpShowsPrevious: --help contains --previous and a
+// distinctive example line.
+func TestWrappedCmd_HelpShowsPrevious(t *testing.T) {
+	root, outBuf, _ := newWrappedTestRoot(t)
+	root.SetArgs([]string{"wrapped", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out := outBuf.String()
+	if !bytes.Contains([]byte(out), []byte("--previous")) {
+		t.Errorf("expected --previous in help:\n%s", out)
+	}
+	if !bytes.Contains([]byte(out), []byte("brag wrapped --previous")) {
+		t.Errorf("expected example line 'brag wrapped --previous' in help:\n%s", out)
+	}
+}
+
 func TestWrappedCmd_StdoutStderrSeparation(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	withNowFunc(t, time.Date(2026, 7, 6, 12, 0, 0, 0, time.UTC))

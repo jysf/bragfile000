@@ -297,7 +297,7 @@ func TestWindowCutoff_CalendarArithmetic(t *testing.T) {
 	now := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC) // Q3, August
 
 	t.Run("quarter", func(t *testing.T) {
-		cutoff, scope, err := windowCutoff("quarter", "", now)
+		cutoff, end, scope, err := windowCutoff("quarter", "", now, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -305,13 +305,16 @@ func TestWindowCutoff_CalendarArithmetic(t *testing.T) {
 		if !cutoff.Equal(want) {
 			t.Errorf("quarter cutoff: got %v, want %v", cutoff, want)
 		}
+		if !end.IsZero() {
+			t.Errorf("quarter (current) end must be the zero sentinel, got %v", end)
+		}
 		if scope != "quarter" {
 			t.Errorf("quarter scope: got %q, want %q", scope, "quarter")
 		}
 	})
 
 	t.Run("month", func(t *testing.T) {
-		cutoff, scope, err := windowCutoff("month", "", now)
+		cutoff, end, scope, err := windowCutoff("month", "", now, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -319,13 +322,16 @@ func TestWindowCutoff_CalendarArithmetic(t *testing.T) {
 		if !cutoff.Equal(want) {
 			t.Errorf("month cutoff: got %v, want %v", cutoff, want)
 		}
+		if !end.IsZero() {
+			t.Errorf("month (current) end must be the zero sentinel, got %v", end)
+		}
 		if scope != "month" {
 			t.Errorf("month scope: got %q, want %q", scope, "month")
 		}
 	})
 
 	t.Run("year", func(t *testing.T) {
-		cutoff, scope, err := windowCutoff("year", "", now)
+		cutoff, end, scope, err := windowCutoff("year", "", now, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -333,19 +339,25 @@ func TestWindowCutoff_CalendarArithmetic(t *testing.T) {
 		if !cutoff.Equal(want) {
 			t.Errorf("year cutoff: got %v, want %v", cutoff, want)
 		}
+		if !end.IsZero() {
+			t.Errorf("year (current) end must be the zero sentinel, got %v", end)
+		}
 		if scope != "year" {
 			t.Errorf("year scope: got %q, want %q", scope, "year")
 		}
 	})
 
 	t.Run("since", func(t *testing.T) {
-		cutoff, scope, err := windowCutoff("since", "2026-01-01", now)
+		cutoff, end, scope, err := windowCutoff("since", "2026-01-01", now, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		want := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 		if !cutoff.Equal(want) {
 			t.Errorf("since cutoff: got %v, want %v", cutoff, want)
+		}
+		if !end.IsZero() {
+			t.Errorf("since end must be the zero sentinel, got %v", end)
 		}
 		if scope != "since:2026-01-01" {
 			t.Errorf("since scope: got %q, want %q", scope, "since:2026-01-01")
@@ -361,12 +373,341 @@ func TestWindowCutoff_CalendarArithmetic(t *testing.T) {
 		{time.Date(2026, 5, 10, 0, 0, 0, 0, time.UTC), time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)},
 		{time.Date(2026, 11, 10, 0, 0, 0, 0, time.UTC), time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)},
 	} {
-		cutoff, _, err := windowCutoff("quarter", "", tc.now)
+		cutoff, _, _, err := windowCutoff("quarter", "", tc.now, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if !cutoff.Equal(tc.want) {
 			t.Errorf("quarter cutoff for %v: got %v, want %v", tc.now, cutoff, tc.want)
+		}
+	}
+}
+
+// spec53Now is the canonical frozen instant for SPEC-053 (--previous):
+// mid-Q3-2026 (July), so every window has a well-defined, non-degenerate
+// previous period within 2026 except --year (which lands in 2025).
+var spec53Now = time.Date(2026, 7, 6, 12, 0, 0, 0, time.UTC)
+
+// TestWindowCutoff_PreviousBoundaries (LOAD-BEARING — the boundary-math
+// core, SPEC-053 / DEC-032). Asserts windowCutoff(..., previous=true)
+// returns exactly the [start, end) pairs and "<window>:previous" scope
+// tokens at both spec53Now and the January year-boundary instant (the
+// AddDate roll), and that previous=false is unchanged (bounded=false).
+func TestWindowCutoff_PreviousBoundaries(t *testing.T) {
+	janRoll := time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
+
+	cases := []struct {
+		name      string
+		window    string
+		now       time.Time
+		wantStart time.Time
+		wantEnd   time.Time
+		wantScope string
+	}{
+		// spec53Now (mid-Q3-2026).
+		{"quarter@Q3", "quarter", spec53Now, date(2026, 4, 1), date(2026, 7, 1), "quarter:previous"},
+		{"month@Jul", "month", spec53Now, date(2026, 6, 1), date(2026, 7, 1), "month:previous"},
+		{"year@2026", "year", spec53Now, date(2025, 1, 1), date(2026, 1, 1), "year:previous"},
+		// January year-boundary roll.
+		{"quarter@Jan", "quarter", janRoll, date(2025, 10, 1), date(2026, 1, 1), "quarter:previous"},
+		{"month@Jan", "month", janRoll, date(2025, 12, 1), date(2026, 1, 1), "month:previous"},
+		{"year@Jan", "year", janRoll, date(2025, 1, 1), date(2026, 1, 1), "year:previous"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end, scope, err := windowCutoff(tc.window, "", tc.now, true)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !start.Equal(tc.wantStart) {
+				t.Errorf("start: got %v, want %v", start, tc.wantStart)
+			}
+			if !end.Equal(tc.wantEnd) {
+				t.Errorf("end: got %v, want %v", end, tc.wantEnd)
+			}
+			if end.IsZero() {
+				t.Errorf("previous window must be bounded (non-zero end)")
+			}
+			if scope != tc.wantScope {
+				t.Errorf("scope: got %q, want %q", scope, tc.wantScope)
+			}
+		})
+	}
+
+	// previous=false is unchanged: current-period cutoff, zero (open) end.
+	for _, window := range []string{"quarter", "month", "year"} {
+		t.Run("additive/"+window, func(t *testing.T) {
+			_, end, scope, err := windowCutoff(window, "", spec53Now, false)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !end.IsZero() {
+				t.Errorf("current-period end must be the zero sentinel, got %v", end)
+			}
+			if scope != window {
+				t.Errorf("current scope: got %q, want %q", scope, window)
+			}
+		})
+	}
+}
+
+// date is a UTC midnight helper for the boundary tables.
+func date(y int, m time.Month, d int) time.Time {
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+}
+
+// TestWindowCutoff_PreviousSinceIsUserError pins the helper-level guard:
+// --previous is undefined for --since (LD3). The CLI also rejects the flag
+// combo, but this backs it up so a future caller can't bypass it.
+func TestWindowCutoff_PreviousSinceIsUserError(t *testing.T) {
+	_, _, _, err := windowCutoff("since", "2026-01-01", spec53Now, true)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrUser) {
+		t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+	}
+}
+
+// TestImpactCmd_PreviousQuarterBounded (LOAD-BEARING — the bounded-window
+// divergence). At spec53Now, --quarter --previous includes ONLY the two
+// prev-Q2 entries; the current-Q3 entry (created "now-ish") is EXCLUDED,
+// proving the upper bound is the current period start, not now.
+func TestImpactCmd_PreviousQuarterBounded(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, spec53Now)
+
+	seedImpactEntry(t, dbPath, storage.Entry{
+		Title: "q1-before", Project: "alpha", Type: "shipped", Impact: "before prev-Q2",
+	}, time.Date(2026, 3, 31, 10, 0, 0, 0, time.UTC))
+	seedImpactEntry(t, dbPath, storage.Entry{
+		Title: "q2-start", Project: "alpha", Type: "shipped", Impact: "prev-Q2 start",
+	}, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC))
+	seedImpactEntry(t, dbPath, storage.Entry{
+		Title: "q2-end", Project: "alpha", Type: "shipped", Impact: "prev-Q2 end",
+	}, time.Date(2026, 6, 30, 23, 0, 0, 0, time.UTC))
+	seedImpactEntry(t, dbPath, storage.Entry{
+		Title: "q3-start", Project: "alpha", Type: "shipped", Impact: "current Q3, excluded",
+	}, time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC))
+
+	out, errStr, err := runImpactCmd(t, dbPath, "--quarter", "--previous", "--format", "json")
+	if err != nil {
+		t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+	}
+	var env struct {
+		Scope           string `json:"scope"`
+		EntriesInWindow int    `json:"entries_in_window"`
+	}
+	if err := json.Unmarshal([]byte(out), &env); err != nil {
+		t.Fatalf("json unmarshal: %v\n%s", err, out)
+	}
+	if env.Scope != "quarter:previous" {
+		t.Errorf("scope: got %q, want %q", env.Scope, "quarter:previous")
+	}
+	if env.EntriesInWindow != 2 {
+		t.Errorf("entries_in_window: got %d, want 2\n%s", env.EntriesInWindow, out)
+	}
+	for _, in := range []string{"q2-start", "q2-end"} {
+		if !bytes.Contains([]byte(out), []byte(in)) {
+			t.Errorf("expected prev-Q2 entry %q IN the window:\n%s", in, out)
+		}
+	}
+	for _, out2 := range []string{"q1-before", "q3-start"} {
+		if bytes.Contains([]byte(out), []byte(out2)) {
+			t.Errorf("entry %q must be OUT of the bounded prev-Q2 window:\n%s", out2, out)
+		}
+	}
+}
+
+// TestImpactCmd_PreviousMonthAndYear covers --month/--year --previous at
+// spec53Now with a below/in/above entry each.
+func TestImpactCmd_PreviousMonthAndYear(t *testing.T) {
+	t.Run("month", func(t *testing.T) {
+		dbPath := filepath.Join(t.TempDir(), "test.db")
+		withNowFunc(t, spec53Now)
+		seedImpactEntry(t, dbPath, storage.Entry{Title: "may-out", Project: "a", Type: "shipped", Impact: "x"}, time.Date(2026, 5, 31, 10, 0, 0, 0, time.UTC))
+		seedImpactEntry(t, dbPath, storage.Entry{Title: "jun-in", Project: "a", Type: "shipped", Impact: "x"}, time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC))
+		seedImpactEntry(t, dbPath, storage.Entry{Title: "jul-out", Project: "a", Type: "shipped", Impact: "x"}, time.Date(2026, 7, 2, 10, 0, 0, 0, time.UTC))
+		out, _, err := runImpactCmd(t, dbPath, "--month", "--previous", "--format", "json")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		assertScope(t, out, "month:previous")
+		assertContainsAll(t, out, "jun-in")
+		assertContainsNone(t, out, "may-out", "jul-out")
+	})
+
+	t.Run("year", func(t *testing.T) {
+		dbPath := filepath.Join(t.TempDir(), "test.db")
+		withNowFunc(t, spec53Now)
+		seedImpactEntry(t, dbPath, storage.Entry{Title: "y2024-out", Project: "a", Type: "shipped", Impact: "x"}, time.Date(2024, 12, 31, 10, 0, 0, 0, time.UTC))
+		seedImpactEntry(t, dbPath, storage.Entry{Title: "y2025-in", Project: "a", Type: "shipped", Impact: "x"}, time.Date(2025, 7, 1, 10, 0, 0, 0, time.UTC))
+		seedImpactEntry(t, dbPath, storage.Entry{Title: "y2026-out", Project: "a", Type: "shipped", Impact: "x"}, time.Date(2026, 1, 2, 10, 0, 0, 0, time.UTC))
+		out, _, err := runImpactCmd(t, dbPath, "--year", "--previous", "--format", "json")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		assertScope(t, out, "year:previous")
+		assertContainsAll(t, out, "y2025-in")
+		assertContainsNone(t, out, "y2024-out", "y2026-out")
+	})
+}
+
+// TestImpactCmd_PreviousYearBoundaryRoll: at 2026-01-15, --month --previous
+// is [2025-12-01, 2026-01-01) — AddDate rolls the month back across the year
+// boundary (Dec of the prior year), not "month 0".
+func TestImpactCmd_PreviousYearBoundaryRoll(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC))
+	seedImpactEntry(t, dbPath, storage.Entry{Title: "dec-in", Project: "a", Type: "shipped", Impact: "x"}, time.Date(2025, 12, 20, 10, 0, 0, 0, time.UTC))
+	seedImpactEntry(t, dbPath, storage.Entry{Title: "jan-out", Project: "a", Type: "shipped", Impact: "x"}, time.Date(2026, 1, 5, 10, 0, 0, 0, time.UTC))
+	out, _, err := runImpactCmd(t, dbPath, "--month", "--previous", "--format", "json")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertScope(t, out, "month:previous")
+	assertContainsAll(t, out, "dec-in")
+	assertContainsNone(t, out, "jan-out")
+}
+
+// TestImpactCmd_PreviousWithSinceIsUserError: --since + --previous → UserError.
+func TestImpactCmd_PreviousWithSinceIsUserError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, spec53Now)
+	out, _, err := runImpactCmd(t, dbPath, "--since", "2026-01-01", "--previous")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrUser) {
+		t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+	}
+	for _, needle := range []string{"--previous", "--since"} {
+		if !bytes.Contains([]byte(err.Error()), []byte(needle)) {
+			t.Errorf("expected error to name %q, got %q", needle, err.Error())
+		}
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+}
+
+// TestImpactCmd_PreviousWithoutWindowIsUserError: --previous with no window
+// flag → the existing "exactly one window required" UserError (a modifier is
+// not a window).
+func TestImpactCmd_PreviousWithoutWindowIsUserError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, spec53Now)
+	out, _, err := runImpactCmd(t, dbPath, "--previous")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrUser) {
+		t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+}
+
+// TestImpactCmd_NoPreviousUnchanged (regression guard): --quarter (no
+// --previous) at spec53Now still reports the CURRENT quarter up to now, and
+// scope echoes plain "quarter".
+func TestImpactCmd_NoPreviousUnchanged(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, spec53Now)
+	seedImpactEntry(t, dbPath, storage.Entry{Title: "cur-q3", Project: "a", Type: "shipped", Impact: "x"}, time.Date(2026, 7, 5, 10, 0, 0, 0, time.UTC))
+	seedImpactEntry(t, dbPath, storage.Entry{Title: "prev-q2", Project: "a", Type: "shipped", Impact: "x"}, time.Date(2026, 6, 30, 10, 0, 0, 0, time.UTC))
+	out, _, err := runImpactCmd(t, dbPath, "--quarter", "--format", "json")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertScope(t, out, "quarter")
+	assertContainsAll(t, out, "cur-q3")
+	assertContainsNone(t, out, "prev-q2")
+}
+
+// TestImpactCmd_HelpShowsPrevious: --help contains --previous and a
+// distinctive example line.
+func TestImpactCmd_HelpShowsPrevious(t *testing.T) {
+	root, outBuf, _ := newImpactTestRoot(t)
+	root.SetArgs([]string{"impact", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out := outBuf.String()
+	if !bytes.Contains([]byte(out), []byte("--previous")) {
+		t.Errorf("expected --previous in help:\n%s", out)
+	}
+	if !bytes.Contains([]byte(out), []byte("brag impact --quarter --previous")) {
+		t.Errorf("expected example line 'brag impact --quarter --previous' in help:\n%s", out)
+	}
+}
+
+// TestImpactCmd_StdoutStderrSeparation_Previous: a successful --previous run
+// writes only stdout; the --since --previous combo writes only the returned
+// UserError (main.go routes it to stderr) with empty stdout.
+func TestImpactCmd_StdoutStderrSeparation_Previous(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	withNowFunc(t, spec53Now)
+
+	t.Run("success-to-stdout-only", func(t *testing.T) {
+		root, outBuf, errBuf := newImpactTestRoot(t)
+		root.SetArgs([]string{"--db", dbPath, "impact", "--quarter", "--previous"})
+		if err := root.Execute(); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if outBuf.Len() == 0 {
+			t.Errorf("expected digest on stdout, got empty")
+		}
+		if errBuf.Len() != 0 {
+			t.Errorf("expected empty stderr on success, got %q", errBuf.String())
+		}
+	})
+
+	t.Run("incoherent-combo-keeps-stdout-clean", func(t *testing.T) {
+		root, outBuf, _ := newImpactTestRoot(t)
+		root.SetArgs([]string{"--db", dbPath, "impact", "--since", "2026-01-01", "--previous"})
+		err := root.Execute()
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, ErrUser) {
+			t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+		}
+		if outBuf.Len() != 0 {
+			t.Errorf("expected empty stdout on error, got %q", outBuf.String())
+		}
+	})
+}
+
+// assertScope unmarshals the JSON envelope and checks scope.
+func assertScope(t *testing.T, out, want string) {
+	t.Helper()
+	var env struct {
+		Scope string `json:"scope"`
+	}
+	if err := json.Unmarshal([]byte(out), &env); err != nil {
+		t.Fatalf("json unmarshal: %v\n%s", err, out)
+	}
+	if env.Scope != want {
+		t.Errorf("scope: got %q, want %q\n%s", env.Scope, want, out)
+	}
+}
+
+func assertContainsAll(t *testing.T, out string, needles ...string) {
+	t.Helper()
+	for _, n := range needles {
+		if !bytes.Contains([]byte(out), []byte(n)) {
+			t.Errorf("expected %q IN output:\n%s", n, out)
+		}
+	}
+}
+
+func assertContainsNone(t *testing.T, out string, needles ...string) {
+	t.Helper()
+	for _, n := range needles {
+		if bytes.Contains([]byte(out), []byte(n)) {
+			t.Errorf("expected %q OUT of output:\n%s", n, out)
 		}
 	}
 }

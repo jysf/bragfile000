@@ -507,6 +507,7 @@ your manager and skip-level think about time:
 
 ```bash
 brag impact --quarter                   # this calendar quarter, by initiative
+brag impact --quarter --previous        # the whole PREVIOUS calendar quarter
 brag impact --month                     # this calendar month
 brag impact --year --format json        # this calendar year, JSON envelope
 brag impact --since 2026-01-01          # since a date (YYYY-MM-DD or Nd/Nw/Nm)
@@ -514,11 +515,15 @@ brag impact --since 2026-01-01          # since a date (YYYY-MM-DD or Nd/Nw/Nm)
 
 Exactly one window is required, and the windows are calendar periods
 (not the rolling windows `brag summary`/`review` use) — "this quarter"
-means the actual calendar quarter, up to today. Only entries with a
-non-empty impact appear in the body; a `<shown>/<in-window> with
-impact` tally keeps you honest about what was left out. Filter flags
-`--tag`/`--project`/`--type` compose with the window. Pipe the JSON
-form into an LLM to draft the narrative:
+means the actual calendar quarter, up to today. Add `--previous` to shift
+the window to the **last-completed** period — `--quarter --previous` is
+the whole previous quarter (bounded, so this quarter's entries are
+excluded), `--month --previous` the previous month, `--year --previous`
+last year. It needs a window flag and can't combine with `--since`. Only
+entries with a non-empty impact appear in the body; a
+`<shown>/<in-window> with impact` tally keeps you honest about what was
+left out. Filter flags `--tag`/`--project`/`--type` compose with the
+window. Pipe the JSON form into an LLM to draft the narrative:
 
 ```bash
 brag impact --quarter --format json | claude "draft my quarterly impact summary"
@@ -533,15 +538,19 @@ bounded period the way you say it out loud:
 
 ```bash
 brag wrapped                            # the current calendar year
+brag wrapped --previous                 # the last-completed calendar year
 brag wrapped 2026                       # calendar year 2026
 brag wrapped 2026 Q3                    # calendar quarter Q3 2026 (case-insensitive q3)
 brag wrapped 2026 --format json         # the JSON envelope
 ```
 
-With no argument it covers the current calendar year. Because a named
-period has a real end, the window is **bounded on both ends** — `brag
-wrapped 2026` run in 2027 covers Jan–Dec 2026 and does not spill into
-2027. The digest renders a celebratory arc: **Cadence** (busiest month, a
+With no argument it covers the current calendar year; `--previous` covers
+the **last-completed** year instead (`brag wrapped --previous` in 2026 is
+`brag wrapped 2025`). `--previous` is annual-only and valid only with no
+positional period — name a past quarter directly (`brag wrapped 2026 Q2`).
+Because a named period has a real end, the window is **bounded on both
+ends** — `brag wrapped 2026` run in 2027 covers Jan–Dec 2026 and does not
+spill into 2027. The digest renders a celebratory arc: **Cadence** (busiest month, a
 Unicode block-glyph sparkline `▁▂▃▄▅▆▇█` over the per-month counts, and
 the per-month count series), **Top initiatives** (your top projects),
 **Impact moments** (entries with an impact statement, in full),
@@ -563,8 +572,10 @@ session) writes the prose:
 
 ```bash
 brag story --audience me                          # candid reflection, this year
+brag story --audience me --previous               # me, the last-completed default period
 brag story --audience manager --month             # tactical 1:1 update, this month
 brag story --audience exec --quarter              # impact-forward, this quarter
+brag story --audience exec --quarter --previous   # exec, the whole previous quarter
 brag story --audience exec --year --format json   # arc-aware JSON envelope
 brag story --audience me --theme perf             # add a cross-project perf arc
 brag story --audience exec --print-directive      # just the framing directive
@@ -580,6 +591,9 @@ grouped by initiative for the "so what"; `exec` surfaces only impact-bearing
 threads, drops impact-less beats, and leads with the highest-impact arc.
 Each audience carries a default window (`me` → year, `manager` → month,
 `skip` → quarter, `exec` → quarter) that an explicit window flag overrides.
+`--previous` shifts whichever window is in play — an explicit flag or the
+profile default — to the last-completed period (`--audience me --previous`
+= last year, `--audience exec --quarter --previous` = last quarter).
 Audiences are extensible profiles, not a fixed list — drop a `<name>.yaml`
 in your story-profiles directory to add one. Pipe it into an LLM to finish:
 

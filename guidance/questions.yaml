@@ -344,6 +344,12 @@ questions:
       the current-calendar-year default HOLDS and the DEC-030 revisit
       trigger is CLOSED (no flip). "Which period" logic stays in the one
       `--previous` mechanism, as intended.
+
+      CONFIRMED at SPEC-053 build (2026-07-07): shipped as designed. Bare
+      `brag wrapped` = current calendar year (`TestWrappedCmd_DefaultsToCurrentYear`
+      unchanged); `brag wrapped --previous` = last-completed year, byte-
+      identical to `brag wrapped 2025` in 2026 (`TestWrappedCmd_PreviousDefaultsToLastYear`).
+      No default flip. Entry stays RESOLVED; nothing further to decide.
     notes: |
       Filed at SPEC-051 design (DEC-030 choice 2, confidence 0.72). The
       DEC locks the default to the CURRENT calendar year, leaving the

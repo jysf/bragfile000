@@ -425,6 +425,7 @@ Unknown `--format` values exit 1 (user error). Undeclared flags
 
 ```
 brag impact --quarter                              # this calendar quarter, markdown
+brag impact --quarter --previous                   # the whole previous calendar quarter
 brag impact --year --format json                   # this calendar year, JSON envelope
 brag impact --since 2026-01-01 --project alpha     # since a date, one initiative
 ```
@@ -462,6 +463,20 @@ Flags:
   because the story surface reports by the calendar periods audiences
   name. Locked by
   [DEC-028](../decisions/DEC-028-impact-digest-window-and-shape.md).
+- `--previous` shifts the selected window to the **last-completed** period,
+  as a **bounded** `[prev-start, prev-end)` window whose exclusive upper
+  bound is the current period's start (so current-period entries are
+  excluded): `--quarter --previous` = the whole previous calendar quarter,
+  `--month --previous` = the previous month, `--year --previous` = the
+  previous year. The boundary is computed via `time.Date`+`AddDate` (rolls
+  year boundaries; a January `--month --previous` lands in the prior
+  December of the prior year). `--previous` REQUIRES a window flag (a
+  modifier is not a window — `impact --previous` alone is the same
+  "exactly one window required" error) and is INCOMPATIBLE with `--since`
+  (an explicit anchor, not a calendar period → user error). The `scope`
+  echoes the shift: `quarter:previous` / `month:previous` / `year:previous`.
+  Locked by
+  [DEC-032](../decisions/DEC-032-previous-window-modifier.md).
 - `--format markdown|json` defaults to `markdown`. JSON is the
   single-object envelope locked by
   [DEC-014](../decisions/DEC-014-rule-based-output-shape.md). Top-level
@@ -490,6 +505,7 @@ Unknown or missing window flags, or an unknown `--format` value, exit 1
 
 ```
 brag wrapped                                       # the current calendar year, markdown
+brag wrapped --previous                            # the last-completed calendar year
 brag wrapped 2026 --format json                    # calendar year 2026, JSON envelope
 brag wrapped 2026 Q3 --project alpha               # one quarter, one initiative
 ```
@@ -538,6 +554,16 @@ Period selection:
   [DEC-030](../decisions/DEC-030-wrapped-period-selection-and-section-taxonomy.md).
   The lower bound is a `Since` SQL filter; the exclusive upper bound is
   applied in Go in the CLI layer (SQL-free).
+- `--previous` (with NO positional period) covers the **last-completed
+  calendar year** — `brag wrapped --previous` in 2026 is byte-identical to
+  `brag wrapped 2025`, `scope` `2025` (the concrete year, NOT a
+  `:previous` suffix — wrapped names a concrete period). It is ANNUAL-only
+  and valid ONLY with no positional arg: pairing it with an explicit
+  period (`brag wrapped 2026 --previous`, `brag wrapped 2026 Q3
+  --previous`) exits 1 (user error), since the positional arg already
+  names a bounded period. A previous *quarter* is named positionally
+  (`brag wrapped 2026 Q2`). Locked by
+  [DEC-032](../decisions/DEC-032-previous-window-modifier.md).
 
 Flags:
 
@@ -569,8 +595,10 @@ A malformed period (bad year, `Q0`/`Q5`, extra tokens) or an unknown
 
 ```
 brag story --audience me                                   # candid, this year (me's default window)
+brag story --audience me --previous                        # me, the last-completed default period
 brag story --audience manager --month                      # tactical update for a 1:1, this month
 brag story --audience exec --quarter                       # exec, this calendar quarter
+brag story --audience exec --quarter --previous            # exec, the whole previous quarter
 brag story --audience exec --year --format json            # arc-aware JSON envelope
 brag story --audience me --theme perf                      # add a cross-project perf arc
 brag story --audience exec --print-directive               # just the framing directive
@@ -637,6 +665,14 @@ Flags:
   window flag, the audience profile's DEFAULT window applies (`me` →
   `year`, `manager` → `month`, `skip` → `quarter`, `exec` → `quarter`);
   `scope` echoes the resolved token.
+- `--previous` shifts the resolved window — an explicit flag OR the
+  profile default — to the **last-completed** period, bounded
+  `[prev-start, prev-end)` (same semantics as `brag impact --previous`).
+  Unlike `impact`, `story --previous` alone is VALID: it shifts the
+  profile default back one period (`--audience me --previous` → the
+  last-completed year). INCOMPATIBLE with `--since` (user error). `scope`
+  echoes `quarter:previous` / `month:previous` / `year:previous`. Locked
+  by [DEC-032](../decisions/DEC-032-previous-window-modifier.md).
 - `--theme <tag>` appends exactly ONE cross-project thread (kind `theme`)
   after the initiative threads, grouping every in-window entry carrying
   that tag, time-ordered. Not subject to fold/drop (an explicit opt-in).
