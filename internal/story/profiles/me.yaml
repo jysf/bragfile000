@@ -1,0 +1,8 @@
+name: me
+default_window: year
+impact_threads_only: false
+drop_impactless_beats: false
+fold_small_threads: false
+thread_order: initiative
+candor: candid
+directive: me.md

@@ -308,6 +308,17 @@ brag list --project X --since 90d | while read -r line; do
 done > /tmp/review-draft.md
 ```
 
+Rule-based digests and narrative bundles (no LLM in the binary — pipe
+into your session for prose):
+
+```bash
+brag summary --range week                   # rolling 7-day digest, grouped
+brag review --week                          # entries + reflection prompts
+brag stats                                  # lifetime metrics
+brag impact --quarter                       # this quarter's impact, by initiative
+brag story --audience exec --quarter        # audience-shaped narrative bundle (threads + throughline + framing directive)
+```
+
 ---
 
 ## If anything goes wrong

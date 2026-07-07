@@ -486,6 +486,86 @@ Empty-window / no-impact: provenance always renders (both tally counts
 Unknown or missing window flags, or an unknown `--format` value, exit 1
 (user error).
 
+### `brag story --audience <name> [window] [--theme <tag>]` (STAGE-012)
+
+```
+brag story --audience me                                   # candid, this year (me's default window)
+brag story --audience exec --quarter                       # exec, this calendar quarter
+brag story --audience exec --year --format json            # arc-aware JSON envelope
+brag story --audience me --theme perf                      # add a cross-project perf arc
+brag story --audience exec --print-directive               # just the framing directive
+```
+
+Audience-shaped narrative bundle: the in-window corpus coalesced into
+**threads** (initiatives = the `project` field, time-ordered, with
+**impact beats** marked) plus a **throughline skeleton** and a
+per-audience **framing directive**. Where `brag impact` reports the
+grouped data, `brag story` shapes it into an arc for an LLM (already in
+the caller) to weave into prose. bragfile owns data + shaping; the LLM
+owns words — **no model, no network in the binary** (DEC-001). The bundle
+is a complete, readable artifact standalone; the LLM is the optional
+upgrade. Emitted by
+[DEC-029](../decisions/DEC-029-story-audience-shaping-profiles-and-thread-definition.md);
+extends DEC-014's envelope with an arc-aware body.
+
+Document structure (markdown):
+
+- **Provenance:** `Generated:` (RFC3339), `Scope:` (the resolved window
+  token), `Audience:` (the requested name), `Filters:` (echoed flags or
+  `(none)`), `Threads: <n>`, and a `Beats: <shown>/<in-window>` tally.
+- **Threads** (`## Threads`; omitted on an empty corpus per DEC-014):
+  per-thread `### <thread>` blocks. Each beat renders `- ★ <id>: <title>`
+  with an indented impact line when it carries a non-empty `impact`, or
+  `- · <id>: <title>` when it does not (the ★/· markers are the visible
+  "so what" signal).
+- **Throughline** (`## Throughline (skeleton)`; omitted on an empty
+  corpus): one line per thread — `- <thread> [<kind>]: <n> beats, <m>
+  with impact (<first> → <last>)` — the ordered thread refs + span +
+  beat/impact counts. The skeleton is deterministic; the LLM (via the
+  directive) finds the actual arc.
+- **Framing directive** (`## Framing directive`): the audience's directive
+  text appended verbatim. Renders even on an empty corpus; omitted only
+  when the resolved directive itself is empty.
+
+Audiences are **data-driven shaping profiles**, NOT a Go enum: `me`/`exec`
+load from bundled `embed.FS` assets; a user `<name>.yaml` in the
+story-profiles override directory shadows a bundled default by name
+(override-wins). A profile is a flat `key: value` file (selection +
+threading + altitude + directive pointer). The two shipped endpoints:
+
+- `me` — candid reflection: every thread, impact-less beats KEPT, low
+  altitude; default window `year`.
+- `exec` — impact-forward promotion: impact-bearing threads only,
+  impact-less beats DROPPED, small threads folded, one headline arc
+  (threads ordered impact-beat-count DESC); default window `quarter`.
+
+Flags:
+
+- `--audience <name>` is REQUIRED. An unknown audience (no bundled
+  default, no override file) exits 1 (user error) naming the audience.
+- Window flags (`--quarter`/`--month`/`--year`/`--since`) are the same
+  CALENDAR periods as `brag impact` and MUTUALLY EXCLUSIVE. With no
+  window flag, the audience profile's DEFAULT window applies (`me` →
+  `year`, `exec` → `quarter`); `scope` echoes the resolved token.
+- `--theme <tag>` appends exactly ONE cross-project thread (kind `theme`)
+  after the initiative threads, grouping every in-window entry carrying
+  that tag, time-ordered. Not subject to fold/drop (an explicit opt-in).
+- `--format markdown|json` defaults to `markdown`. The JSON envelope
+  extends DEC-014 with `audience`, `threads` (each `{thread, kind, span,
+  beats:[...]}`), `throughline` (`{arcs:[...]}`), and `framing_directive`,
+  2-space indent. Each beat is a 7-key projection `{id, title, project,
+  type, impact, is_impact_beat, created_at}`.
+- `--print-directive` prints ONLY the resolved framing directive to
+  stdout and exits 0 — no window, no DB read.
+- `--tag`/`--project`/`--type` compose with the window and echo into
+  `filters`.
+
+Empty-window: provenance renders (`Threads: 0`, `Beats: 0/0`); the
+`## Threads` and `## Throughline` sections are omitted from markdown; the
+`## Framing directive` section still renders. JSON renders `threads` `[]`,
+`throughline.arcs` `[]`, `framing_directive` the directive string,
+`filters` `{}`.
+
 ### `brag tags` — tag taxonomy view (STAGE-006)
 
 ```
@@ -830,3 +910,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-020` — `brag project edit` location editing: `RemoveLocation`/`EditLocations`; remove-not-attached and remove-other-project are user errors; verbatim path matching; one invocation's location changes are atomic (removes before adds); location edits don't bump `updated_at`.
 - `DEC-024` — `brag mcp serve`: official Go MCP SDK, stdio-only subcommand (not a separate binary), transport-purity generalization of the stdout/stderr spine, and provenance via reserved-namespace tags (explicit `agent`/`model` params with an `agent`/`clientInfo.Name` fallback).
 - `DEC-028` — `brag impact`: fourth DEC-014 consumer. CALENDAR time windows (`--quarter`/`--month`/`--year`, current in-progress period; `--since` via ParseSince) deliberately diverging from summary/review's rolling windows; initiative = the `project` axis (reuses `GroupEntriesByProject`); impact-first body (only entries with a non-empty `impact`, plus a `<shown>/<in-window>` tally); a narrow 4-key `{id,title,project,impact}` per-entry JSON projection.
+- `DEC-029` — `brag story --audience`: deterministic threads (initiative = the `project` axis, time-ordered, impact beats marked via `WithImpact`; an opt-in `--theme` cross-project cross-cut) + a throughline SKELETON that bragfile assembles and the caller's LLM weaves into an arc — the pure-pipe posture (no model/network in the binary) preserved. Audiences are DATA-DRIVEN shaping profiles (bundled `embed.FS` defaults + user override, override-wins, a flat `key: value` schema parsed by a hand-rolled stdlib parser — no new YAML dep), not a Go enum. The bundle EXTENDS DEC-014's envelope with an arc-aware body (`audience`/`threads`/`throughline`/`framing_directive`; a 7-key beat projection); framing directives ship as bundled per-audience assets, printable via `--print-directive`. Ships the gradient endpoints `me`/`exec` (`manager`/`skip` deferred to SPEC-050 as config-only).

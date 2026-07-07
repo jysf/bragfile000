@@ -84,12 +84,20 @@ Ordered list of specs composing this stage. Add specs as identified.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-049 (design) — `brag story --audience` — the extensible
-      shaping-profile mechanism, the coalesce-into-arcs bundle, and the
-      framing-directive assets (emits DEC-029, the audience taxonomy + the
-      thread-definition choice). The headline spec.
+- [x] SPEC-049 (shipped on 2026-07-06) — `brag story --audience` — the
+      extensible shaping-profile mechanism, the coalesce-into-arcs bundle, and
+      the framing-directive assets (emitted DEC-029, the audience taxonomy +
+      thread-definition choice). The headline spec. **Assessed L → split taken
+      (orchestrator APPROVED):** SPEC-049 shipped the mechanism + the gradient
+      ENDPOINTS (`me`/`exec`); SPEC-050 adds `manager`/`skip` config-only.
+- [ ] SPEC-050 (pending, planned in SPEC-049's split) — `manager` (and
+      optionally `skip`) audience profiles + directive assets, shipped as
+      bundled defaults with ZERO Go change — the proof that DEC-029's
+      profiles-as-data mechanism is extensible. Plus: a dedicated test for
+      AC-8's empty-directive omission branch (the coverage gap verify flagged),
+      and any polish (per-profile fold thresholds, doc/tutorial pass).
 
-**Count:** 0 shipped / 0 active / 1 pending
+**Count:** 1 shipped / 0 active / 1 pending
 
 ## Design Notes
 
@@ -103,13 +111,18 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
   diverge in practice") — data/config: selection + threading + framing directive
   + altitude. Ship me/manager/exec defaults.
 - **Reuses `brag impact` (STAGE-011) grouped data** as the raw material.
-- **OPEN DESIGN FORK for DEC-029 — what defines a "thread"/arc** (the unit
-  bragfile coalesces): the **initiative/project field** (deterministic, exists)
-  vs **theme-tags** (cross-project arcs) vs **time-progression** vs
-  **LLM-inferred**. Leaning: bragfile offers deterministic threads (initiative +
-  optional theme-tag), time-ordered with impact beats; the framing directive
-  lets the LLM merge cross-cutting arcs — bragfile assembles threads, the LLM
-  finds the throughline. **Resolve at design.**
+- **RESOLVED (DEC-029, SPEC-049 design) — what defines a "thread"/arc**:
+  bragfile assembles **deterministic threads** = initiative (the `project`
+  axis, reusing `GroupEntriesByProject`), time-ordered, with **impact beats**
+  marked (`WithImpact`), plus an **opt-in `--theme` cross-project cross-cut**,
+  and a **throughline SKELETON** (ordered thread refs + span + beat/impact-beat
+  counts). The **framing directive + the caller's LLM find the throughline**
+  and weave the arc. Rejected: LLM-inferred threading in the binary (bakes in a
+  model / breaks standalone use); theme or time-progression as the *primary*
+  axis (folded in as a cross-cut + within-thread ordering instead). Audiences
+  are **data-driven profiles** (bundled `embed.FS` defaults + user override),
+  not a Go enum. Confidence 0.72 (two sub-choices — profile-file format and the
+  two-audience slice — filed as questions).
 
 ## Dependencies
 
