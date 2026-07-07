@@ -7,7 +7,7 @@
 task:
   id: SPEC-053
   type: story
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S
@@ -641,3 +641,67 @@ cycle.*
    and story.go — it is now duplicated in two (plus wrapped's inline copy),
    which is exactly the "third consumer" signal DEC-030/DEC-032 flagged for a
    future `ListFilter.Until` promotion.
+
+---
+
+## Verify
+
+**Verdict: ✅ APPROVED** (2026-07-07, fresh independent session per AGENTS.md §12/§13).
+
+Re-derived from SPEC-053 + DEC-032 + constraints; did NOT trust the build
+self-report. PR #91 left open/ready; NOT merged. Branch pushed at ship cycle.
+
+### Six gates (re-run this session)
+- `go test ./...` → **PASS** (733 passed, 11 packages, exit 0)
+- `gofmt -l .` → **PASS** (empty)
+- `go vet ./...` → **PASS** (exit 0)
+- `CGO_ENABLED=0 go build ./...` → **PASS** (exit 0)
+- `just test-docs` → **PASS** (exit 0, ALL OK)
+- `just test-hook` → **PASS** (exit 0, ALL OK)
+
+### Acceptance criteria — all 11 met (code + independent live probe)
+Boundary math re-derived against the spec's frozen tables: `--quarter --previous`
+`[2026-04-01,2026-07-01)`, `--month --previous` `[2026-06-01,2026-07-01)`,
+`--year --previous` `[2025-01-01,2026-01-01)` at `spec53Now`; year-roll at Jan
+`now` → `--month --previous` `[2025-12-01,2026-01-01)`, `--quarter --previous`
+→ prior-year Q4 `[2025-10-01,2026-01-01)`. All via `time.Date`+`AddDate`
+(window.go:46–79), no day subtraction. Bounded upper edge = current-period
+start; current-period entry (now-ish) correctly excluded. Scope tokens
+`quarter:previous`/`month:previous`/`year:previous` (impact/story), concrete
+`"2025"` (wrapped). Errors (exit-1, empty stdout, stderr): `--previous --since`
+(impact+story), `impact --previous` no-window, `wrapped 2026 --previous`,
+`wrapped 2026 Q3 --previous`. `story --previous` alone shifts the `me` profile
+default (year); `impact --previous` alone errors.
+
+### No-regression (independently confirmed — the key check)
+`windowCutoff`'s new `previous bool` + exclusive-`end` return uses a
+**zero-`time.Time` sentinel** for the current-period path. Existing
+`TestWindowCutoff_CalendarArithmetic` cutoff/scope assertions are byte-unchanged
+(diff vs main: only a mechanical `, false` arg + additive zero-`end`
+assertions). No non-`--previous` test line removed across impact/story/wrapped
+test files. `TestImpactCmd_NoPreviousUnchanged` genuinely pins the current path;
+an independent live `brag impact --quarter` (no `--previous`) at `spec53Now`
+still reports current-Q3-up-to-now with plain `quarter` scope.
+
+### wrapped --previous == wrapped <y-1>
+Live byte-identity confirmed: `brag wrapped --previous` (2026) produced output
+**byte-for-byte identical** to `brag wrapped 2025` (JSON, `--no-spark`); bounded
+to 2025 (2024 + 2026 entries excluded); scope `"2025"`.
+
+### Constraints
+`no-sql-in-cli-layer` intact (no `database/sql` in production CLI; upper bound
+filtered in Go); no window-path fork (extends `windowCutoff`, DEC-032 choice 3);
+`go.mod`/`go.sum` unchanged (no new dep); stdout/stderr separation held.
+
+### `errors.Is` vs `errors.As` deviation — ACCEPTED
+`ErrUser` is a `%w`-wrapped sentinel value (`errors.New`), not a concrete type;
+`errors.As` cannot unwrap into a sentinel. `errors.Is(err, ErrUser)` is the
+correct mechanism and the codebase-wide idiom (`main.go` maps it to exit 1).
+Faithful correction of a design-time assumption; same signal, zero behavioral
+change; applied consistently (no shipped test uses `errors.As`).
+
+### Decision scope
+DEC-032 (7 locked choices) fully covers `--previous`; no smuggled DEC-033.
+`wrapped-default-current-vs-last-completed` confirmed RESOLVED in questions.yaml.
+
+Working tree clean; probe reverted.
