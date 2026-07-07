@@ -5,7 +5,7 @@
 task:
   id: SPEC-050
   type: task                       # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high                   # completes v0.4.0's audience gradient + the extensibility proof
   complexity: S                    # S — two bundled asset pairs (config only) + one Go test; ZERO production-Go change to the mechanism.
@@ -1178,7 +1178,69 @@ files + a help-string refresh + tests + docs — no mechanism code touched.
 
 ## Verify
 
-*Filled during verify.*
+**Verdict: ✅ APPROVED** (fresh independent verify session, 2026-07-06, re-derived
+from the spec + DEC-029 + constraints — not trusting the build self-report).
+
+### Six gates (re-run by verify)
+
+| Gate | Exit |
+|---|---|
+| `go test ./...` | 0 (653 passed, 10 packages — incl. E1/P1–P4/H1 + the full SPEC-049 suite) |
+| `gofmt -l .` | 0 (empty output) |
+| `go vet ./...` | 0 |
+| `CGO_ENABLED=0 go build ./...` | 0 |
+| `just test-docs` | 0 (ALL OK) |
+| `just test-hook` | 0 (ALL OK) |
+
+### Extensibility proof (the headline) — confirmed hard
+
+- `git diff --stat main -- '*.go'` (excl. `_test.go`): **only `internal/cli/story.go`**.
+- Its diff is **help-strings ONLY** (6 ins / 3 del): the 4-row `Long` audience
+  table, one `--audience manager --month` example, the `--audience` usage string
+  → `one of: me, manager, skip, exec, or a user profile`. **No change** to the
+  `//go:embed` glob, `LoadProfile`, `--audience` validation (no allowlist — grep
+  for `switch audience`/`case "me"` returns NONE), or `BuildThreads`. Line 40
+  extensibility sentence + line 92 required-error kept verbatim.
+- `go.mod`/`go.sum` **byte-unchanged** vs main (no new dependency).
+- The four new assets (`profiles/{manager,skip}.yaml`, `directives/{manager,skip}.md`)
+  are discovered purely via the shipped `//go:embed profiles/*.yaml directives/*.md`
+  glob — verified by the live binary resolving `--audience manager|skip` with no
+  mechanism edit.
+
+### Acceptance criteria (all met)
+
+- **AC-1/AC-5** manager: `profiles/manager.yaml` — month, all-false, initiative,
+  candid, `manager.md` (P1 asserts the parsed struct; live me≡manager body).
+- **AC-2/AC-5** skip: `profiles/skip.yaml` — quarter, impact_threads_only+fold
+  true, `drop_impactless_beats=false`, initiative, promotional, `skip.md` (P2).
+- **AC-3** mechanism accepts both with zero code (story.go-only, help-only diff).
+- **AC-4** four profiles distinct on the gradient (P3 struct-inequality + body).
+- **AC-6** empty-directive omission (E1 — genuine: markdown omits the section,
+  JSON `framing_directive` present-as-`""`, not null/absent).
+- **AC-7** directives distinct + on-voice (manager→"blockers"; skip→"initiative";
+  P4).
+- **AC-8** posture: no new dep, embed via glob, no-cgo, stdout/stderr unchanged;
+  `just test-docs` green.
+- **AC-9** `--help` lists all four built-ins + usage names all four + keeps
+  "user profile" (H1 — genuine).
+
+### Live four-way gradient (throwaway DB, `--year`)
+
+alpha (1 impact + 1 impact-less beat), beta (1 impact), `(no project)` (0 impact):
+- **me** — 3 threads, **4/4** beats (keeps everything, incl. `(no project)`).
+- **manager** — 3 threads, **4/4** beats; body byte-identical to me (diverges on
+  default window + directive, as designed).
+- **skip** — 2 threads, **3/4** beats; folds `(no project)` (like exec) but KEEPS
+  alpha's impact-less beat, initiative order.
+- **exec** — 2 threads, **2/4** beats; folds `(no project)` AND drops the
+  impact-less beat, impact-forward.
+
+`skip` sits **strictly between** me (4/4) and exec (2/4) at 3/4 — the checkable
+midpoint. Directive voices confirmed distinct and on-voice.
+
+No smuggled decision (no new DEC; DEC-029 covers it); no `database/sql` in
+`internal/cli/story.go`; NOT-contains self-audit clean; working tree clean.
+Shipping SPEC-050 closes STAGE-012.
 
 ## Reflection
 
