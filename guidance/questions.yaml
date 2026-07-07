@@ -214,3 +214,60 @@ questions:
       previous COMPLETE one; a `--previous` modifier is the clean future
       addition if the complete-period workflow materializes. Neither
       changes the schema — both are flag/semantics-only.
+
+  - id: story-profile-override-file-format
+    question: "What is the exact file format, config path, and precedence for user-defined `brag story` audience shaping profiles (the override layer over the bundled defaults)?"
+    priority: medium
+    status: open
+    raised_by: claude
+    raised_at: 2026-07-06
+    assigned_to: null
+    resolution: null
+    notes: |
+      Filed at SPEC-049 design (DEC-029, composite confidence 0.72). The
+      profiles-as-DATA *mechanism* is high-confidence and locked (DEC-029
+      choice 2): a profile = selection filter + threading policy +
+      altitude/length + framing-directive pointer, sourced from a bundled
+      default asset (embed.FS) with an optional user override. What is
+      below 0.8 is the *concrete surface*: (a) the override file format —
+      YAML is the lean; JSON/TOML are alternatives; (b) the path —
+      `~/.bragfile/story-profiles/<name>.yaml` vs a `config`-dir location
+      vs a single `story-profiles.yaml` map file; (c) precedence when a
+      user file shadows a bundled default name (override-wins vs
+      merge-fields); (d) malformed/partial-profile handling (reject vs
+      fall back to default vs merge). SPEC-049 SHIPS the bundled `me`/`exec`
+      defaults and the loader that reads them; it specifies the override
+      path + format + precedence as a locked design decision so build does
+      not guess, but the surface is new (no prior config-file-as-data
+      precedent in the repo beyond flags + embedded migrations), hence the
+      confidence flag. Resolve/harden when the first real user profile is
+      authored (SPEC-050 `manager`/`skip` are shipped-as-bundled-defaults,
+      NOT user-override files, so they exercise the loader but not the
+      override precedence — the override path stays lightly exercised until
+      a genuine third-party profile appears).
+
+  - id: story-two-audience-slice-proves-divergence
+    question: "Do the two shipped audiences (`me`, `exec`) prove `brag story`'s 'same in theory, diverge in practice' thesis convincingly, or does the release need `manager` too to be persuasive?"
+    priority: medium
+    status: open
+    raised_by: claude
+    raised_at: 2026-07-06
+    assigned_to: null
+    resolution: null
+    notes: |
+      Filed at SPEC-049 design (DEC-029 choice 4). SPEC-049 ships the
+      gradient ENDPOINTS — `me` (candid / every thread / impact-less beats
+      kept / low altitude / many arcs) and `exec` (promotional / impact-
+      bearing threads only / small threads folded / impact-less beats
+      dropped / high altitude / one headline arc) — because the endpoints
+      maximally exercise the mechanism and give the sharpest byte-golden
+      contrast. The open question is whether shipping only the endpoints
+      reads as "we built two hard-coded modes" rather than "we built an
+      extensible gradient." Mitigations already in the design: (1) the
+      mechanism is data-driven, so `manager` is a config-only addition;
+      (2) SPEC-050 adds `manager`/`skip` explicitly to DEMONSTRATE the
+      zero-Go-change extensibility. If the orchestrator judges two
+      endpoints insufficient for the v0.4.0 narrative headline, pull
+      `manager` forward into SPEC-049 (it is additive config; it does not
+      change the mechanism or the bundle shape). Recorded so the
+      slice-vs-whole call is explicit, not silent.
