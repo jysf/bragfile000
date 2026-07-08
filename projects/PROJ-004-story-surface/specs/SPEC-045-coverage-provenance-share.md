@@ -7,7 +7,7 @@
 task:
   id: SPEC-045
   type: story
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: M
@@ -842,6 +842,42 @@ sparkline is a markdown-only rendering (DEC-031 choice f).
   capture (SPEC-046) accrues it, but reporting it is a later metric.
 - **Weekly buckets / a configurable bucket unit** — monthly only (matches
   `wrapped`'s cadence unit); a future call.
+
+## Verify
+
+**Verdict: ✅ APPROVED** (independent verify cycle, fresh session, re-derived
+from spec + DEC-033 + constraints — build self-report NOT trusted).
+
+- **Six gates (re-run):** `go test ./...` PASS (762 tests, 11 packages);
+  `gofmt -l .` empty; `go vet ./...` clean; `CGO_ENABLED=0 go build ./...`
+  clean; `just test-docs` ALL OK; `just test-hook` ALL OK. All exit 0.
+- **No import cycle in SHIPPED state:** `go vet ./internal/storage/...
+  ./internal/aggregate/...` clean; the agreement test is `package storage_test`
+  (external) as the spec's deviation records — the correct Go resolution.
+- **Classifier agreement (key check):**
+  `TestProvenanceClassifier_GoPredicateMatchesSQLClause` PASS — SQL
+  `provenanceExistsClause` and Go `aggregate.IsAgentAuthored` partition the same
+  seeded corpus identically (4 agent / 3 human; `agentic,modeling` false-positive
+  excluded by both). `brag list --author` unregressed:
+  `TestList_FilterByAuthor` + author-compose tests green; the filter still uses
+  the SQL clause (coverage does NOT set `ListFilter.Author`).
+- **Live end-to-end:** built the binary, seeded a throwaway DB reproducing the
+  year fixture (4 agent ids 4/6/7/9, 6 human, self-ref 3). Confirmed: overall
+  share + per-month zero-filled series + self-reference; agent-share sparkline in
+  markdown, suppressed by `--no-spark` and by `NO_COLOR`; JSON glyph-free with
+  the flat keys + 4-key per-month projection + 2-space indent; `--previous` /
+  window flags + scope tokens (`year`, `quarter:previous`, `since:<raw>`);
+  `--project` filter echo; empty window omits markdown body but renders every
+  JSON key. Validation: no-window / two-window / `--previous --since` /
+  `--format yaml` all `UserError` with empty stdout (stdout/stderr separation).
+- **Golden faithfulness (re-derived):** `spark.Line([0,0,0,0,0,0,50,0,100,0,50,50])`
+  → min0/max100/span100 → 0=▁, 50=round(3.5)=4=▅, 100=7=█ → `▁▁▁▁▁▁▅▁█▁▅▅`,
+  matches Test 1's markdown golden. Both load-bearing byte-goldens (Test 1 md,
+  Test 2 JSON) PASS unmodified. No mis-computed golden.
+- **Constraints:** `internal/cli/coverage.go` + `internal/export/coverage.go`
+  import no `database/sql`/driver; `aggregate` has no `database/sql` (SQL only in
+  `internal/storage`). `go.mod`/`go.sum` unchanged vs `main` (no new dependency).
+- **No smuggled decision:** DEC-033 covers the metric + surface; no DEC-034.
 
 ## Locked design decisions
 
