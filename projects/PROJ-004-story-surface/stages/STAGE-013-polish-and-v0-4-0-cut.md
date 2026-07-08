@@ -95,10 +95,12 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       sixth DEC-014 digest: monthly agent-vs-human share + an agent-share
       sparkline + self-reference density, with `IsAgentAuthored` single-sourcing
       the SPEC-043 classifier via a cross-package agreement test (DEC-033).
-- [ ] SPEC-054 (planned) — **the v0.4.0 release cut** — the stage's closing
-      action (RC → Pattern 1 → final; CHANGELOG `[0.4.0]`; brew verify).
+- [x] SPEC-054 (shipped on 2026-07-07) — **the v0.4.0 release cut** — the stage's
+      closing action. Mechanical prep merged to main (CHANGELOG `[0.4.0]` + plugin
+      pin `0.4.0` + pre-flight ticked); the irreversible RC → Pattern 1 → final tag,
+      brew verify, and §12(b) behavioral check are the orchestrator's at the cut.
 
-**Count:** 4 shipped / 0 active / 1 pending
+**Count:** 5 shipped / 0 active / 0 pending
 
 ## Design Notes
 
