@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-013
-  status: active
+  status: shipped
   priority: high                    # closes PROJ-004 and cuts v0.4.0
   target_complete: null             # optional: YYYY-MM-DD
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-07-06
-shipped_at: null
+shipped_at: 2026-07-07             # v0.4.0 cut + published to Homebrew
 ---
 
 # STAGE-013: Polish + the v0.4.0 cut
@@ -127,10 +127,27 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped.*
+*Filled at ship (2026-07-07, v0.4.0 published to Homebrew).*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <tbd>
-- **How many specs did it actually take?** <tbd>
-- **What changed between starting and shipping?** <tbd>
-- **Lessons that should update AGENTS.md, templates, or constraints?** <tbd>
-- **Should any spec-level reflections be promoted to stage-level lessons?** <tbd>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes. The polish landed
+  and v0.4.0 shipped: `brag wrapped` (year+quarter), the in-terminal sparkline
+  pass, `--previous`, and `brag coverage` — then the release cut published the
+  whole read/story surface (impact + story + these) to Homebrew. `brew upgrade`
+  0.3.1→0.4.0 verified; prod DB opens migration-free.
+- **How many specs did it actually take?** Five: SPEC-051 (wrapped), SPEC-052
+  (sparklines), SPEC-053 (--previous), SPEC-045 (coverage, adopted from a
+  PROJ-003 draft), SPEC-054 (the v0.4.0 cut) + DEC-030/031/032/033.
+- **What changed between starting and shipping?** Per the 2026-07-06 scoping
+  call we bundled the polish rather than cutting a core-only v0.4.0 — one richer
+  release. The digest family's shared primitives (aggregate toolbox, DEC-014
+  envelope, calendar-window infra, `spark`) compounded: coverage was assembled
+  almost entirely from prior machinery.
+- **Lessons that should update AGENTS.md, templates, or constraints?** Two
+  observations tracked (both below the §12 bar): window semantics are per-command
+  (rolling/calendar-to-now/bounded — DEC-014/028/030/032), and the Go-predicate↔
+  SQL-clause agreement-test pattern (DEC-033) is the reusable move for a
+  classifier split across `no-sql-in-cli-layer`. One code-quality follow-up
+  spawned: promote the duplicated upper-bound filter to `ListFilter.Until`.
+- **Should any spec-level reflections be promoted to stage-level lessons?** The
+  two above are the stage-level lessons; the "faithful goldens at design time"
+  discipline (post-SPEC-049) held across all five specs and is the process win.
