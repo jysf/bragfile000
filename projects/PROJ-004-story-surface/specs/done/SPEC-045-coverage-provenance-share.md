@@ -1101,3 +1101,24 @@ collection is touched (each digest golden is self-contained).
   for a post-v0.4.0 dogfooding re-check — no wire change needed to re-render
   the trend (JSON already carries raw counts+shares). No other follow-up
   surfaced during build.
+
+## Reflection (Ship)
+
+*Appended at ship (2026-07-07). Merged to main; ships in the v0.4.0 cut.
+Last feature spec of STAGE-013 — only the release cut (SPEC-054) remains.*
+
+1. **What would I do differently next time?** — Nothing notable; adopting a
+   frame-stub (re-homing SPEC-045 from the closed PROJ-003 into STAGE-013) was
+   clean, and the metric assembled almost entirely from shipped machinery
+   (window core, wrapped's monthly renderer, `spark`, `--previous`) — a sign the
+   digest family's shared primitives are paying compounding dividends.
+2. **Does any template, constraint, or decision need updating?** — No. The
+   real win to remember: the `IsAgentAuthored` Go predicate is now the single
+   twin of storage's SQL `provenanceExistsClause`, pinned by a cross-package
+   agreement test — closing the SPEC-043 drift WATCH. That drift-guard pattern
+   (Go-predicate ↔ SQL-clause agreement) is the reusable move whenever a
+   classifier must live on both sides of the `no-sql-in-cli-layer` boundary.
+3. **Is there a follow-up spec I should write now before I forget?** — No. The
+   `coverage-sparkline-metric-choice` residual (single-entry-month = 100% spike)
+   is parked for post-v0.4.0 dogfooding, no wire change needed. STAGE-013's only
+   remaining backlog item is SPEC-054, the v0.4.0 release cut.
