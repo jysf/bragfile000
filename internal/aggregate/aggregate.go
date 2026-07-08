@@ -5,7 +5,9 @@
 package aggregate
 
 import (
+	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/jysf/bragfile000/internal/storage"
@@ -342,6 +344,94 @@ func Cadence(entries []storage.Entry, months []string) (series []CadenceBucket, 
 	}
 	return series, busiest
 }
+
+// IsAgentAuthored reports whether e carries a reserved provenance tag
+// (agent:<name> or model:<id>, DEC-024) — the SINGLE Go-side definition of
+// "agent-authored", kept in agreement with storage's provenanceExistsClause
+// SQL predicate by TestProvenanceClassifier_GoPredicateMatchesSQLClause. It
+// splits Entry.Tags (the comma-joined projection of the same taggings join
+// the SQL clause queries) and prefix-matches each token, mirroring the
+// LIKE 'agent:%' / 'model:%' anchoring: a topic tag like "agentic" or
+// "modeling" (no colon) is NOT provenance. This is the classifier SPEC-043's
+// --author filter reads in SQL; brag coverage reads it in Go so it can count
+// BOTH classes from one query (SPEC-045 LD2/LD7).
+func IsAgentAuthored(e storage.Entry) bool {
+	for _, raw := range strings.Split(e.Tags, ",") {
+		t := strings.TrimSpace(raw)
+		if strings.HasPrefix(t, "agent:") || strings.HasPrefix(t, "model:") {
+			return true
+		}
+	}
+	return false
+}
+
+// CoverageBucket is one month's provenance split: Period is the "YYYY-MM"
+// label, Agent/Human the classified counts, Share = Agent/(Agent+Human)
+// rounded to 4 decimals (0 when the month is empty). SPEC-045. The json tags
+// are the on-the-wire shape the coverage envelope embeds directly (LD8 of
+// SPEC-051): by_month[].period / .agent / .human / .share.
+type CoverageBucket struct {
+	Period string  `json:"period"`
+	Agent  int     `json:"agent"`
+	Human  int     `json:"human"`
+	Share  float64 `json:"share"`
+}
+
+// CoverageByMonth buckets entries by UTC calendar month, classifies each via
+// IsAgentAuthored, and emits one CoverageBucket per label in months order
+// (zero-filled). months is the ordered "YYYY-MM" set the CLI derives from the
+// window (12 for a year, 3 for a quarter, N for --since) so the series is
+// always fully present, even on an empty window. Mirrors Cadence (SPEC-051).
+func CoverageByMonth(entries []storage.Entry, months []string) []CoverageBucket {
+	agent := map[string]int{}
+	human := map[string]int{}
+	for _, e := range entries {
+		lbl := e.CreatedAt.UTC().Format("2006-01")
+		if IsAgentAuthored(e) {
+			agent[lbl]++
+		} else {
+			human[lbl]++
+		}
+	}
+	out := make([]CoverageBucket, 0, len(months))
+	for _, lbl := range months {
+		a, h := agent[lbl], human[lbl]
+		out = append(out, CoverageBucket{Period: lbl, Agent: a, Human: h, Share: shareRound(a, a+h)})
+	}
+	return out
+}
+
+// SelfReferenceCount returns how many entries mention "brag" (case-insensitive)
+// in Title or Description — a proxy for dogfooding density (the corpus talking
+// about the tool itself). Substring match: "brag" subsumes "bragfile" (SPEC-045
+// LD5).
+func SelfReferenceCount(entries []storage.Entry) int {
+	n := 0
+	for _, e := range entries {
+		hay := strings.ToLower(e.Title + " " + e.Description)
+		if strings.Contains(hay, "brag") {
+			n++
+		}
+	}
+	return n
+}
+
+// shareRound returns num/den rounded to 4 decimals (half-away-from-zero via
+// math.Round), or 0 when den == 0. Used for per-month and overall shares so
+// the JSON number is stable and the goldens are byte-exact. There is ONE
+// rounding definition (SPEC-045 Notes for the Implementer); Share is its
+// exported alias for the export renderer's overall-share computation.
+func shareRound(num, den int) float64 {
+	if den == 0 {
+		return 0
+	}
+	return math.Round(float64(num)/float64(den)*10000) / 10000
+}
+
+// Share is the exported alias of shareRound so the export renderer rounds the
+// overall agent_share / self_reference.share identically to the per-month
+// CoverageBucket.Share — one rounding definition, no drift (SPEC-045).
+func Share(num, den int) float64 { return shareRound(num, den) }
 
 // GroupForHighlights returns project groups in alpha-ASC order with
 // NoProjectKey forced last; within each group, entries are sorted

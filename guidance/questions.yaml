@@ -16,6 +16,38 @@
 #   (b) delete the question if it was resolved without a formal decision.
 
 questions:
+  - id: coverage-sparkline-metric-choice
+    question: "Should brag coverage's monthly trend sparkline encode agent SHARE (share×100, the adoption trend) or agent COUNT (volume) — and does the single-entry-month = 100% spike read misleadingly in practice?"
+    priority: medium
+    status: answered
+    raised_by: claude-opus-4-8
+    raised_at: 2026-07-07
+    assigned_to: null
+    answered_by: SPEC-045 build (2026-07-07), per orchestrator sign-off — DEC-033
+    notes: |
+      RESOLVED to agent SHARE (share×100, min→max normalized via spark.Line),
+      per the DEC-033 sign-off, and SHIPPED that way in SPEC-045 build. The
+      command's thesis is agent-native ADOPTION over time, not entry volume, so
+      the share is the honest series; the raw per-month agent/human counts are
+      printed directly beneath the glyph line, which disambiguates any
+      flat/ambiguous stretch. The residual single-entry-month = 100% soft spot
+      (below) is parked for a post-v0.4.0 dogfooding re-check — no wire change is
+      needed to re-render the trend differently, since the JSON already carries
+      raw counts + shares.
+
+      The residual soft spot: a month with a single entry that happens to be
+      agent-authored renders 100% (a full-height glyph), which can OVERSTATE
+      adoption relative to a busier, more representative month. The adjacent raw
+      counts mitigate this, but a reader scanning only the glyphs could be misled.
+
+      Resolve/harden when coverage is dogfooded over the real post-v0.4.0 corpus:
+      if the single-entry-month spike (or a share-vs-count preference) reads
+      misleadingly, revisit with a count-weighted or dual-series sparkline, or a
+      minimum-entries-per-bucket threshold. All are localized, additive changes —
+      the CoverageBucket shape and the DEC-014 envelope are unaffected either way
+      (JSON already carries raw counts + shares, so no wire change is needed to
+      re-render the trend differently).
+
   - id: tags-storage-model
     question: "Is comma-joined TEXT still the right shape for tags once `list --tag` and FTS5 `search` are implemented, or do we need to migrate to a normalized tags/entry_tags pair?"
     priority: medium
