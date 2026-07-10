@@ -91,6 +91,10 @@ weekly-review:
 specs-by-stage *ARGS:
     @./scripts/specs-by-stage.sh {{ARGS}}
 
+# Print the Lifetime Report prompt: whole-repo history (all projects/stages/releases) pre-loaded for narrative synthesis
+lifetime-report:
+    @./scripts/lifetime-report.sh
+
 # Snapshot `just status` to docs/reports/daily/YYYY-MM-DD.md (overwrites if run twice in one day)
 daily-status-report:
     @mkdir -p docs/reports/daily
