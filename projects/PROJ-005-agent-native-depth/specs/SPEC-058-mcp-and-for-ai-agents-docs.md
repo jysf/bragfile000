@@ -7,7 +7,7 @@
 task:
   id: SPEC-058
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -672,28 +672,56 @@ fi
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-058-mcp-agent-docs`
+- **PR (if applicable):** see final report / PR link
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+  - None. This spec lifts shipped behavior only (DEC-024/027/034/036/003 cited,
+    none created). DEC-037 left unclaimed as instructed.
 - **Deviations from spec:**
-  - [list]
+  - **One whitespace-only reflow of LITERAL 1.** The embedded LITERAL 1
+    wrapped the impact-framing phrase across a line break ("State a metric or
+    a named / outcome"), but the T11 assertion (`assert_contains_literal`,
+    line-oriented `grep -F`) checks for the single-line substring
+    `a metric or a named outcome`. Byte-for-byte transcription therefore FAILS
+    T11 — a genuine internal contradiction between LITERAL 1's line-wrap and
+    the T11 grep (the §12(a) design note wrongly claimed byte-for-byte
+    substring alignment). Resolved WITHOUT touching `scripts/test-docs.sh`:
+    the doc line was reflowed so `a metric or a named outcome` sits on one
+    line. Zero words changed; Markdown rendering is identical (a soft-wrap
+    newline is a space). Every other literal transcribed verbatim.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - Design-process feedback (not a spec): when a Group-T-style literal is
+    asserted via line-oriented `grep -F`, the embedded literal must keep that
+    phrase un-wrapped, OR the design should note the wrap and assert on a
+    shorter un-wrapped fragment. Worth a one-line addition to the §12(a)
+    reconciliation checklist ("verify each asserted literal fits within a
+    single physical line of the embedded artifact").
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing unclear in intent — the literal-artifact-as-spec pattern made the
+   transcription mechanical and the source cross-check confirmed every claim is
+   a faithful lift (install path table, four-tool contract, provenance,
+   `--db`/`BRAGFILE_DB`/default order all verified against source). The one snag
+   was mechanical, not conceptual: LITERAL 1's line-wrap defeated T11's
+   single-line `grep -F`, so "byte-for-byte" and "pass T11" were momentarily in
+   conflict.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No missing constraint/decision. The gap was a reconciliation defect in the
+   design's own §12(a) claim ("every asserted literal is a byte-for-byte
+   substring") — true only if the literal never wraps the asserted phrase. That
+   invariant should be explicit in the design checklist.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Before transcribing, I would pre-scan each `assert_contains_literal`
+   pattern against the embedded literal for phrases that straddle a line break,
+   and flag them at the top rather than discovering them at the gate. Would have
+   saved one fail/fix round-trip.
 
 ---
 
