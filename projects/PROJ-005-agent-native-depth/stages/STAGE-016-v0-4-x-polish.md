@@ -58,11 +58,13 @@ doc corrections) cheap enough to batch alongside.
 ## Scope
 
 ### In scope
-- **SPEC-058 — `ListFilter.Until` storage promotion** (+ a storage-layer
-  DEC): add `Until` to `storage.ListFilter`, refactor `impact`/`story`/
-  `wrapped` (and note `coverage`) off Go-side upper-bound filtering.
-  Behavior-preserving; goldens are fixture-fed so stay byte-identical.
-- **SPEC-059 — `brag spark`**: sparklines-only pulse for a recent window,
+- **SPEC-056 — `ListFilter.Until` storage promotion** (+ a storage-layer
+  DEC, DEC-035): add `Until` to `storage.ListFilter`, refactor `impact`/
+  `story`/`wrapped`/`coverage` off Go-side upper-bound filtering (coverage is
+  the confirmed 4th consumer). Behavior-preserving; goldens are fixture-fed so
+  stay byte-identical. (IDs are assigned at creation: this refactor's actual id
+  is SPEC-056; the `brag spark` item's actual id is assigned when created next.)
+- **`brag spark`**: sparklines-only pulse for a recent window,
   Total + by-project rows. Design must resolve the real forks (no `--week`
   in the calendar core; no sub-month bucketer; new multi-row render).
 - **Tier-1 micro-fixes** (fold in as small specs as they fit one-spec-
@@ -80,10 +82,10 @@ doc corrections) cheap enough to batch alongside.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-058 (frame) — `ListFilter.Until` storage promotion (+ storage-
-      layer DEC); remove duplicated Go-side upper-bound filtering.
-- [ ] SPEC-059 (frame) — `brag spark` sparklines-only pulse (Total +
-      by-project) over `--week|--month|--quarter`.
+- [ ] SPEC-056 (design) — `ListFilter.Until` storage promotion (+ DEC-035);
+      remove duplicated Go-side upper-bound filtering across the 4 consumers.
+- [ ] `brag spark` (frame) — sparklines-only pulse (Total + by-project) over
+      `--week|--month|--quarter`. (Id assigned at creation — next free SPEC-*.)
 - [ ] (candidate) — milestone-write `type` (R5); `project status`
       trailing-column cosmetic; WAL-safe backup doc + `sprint:` tag
       convention note. Split per one-spec-per-PR at frame time.

@@ -754,6 +754,95 @@ func TestList_FilterCombined(t *testing.T) {
 	}
 }
 
+// TestList_FilterByUntil ▲ SPEC-056 / DEC-035 — Until is the exclusive
+// RFC3339-UTC upper bound (created_at < Until), symmetric with Since's
+// inclusive lower bound. Promotes the calendar-window upper edge that four
+// commands (impact/story/wrapped/coverage) previously filtered in Go into the
+// storage layer. A zero Until is a no-op (the !IsZero() guard), preserving the
+// current-period path byte-for-byte.
+func TestList_FilterByUntil(t *testing.T) {
+	s, path := newTestStore(t)
+
+	now := time.Now().UTC()
+	a := addWithTags(t, s, "old", "", "", "")      // -3d, before bound
+	b := addWithTags(t, s, "recent", "", "", "")   // -1d, before bound
+	c := addWithTags(t, s, "at-bound", "", "", "") // exactly at bound → excluded (< not <=)
+	d := addWithTags(t, s, "after", "", "", "")    // now, after bound → excluded
+
+	bound := now.Add(-12 * time.Hour)
+	mustBackdate(t, path, a.ID, now.Add(-3*24*time.Hour))
+	mustBackdate(t, path, b.ID, now.Add(-1*24*time.Hour))
+	mustBackdate(t, path, c.ID, bound)
+	mustBackdate(t, path, d.ID, now)
+
+	got, err := s.List(ListFilter{Until: bound})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("len=%d, want 2 (titles=%v)", len(got), titlesOf(got))
+	}
+	if !containsTitle(got, "old") || !containsTitle(got, "recent") {
+		t.Errorf("want {old,recent}; got %v", titlesOf(got))
+	}
+	// The exclusive-edge assertion: an entry created exactly at Until is EXCLUDED.
+	if containsTitle(got, "at-bound") {
+		t.Errorf("entry at exactly Until must be EXCLUDED (< not <=); got %v", titlesOf(got))
+	}
+	if containsTitle(got, "after") {
+		t.Errorf("entry after Until must be excluded; got %v", titlesOf(got))
+	}
+
+	// Zero Until is a no-op (the !IsZero() guard): returns every row.
+	all, err := s.List(ListFilter{})
+	if err != nil {
+		t.Fatalf("List (zero Until): %v", err)
+	}
+	if len(all) != 4 {
+		t.Errorf("zero Until should be a no-op; len=%d, want 4 (titles=%v)", len(all), titlesOf(all))
+	}
+}
+
+// TestList_FilterBySinceAndUntil ▲ SPEC-056 / DEC-035 — Since (inclusive >=)
+// and Until (exclusive <) AND-compose into a half-open [Since, Until) window:
+// an entry exactly at Since is INCLUDED, one exactly at Until is EXCLUDED. This
+// is the bounded-window shape impact/story/wrapped/coverage feed via
+// windowCutoff.end / parseWrappedPeriod.nextBoundary. Modeled on
+// TestList_FilterCombined / TestList_AuthorComposesWithOtherFilters.
+func TestList_FilterBySinceAndUntil(t *testing.T) {
+	s, path := newTestStore(t)
+
+	now := time.Now().UTC()
+	since := now.Add(-10 * 24 * time.Hour) // inclusive lower edge
+	until := now.Add(-2 * 24 * time.Hour)  // exclusive upper edge
+
+	below := addWithTags(t, s, "below", "", "", "")      // before Since → excluded
+	atSince := addWithTags(t, s, "at-since", "", "", "") // exactly Since → included (>=)
+	inside := addWithTags(t, s, "inside", "", "", "")    // strictly within → included
+	atUntil := addWithTags(t, s, "at-until", "", "", "") // exactly Until → excluded (<)
+	above := addWithTags(t, s, "above", "", "", "")      // after Until → excluded
+
+	mustBackdate(t, path, below.ID, since.Add(-24*time.Hour))
+	mustBackdate(t, path, atSince.ID, since)
+	mustBackdate(t, path, inside.ID, now.Add(-5*24*time.Hour))
+	mustBackdate(t, path, atUntil.ID, until)
+	mustBackdate(t, path, above.ID, now)
+
+	got, err := s.List(ListFilter{Since: since, Until: until})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("len=%d, want 2 (titles=%v)", len(got), titlesOf(got))
+	}
+	if !containsTitle(got, "at-since") || !containsTitle(got, "inside") {
+		t.Errorf("want half-open [Since, Until) = {at-since,inside}; got %v", titlesOf(got))
+	}
+	if containsTitle(got, "below") || containsTitle(got, "at-until") || containsTitle(got, "above") {
+		t.Errorf("out-of-window rows leaked; got %v", titlesOf(got))
+	}
+}
+
 func TestList_FilterPreservesOrder(t *testing.T) {
 	s, _ := newTestStore(t)
 
