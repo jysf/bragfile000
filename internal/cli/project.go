@@ -27,9 +27,10 @@ var getCwd = os.Getwd
 func NewProjectCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project",
-		Short: "Manage projects (new, list, show, status, edit, archive, delete, here)",
+		Short: "Manage projects (new, ensure, list, show, status, edit, archive, delete, here)",
 	}
 	cmd.AddCommand(newProjectNewCmd())
+	cmd.AddCommand(newProjectEnsureCmd())
 	cmd.AddCommand(newProjectListCmd())
 	cmd.AddCommand(newProjectShowCmd())
 	cmd.AddCommand(newProjectStatusCmd())
@@ -114,6 +115,89 @@ func runProjectNew(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("add location: %w", err)
 	}
 	fmt.Fprintf(cmd.ErrOrStderr(), "Created project %q.\n", name)
+	return nil
+}
+
+func newProjectEnsureCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "ensure <name> [--location <dir>]",
+		Short: "Idempotently register a project (create if absent, no-op if present)",
+		Long: `Ensure a project is registered, safely and repeatably. If a project with
+this name already exists, ensure does nothing (exit 0); if not, it creates it
+with status "active". With --location, the given path is attached if it is not
+already registered (a project may have multiple locations); re-attaching the
+same path is a no-op. A path already registered to a DIFFERENT project is
+rejected (paths are globally unique).
+
+Unlike 'brag project new', ensure never errors when the project already exists,
+so it is safe to run before every capture or from an agent's setup script. The
+project name is stored verbatim and must be 64 characters or fewer.
+
+--location is optional and defaults to unset: no location (and no current
+directory) is registered unless you pass it.
+
+Examples:
+  brag project ensure standup
+  brag project ensure standup --location ~/code/standup
+  brag project ensure platform --location /srv/platform`,
+		RunE: runProjectEnsure,
+	}
+	cmd.Flags().String("location", "", "filesystem directory to attach to the project (optional; default: unset)")
+	return cmd
+}
+
+func runProjectEnsure(cmd *cobra.Command, args []string) error {
+	if len(args) != 1 {
+		return UserErrorf("ensure requires exactly one <name> argument")
+	}
+	name := strings.TrimSpace(args[0])
+	if name == "" {
+		return UserErrorf("project name must not be empty")
+	}
+	// Match the 64-char cap `brag add --json` / MCP enforce on the project field
+	// so an ensured name can always soft-match a normally-added entry (DEC-036).
+	if len([]rune(name)) > 64 {
+		return UserErrorf("project name exceeds 64-character limit")
+	}
+	// --location defaults to "" (unset); a location is attached only when the
+	// flag is non-empty. Deliberately NOT defaulted to cwd (DEC-036).
+	location, _ := cmd.Flags().GetString("location")
+
+	dbFlag := getFlagString(cmd, "db")
+	dbPath, err := config.ResolveDBPath(dbFlag)
+	if err != nil {
+		return fmt.Errorf("resolve db path: %w", err)
+	}
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	defer s.Close()
+
+	proj, created, err := s.EnsureProject(name)
+	if err != nil {
+		return fmt.Errorf("ensure project: %w", err)
+	}
+	if created {
+		fmt.Fprintf(cmd.ErrOrStderr(), "Created project %q.\n", name)
+	} else {
+		fmt.Fprintf(cmd.ErrOrStderr(), "Project %q already exists.\n", name)
+	}
+
+	if location != "" {
+		attached, err := s.EnsureLocation(proj.ID, location)
+		if err != nil {
+			if errors.Is(err, storage.ErrLocationOtherProject) {
+				return UserErrorf("path %q is already registered to another project", location)
+			}
+			return fmt.Errorf("ensure location: %w", err)
+		}
+		if attached {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Attached location %q.\n", location)
+		} else {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Location %q already attached.\n", location)
+		}
+	}
 	return nil
 }
 
