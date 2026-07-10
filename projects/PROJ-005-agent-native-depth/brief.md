@@ -91,12 +91,12 @@ memory, capture completeness, benchmark) lands on a clean base.
 
 Format: `- [status] STAGE-ID — one-line summary`
 
-- [ ] STAGE-015 (active) — MCP first-class for agents (install command,
-      unregistered-project gap, agent docs)
-- [ ] STAGE-016 (active) — v0.4.x polish (ListFilter.Until, brag spark,
-      tier-1 micro-fixes)
+- [x] STAGE-015 (shipped on 2026-07-10) — MCP first-class for agents
+      (install command, unregistered-project gap, agent docs)
+- [ ] STAGE-016 (active) — v0.4.x polish (ListFilter.Until ✓ shipped,
+      brag spark, tier-1 micro-fixes)
 
-**Count:** 0 shipped / 2 active / 0 pending
+**Count:** 1 shipped / 1 active / 0 pending
 
 ## Dependencies
 
