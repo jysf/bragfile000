@@ -348,6 +348,10 @@ func (s *Store) List(f ListFilter) ([]Entry, error) {
 		conds = append(conds, "e.created_at >= ?")
 		args = append(args, f.Since.UTC().Format(time.RFC3339))
 	}
+	if !f.Until.IsZero() {
+		conds = append(conds, "e.created_at < ?")
+		args = append(args, f.Until.UTC().Format(time.RFC3339))
+	}
 	switch f.Author {
 	case authorAgent:
 		conds = append(conds, provenanceExistsClause)

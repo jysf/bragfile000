@@ -7,7 +7,7 @@
 task:
   id: SPEC-056
   type: chore                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -351,27 +351,59 @@ be redundant and they would not fail-first.
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** feat/spec-056-listfilter-until
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **PR (if applicable):** https://github.com/jysf/bragfile/pull/97
+- **All acceptance criteria met?** yes
+  - `ListFilter.Until time.Time` added with a doc comment symmetric with `Since`
+    (exclusive RFC3339-UTC upper bound).
+  - `Store.List` applies `e.created_at < ?` (bound `f.Until.UTC().Format(time.RFC3339)`)
+    when `!f.Until.IsZero()`; a zero `Until` adds no clause. Verified by the new
+    `TestList_FilterByUntil` (exclusive edge: entry at exactly `Until` excluded;
+    zero-`Until` no-op returns all rows).
+  - Half-open `[Since, Until)` composition + AND verified by `TestList_FilterBySinceAndUntil`.
+  - Four consumers (`impact`, `story`, `wrapped`, `coverage`) now set `filter.Until`
+    (`end` / `nextBoundary`) and their Go upper-bound loops are deleted;
+    `grep -rn "CreatedAt.Before" internal/cli/` returns nothing.
+  - All enumerated bounded-window CLI guardrail tests stay GREEN, unchanged (26
+    tests incl. subtests). Export goldens byte-identical (`go test ./...` green).
+  - `gofmt -l .` clean; `go vet ./...` clean; `go test ./...` green (764 passed);
+    `just test-docs` green; `just test-hook` green.
 - **New decisions emitted:**
   - `DEC-035` — ListFilter.Until storage promotion (emitted at design)
 - **Deviations from spec:**
-  - [list]
+  - None. The two storage tests were already authored at design; build confirmed
+    fail-first (unknown field `Until`) then made them pass. All four consumer
+    refactors matched the spec's per-file change list exactly. In `wrapped.go` the
+    result variable was renamed `all` → `entries` and the `entries := make(...)`
+    filter loop deleted, as prescribed.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None new. `brag spark` (the sketched fifth bounded consumer) will simply set
+    `Until` when it lands — no re-copied Go loop — which is the intended payoff of
+    this promotion.
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing. The spec was fully mechanical: the four locked DEC-035 points, the
+   exact per-file change list (with line ranges), the pre-authored failing tests,
+   and the "model on `Since` verbatim" instruction left no design decision for
+   build. The one thing worth double-checking — that coverage.go's `end`-based
+   `upper`/`scopeMonths` block must NOT be touched — was called out explicitly, so
+   I only deleted the filter loop.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. `no-sql-in-cli-layer`, `timestamps-in-utc-rfc3339`, `storage-tests-use-tempdir`,
+   and `test-before-implementation` all applied and were listed. The refactor
+   only removes Go from the CLI and adds one SQL clause in `internal/storage`, so
+   the constraint set was exactly right.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing material. This is close to the ideal shape of a behavior-preserving
+   refactor spec: the regression contract is a named set of existing green tests
+   plus two new storage tests for the new field, so build is transcribe-and-verify.
+   The `grep "CreatedAt.Before"` completeness check made "all four copies gone"
+   trivially confirmable.
 
 ---
 
