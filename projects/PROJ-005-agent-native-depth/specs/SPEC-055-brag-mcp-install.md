@@ -7,7 +7,7 @@
 task:
   id: SPEC-055
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -604,27 +604,47 @@ Completion (design lists the files; build re-verifies the hits).
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** feat/spec-055-mcp-install
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **PR (if applicable):** (see PR opened from this branch, base `main`)
+- **All acceptance criteria met?** yes — all 22 tests in `mcp_install_test.go`
+  pass; Case A/B/D outputs are byte-exact; idempotent re-run is byte-identical;
+  dry-run writes nothing (JSON→stdout, path→stderr); every unsupported combo is
+  `errors.Is(err, ErrUser)` with empty stdout; `mcp install --help` and `mcp
+  --help` list the expected flags/subcommands. Full gate set green (`go test
+  ./...` 781 pass, `gofmt -l .` clean, `go vet` clean, `CGO_ENABLED=0 go build`
+  OK, `just test-docs` ALL OK, `just test-hook` ALL OK). End-to-end binary run
+  confirmed the stdout/stderr discipline live.
 - **New decisions emitted:**
   - `DEC-034` — MCP install config-merge scheme (emitted at design)
 - **Deviations from spec:**
-  - [list]
+  - None. `mergeMCPConfig` and `resolveInstallTarget` transcribed per the
+    embedded artifacts; the flag set, path table, UserError combos, and output
+    contract match DEC-034 exactly.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None new. SPEC-056 (unregistered-project gap) and SPEC-057 (agent docs
+    page) already carry the deferred scope noted in "Out of scope".
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing material. The literal-artifact-as-spec approach (byte-exact Case
+   A/B/D + the verbatim `mergeMCPConfig`/`resolveInstallTarget` transcriptions
+   + the flow numbered 1–8) made the build almost mechanical: transcribe, wire,
+   run the pre-authored tests to green. The design-time pre-flight of the merge
+   bytes meant zero guesswork about whitespace/key-order.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. The blocking constraints (stdout/stderr spine, no-sql-in-cli-layer,
+   errors-wrap-with-context, no-cgo, no-new-deps) were all listed and were the
+   right ones; `no-sql-in-cli-layer` is satisfied structurally (the file
+   imports only stdlib + cobra).
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing significant. One nicety: the spec's flow step 6 puts the dry-run
+   `Fprintf` before the `Write`, which I followed verbatim — worth keeping since
+   it means the stderr annotation precedes the stdout payload when both are
+   viewed interleaved.
 
 ---
 

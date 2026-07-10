@@ -945,6 +945,23 @@ your existing database. An MCP-client agent can capture and recall brags
 without spawning a shell. The protocol stream owns stdout; nothing
 human-facing is ever written there.
 
+### `brag mcp install` — register the server with a client
+
+Rather than hand-editing a client's config, let `brag` write it:
+
+```bash
+brag mcp install                          # claude-code, this repo's .mcp.json
+brag mcp install --client cursor          # cursor's .cursor/mcp.json
+brag mcp install --dry-run                # print the exact JSON + path, write nothing
+```
+
+This merges the `brag` server block into the target client's config
+idempotently — re-running is safe, and any other MCP server already there is
+preserved. Supported clients are `claude-code` (default), `claude-desktop`,
+and `cursor`; `--scope` is `project` (default, the checked-in file) or `user`.
+MCP servers connect at client startup, so restart or reconnect the session
+after installing.
+
 ### The Claude Code plugin
 
 The MCP server, a `/brag` slash-command, and a quiet session-end

@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewMCPCmd returns the `brag mcp` parent command, with `serve` as its only
-// child.
+// NewMCPCmd returns the `brag mcp` parent command, with `serve` and `install`
+// as its children.
 func NewMCPCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mcp",
@@ -19,9 +19,13 @@ func NewMCPCmd() *cobra.Command {
 		Long: `Model Context Protocol (MCP) server commands.
 
 See 'brag mcp serve --help' for the local stdio server that exposes
-brag_add / brag_list / brag_search / brag_stats as typed tools.`,
+brag_add / brag_list / brag_search / brag_stats as typed tools.
+
+See 'brag mcp install --help' to register that server in a client's config
+(claude-code, claude-desktop, or cursor) idempotently.`,
 	}
 	cmd.AddCommand(newMCPServeCmd())
+	cmd.AddCommand(newMCPInstallCmd())
 	return cmd
 }
 

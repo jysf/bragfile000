@@ -60,6 +60,10 @@ binaries don't trigger Gatekeeper.
 
 - **Claude Code plugin:** `claude plugin marketplace add jysf/bragfile000`
   then `claude plugin install brag@bragfile` — see `plugin/README.md`.
+- **MCP server (any client):** `brag mcp install` registers the `brag mcp
+  serve` server in a client's config idempotently (`--client
+  claude-code|claude-desktop|cursor`, `--scope project|user`, `--dry-run` to
+  preview) — see [`docs/api-contract.md`](docs/api-contract.md).
 
 ## Capture an entry
 

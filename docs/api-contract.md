@@ -1078,6 +1078,53 @@ CLI flags).
 form of `stdout-is-for-data-stderr-is-for-humans` at this transport). See
 [DEC-024](../decisions/DEC-024-mcp-server-sdk-transport-and-provenance.md).
 
+### `brag mcp install` — register the server in a client's config (STAGE-015)
+
+```
+brag mcp install [--client claude-code|claude-desktop|cursor] [--scope user|project] [--dir PATH] [--dry-run]
+```
+
+Writes or merges the `brag` MCP server block
+(`{"command":"brag","args":["mcp","serve"]}`) under `mcpServers` in the target
+client's config file, **idempotently** and **without clobbering** any other
+MCP server or unrelated top-level key. Re-running is always safe: a
+byte-identical result is detected and reported as a no-op (exit 0, no write).
+A present-but-different `brag` block is overwritten with the canonical block.
+
+**Flags** (defaults explicit):
+
+- `--client` (default `claude-code`) — one of `claude-code`,
+  `claude-desktop`, `cursor`.
+- `--scope` (default `project`) — `project` (the checked-in, shareable file)
+  or `user` (the per-user file).
+- `--dir` (default: current working directory) — the project directory for
+  `project` scope; a `UserError` if combined with `--scope user`.
+- `--dry-run` — prints the exact JSON that would be written to **stdout** and
+  a `Would write to <path>:` line to **stderr**, writing nothing to disk.
+
+**Target paths** (client × scope):
+
+| client         | scope   | path |
+|----------------|---------|------|
+| claude-code    | project | `<dir>/.mcp.json` |
+| claude-code    | user    | `~/.claude.json` |
+| cursor         | project | `<dir>/.cursor/mcp.json` |
+| cursor         | user    | `~/.cursor/mcp.json` |
+| claude-desktop | user    | macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`; Windows: `%APPDATA%\Claude\claude_desktop_config.json` |
+
+Unsupported combinations are `UserError`s (exit 1, stdout empty), never silent
+fallbacks: an unknown `--client` or `--scope`, `claude-desktop --scope
+project` (Desktop has no project config), `--dir` with `--scope user`, and
+`claude-desktop` on a non-macOS/non-Windows OS.
+
+**Output contract.** A real write prints `Registered brag MCP server in
+<path>` to stderr (stdout empty); a no-op prints `brag MCP server already
+registered in <path> (no changes)` to stderr (stdout empty). Only `--dry-run`
+emits data (the would-be JSON) on stdout. The command imports no storage and
+no SQL (`no-sql-in-cli-layer`). MCP servers connect at client startup —
+restart/reconnect the session after installing. See
+[DEC-034](../decisions/DEC-034-mcp-install-config-merge-scheme.md).
+
 ## Error output
 
 All human-readable errors go to stderr with the prefix `brag: `. Example:
@@ -1113,6 +1160,7 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-019` — `brag project here` / `brag add` cwd auto-fill: nearest-ancestor (longest-prefix) match against registered project locations
 - `DEC-020` — `brag project edit` location editing: `RemoveLocation`/`EditLocations`; remove-not-attached and remove-other-project are user errors; verbatim path matching; one invocation's location changes are atomic (removes before adds); location edits don't bump `updated_at`.
 - `DEC-024` — `brag mcp serve`: official Go MCP SDK, stdio-only subcommand (not a separate binary), transport-purity generalization of the stdout/stderr spine, and provenance via reserved-namespace tags (explicit `agent`/`model` params with an `agent`/`clientInfo.Name` fallback).
+- `DEC-034` — `brag mcp install`: idempotent, no-clobber merge of the `brag` server block into a client's `mcpServers` config (claude-code/claude-desktop/cursor), per-client×scope target-path table, unsupported combos as `UserError`s, and the dry-run(JSON→stdout)/human(→stderr) output contract. Storage-free (`no-sql-in-cli-layer`).
 - `DEC-028` — `brag impact`: fourth DEC-014 consumer. CALENDAR time windows (`--quarter`/`--month`/`--year`, current in-progress period; `--since` via ParseSince) deliberately diverging from summary/review's rolling windows; initiative = the `project` axis (reuses `GroupEntriesByProject`); impact-first body (only entries with a non-empty `impact`, plus a `<shown>/<in-window>` tally); a narrow 4-key `{id,title,project,impact}` per-entry JSON projection.
 - `DEC-033` — `brag coverage`: sixth DEC-014 consumer. Provenance-share metric — per-month agent-vs-human split + share, an agent-share sparkline (DEC-031, markdown-only), and a self-reference density measure — over the shared DEC-028/DEC-032 calendar window. The classifier is single-sourced: a pure `aggregate.IsAgentAuthored` Go predicate kept in agreement with storage's `provenanceExistsClause` SQL clause by a cross-package drift-guard test (`brag list --author` stays SQL, unregressed).
 - `DEC-029` — `brag story --audience`: deterministic threads (initiative = the `project` axis, time-ordered, impact beats marked via `WithImpact`; an opt-in `--theme` cross-project cross-cut) + a throughline SKELETON that bragfile assembles and the caller's LLM weaves into an arc — the pure-pipe posture (no model/network in the binary) preserved. Audiences are DATA-DRIVEN shaping profiles (bundled `embed.FS` defaults + user override, override-wins, a flat `key: value` schema parsed by a hand-rolled stdlib parser — no new YAML dep), not a Go enum. The bundle EXTENDS DEC-014's envelope with an arc-aware body (`audience`/`threads`/`throughline`/`framing_directive`; a 7-key beat projection); framing directives ship as bundled per-audience assets, printable via `--print-directive`. Ships the gradient endpoints `me`/`exec` (`manager`/`skip` deferred to SPEC-050 as config-only).
