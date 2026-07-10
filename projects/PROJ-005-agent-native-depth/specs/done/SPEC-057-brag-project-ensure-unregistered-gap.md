@@ -7,7 +7,7 @@
 task:
   id: SPEC-057
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -475,10 +475,28 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Little on the spec itself — it was complete enough that build was
+   transcription-plus-wire-up and verify approved on live re-derivation.
+   The one optional hardening verify flagged is worth doing if this area
+   is touched again: `TestEnsureProject_NoOpWhenExists` proves the no-op
+   returns the existing row but does not *explicitly* assert
+   `updated_at` is unchanged (the guarantee holds by code inspection —
+   no `UPDATE` on that path — but an explicit `second.UpdatedAt ==
+   first.UpdatedAt` assertion would lock it against regression).
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. DEC-036 records the idempotent-upsert semantics, the
+   keep-`brag_add`-free-text boundary, and the two documented soft-link
+   facts. The `new` vs `ensure` split keeps `brag project new`'s
+   error-on-duplicate contract intact. `no-sql-in-cli-layer` holds — the
+   Ensure* logic lives in `internal/storage`.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — Two candidates surfaced, both non-blocking: (a) exposing an
+   `ensure`-equivalent over the MCP server so agents can register a
+   project programmatically before capture (DEC-036 boundary — deferred);
+   (b) the ≤64-char name cap asymmetry (`ensure` enforces it, `brag
+   project new` does not) — a small tidy spec. Neither belongs in this
+   batch; log for PROJ-005's deeper agent-native stages. The immediate
+   next spec is SPEC-058 (MCP + "For AI agents" docs), which closes
+   STAGE-015.
