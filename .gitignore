@@ -38,3 +38,6 @@ coverage/
 tmp/
 temp/
 *.tmp
+
+# Claude Code local state / agent worktrees
+.claude/
