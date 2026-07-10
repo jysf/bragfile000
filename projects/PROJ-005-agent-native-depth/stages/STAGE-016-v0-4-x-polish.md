@@ -85,13 +85,14 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 - [x] SPEC-056 (shipped on 2026-07-10) — `ListFilter.Until` storage promotion
       (+ DEC-035); removed duplicated Go-side upper-bound filtering across the 4
       consumers.
-- [ ] `brag spark` (frame) — sparklines-only pulse (Total + by-project) over
-      `--week|--month|--quarter`. (Id assigned at creation — next free SPEC-*.)
+- [ ] SPEC-059 (design) — `brag spark` sparklines-only pulse (Total +
+      top-8 by-project) over rolling `--week|--month|--quarter` (default
+      `--month`); new `aggregate.RollingBuckets` sub-month bucketer + DEC-037.
 - [ ] (candidate) — milestone-write `type` (R5); `project status`
       trailing-column cosmetic; WAL-safe backup doc + `sprint:` tag
       convention note. Split per one-spec-per-PR at frame time.
 
-**Count:** 1 shipped / 0 active / 1 pending (+ micro-fix candidates)
+**Count:** 1 shipped / 1 active / 0 pending (+ micro-fix candidates)
 
 ## Design Notes
 

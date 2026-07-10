@@ -16,6 +16,32 @@
 #   (b) delete the question if it was resolved without a formal decision.
 
 questions:
+  - id: spark-month-semantic-drift
+    question: "Does brag spark's rolling --month (28 days) reading misleadingly, given --month means rolling 30 days in brag review and the calendar month in impact/coverage/wrapped?"
+    priority: low
+    status: open
+    raised_by: claude-opus-4-8
+    raised_at: 2026-07-10
+    assigned_to: null
+    notes: |
+      Filed at SPEC-059 design (DEC-037, confidence 0.72). DEC-037 chose ROLLING
+      windows for the pulse (a pulse is "now"), with --week=7d/7 daily bars,
+      --month=28d/4 weekly bars, --quarter=91d/13 weekly bars. 28 (not 30) days
+      is required to get four clean weekly buckets. The consequence is that
+      --month now means THREE different spans across the CLI: rolling 28d here,
+      rolling 30d in `brag review`, and the calendar month in
+      impact/coverage/wrapped. This is a real cross-surface ergonomic wart, not a
+      correctness issue — the `scope` echo + the `Generated:` line make the actual
+      window unambiguous in output, and the choice is reversible.
+
+      Resolve/harden when `brag spark` is dogfooded over the real corpus: if the
+      rolling-`--month` span reads misleadingly against the other commands'
+      `--month`, revisit by either renaming spark's flags to be span-explicit
+      (e.g. --7d/--28d/--91d) or unifying `--month` semantics CLI-wide. Both are
+      localized flag-surface changes — the RollingBuckets primitive and the
+      DEC-014 envelope are unaffected either way. Weekly-review should watch this
+      as the canonical "same flag, different meaning per command" inconsistency.
+
   - id: coverage-sparkline-metric-choice
     question: "Should brag coverage's monthly trend sparkline encode agent SHARE (share×100, the adoption trend) or agent COUNT (volume) — and does the single-entry-month = 100% spike read misleadingly in practice?"
     priority: medium
