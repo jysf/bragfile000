@@ -7,7 +7,7 @@
 task:
   id: SPEC-055
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -654,10 +654,27 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — The command build itself was near-mechanical thanks to the
+   literal-artifact-as-spec discipline (byte-exact Case A/B/D + a verbatim
+   `mergeMCPConfig` pre-flighted at design), so verify passed on live
+   re-derivation with zero code findings. The one lesson is orchestration
+   hygiene, not spec: pre-existing uncommitted WIP in the working tree
+   (the lifetime-report tooling) got swept into the scaffold commit by a
+   `git add -A`; verify caught it as PR-scope pollution and it was split
+   back out. Stage explicit paths, never `-A`, when unrelated WIP or agent
+   worktrees are present.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No repo constraint/template change. DEC-034 records the merge scheme
+   and its honest soft spots (semantic-not-byte-for-byte rewrite of the
+   large managed `~/.claude.json`; cross-OS Claude Desktop path) with a
+   revisit-trigger list. The command satisfies `no-sql-in-cli-layer` /
+   `no-new-top-level-deps` structurally (stdlib `encoding/json` only).
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — Two already-scoped in STAGE-015: SPEC-057 (`brag project ensure`,
+   the unregistered-project gap — in design now) and the MCP + "For AI
+   agents" documentation spec, which should lift the now-final `install`
+   flags/paths and the tool contract into an agent-facing form. A smaller
+   candidate surfaced by DEC-034's boundary: exposing `project ensure` (and
+   possibly `install`) over the MCP server itself — noted, not yet a spec.

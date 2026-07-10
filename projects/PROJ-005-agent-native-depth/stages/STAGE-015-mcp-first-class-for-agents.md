@@ -84,17 +84,18 @@ that assumes agents actually use the MCP path.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [~] SPEC-055 (build) — `brag mcp install`: idempotent client-config
-      merge (DEC-034 emitted), `--dry-run`, never clobber other
+- [x] SPEC-055 (shipped on 2026-07-10) — `brag mcp install`: idempotent
+      client-config merge (DEC-034), `--dry-run`, never clobbers other
       `mcpServers`.
-- [ ] SPEC-056 (frame) — close the unregistered-project gap: `brag project
-      ensure <name>` (or auto-register on `brag_add`) + document the
-      soft-link facts (`project list` locations authoritative-but-
-      incomplete; a project may have multiple locations).
-- [ ] SPEC-057 (frame) — MCP + "For AI agents" docs (README + docs page,
-      full tool schemas, gotchas, impact-framing convention).
+- [ ] SPEC-057 (design) — close the unregistered-project gap: `brag project
+      ensure <name>` (idempotent upsert) + document the soft-link facts
+      (`project list` locations authoritative-but-incomplete; a project may
+      have multiple locations). Creates DEC-036.
+- [ ] SPEC-058 (frame) — MCP + "For AI agents" docs (README + docs page,
+      full tool schemas, gotchas, impact-framing convention). Comes last,
+      once install + project-ensure shapes are final.
 
-**Count:** 0 shipped / 0 active / 3 pending
+**Count:** 1 shipped / 1 active / 1 pending
 
 ## Design Notes
 
