@@ -94,7 +94,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       authoritative-but-incomplete; a project may have multiple
       locations). `brag_add` stays free-text — no silent auto-register
       (DEC-036). Full agent-facing MCP docs are SPEC-058.
-- [ ] SPEC-058 (frame) — MCP + "For AI agents" docs (README + docs page,
+- [ ] SPEC-058 (design) — MCP + "For AI agents" docs (README + docs page,
       full tool schemas, gotchas, impact-framing convention). Comes last,
       once install + project-ensure shapes are final.
 
