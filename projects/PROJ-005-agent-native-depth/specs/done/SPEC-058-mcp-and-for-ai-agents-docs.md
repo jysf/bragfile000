@@ -7,7 +7,7 @@
 task:
   id: SPEC-058
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -731,10 +731,27 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Pre-scan every `assert_contains_literal` pattern against the embedded
+   doc literal for phrases that straddle a line break BEFORE transcribing.
+   The one snag this cycle was mechanical: LITERAL 1 wrapped the
+   impact-framing phrase across a newline while T11 greps for it as a
+   single line, so byte-for-byte transcription failed T11. Build reflowed
+   the doc line (zero words changed, identical render) rather than weaken
+   the test — the right call — but a design-time single-line check would
+   have avoided the round-trip.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — One small AGENTS.md §12(a) refinement is worth codifying if it
+   recurs: "when a doc-test assertion greps a literal substring, that
+   substring must fit on ONE physical line of the embedded artifact
+   (grep is line-oriented)." N=1 so far (this spec) — WATCH, codify on a
+   second occurrence per the §12 codification meta-rule. No decision
+   change: this spec invented no behavior; it lifted the shipped MCP
+   contract into an agent-facing form.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No. SPEC-058 closes STAGE-015 (MCP first-class). The candidates it
+   surfaced are already logged from SPEC-057 (an MCP-exposed `ensure`
+   tool; the ≤64-char name-cap asymmetry) for PROJ-005's deeper
+   agent-native stages. Remaining batch work is STAGE-016 (`brag spark`
+   + micro-fixes) then the v0.5.0 cut.

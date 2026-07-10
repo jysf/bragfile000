@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-015
-  status: active
+  status: shipped
   priority: high
   target_complete: null
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-07-10
-shipped_at: null
+shipped_at: 2026-07-10
 ---
 
 # STAGE-015: MCP first-class for agents
@@ -94,11 +94,13 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       authoritative-but-incomplete; a project may have multiple
       locations). `brag_add` stays free-text — no silent auto-register
       (DEC-036). Full agent-facing MCP docs are SPEC-058.
-- [ ] SPEC-058 (design) — MCP + "For AI agents" docs (README + docs page,
-      full tool schemas, gotchas, impact-framing convention). Comes last,
-      once install + project-ensure shapes are final.
+- [x] SPEC-058 (shipped on 2026-07-10) — MCP + "For AI agents" docs
+      (`docs/for-ai-agents.md` + README section): full tool schemas, the
+      `project`-not-auto-filled gotcha, provenance stamping, `--db`, and the
+      how-to-log-a-win + impact-framing playbook. A pure lift of the shipped
+      MCP contract into an agent-facing form.
 
-**Count:** 2 shipped / 0 active / 1 pending
+**Count:** 3 shipped / 0 active / 0 pending
 
 *(Numbering note: the "unregistered gap" work landed as SPEC-057 and the
 docs work as SPEC-058 — the earlier backlog's SPEC-056 label was consumed
@@ -144,10 +146,30 @@ monotonic, §2.)*
 
 *Filled in when status moves to shipped.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes. `brag mcp
+  serve` is now first-class: `brag mcp install` (SPEC-055) registers it in a
+  client's config idempotently without clobbering other servers; `brag
+  project ensure` (SPEC-057) closes the referential half of the gap so an
+  agent's `project` maps for downstream consumers; and `docs/for-ai-agents.md`
+  + a README section (SPEC-058) give an agent the full tool contract and the
+  gotchas with no source-diving. The live gap that motivated the stage (an
+  agent falling back to `brag add` because nothing told it how to connect) is
+  closed end-to-end.
+- **How many specs did it actually take?** 3 (SPEC-055, 057, 058) — exactly
+  the plan. (The stage's placeholder backlog IDs 056/057 predated real
+  numbering; the `Until` promotion consumed SPEC-056, so the ensure/docs work
+  landed as 057/058 — repo-global monotonic IDs, §2.)
+- **What changed between starting and shipping?** Nothing structural; the
+  ensure-vs-auto-register question resolved cleanly to an explicit idempotent
+  `ensure` primitive (DEC-036) with capture staying free-text.
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
+  - WATCH (N=1): a §12(a) refinement — a doc-test `assert_contains_literal`
+    substring must fit on ONE physical line of the embedded artifact (grep is
+    line-oriented). Codify on a second occurrence (SPEC-058 build).
+  - Orchestration (not repo-AGENTS.md): writing sub-agents must run in
+    isolated worktrees, and never `git add -A` with live worktrees/WIP
+    present — two accidental-capture incidents this stage.
 - **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <one-line items>
+  - The literal-artifact-as-spec pattern made all three builds near-mechanical
+    and verify-on-re-derivation clean — worth keeping as the default for
+    fixed-shape (CLI/JSON/docs) specs.
