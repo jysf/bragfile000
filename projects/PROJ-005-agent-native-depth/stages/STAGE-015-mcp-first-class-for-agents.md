@@ -84,9 +84,9 @@ that assumes agents actually use the MCP path.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-055 (frame) — `brag mcp install`: idempotent client-config
-      merge (+ a DEC for the merge scheme), `--dry-run`, never clobber
-      other `mcpServers`.
+- [ ] SPEC-055 (design) — `brag mcp install`: idempotent client-config
+      merge (DEC-034 emitted), `--dry-run`, never clobber other
+      `mcpServers`.
 - [ ] SPEC-056 (frame) — close the unregistered-project gap: `brag project
       ensure <name>` (or auto-register on `brag_add`) + document the
       soft-link facts (`project list` locations authoritative-but-
