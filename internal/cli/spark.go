@@ -63,7 +63,11 @@ func sparkWindow(scope string) (width time.Duration, n int) {
 }
 
 func runSpark(cmd *cobra.Command, _ []string) error {
-	now := nowFunc()
+	// Sample the clock ONCE and truncate to the second so the query boundary
+	// (storage stores/compares created_at at RFC3339 second precision) and the
+	// bucket axis agree exactly — one axis feeds both the filter and the
+	// bucketer below (SPEC-060).
+	now := nowFunc().Truncate(time.Second)
 
 	// Resolve the rolling window: exactly-one-or-none among week/month/quarter,
 	// mutually exclusive, default month. (window.go's selectedWindow is for the
@@ -89,10 +93,16 @@ func runSpark(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	// Query the in-window corpus once. Since = now - width*n (the axis start);
-	// Until is left zero — the bucketer's `end` (now) is the effective exclusive
-	// upper edge (DEC-037: a pure "last N days ending now").
-	filter := storage.ListFilter{Since: now.Add(-width * time.Duration(n))}
+	// Query the in-window corpus once over the SAME half-open [start, now) axis
+	// the bucketer uses. start = now - width*n is aggregate.RollingBuckets's
+	// axis start; Until = now is its exclusive upper edge (the DEC-035 field, set
+	// per that decision's "fifth bounded consumer" guidance). Bounding BOTH ends
+	// keeps the markdown header count (len(entries)) and the ByProject top-8
+	// selection aligned with the bucket sums, so an out-of-window row (clock
+	// skew / import / multi-machine) can't inflate the header or take a top-8
+	// slot (SPEC-060).
+	start := now.Add(-width * time.Duration(n))
+	filter := storage.ListFilter{Since: start, Until: now}
 
 	dbFlag := getFlagString(cmd, "db")
 	path, err := config.ResolveDBPath(dbFlag)
