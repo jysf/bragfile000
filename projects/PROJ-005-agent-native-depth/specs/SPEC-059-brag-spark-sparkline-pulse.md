@@ -7,7 +7,7 @@
 task:
   id: SPEC-059
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -424,28 +424,45 @@ other `New*Cmd()` calls).
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `feat/spec-059-brag-spark`
+- **PR (if applicable):** see PR link in the branch's PR
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+  - none (DEC-037 already covered every choice)
 - **Deviations from spec:**
-  - [list]
+  - `RollingBuckets` lives in a new file `internal/aggregate/rolling.go` (the
+    test lives in `rolling_test.go`) rather than being appended to
+    `aggregate.go` — the Outputs section listed `aggregate.go`, but a
+    dedicated file keeps the new primitive with its test and matches the
+    `rolling_test.go` sibling. Signature and behavior are byte-identical to
+    the spec's transcribed body.
+  - No other deviations; the literal cobra `Long`, flag defaults, render
+    shape, and JSON key order were transcribed as specified.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - none new. The already-deferred `--previous`, calendar-aligned windows,
+    and column padding remain the documented follow-ups (DEC-037).
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing material. The spec was unusually complete: the bucketer body,
+   the cobra `Long`, the flag table, the markdown/JSON shapes, and the
+   §12(b) golden were all transcribable. The one micro-decision was where
+   `RollingBuckets` should live (a new file vs appended); both were
+   defensible, so it cost only a moment.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. `no-sql-in-cli-layer`, the stdout/stderr split, UTC RFC3339, and
+   the `lookupSparkEnv` reuse were all called out, and each mapped cleanly
+   to the authored tests.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing significant. Reading the failing tests before writing the
+   renderer paid off (the JSON key names and the `Total (` / `alpha (`
+   row-label format are pinned by the tests, so matching them first avoided
+   any churn).
 
 ---
 

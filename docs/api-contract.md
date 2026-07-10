@@ -669,6 +669,79 @@ its classifier means exactly what `brag list --author` means. Zero windows,
 two windows, `--previous --since`, or an unknown `--format` value exits 1
 (user error), stdout empty.
 
+### `brag spark [--week|--month|--quarter] [--project <name>] (STAGE-016)`
+
+```
+brag spark                                  # last 28 days, weekly bars, markdown
+brag spark --week                           # last 7 days, one bar per day
+brag spark --quarter --project alpha        # 13 weekly bars: Total vs alpha
+brag spark --month --format json            # raw per-bucket counts, JSON envelope
+```
+
+A sparklines-only **pulse** of recent activity: a `Total` row plus up to
+the top-8 by-project rows, each a compact Unicode block-glyph **sparkline**
+over a **rolling** recent window with the row's entry count in parentheses.
+The **seventh** DEC-014 consumer; rule-based, deterministic, no LLM, no
+schema change. A quick "what does my last stretch look like?" glance, not a
+full digest. Locked by
+[DEC-037](../decisions/DEC-037-brag-spark-rolling-windows-and-multirow-pulse.md).
+
+Document structure:
+
+- **Provenance:** `Generated:` (RFC3339), `Scope:` (the rolling-window
+  token — `week`/`month`/`quarter`), `Filters:` (`--project <name>` when
+  set, else `(none)`), and a headline `Entries: N` count (the whole
+  in-window corpus, matching the `Total` row's sum).
+- **Body** (markdown; omitted entirely on an empty window per
+  [DEC-014](../decisions/DEC-014-rule-based-output-shape.md)):
+  - `## Pulse` — a `Total (<count>): <glyphs>` row followed by
+    `<project> (<count>): <glyphs>` rows. Each row's sparkline is scaled to
+    its own min→max shape; the parenthesized count is the sum of that row's
+    buckets, so a steady project and a bursty one are both legible. Every
+    row is bucketed over the **same** shared axis, so glyph position *i* is
+    the same time bucket in every row. `(no project)` renders last.
+
+Window selection (**rolling**, ending now — NOT a calendar period):
+
+- Exactly one of `--week`/`--month`/`--quarter` may be given; they are
+  **mutually exclusive** and default to `--month`. Each maps to a fixed
+  (bucket-width, bucket-count) axis ending at now:
+  - `--week` → last **7 days**, **7 daily** bars.
+  - `--month` → last **28 days**, **4 weekly** bars (default).
+  - `--quarter` → last **91 days**, **13 weekly** bars.
+- Note `--month` here is a **rolling 28 days** — deliberately different from
+  `brag review`'s rolling 30 days and the calendar month in
+  `impact`/`coverage`/`wrapped` (DEC-037; the `Scope:`/`Generated:` lines
+  disambiguate).
+
+Flags:
+
+- `--project <name>` is a **row selector, not a corpus filter**: the
+  by-project rows collapse to that one project (`Total` still spans the
+  whole in-window corpus, so it reads as "this project vs everything"). A
+  named project with zero in-window entries still renders (an all-`▁` /
+  zero-count row). This diverges from the corpus-filtering `--project` on
+  `coverage`/`wrapped`/`impact` — see DEC-037 choice 3.
+- `--format markdown|json` defaults to `markdown`. JSON is the single-object
+  envelope. Top-level keys: `generated_at`, `scope`, `filters`, `window`
+  (`{buckets, bucket_width_days, start, end}`), `total` (`{count, series}`),
+  `by_project` (`[{project, count, series}]`). Each `series` is the **raw
+  per-bucket int array** — JSON never contains glyphs
+  ([DEC-031](../decisions/DEC-031-sparkline-primitive.md) choice f). On an
+  empty window `total.series` is the full zero-filled series, `by_project`
+  is `[]`, and `filters` is `{}`.
+- `--no-spark`, or a present `NO_COLOR` env var (any value, per
+  no-color.org), drops the glyphs and prints the **raw per-bucket counts**
+  instead (a sparkline-only command that suppressed its glyphs still emits
+  its data). No effect on `--format json` (already raw).
+- Output goes to stdout. Redirect with `>` if you want a file.
+
+The window is queried once via `ListFilter{Since: now - width*n}` (no SQL in
+the CLI layer); the pure `aggregate.RollingBuckets` bucketer assigns each
+entry to `[start+k*width, start+(k+1)*width)` (lower-inclusive,
+upper-exclusive). Two windows, an empty `--project`, or an unknown
+`--format` value exits 1 (user error), stdout empty.
+
 ### `brag story --audience <name> [window] [--theme <tag>]` (STAGE-012)
 
 ```
