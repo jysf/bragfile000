@@ -7,7 +7,7 @@
 task:
   id: SPEC-061
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -24,87 +24,99 @@ agents:
   created_at: 2026-07-10
 
 references:
-  decisions: []
-  constraints: []
-  related_specs: []
+  decisions: [DEC-036]
+  constraints: [stdout-is-for-data-stderr-is-for-humans, errors-wrap-with-context, no-sql-in-cli-layer]
+  related_specs: [SPEC-057]
 ---
 
 # SPEC-061: fix project ensure name cap parity
 
 ## Context
 
-Why does this spec exist? What problem does it solve? Link to:
-- The parent `STAGE-016` and this spec's place in its backlog
-- The project `PROJ-005`
-- Any related discussions or prior decisions
+A pre-release adversarial sweep found that `brag project ensure` caps the
+project name length in **runes**, but the two capture paths that actually
+write brag entries — `brag add --json` and the MCP `brag_add` tool — cap in
+**bytes**. The comment above the `ensure` check claims the cap "matches" the
+capture cap so an ensured name can always soft-match a normally-added entry
+(DEC-036), but that invariant is FALSE for multibyte names: a 40-CJK-character
+name is 40 runes (ensure accepts) but 120 bytes (capture paths reject). So
+`ensure` can register a project name that the agent-native capture surfaces can
+never write an entry for — the exact failure DEC-036's parity clause exists to
+prevent. This lives in `STAGE-016` (polish) under `PROJ-005`.
 
 ## Goal
 
-1–2 sentences. Unambiguous. If you can't write the goal in two
-sentences, split the spec.
+Align `brag project ensure`'s project-name length cap to count **bytes** (not
+runes), matching `add --json` and MCP `brag_add`, so any name ensure accepts is
+also acceptable to the capture paths (DEC-036 parity).
 
 ## Inputs
 
-- **Files to read:** `path/to/file.ext` — why
-- **External APIs:** <name, docs link, auth>
-- **Related code paths:** `src/some/module/`
+- **Files to read:** `internal/cli/project.go` (ensure cap ~L157–161),
+  `internal/cli/add_json.go` (`len(in.Project) > 64`),
+  `internal/mcpserver/server.go` (`len(in.Project) > 64`) — the byte-cap
+  the fix aligns to.
+- **Related code paths:** `internal/cli/project_test.go`
 
 ## Outputs
 
-- **Files created:** `path/to/new.ext` — purpose
-- **Files modified:** `path/to/existing.ext` — what changes
-- **New exports:** <names and signatures>
-- **Database changes:** <migrations>
+- **Files modified:**
+  - `internal/cli/project.go` — change `len([]rune(name)) > 64` to
+    `len(name) > 64` in `runProjectEnsure`; update the adjacent comment to state
+    a 64-BYTE cap matching the capture paths (keep the DEC-036 rationale).
+  - `internal/cli/project_test.go` — add fail-first coverage.
+- **Database changes:** none.
 
 ## Acceptance Criteria
 
-Testable outcomes. Cover happy path, error cases, edge cases.
-
-- [ ] Criterion 1 (testable)
-- [ ] Criterion 2 (testable)
+- [x] A name ≤64 runes but >64 bytes (e.g. 40× a 3-byte CJK rune = 120 bytes)
+      passed to `ensure` is REJECTED with a `UserError` (exit 1, empty stdout,
+      message on stderr) — matching `add --json`.
+- [x] A 64-byte ASCII name is accepted; a 65-byte one is rejected.
+- [x] The same over-cap name fed through `add --json` is also rejected
+      (symmetry proven in-test).
+- [x] The rejected name never appears in `project list`.
 
 ## Failing Tests
 
-Written during **design**, BEFORE build. The implementer's job in
-**build** is to make these pass.
-
-- **`path/to/test.file`**
-  - `"test description 1"` — asserts: ...
+- **`internal/cli/project_test.go`**
+  - `"TestProjectEnsure_MultibyteOverByteCapErrUser"` — asserts ensure rejects
+    a 40-CJK-rune (120-byte) name with `ErrUser`, empty stdout, no list row;
+    proves `add --json` rejects the same name.
+  - `"TestProjectEnsure_ByteCapAcceptsExactly64ASCII"` — asserts a 64-byte
+    ASCII name is accepted.
 
 ## Implementation Context
 
-*Read this section (and the files it points to) before starting
-the build cycle. It is the equivalent of a handoff document, folded
-into the spec since there is no separate receiving agent.*
-
 ### Decisions that apply
 
-- `DEC-NNN` — <one-line summary of why this matters here>
-- `DEC-MMM` — <one-line summary>
+- `DEC-036` — project ensure is an idempotent upsert whose name cap must match
+  the capture paths so an ensured name can always soft-match a normally-added
+  entry; this fix restores that parity for multibyte names.
 
 ### Constraints that apply
 
-These constraints apply to the paths touched by this task (see
-`/guidance/constraints.yaml` for full text):
-
-- `constraint-id-1` — <one-line summary>
-- `constraint-id-2` — <one-line summary>
+- `stdout-is-for-data-stderr-is-for-humans` — rejection is a `UserError`;
+  stdout stays empty, the human message goes to stderr.
+- `errors-wrap-with-context` — unchanged; the cap returns a `UserErrorf`.
+- `no-sql-in-cli-layer` — unchanged; the cap is a pure length check.
 
 ### Prior related work
 
-- `SPEC-YYY` (shipped) — <one-line summary, if relevant>
-- `PR #NNN` — <link, if relevant>
+- `SPEC-057` (shipped) — introduced `brag project ensure` and the rune-based
+  cap this fix corrects.
 
 ### Out of scope (for this spec specifically)
 
-Explicit list of what this spec does NOT include. If any of these feel
-necessary during build, create a new spec rather than expanding this one.
-
-- ...
+- The capture paths (`add_json.go`, `server.go`) are correct and unchanged.
+- `brag project new`'s no-cap behavior is a separate pre-existing asymmetry,
+  not addressed here.
 
 ## Notes for the Implementer
 
-Gotchas, style preferences, reuse opportunities.
+The fix is a one-token change (`len([]rune(name))` → `len(name)`) plus a comment
+update. Write the failing test first; the current rune-based code accepts the
+multibyte name, so the test fails before the fix and passes after.
 
 ---
 
@@ -112,28 +124,29 @@ Gotchas, style preferences, reuse opportunities.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `fix/spec-061-ensure-cap-parity` (stacked on `fix/spec-060-spark-until-bound`)
+- **PR (if applicable):** base `main`
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+  - none — this restores the parity DEC-036 already mandates.
 - **Deviations from spec:**
-  - [list]
+  - none
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - `brag project new` has no name cap at all (pre-existing asymmetry) — a
+    candidate for a future small-wins spec, deliberately out of scope here.
 
 ### Build-phase reflection (3 questions, short answers)
 
-Process-focused: how did the build go? What friction did the spec create?
-
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing. The bug was fully characterized (rune-vs-byte, exact lines, repro).
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. DEC-036 is the load-bearing decision and it was cited.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing material; one-line fix with a fail-first multibyte test is the
+     right shape. Worth noting the same byte/rune question exists for the other
+     capped fields (title, tags, type) as a future consistency sweep.
 
 ---
 
