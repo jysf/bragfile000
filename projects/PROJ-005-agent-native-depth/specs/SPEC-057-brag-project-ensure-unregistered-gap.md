@@ -7,7 +7,7 @@
 task:
   id: SPEC-057
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -433,27 +433,39 @@ decision in Build Completion).
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** feat/spec-057-project-ensure
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **PR (if applicable):** (opened at end of build — see PR link in the ship notes)
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+  - none (DEC-036 was emitted at design; no new decision needed at build)
 - **Deviations from spec:**
-  - [list]
+  - none. `EnsureProject`/`EnsureLocation` implemented per LD1/LD2 verbatim;
+    the cobra command and stderr strings transcribed from the Notes section as
+    written; the two soft-link facts and the `brag project ensure` doc section
+    added to `docs/api-contract.md`; a one-line pointer added to
+    `docs/tutorial.md` (it fit the project-registry paragraph cleanly).
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - none new. The two candidate follow-ups already named in the spec still
+    stand (an MCP `brag_project_ensure` tool; retrofitting a 64-char name check
+    onto `brag project new`), both explicitly out of scope here.
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing. The spec was unusually complete: exact signatures, the verbatim
+   cobra command, exact stderr strings, and the literal doc text were all
+   provided, and the failing tests were already authored. Build was a
+   transcription-plus-wire-up exercise, which is the point.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. Every constraint that bit (no-sql-in-cli-layer, the stdout/stderr
+   split, errors-wrap-with-context) was listed, and DEC-036's LD1–LD4 covered
+   every design question I would otherwise have had to raise.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing on the implementation. The only friction was environmental (the
+   isolated worktree vs. shared-checkout path for edits), not spec-related.
 
 ---
 

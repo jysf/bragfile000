@@ -73,6 +73,73 @@ func (s *Store) CreateProject(p Project) (Project, error) {
 	return p, nil
 }
 
+// EnsureProject is the idempotent create-or-no-op counterpart to CreateProject
+// (DEC-036). It reads first: on an existing name it returns the hydrated
+// existing project with created=false and NO error (never ErrProjectExists); on
+// an absent name it creates an "active" project and returns created=true. The
+// no-op path returns the existing row verbatim and does NOT bump updated_at —
+// ensuring an existing project changed nothing. Safe to run repeatedly (e.g.
+// from an agent's setup script before every capture).
+func (s *Store) EnsureProject(name string) (Project, bool, error) {
+	existing, err := s.GetProjectByName(name)
+	if err == nil {
+		return existing, false, nil
+	}
+	if !errors.Is(err, ErrNotFound) {
+		return Project{}, false, fmt.Errorf("ensure project %q: %w", name, err)
+	}
+
+	created, err := s.CreateProject(Project{Name: name})
+	if err != nil {
+		// Defensive backstop for a TOCTOU that cannot really occur in the
+		// single-user CLI: if the row appeared between the read and the insert,
+		// re-fetch and report it as a no-op rather than surfacing ErrProjectExists.
+		if errors.Is(err, ErrProjectExists) {
+			existing, getErr := s.GetProjectByName(name)
+			if getErr != nil {
+				return Project{}, false, fmt.Errorf("ensure project %q: %w", name, getErr)
+			}
+			return existing, false, nil
+		}
+		return Project{}, false, fmt.Errorf("ensure project %q: %w", name, err)
+	}
+	return created, true, nil
+}
+
+// EnsureLocation is the idempotent attach counterpart to AddLocation (DEC-036).
+// It queries the path's current owner (the EditLocations owner-query pattern):
+// a free path is inserted (attached=true); a path already attached to THIS
+// project is an idempotent no-op (attached=false, nil); a path attached to a
+// DIFFERENT project returns ErrLocationOtherProject (attached=false) — paths are
+// globally UNIQUE (the guarantee SPEC-031 relies on), so ensure never silently
+// retargets one. A project may hold multiple locations; this guards only the
+// same path, not the count. Paths match verbatim (SPEC-031/DEC-019 own
+// normalization at cwd-resolve time only).
+func (s *Store) EnsureLocation(projectID int64, path string) (bool, error) {
+	ctx := context.Background()
+
+	var ownerID int64
+	err := s.db.QueryRowContext(ctx,
+		`SELECT project_id FROM project_locations WHERE path = ?`, path,
+	).Scan(&ownerID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			if _, err := s.db.ExecContext(ctx,
+				`INSERT INTO project_locations (project_id, path) VALUES (?, ?)`,
+				projectID, path,
+			); err != nil {
+				return false, fmt.Errorf("ensure location %q: %w", path, err)
+			}
+			return true, nil
+		}
+		return false, fmt.Errorf("ensure location %q: %w", path, err)
+	}
+	if ownerID == projectID {
+		return false, nil
+	}
+	return false, fmt.Errorf("ensure location %q: %w", path, ErrLocationOtherProject)
+}
+
 // GetProject returns the project with the given id, with its Locations
 // hydrated in insertion order. Returns an error wrapping ErrNotFound if
 // no row matches.

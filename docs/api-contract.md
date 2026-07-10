@@ -846,6 +846,46 @@ concern, STAGE-007).
   name already exists, or the path is already registered to another project
   (in which case nothing is created — the path is checked first).
 
+### `brag project ensure <name> [--location PATH]` — idempotent registration (STAGE-015)
+
+```
+brag project ensure standup
+brag project ensure standup --location ~/code/standup
+brag project ensure platform --location /srv/platform
+```
+
+Idempotently registers a project by name: creates it with status `active` if
+absent, and does nothing if it already exists. Unlike `brag project new`, ensure
+**never errors when the project already exists**, so it is safe to run before
+every capture or from an agent's setup script.
+
+- With `--location PATH`, the path is attached if it is not already registered;
+  re-attaching the same path to the same project is a no-op. A project may have
+  **multiple** locations. `--location` defaults to unset — no location (and no
+  current directory) is registered unless you pass it.
+- The name is trimmed and must be **64 characters or fewer** (matching the cap
+  `brag add --json` / MCP enforce on the `project` field, so an ensured name can
+  always soft-match a normally-added entry).
+- Exits 0 on both create and no-op. stdout empty. stderr carries composable
+  confirmations: a project line — `Created project "<name>".` or `Project
+  "<name>" already exists.` — and, only with `--location`, a location line —
+  `Attached location "<path>".` or `Location "<path>" already attached.`
+- Exit 1 (user error) if `<name>` is empty or over 64 characters, or if
+  `--location` names a path already registered to a **different** project (the
+  project is still ensured; only the location step fails — re-run after fixing
+  the path is safe).
+
+> **Two soft-link facts for consumers that map entries → projects/repos.**
+> (1) `brag project list` (and `brag project status`) read the `projects`
+> table, which is **authoritative but incomplete**: an entry's `project` is
+> free text (DEC-017) and MCP `brag_add` does not auto-fill it from cwd, so an
+> entry may reference a project name that was never registered. Use
+> `brag project ensure <name>` to register such a name. (2) A single project
+> may have **multiple** on-disk `locations`, so any mapping from an entry (or a
+> path) to a repo must handle a one-project-many-directories shape — see the
+> `locations` array in `brag project list --format json` / `brag project show
+> --format json`.
+
 ### `brag project list` — list projects (STAGE-007)
 
 ```

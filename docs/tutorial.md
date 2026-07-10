@@ -676,6 +676,10 @@ brag project new bragfile --path ~/code/bragfile
 `--path` is required and stored verbatim; a path already registered to
 another project is rejected.
 
+For a re-runnable, script-safe alternative (create if absent, no-op if
+present), use `brag project ensure <name> [--location PATH]` — it never
+errors when the project already exists.
+
 Ask which project the current directory belongs to:
 
 ```bash
