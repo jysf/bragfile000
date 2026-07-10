@@ -278,6 +278,73 @@ func TestSparkCmd_EmptyCorpusHeaderOnly(t *testing.T) {
 	}
 }
 
+// TestSparkCmd_ExcludesOutOfWindowEntries pins SPEC-060: the spark query is
+// bounded to the half-open [start, now) rolling axis, so an entry with
+// created_at at/after now (clock skew / multi-machine / imported row) is
+// excluded from BOTH the markdown header count (len(entries)) AND the
+// top-8 by-project selection (aggregate.ByProject) — not just the bucket sums.
+// Before the fix (Since-only, no Until) the future entry inflated the header to
+// 2 and could occupy a phantom all-▁ top-8 row. The future project must not
+// appear as a row, and the in-window project must still be present.
+func TestSparkCmd_ExcludesOutOfWindowEntries(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	now := time.Date(2026, 7, 10, 12, 0, 0, 0, time.UTC)
+	withNowFunc(t, now)
+	// One in-window entry, and one FUTURE-dated entry (created_at after now).
+	seedImpactEntry(t, dbPath, storage.Entry{Title: "in", Project: "alpha"}, now.Add(-2*24*time.Hour))
+	seedImpactEntry(t, dbPath, storage.Entry{Title: "future", Project: "phantom"}, now.Add(48*time.Hour))
+
+	t.Run("markdown-header-and-rows", func(t *testing.T) {
+		out, errStr, err := runSparkCmd(t, dbPath)
+		if err != nil {
+			t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+		}
+		if !strings.Contains(out, "Entries: 1") {
+			t.Errorf("expected header 'Entries: 1' (future entry excluded), got:\n%s", out)
+		}
+		if strings.Contains(out, "Entries: 2") {
+			t.Errorf("future entry must not inflate the header count:\n%s", out)
+		}
+		if !strings.Contains(out, "alpha (") {
+			t.Errorf("expected the in-window project row (alpha):\n%s", out)
+		}
+		if strings.Contains(out, "phantom (") {
+			t.Errorf("future entry's project must not appear as a row:\n%s", out)
+		}
+	})
+
+	t.Run("json-total-sum-matches-count", func(t *testing.T) {
+		out, errStr, err := runSparkCmd(t, dbPath, "--format", "json")
+		if err != nil {
+			t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+		}
+		var env struct {
+			Total struct {
+				Count  int   `json:"count"`
+				Series []int `json:"series"`
+			} `json:"total"`
+			ByProject []struct {
+				Project string `json:"project"`
+			} `json:"by_project"`
+		}
+		if err := json.Unmarshal([]byte(out), &env); err != nil {
+			t.Fatalf("output is not valid JSON: %v\n%s", err, out)
+		}
+		sum := 0
+		for _, v := range env.Total.Series {
+			sum += v
+		}
+		if sum != 1 || env.Total.Count != 1 {
+			t.Errorf("expected total count/series-sum == 1 (future excluded), got count=%d sum=%d:\n%s", env.Total.Count, sum, out)
+		}
+		for _, p := range env.ByProject {
+			if p.Project == "phantom" {
+				t.Errorf("future entry's project must not appear in by_project:\n%s", out)
+			}
+		}
+	})
+}
+
 // TestSparkCmd_StdoutStderrSeparation pins AGENTS.md §9: success → stdout only;
 // UserError → clean stdout.
 func TestSparkCmd_StdoutStderrSeparation(t *testing.T) {
