@@ -7,7 +7,7 @@
 task:
   id: SPEC-056
   type: chore                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -413,10 +413,25 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing about the change itself — this was the near-ideal shape of a
+   behavior-preserving refactor: a locked DEC, exact per-file line ranges,
+   two pre-authored edge-pinning tests, an existing green-test regression
+   contract, and a `grep -rn "CreatedAt.Before"` completeness check. The one
+   process note is orchestration-level, not spec-level: the branch was
+   stacked on SPEC-055's for race-free repo-global ID numbering and then
+   rebased onto main to become a clean one-spec PR — pre-assigning IDs (as
+   was done for the DEC files) or serializing scaffold creation avoids that
+   rebase step next time.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. DEC-035 records the promotion and CLOSES the revisit trigger that
+   DEC-030 and DEC-032 both deferred to exactly this threshold (the 4th
+   Go-side consumer, well past rule-of-three) — the storage-query analogue of
+   the DEC-004 → DEC-015 tag-model promotion. `no-sql-in-cli-layer` is now
+   honored for the window's upper bound, not just its lower bound. No
+   constraint or template text needs to change.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No new one. The next bounded-window consumer, `brag spark` (STAGE-016's
+   other spec), simply sets `filter.Until` when it lands — it inherits this
+   field instead of re-copying the Go loop, which is precisely the payoff.

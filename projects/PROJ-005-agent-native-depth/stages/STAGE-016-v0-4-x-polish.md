@@ -82,15 +82,16 @@ doc corrections) cheap enough to batch alongside.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-056 (design) — `ListFilter.Until` storage promotion (+ DEC-035);
-      remove duplicated Go-side upper-bound filtering across the 4 consumers.
+- [x] SPEC-056 (shipped on 2026-07-10) — `ListFilter.Until` storage promotion
+      (+ DEC-035); removed duplicated Go-side upper-bound filtering across the 4
+      consumers.
 - [ ] `brag spark` (frame) — sparklines-only pulse (Total + by-project) over
       `--week|--month|--quarter`. (Id assigned at creation — next free SPEC-*.)
 - [ ] (candidate) — milestone-write `type` (R5); `project status`
       trailing-column cosmetic; WAL-safe backup doc + `sprint:` tag
       convention note. Split per one-spec-per-PR at frame time.
 
-**Count:** 0 shipped / 0 active / 2 pending (+ micro-fix candidates)
+**Count:** 1 shipped / 0 active / 1 pending (+ micro-fix candidates)
 
 ## Design Notes
 
