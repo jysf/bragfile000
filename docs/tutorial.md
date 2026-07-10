@@ -660,6 +660,25 @@ brag tag merge auth perf
 - The `auth` tag row is deleted; `perf`'s count rises by the previously
   `auth`-only memberships.
 
+#### Namespaced tag conventions (sprint, and friends)
+
+Tags are the extension point for organizational metadata bragfile does not
+model as a first-class field. If your team works in **sprints**, record the
+sprint as a namespaced freeform tag rather than asking for a dedicated field —
+there is no `sprint` column and no `--sprint` flag by design:
+
+```bash
+brag add --title "Ship checkout v2" --tag "sprint:2026-q3-s4"
+brag list --tag sprint:2026-q3-s4          # everything in that sprint
+```
+
+Any `key:value` tag works this way (`quarter:2026-q3`, `epic:billing`, …); the
+`key:` prefix just keeps related values grouped and greppable. This is distinct
+from the **reserved** provenance namespaces (`agent:`/`model:`/`session:`/
+`cost:`/`tokens:`) that the MCP `brag_add` tool stamps and validates — those are
+machine-written; a `sprint:` tag is yours to write freely and is never
+validated or auto-filled.
+
 ### Projects
 
 A **project** is a first-class, named workspace you register once and
