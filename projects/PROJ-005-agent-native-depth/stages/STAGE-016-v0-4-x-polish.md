@@ -85,14 +85,24 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 - [x] SPEC-056 (shipped on 2026-07-10) — `ListFilter.Until` storage promotion
       (+ DEC-035); removed duplicated Go-side upper-bound filtering across the 4
       consumers.
-- [ ] SPEC-059 (design) — `brag spark` sparklines-only pulse (Total +
-      top-8 by-project) over rolling `--week|--month|--quarter` (default
-      `--month`); new `aggregate.RollingBuckets` sub-month bucketer + DEC-037.
-- [ ] (candidate) — milestone-write `type` (R5); `project status`
-      trailing-column cosmetic; WAL-safe backup doc + `sprint:` tag
-      convention note. Split per one-spec-per-PR at frame time.
+- [x] SPEC-059 (shipped on 2026-07-10) — `brag spark` sparklines-only pulse
+      (Total + top-8 by-project) over rolling `--week|--month|--quarter`
+      (default `--month`); new `aggregate.RollingBuckets` sub-month bucketer
+      + DEC-037.
+- [ ] SPEC-060 (frame) — R5: set `type` on milestone-generated writes (they
+      land untyped today, diluting by-type analytics). No back-migration of
+      historical rows. + fold in the `sprint:<id>` freeform-tag convention
+      doc note (agreed: sprint is just a tag, no schema).
 
-**Count:** 1 shipped / 1 active / 0 pending (+ micro-fix candidates)
+**Micro-fix cut (post-scan decision, 2026-07-10):**
+- INCLUDE — SPEC-060 R5 milestone `type` (real data-quality bug, testable).
+- INCLUDE — `sprint:<id>` tag convention doc note (cheap; rides with SPEC-060).
+- DEFER — `project status` trailing empty column when `state_note` blank
+  (pure cosmetic; not consumed by `standup`, which reads JSON).
+- DROP — WAL-safe backup doc: `journal_mode=WAL` is not set and `backup.go`
+  is already WAL-safe, so bare `cp` guidance is not unsafe — moot.
+
+**Count:** 2 shipped / 1 active / 0 pending
 
 ## Design Notes
 

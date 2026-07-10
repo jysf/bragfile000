@@ -7,7 +7,7 @@
 task:
   id: SPEC-059
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -472,10 +472,24 @@ Process-focused: how did the build go? What friction did the spec create?
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing on execution — the literal-artifact spec (bucketer body, cobra
+   `Long`, flag table, markdown/JSON shapes, and a hand-computed sparkline
+   golden) made build near-mechanical and verify clean on live re-derivation.
+   The one open judgment is product-shape, not process: `--month` now means
+   28 rolling days here vs 30 in `brag review` vs a calendar month in
+   impact/coverage/wrapped (filed as `spark-month-semantic-drift`, low). I'd
+   watch real usage before harmonizing — the clean 4-weekly-bucket sparkline
+   was worth the divergence for v1.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. DEC-037 records the rolling-window choice and its rejected
+   calendar alternative honestly (conf 0.72). `RollingBuckets` is a reusable
+   pure aggregate primitive; a future calendar-aligned or `--previous`
+   variant builds on it without reopening this decision.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — Not for this batch. Two low-priority candidates are logged: a
+   `--previous` window for spark (deferred in DEC-037), and revisiting the
+   `--month` cross-command span drift if usage shows it confuses. Both are
+   PROJ-005-deeper / post-v0.5.0. The remaining batch work is the tier-1
+   micro-fixes then the v0.5.0 cut.
