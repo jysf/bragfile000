@@ -6,10 +6,10 @@
 
 task:
   id: SPEC-062
-  type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  type: bug                        # epic | story | task | bug | chore
+  cycle: verify
   blocked: false
-  priority: medium
+  priority: high
   complexity: S                    # S | M | L  (L means split it)
 
 project:
@@ -19,13 +19,20 @@ repo:
   id: bragfile
 
 agents:
-  architect: claude-opus-4-7
-  implementer: claude-opus-4-7     # usually same Claude, different session
+  architect: claude-opus-4-8
+  implementer: claude-opus-4-8     # usually same Claude, different session
   created_at: 2026-07-10
 
 references:
-  decisions: []
-  constraints: []
+  decisions:
+    - DEC-038
+    - DEC-001
+    - DEC-002
+    - DEC-021
+  constraints:
+    - no-cgo
+    - storage-tests-use-tempdir
+    - errors-wrap-with-context
   related_specs: []
 ---
 
@@ -33,107 +40,145 @@ references:
 
 ## Context
 
-Why does this spec exist? What problem does it solve? Link to:
-- The parent `STAGE-016` and this spec's place in its backlog
-- The project `PROJ-005`
-- Any related discussions or prior decisions
+A pre-release storage audit (HIGH) found `internal/storage/store.go` `Open`
+calling `sql.Open("sqlite", path)` with a bare path — no busy timeout, no
+connection cap, default (deferred) transactions. So concurrent access fails
+immediately with `database is locked (5) (SQLITE_BUSY)` instead of waiting.
+Confirmed repro: two `Store` handles on one temp DB doing concurrent `Add`s →
+~39/40 writes fail, a second handle's write returning `database is locked` in
+~30µs with no wait.
+
+This is reachable and **amplified by v0.5.0**: `brag mcp serve` (a headline
+feature, STAGE-016) holds ONE long-lived `Store` for the whole process while
+the user also runs `brag add` from a shell, and Claude Code hooks fire `brag
+add` — any overlap fails. Concurrent MCP tool calls can also self-conflict
+since `database/sql` may open multiple pooled connections.
+
+Part of `PROJ-005` (agent-native depth) / `STAGE-016` (polish) — a reliability
+fix hardening the storage layer under the concurrency the MCP server
+introduces.
 
 ## Goal
 
-1–2 sentences. Unambiguous. If you can't write the goal in two
-sentences, split the spec.
+Make `storage.Open` configure SQLite so concurrent access from multiple `Store`
+handles/processes WAITS and succeeds instead of failing with `database is
+locked`, without switching journal mode (keeping the single-file backup story
+intact) and without adding a CGO dependency.
 
 ## Inputs
 
-- **Files to read:** `path/to/file.ext` — why
-- **External APIs:** <name, docs link, auth>
-- **Related code paths:** `src/some/module/`
+- **Files to read:** `internal/storage/store.go` — `Open`; `internal/storage/backup.go`
+  (`VACUUM INTO`, must keep the clean path); `internal/config/config.go`
+  (`ResolveDBPath`, must keep the clean path).
+- **External APIs:** `modernc.org/sqlite` v1.53.0 DSN pragmas — `_pragma` and
+  `_txlock`.
+- **Related code paths:** `internal/storage/store_test.go`.
 
 ## Outputs
 
-- **Files created:** `path/to/new.ext` — purpose
-- **Files modified:** `path/to/existing.ext` — what changes
-- **New exports:** <names and signatures>
-- **Database changes:** <migrations>
+- **Files modified:** `internal/storage/store.go` — build a DSN with
+  `busy_timeout(5000)` + `_txlock=immediate` in `Open`, call
+  `db.SetMaxOpenConns(1)`; keep the on-disk path clean.
+- **Files created:** `decisions/DEC-038-sqlite-concurrency-busy-timeout-single-conn.md`.
+- **Tests added:** `internal/storage/store_test.go` —
+  `TestOpen_ConcurrentWritesAcrossHandles`, `TestOpen_BusyTimeoutPragma`.
+- **Database changes:** none (no schema change, no migration).
 
 ## Acceptance Criteria
 
-Testable outcomes. Cover happy path, error cases, edge cases.
-
-- [ ] Criterion 1 (testable)
-- [ ] Criterion 2 (testable)
+- [x] Two separate `*Store` handles on one temp path running N concurrent
+  `Add`s (10 each) complete with zero `database is locked` errors; final row
+  count == total inserted. Deterministic across `-count=20`.
+- [x] A fresh `Store` reports `PRAGMA busy_timeout == 5000`,
+  `db.Stats().MaxOpenConnections == 1`, and `PRAGMA journal_mode == delete`
+  (rollback, not WAL).
+- [x] The DSN pragma does not leak into the on-disk path; `VACUUM INTO` backup
+  and `ResolveDBPath` unaffected (existing storage tests green).
+- [x] No CGO added; full gate set passes.
 
 ## Failing Tests
 
-Written during **design**, BEFORE build. The implementer's job in
-**build** is to make these pass.
+Written during **design**, BEFORE build. Confirmed fail-first on the pre-fix
+code: `busy_timeout = 0`, `MaxOpenConnections = 0`, and 20/20 concurrent writes
+failed with `database is locked`.
 
-- **`path/to/test.file`**
-  - `"test description 1"` — asserts: ...
+- **`internal/storage/store_test.go`**
+  - `"TestOpen_ConcurrentWritesAcrossHandles"` — asserts: two handles ×10
+    concurrent `Add`s all succeed, no `database is locked`, final count == 20.
+  - `"TestOpen_BusyTimeoutPragma"` — asserts: `busy_timeout == 5000`,
+    `MaxOpenConnections == 1`, `journal_mode == delete`.
 
 ## Implementation Context
 
-*Read this section (and the files it points to) before starting
-the build cycle. It is the equivalent of a handoff document, folded
-into the spec since there is no separate receiving agent.*
-
 ### Decisions that apply
 
-- `DEC-NNN` — <one-line summary of why this matters here>
-- `DEC-MMM` — <one-line summary>
+- `DEC-038` — the concurrency policy this spec emits: busy_timeout(5000) +
+  `_txlock=immediate` + `SetMaxOpenConns(1)`, rollback journal retained, WAL
+  deferred.
+- `DEC-001` — pure-Go / CGO-off SQLite (modernc); the fix must stay within the
+  modernc DSN + `database/sql`.
+- `DEC-002` / `DEC-021` — forward-only migrations and the pre-migration
+  snapshot; the single-file backup must stay valid (argues against WAL).
 
 ### Constraints that apply
 
-These constraints apply to the paths touched by this task (see
-`/guidance/constraints.yaml` for full text):
-
-- `constraint-id-1` — <one-line summary>
-- `constraint-id-2` — <one-line summary>
-
-### Prior related work
-
-- `SPEC-YYY` (shipped) — <one-line summary, if relevant>
-- `PR #NNN` — <link, if relevant>
+- `no-cgo` — modernc stays pure-Go; no CGO driver added.
+- `storage-tests-use-tempdir` — the concurrency test uses `t.TempDir()`, never
+  touches `~/.bragfile`.
+- `errors-wrap-with-context` — `Open` continues to wrap errors with context.
 
 ### Out of scope (for this spec specifically)
 
-Explicit list of what this spec does NOT include. If any of these feel
-necessary during build, create a new spec rather than expanding this one.
-
-- ...
+- Switching to WAL journal mode (considered and deferred in DEC-038).
+- Application-level retry loops or mutexes.
+- Any schema/migration change.
 
 ## Notes for the Implementer
 
-Gotchas, style preferences, reuse opportunities.
+The DSN pragma form is `_pragma=busy_timeout(5000)` (verified on modernc
+v1.53.0; the `_busy_timeout=` form is a no-op). `_txlock=immediate` is required
+in addition to busy_timeout: busy_timeout alone leaves ~1/20 writes failing on
+the deferred-transaction write-upgrade deadlock. Keep pragmas ONLY in the
+`sql.Open` DSN — pass the clean `path` to `backupBeforeMigrations` and the
+dev/prod guard.
 
 ---
 
 ## Build Completion
 
-*Filled in at the end of the **build** cycle, before advancing to verify.*
-
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `fix/spec-062-sqlite-concurrency`
+- **PR (if applicable):** see PR opened against `main`.
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+  - `DEC-038` — SQLite concurrency policy (busy_timeout + IMMEDIATE + single
+    conn, rollback retained, WAL deferred)
 - **Deviations from spec:**
-  - [list]
+  - Added `_txlock=immediate` beyond the audit's headline recommendation
+    (busy_timeout + single-conn). Justified: busy_timeout alone left ~1/20
+    concurrent writes failing on the deferred-transaction upgrade deadlock;
+    IMMEDIATE takes the write lock at BEGIN so busy_timeout can serialize
+    writers. All of this package's transactions are writes, so it costs
+    nothing. Journal mode still unchanged (rollback), so the deviation stays
+    within DEC-038's policy envelope.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - Revisit WAL only if a workload needs concurrent readers during long writes
+    (would require updating the backup docs; own DEC).
 
 ### Build-phase reflection (3 questions, short answers)
 
-Process-focused: how did the build go? What friction did the spec create?
-
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing in the scaffold; the one discovery was that busy_timeout alone is
+   insufficient (the deferred-transaction upgrade deadlock), which the
+   fail-first test surfaced immediately.
 
-2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+2. **Was there a constraint or decision that should have been listed but
+   wasn't?**
+   — No; `no-cgo`, `storage-tests-use-tempdir`, and the DEC-001/002/021
+   backup lineage covered it.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Reach for `_txlock=immediate` from the start rather than confirming via
+   the 1/20 residual failure — though the test-first loop caught it cleanly.
 
 ---
 
