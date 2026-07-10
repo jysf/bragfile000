@@ -154,9 +154,12 @@ func runProjectEnsure(cmd *cobra.Command, args []string) error {
 	if name == "" {
 		return UserErrorf("project name must not be empty")
 	}
-	// Match the 64-char cap `brag add --json` / MCP enforce on the project field
-	// so an ensured name can always soft-match a normally-added entry (DEC-036).
-	if len([]rune(name)) > 64 {
+	// Match the 64-BYTE cap `brag add --json` / MCP enforce on the project field
+	// (both count bytes via len(in.Project)) so an ensured name can always
+	// soft-match a normally-added entry (DEC-036). Counting bytes — not runes —
+	// is what keeps the invariant true for multibyte names: a 40-CJK-rune name
+	// is 40 runes but 120 bytes, which the capture paths reject; ensure must too.
+	if len(name) > 64 {
 		return UserErrorf("project name exceeds 64-character limit")
 	}
 	// --location defaults to "" (unset); a location is attached only when the

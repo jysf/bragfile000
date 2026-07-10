@@ -1682,6 +1682,68 @@ func TestProjectEnsure_OverLongNameErrUser(t *testing.T) {
 	}
 }
 
+func TestProjectEnsure_ByteCapAcceptsExactly64ASCII(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	name := strings.Repeat("p", 64) // 64 bytes == 64 runes
+	out, errOut, err := runProjectCmd(t, dbPath, "ensure", name)
+	if err != nil {
+		t.Fatalf("ensure with 64-byte name: unexpected error: %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+	if !strings.Contains(errOut, "Created project") {
+		t.Errorf("expected create confirmation on stderr, got %q", errOut)
+	}
+}
+
+// SPEC-061: the cap is a 64-BYTE cap matching the capture paths (add --json
+// / MCP brag_add), not a 64-rune cap. A name that is ≤64 runes but >64 bytes
+// (40 three-byte CJK runes = 40 runes, 120 bytes) must be REJECTED by ensure,
+// exactly as the capture paths reject it — otherwise ensure could register a
+// project name that can never soft-match a normally-added entry (DEC-036).
+func TestProjectEnsure_MultibyteOverByteCapErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	name := strings.Repeat("あ", 40) // 40 runes, 120 bytes
+	if len([]rune(name)) > 64 {
+		t.Fatalf("test fixture is not ≤64 runes: %d runes", len([]rune(name)))
+	}
+	if len(name) <= 64 {
+		t.Fatalf("test fixture is not >64 bytes: %d bytes", len(name))
+	}
+
+	out, errOut, err := runProjectCmd(t, dbPath, "ensure", name)
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for over-byte-cap multibyte name, got %v", err)
+	}
+	if err == nil || !strings.Contains(err.Error(), "64") {
+		t.Errorf("expected error mentioning the 64-char limit, got %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout on rejected ensure, got %q", out)
+	}
+
+	// The project must NOT have been created.
+	listOut, _, _ := runProjectCmd(t, dbPath, "list")
+	if strings.Contains(listOut, name) {
+		t.Errorf("rejected name must not appear in project list, got %q", listOut)
+	}
+	_ = errOut
+
+	// Symmetry: the same over-cap name is also rejected by `add --json`, so
+	// both surfaces now agree (the invariant ensure's cap exists to uphold).
+	root, addDBPath := newRootWithAdd(t)
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetIn(strings.NewReader(`{"title":"t","project":"` + name + `"}`))
+	root.SetArgs([]string{"--db", addDBPath, "add", "--json"})
+	addErr := root.Execute()
+	if !errors.Is(addErr, ErrUser) {
+		t.Fatalf("expected add --json to also reject the over-cap name with ErrUser, got %v", addErr)
+	}
+}
+
 func TestProjectEnsure_StdoutStderrSeparation(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	root, outBuf, errBuf := newProjectTestRoot(t)
