@@ -351,7 +351,7 @@ be redundant and they would not fail-first.
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** feat/spec-056-listfilter-until
-- **PR (if applicable):** https://github.com/jysf/bragfile/pull/97
+- **PR (if applicable):** https://github.com/jysf/bragfile000/pull/97
 - **All acceptance criteria met?** yes
   - `ListFilter.Until time.Time` added with a doc comment symmetric with `Since`
     (exclusive RFC3339-UTC upper bound).
