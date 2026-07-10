@@ -174,7 +174,7 @@ func runWrapped(cmd *cobra.Command, args []string) error {
 		return UserErrorf("unknown --format value %q (accepted: markdown, json)", format)
 	}
 
-	filter := storage.ListFilter{Since: start}
+	filter := storage.ListFilter{Since: start, Until: nextBoundary}
 	if cmd.Flags().Changed("tag") {
 		v, _ := cmd.Flags().GetString("tag")
 		if v == "" {
@@ -209,21 +209,9 @@ func runWrapped(cmd *cobra.Command, args []string) error {
 	}
 	defer s.Close()
 
-	all, err := s.List(filter)
+	entries, err := s.List(filter)
 	if err != nil {
 		return fmt.Errorf("list entries: %w", err)
-	}
-
-	// Bounded-window upper edge (DEC-030 choice 3): ListFilter.Since is the
-	// SQL lower bound; the exclusive created_at < nextBoundary upper filter
-	// runs here in Go so no-sql-in-cli-layer stays intact (ListFilter has no
-	// Until field). The period end is NOT "now" — this is the load-bearing
-	// divergence from impact's [cutoff, now].
-	entries := make([]storage.Entry, 0, len(all))
-	for _, e := range all {
-		if e.CreatedAt.Before(nextBoundary) {
-			entries = append(entries, e)
-		}
 	}
 
 	// Sparkline is default-on in markdown, suppressed by --no-spark OR a
