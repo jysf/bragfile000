@@ -58,6 +58,9 @@ type addIn struct {
 	Impact      string `json:"impact,omitempty"`
 	Agent       string `json:"agent,omitempty" jsonschema:"caller agent name; stamped as agent:<name> (falls back to the MCP client's clientInfo.Name when omitted)"`
 	Model       string `json:"model,omitempty" jsonschema:"caller model id; stamped as model:<id> (no transport fallback)"`
+	Session     string `json:"session,omitempty" jsonschema:"stable per-session id; stamped as session:<id> — the PROJ-005 reconciliation join-key (no transport fallback; forward the hook-surfaced session_id)"`
+	Cost        string `json:"cost,omitempty" jsonschema:"caller-reported cost in USD (non-negative decimal, e.g. 0.42); stamped as cost:<n>. Never estimated by bragfile."`
+	Tokens      string `json:"tokens,omitempty" jsonschema:"caller-reported total tokens (non-negative integer); stamped as tokens:<n>. Never estimated by bragfile."`
 }
 
 // handleAdd mirrors parseAddJSON's validation (DEC-012), stamps provenance
@@ -92,10 +95,22 @@ func handleAdd(s *storage.Store) func(context.Context, *mcp.CallToolRequest, add
 			agent = clientInfoName(req)
 		}
 
+		// Validate the seed numerics at the handler boundary, before stamping,
+		// so a bad value is a tool error and never a coerced/inserted tag
+		// (DEC-027). session: is opaque and needs no numeric check.
+		cost, err := normalizeCost(in.Cost)
+		if err != nil {
+			return nil, nil, fmt.Errorf("brag_add: %w", err)
+		}
+		tokens, err := normalizeTokens(in.Tokens)
+		if err != nil {
+			return nil, nil, fmt.Errorf("brag_add: %w", err)
+		}
+
 		inserted, err := s.Add(storage.Entry{
 			Title:       in.Title,
 			Description: in.Description,
-			Tags:        stampProvenance(in.Tags, agent, in.Model),
+			Tags:        stampProvenance(in.Tags, agent, in.Model, in.Session, cost, tokens),
 			Project:     in.Project,
 			Type:        in.Type,
 			Impact:      in.Impact,

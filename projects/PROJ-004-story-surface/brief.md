@@ -4,15 +4,15 @@
 
 project:
   id: PROJ-004
-  status: proposed                  # proposed | active | shipped | cancelled
+  status: shipped
   priority: high
-  target_ship: null                 # v0.4.0 (single-user story surface)
+  target_ship: v0.4.0                # shipped 2026-07-07 (single-user story surface)
 
 repo:
   id: bragfile
 
 created_at: 2026-07-06
-shipped_at: null
+shipped_at: 2026-07-07
 ---
 
 # PROJ-004: The story surface — tell your own story (v0.4.0)
@@ -105,20 +105,39 @@ the LLM owns *words*.
 
 ## Stage Plan
 
-Ordered; a project typically has 2–5 stages. IDs are the next-free repo-global
-(§2): STAGE-011+, SPEC-046+, DEC-027+.
+Listed in **ship order** (which is not stage-number order — see the note below).
+IDs are the next-free repo-global (§2).
 
-- [ ] STAGE-011 (proposed) — **`brag impact` — the digest foundation.** The
-      rule-based, time-windowed, initiative-grouped impact aggregation the story
-      reads. Reuses `internal/aggregate`; DEC-014 envelope.
-- [ ] STAGE-012 (proposed) — **`brag story --audience` — the narrative surface.**
-      The audience taxonomy + shaping rules (a DEC), the LLM-pipe bundle format,
-      the framing-directive assets. The headline.
-- [ ] STAGE-013 (proposed, maybe) — **Polish + v0.4.0 cut.** `brag wrapped`,
-      the P3 personal metric, output adapters if earned, and the v0.4.0 release
-      cut (per the `spec-release-cut` template + §4).
+- [x] STAGE-014 (shipped 2026-07-06, **v0.3.1**) — **Seed cost / session /
+      token capture (v0.3.x).** Shipped **first**, on its own release line: the
+      MCP `brag_add` session/cost/tokens capture seed (**SPEC-046**; DEC-027) +
+      the capture-nudge hook `session_id` surfacing, so economics history accrues
+      before PROJ-005 needs it. A stage is the atomic ship-unit, so this v0.3.x
+      seed got its own stage rather than riding STAGE-011's v0.4.0 backlog.
+- [x] STAGE-011 (shipped 2026-07-06) — **`brag impact` — the digest foundation.**
+      The rule-based, calendar-windowed, initiative-grouped, impact-first digest
+      the story reads (SPEC-048 + DEC-028). Reuses `internal/aggregate`; DEC-014
+      envelope. On main; reaches users in the v0.4.0 release.
+- [x] STAGE-012 (shipped 2026-07-06) — **`brag story --audience` — the narrative
+      surface.** The full four-point gradient (me/manager/skip/exec) as data-driven
+      shaping profiles + the LLM-pipe arc bundle + framing-directive assets
+      (SPEC-049 + SPEC-050 + DEC-029). Pure pipe, LLM optional; coalesces a set of
+      brags into narrative arcs. On main; reaches users in the v0.4.0 release.
+- [x] STAGE-013 (shipped 2026-07-07, **v0.4.0**) — **Polish + v0.4.0 cut.**
+      `brag wrapped` (year+quarter, SPEC-051), the in-terminal sparkline pass
+      (SPEC-052), `--previous` (SPEC-053), `brag coverage` (SPEC-045), and the
+      v0.4.0 release cut (SPEC-054). Per the 2026-07-06 scoping decision we
+      bundled the polish and cut one richer v0.4.0. Published to Homebrew;
+      `brew upgrade` 0.3.1→0.4.0 verified, migration-free.
 
-**Count:** 0 shipped / 0 active / 3 proposed
+> **Number vs. ship-order:** STAGE-014's number is higher than the v0.4.0
+> stages it ships *before* because it was split out of STAGE-011 after the
+> original STAGE-011/012/013 were framed — §2 stage IDs track creation order,
+> not ship order (cf. STAGE-010, created-but-never-activated). SPEC-046 keeps
+> its PROJ-004 lineage but lives in STAGE-014, not STAGE-011, because a stage
+> is the atomic ship-unit and cannot straddle the v0.3.x and v0.4.0 lines.
+
+**Count:** 4 shipped / 0 active / 0 proposed
 
 ## Dependencies
 
@@ -142,13 +161,40 @@ Ordered; a project typically has 2–5 stages. IDs are the next-free repo-global
 
 ## Project-Level Reflection
 
-*Filled in when status moves to shipped.*
+*Filled at ship (2026-07-07, v0.4.0 published to Homebrew).*
 
-- **Did we deliver the outcome in "What This Project Is"?** <tbd>
-- **How many stages did it actually take?** <tbd>
-- **What changed between starting and shipping?** <tbd>
-- **Lessons that should update AGENTS.md, templates, or constraints?** <tbd>
-- **What did we defer to the next project?** <tbd>
+- **Did we deliver the outcome in "What This Project Is"?** Yes — and more than
+  the original frame. The corpus now reads back as **audience-shaped stories**:
+  `brag story` shapes one corpus into four audience narratives (me/manager/skip/
+  exec) via data-driven profiles as a pure LLM pipe; `brag impact` is the
+  deterministic digest it reads; `brag wrapped` is the shareable review;
+  `brag coverage` measures the agent-assist thesis (and on the real corpus shows
+  the trend inflecting from 0% to 22% agent-share this quarter). Local-first,
+  no model in the binary, migration-free.
+- **How many stages did it actually take?** Four: STAGE-014 (the v0.3.1 seed
+  capture, split onto its own release line), STAGE-011 (`brag impact`), STAGE-012
+  (`brag story`, 2 specs), STAGE-013 (polish + the v0.4.0 cut, 5 specs). ~11
+  feature/release specs + DEC-027..033.
+- **What changed between starting and shipping?** Two big shape-shifts, both
+  user-driven: the synthesis posture settled to a **pure pipe (LLM optional)**,
+  and the story's core capability sharpened from "filter/group" to **"coalesce a
+  set of brags into narrative arcs."** The audience model became extensible
+  **profiles-as-data**, not an enum. The token/cost/session seed shipped early
+  (v0.3.1) so economics history accrues before PROJ-005.
+- **Lessons that should update AGENTS.md, templates, or constraints?** Codified
+  candidates (tracked, each N=1–2, below the §12 bar): "a stage is the atomic
+  ship-unit, cannot straddle release lines"; "window semantics are per-command";
+  the "Go-predicate↔SQL-clause agreement test" pattern; and the process win of
+  **faithful goldens at design time** (after the SPEC-049 near-miss the
+  orchestrator caught). The orchestrator review layer caught three real defects
+  (a stage-placement error, a knowingly-wrong golden, a stale-help vanity
+  metric) before they shipped — evidence the fresh-session-per-cycle + review
+  discipline earns its cost.
+- **What did we defer to the next project?** **PROJ-005** — team/multi-user
+  federation, the token-economics reconciliation (join `session:`→usage logs),
+  and the org-weave, over the spike-validated export→DuckDB warehouse. Plus the
+  spawned `ListFilter.Until` refactor. The single-user synthesis logic
+  (select→thread→frame→LLM) is built and reused there at team/org scope.
 
 ### Numbering (at framing)
 
@@ -156,3 +202,11 @@ Highest consumed: PROJ-003, STAGE-010 (referenced/never-activated), SPEC-045
 (P3 draft), DEC-026. Next free (repo-global monotonic, §2): **PROJ-004**,
 **STAGE-011**, **SPEC-046**, **DEC-027** — the first DEC (likely the audience
 taxonomy) is assigned at emission, not pinned here.
+
+**Post-framing update (2026-07-06):** SPEC-046 (the v0.3.x capture seed) was
+split into its **own** stage, **STAGE-014**, when its distinct release line
+made clear a stage — the atomic ship-unit — cannot straddle v0.3.x and v0.4.0.
+STAGE-014 takes the next-free stage number (higher than the v0.4.0 stages it
+ships before; §2 tracks creation order, not ship order). Consumed so far in
+PROJ-004: STAGE-011 (`brag impact`), STAGE-014 (seed capture), SPEC-046,
+DEC-027. STAGE-012 (story) / STAGE-013 (polish) earmarks are unchanged.

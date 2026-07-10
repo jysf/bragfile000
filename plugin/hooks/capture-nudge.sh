@@ -51,10 +51,10 @@ grep -q '^nudged$' "$MARKER" 2>/dev/null && exit 0
 BASELINE=$(sed -n 's/^baseline=//p' "$MARKER" | head -1)
 if [ -n "$BASELINE" ] && [ "$HEAD" != "$BASELINE" ]; then
     printf 'nudged\n' >> "$MARKER"
-    jq -cn '{
+    jq -cn --arg session "$SESSION_ID" '{
         hookSpecificOutput: {
             hookEventName: "Stop",
-            additionalContext: "A commit landed during this session. If something brag-worthy shipped, draft a brag entry for the user'"'"'s approval per BRAG.md (you can use the /brag:brag command): a required action-verb title plus optional project, type, tags, and a concrete impact. Stamp provenance as reserved tags agent:<name> and model:<id>. Do NOT run `brag add` until the user explicitly approves."
+            additionalContext: "A commit landed during this session. If something brag-worthy shipped, draft a brag entry for the user'"'"'s approval per BRAG.md (you can use the /brag:brag command): a required action-verb title plus optional project, type, tags, and a concrete impact. Stamp provenance as reserved tags agent:<name> and model:<id>, and pass session:<id> using this session'"'"'s id (\($session)) so the work is joinable later; include cost:<usd> and tokens:<n> only if you have real figures — never estimate them. Do NOT run `brag add` until the user explicitly approves."
         }
     }'
 fi

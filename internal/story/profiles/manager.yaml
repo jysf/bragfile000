@@ -1,0 +1,8 @@
+name: manager
+default_window: month
+impact_threads_only: false
+drop_impactless_beats: false
+fold_small_threads: false
+thread_order: initiative
+candor: candid
+directive: manager.md

@@ -597,3 +597,170 @@ func TestStatsAggregate_EmptyInputContract(t *testing.T) {
 		t.Errorf("Span(nil): got %+v, want zero-value", sp)
 	}
 }
+
+// TestWithImpact_FiltersNonEmptyImpactPreservingOrder pairs SPEC-048
+// locked decision 4 (impact-first): WithImpact returns exactly the
+// entries with non-empty Impact, in input order, dropping the empties.
+func TestWithImpact_FiltersNonEmptyImpactPreservingOrder(t *testing.T) {
+	in := []storage.Entry{
+		{ID: 1, Title: "a", Project: "alpha", Impact: "cut latency"},
+		{ID: 2, Title: "b", Project: "beta", Impact: "onboarding 1 day"},
+		{ID: 3, Title: "c", Project: "gamma", Impact: ""},
+		{ID: 4, Title: "d", Project: "alpha", Impact: "removed cron"},
+		{ID: 5, Title: "e", Impact: ""},
+	}
+	got := WithImpact(in)
+	wantIDs := []int64{1, 2, 4}
+	if len(got) != len(wantIDs) {
+		t.Fatalf("WithImpact: got %d entries, want %d (%v)", len(got), len(wantIDs), wantIDs)
+	}
+	for i, e := range got {
+		if e.ID != wantIDs[i] {
+			t.Errorf("WithImpact[%d].ID: got %d, want %d (order must be preserved)", i, e.ID, wantIDs[i])
+		}
+		if e.Impact == "" {
+			t.Errorf("WithImpact[%d]: empty-impact entry leaked into result", i)
+		}
+	}
+}
+
+// TestWithImpact_EmptyInputAndAllEmptyImpact pairs SPEC-048 locked
+// decision 4: both an empty input and an all-empty-impact input return
+// a non-nil empty slice so JSON callers never see null.
+func TestWithImpact_EmptyInputAndAllEmptyImpact(t *testing.T) {
+	got := WithImpact(nil)
+	if got == nil {
+		t.Errorf("WithImpact(nil): expected non-nil empty slice, got nil")
+	}
+	if len(got) != 0 {
+		t.Errorf("WithImpact(nil): expected len 0, got %d", len(got))
+	}
+
+	allEmpty := []storage.Entry{
+		{ID: 1, Title: "a", Impact: ""},
+		{ID: 2, Title: "b", Impact: ""},
+	}
+	got2 := WithImpact(allEmpty)
+	if got2 == nil {
+		t.Errorf("WithImpact(all-empty): expected non-nil empty slice, got nil")
+	}
+	if len(got2) != 0 {
+		t.Errorf("WithImpact(all-empty): expected len 0, got %d", len(got2))
+	}
+}
+
+// --- SPEC-045: provenance coverage helpers ------------------------------
+
+// coverageAggFixture mirrors the export package's coverageYearFixture (kept
+// local because the two live in different packages). 4 agent / 6 human;
+// self-reference ids 1,4,9 (3). See SPEC-045 Failing Tests.
+var coverageAggFixture = []storage.Entry{
+	{ID: 1, Title: "bragfile MVP retro", Description: "shipped the CLI", Tags: "process",
+		CreatedAt: time.Date(2026, 2, 10, 10, 0, 0, 0, time.UTC)},
+	{ID: 2, Title: "auth refactor", Description: "cleaned up login", Tags: "auth",
+		CreatedAt: time.Date(2026, 3, 5, 10, 0, 0, 0, time.UTC)},
+	{ID: 3, Title: "docs pass", Description: "rewrote the tutorial", Tags: "docs",
+		CreatedAt: time.Date(2026, 5, 20, 10, 0, 0, 0, time.UTC)},
+	{ID: 4, Title: "MCP server for brag", Description: "agent-native write spine",
+		Tags:      "mcp,agent:claude-code,model:claude-opus-4-8",
+		CreatedAt: time.Date(2026, 7, 4, 10, 0, 0, 0, time.UTC)},
+	{ID: 5, Title: "hotfix streak bug", Description: "local-day streak", Tags: "fix",
+		CreatedAt: time.Date(2026, 7, 5, 10, 0, 0, 0, time.UTC)},
+	{ID: 6, Title: "impact digest", Description: "calendar windows", Tags: "agent:claude-code",
+		CreatedAt: time.Date(2026, 9, 12, 10, 0, 0, 0, time.UTC)},
+	{ID: 7, Title: "story surface", Description: "audience shaping", Tags: "model:claude-opus-4-8,narrative",
+		CreatedAt: time.Date(2026, 11, 3, 10, 0, 0, 0, time.UTC)},
+	{ID: 8, Title: "modeling notes", Description: "agentic patterns essay", Tags: "agentic,modeling",
+		CreatedAt: time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC)},
+	{ID: 9, Title: "wrapped + sparklines", Description: "shareable year in brags",
+		Tags:      "agent:claude-code,model:claude-opus-4-8,visual",
+		CreatedAt: time.Date(2026, 12, 15, 10, 0, 0, 0, time.UTC)},
+	{ID: 10, Title: "release cut", Description: "v0.4.0 to homebrew", Tags: "release",
+		CreatedAt: time.Date(2026, 12, 20, 10, 0, 0, 0, time.UTC)},
+}
+
+var coverageAggMonths = []string{
+	"2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06",
+	"2026-07", "2026-08", "2026-09", "2026-10", "2026-11", "2026-12"}
+
+// Test 6 — TestIsAgentAuthored_ClassifiesReservedNamespace: the Go predicate
+// matches the SQL LIKE 'agent:%'/'model:%' anchoring (SPEC-045 LD2).
+func TestIsAgentAuthored_ClassifiesReservedNamespace(t *testing.T) {
+	cases := []struct {
+		tags string
+		want bool
+	}{
+		{"agent:x", true},
+		{"model:x", true},
+		{"a,agent:x,b", true},       // mid-list
+		{"agent:x,model:y", true},   // both
+		{"agentic,modeling", false}, // no colon → false-positive guard
+		{"", false},                 // no tags
+		{"auth,api", false},         // plain human
+		{"agent:anything", true},    // prefix-anchored regardless of suffix
+	}
+	for _, c := range cases {
+		got := IsAgentAuthored(storage.Entry{Tags: c.tags})
+		if got != c.want {
+			t.Errorf("IsAgentAuthored(Tags=%q) = %v, want %v", c.tags, got, c.want)
+		}
+	}
+}
+
+// Test 7 — TestCoverageByMonth_BucketsAndShareZeroFilled: 12 zero-filled
+// buckets in month order; counts + 4-decimal share per bucket (SPEC-045 LD7).
+func TestCoverageByMonth_BucketsAndShareZeroFilled(t *testing.T) {
+	got := CoverageByMonth(coverageAggFixture, coverageAggMonths)
+	want := []CoverageBucket{
+		{Period: "2026-01", Agent: 0, Human: 0, Share: 0},
+		{Period: "2026-02", Agent: 0, Human: 1, Share: 0},
+		{Period: "2026-03", Agent: 0, Human: 1, Share: 0},
+		{Period: "2026-04", Agent: 0, Human: 0, Share: 0},
+		{Period: "2026-05", Agent: 0, Human: 1, Share: 0},
+		{Period: "2026-06", Agent: 0, Human: 0, Share: 0},
+		{Period: "2026-07", Agent: 1, Human: 1, Share: 0.5},
+		{Period: "2026-08", Agent: 0, Human: 0, Share: 0},
+		{Period: "2026-09", Agent: 1, Human: 0, Share: 1},
+		{Period: "2026-10", Agent: 0, Human: 0, Share: 0},
+		{Period: "2026-11", Agent: 1, Human: 1, Share: 0.5},
+		{Period: "2026-12", Agent: 1, Human: 1, Share: 0.5},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("CoverageByMonth mismatch:\n got=%+v\nwant=%+v", got, want)
+	}
+
+	// Empty input over the same months → 12 {0,0,0} buckets.
+	empty := CoverageByMonth(nil, coverageAggMonths)
+	if len(empty) != 12 {
+		t.Fatalf("empty input: got %d buckets, want 12", len(empty))
+	}
+	for _, b := range empty {
+		if b.Agent != 0 || b.Human != 0 || b.Share != 0 {
+			t.Errorf("empty input: bucket %q not zero: %+v", b.Period, b)
+		}
+	}
+}
+
+// Test 8 — TestSelfReferenceCount_SubstringCaseInsensitive (SPEC-045 LD5).
+func TestSelfReferenceCount_SubstringCaseInsensitive(t *testing.T) {
+	if got := SelfReferenceCount(coverageAggFixture); got != 3 {
+		t.Errorf("SelfReferenceCount(fixture) = %d, want 3 (ids 1,4,9)", got)
+	}
+
+	cases := []struct {
+		name    string
+		entries []storage.Entry
+		want    int
+	}{
+		{"title-only", []storage.Entry{{Title: "brag digest", Description: "x"}}, 1},
+		{"description-only", []storage.Entry{{Title: "x", Description: "the brag tool"}}, 1},
+		{"mixed-case", []storage.Entry{{Title: "BragFile release", Description: "y"}}, 1},
+		{"non-match", []storage.Entry{{Title: "auth refactor", Description: "login"}}, 0},
+		{"empty", nil, 0},
+	}
+	for _, c := range cases {
+		if got := SelfReferenceCount(c.entries); got != c.want {
+			t.Errorf("%s: SelfReferenceCount = %d, want %d", c.name, got, c.want)
+		}
+	}
+}

@@ -654,6 +654,28 @@ func TestList_FilterByAuthor(t *testing.T) {
 	}
 }
 
+// TestList_AuthorIgnoresSeedTags ▲ DEC-027 — session:/cost:/tokens: are
+// reserved but NOT author-provenance tags. An entry carrying only these (no
+// agent:/model:) classifies as "human", never "agent". Guards that
+// provenanceExistsClause stays agent:%/model:%-only.
+func TestList_AuthorIgnoresSeedTags(t *testing.T) {
+	s, _ := newTestStore(t)
+	addWithTags(t, s, "seed-only", "session:sess-abc,cost:0.42,tokens:18000", "", "")
+	addWithTags(t, s, "real-agent", "agent:claude-code,session:sess-abc", "", "")
+
+	got, err := s.List(ListFilter{Author: "agent"})
+	if err != nil {
+		t.Fatalf("Author=agent: %v", err)
+	}
+	if len(got) != 1 || got[0].Title != "real-agent" {
+		t.Errorf("Author=agent: want {real-agent} (seed-only is human); got %v", titlesOf(got))
+	}
+	got, _ = s.List(ListFilter{Author: "human"})
+	if len(got) != 1 || got[0].Title != "seed-only" {
+		t.Errorf("Author=human: want {seed-only}; got %v", titlesOf(got))
+	}
+}
+
 // TestList_AuthorComposesWithOtherFilters ▲ SPEC-043 — Author AND-composes with
 // --project, --type, and --since (the AC claims all of them; this backs the
 // claim beyond the tag+limit cases in TestList_FilterByAuthor).
