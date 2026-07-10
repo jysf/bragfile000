@@ -1547,3 +1547,166 @@ func TestProjectEdit_HelpShowsLocationFlags(t *testing.T) {
 		t.Errorf("edit --help missing '--add-path', got %q", out)
 	}
 }
+
+// --- SPEC-057: `brag project ensure` (DEC-036) ---
+
+func TestProjectEnsure_CreatesWhenAbsent(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	out, errOut, err := runProjectCmd(t, dbPath, "ensure", "standup")
+	if err != nil {
+		t.Fatalf("ensure: unexpected error: %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout on ensure, got %q", out)
+	}
+	if !strings.Contains(errOut, `Created project "standup".`) {
+		t.Errorf("expected create confirmation on stderr, got %q", errOut)
+	}
+
+	// The project is now visible to `project list`.
+	listOut, _, listErr := runProjectCmd(t, dbPath, "list")
+	if listErr != nil {
+		t.Fatalf("list: unexpected error: %v", listErr)
+	}
+	if !strings.Contains(listOut, "standup") {
+		t.Errorf("expected 'standup' in project list, got %q", listOut)
+	}
+}
+
+func TestProjectEnsure_IdempotentReRunNoError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "ensure", "standup"); err != nil {
+		t.Fatalf("first ensure: %v", err)
+	}
+
+	// Re-running is always safe: exit 0, no error, and the "already exists"
+	// message on stderr rather than a duplicate-name failure.
+	out, errOut, err := runProjectCmd(t, dbPath, "ensure", "standup")
+	if err != nil {
+		t.Fatalf("second ensure returned error, want nil: %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout on idempotent ensure, got %q", out)
+	}
+	if !strings.Contains(errOut, `Project "standup" already exists.`) {
+		t.Errorf("expected already-exists message on stderr, got %q", errOut)
+	}
+
+	// Exactly one project row — no duplicate.
+	listOut, _, _ := runProjectCmd(t, dbPath, "list")
+	if strings.Count(listOut, "standup") != 1 {
+		t.Errorf("expected exactly one 'standup' row, got %q", listOut)
+	}
+}
+
+func TestProjectEnsure_AttachesLocation(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	out, errOut, err := runProjectCmd(t, dbPath, "ensure", "standup", "--location", "/repo/standup")
+	if err != nil {
+		t.Fatalf("ensure --location: unexpected error: %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+	if !strings.Contains(errOut, `Attached location "/repo/standup".`) {
+		t.Errorf("expected attach confirmation on stderr, got %q", errOut)
+	}
+
+	// The location is persisted and shown by `project show`.
+	showOut, _, showErr := runProjectCmd(t, dbPath, "show", "standup")
+	if showErr != nil {
+		t.Fatalf("show: %v", showErr)
+	}
+	if !strings.Contains(showOut, "/repo/standup") {
+		t.Errorf("expected '/repo/standup' in show output, got %q", showOut)
+	}
+}
+
+func TestProjectEnsure_LocationIdempotentReRun(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	if _, _, err := runProjectCmd(t, dbPath, "ensure", "standup", "--location", "/repo/standup"); err != nil {
+		t.Fatalf("first ensure --location: %v", err)
+	}
+
+	// Re-running with the same location is a no-op: no error, the
+	// already-attached message, and no duplicate location row.
+	_, errOut, err := runProjectCmd(t, dbPath, "ensure", "standup", "--location", "/repo/standup")
+	if err != nil {
+		t.Fatalf("second ensure --location returned error, want nil: %v", err)
+	}
+	if !strings.Contains(errOut, `Location "/repo/standup" already attached.`) {
+		t.Errorf("expected already-attached message on stderr, got %q", errOut)
+	}
+
+	showOut, _, _ := runProjectCmd(t, dbPath, "show", "standup")
+	if strings.Count(showOut, "/repo/standup") != 1 {
+		t.Errorf("expected exactly one location row, got %q", showOut)
+	}
+}
+
+func TestProjectEnsure_LocationOnDifferentProjectErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	// /repo/shared belongs to project "owner".
+	if _, _, err := runProjectCmd(t, dbPath, "ensure", "owner", "--location", "/repo/shared"); err != nil {
+		t.Fatalf("ensure owner: %v", err)
+	}
+
+	// Ensuring "other" with the same path is a user error (paths are globally
+	// unique). The message names the conflicting path.
+	_, _, err := runProjectCmd(t, dbPath, "ensure", "other", "--location", "/repo/shared")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser on cross-project location, got %v", err)
+	}
+	if err == nil || !strings.Contains(err.Error(), "/repo/shared") {
+		t.Errorf("expected error naming '/repo/shared', got %v", err)
+	}
+}
+
+func TestProjectEnsure_EmptyNameErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	_, _, err := runProjectCmd(t, dbPath, "ensure", "")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for empty name, got %v", err)
+	}
+}
+
+func TestProjectEnsure_OverLongNameErrUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	longName := strings.Repeat("p", 65)
+	_, _, err := runProjectCmd(t, dbPath, "ensure", longName)
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for over-length name, got %v", err)
+	}
+	if err == nil || !strings.Contains(err.Error(), "64") {
+		t.Errorf("expected error mentioning the 64-char limit, got %v", err)
+	}
+}
+
+func TestProjectEnsure_StdoutStderrSeparation(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	root, outBuf, errBuf := newProjectTestRoot(t)
+	root.SetArgs([]string{"--db", dbPath, "project", "ensure", "standup"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("ensure: %v", err)
+	}
+	if outBuf.Len() != 0 {
+		t.Errorf("stdout must be empty (data channel), got %q", outBuf.String())
+	}
+	if errBuf.Len() == 0 {
+		t.Errorf("stderr must carry the human confirmation, got empty")
+	}
+}
+
+func TestProjectEnsure_HelpShowsExamples(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	out, _, _ := runProjectCmd(t, dbPath, "ensure", "--help")
+	if !strings.Contains(out, "Examples:") {
+		t.Errorf("ensure --help missing 'Examples:', got %q", out)
+	}
+	if !strings.Contains(out, "brag project ensure") {
+		t.Errorf("ensure --help missing 'brag project ensure', got %q", out)
+	}
+	if !strings.Contains(out, "--location") {
+		t.Errorf("ensure --help missing '--location', got %q", out)
+	}
+}

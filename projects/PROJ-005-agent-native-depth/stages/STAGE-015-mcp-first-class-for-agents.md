@@ -87,15 +87,23 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 - [x] SPEC-055 (shipped on 2026-07-10) — `brag mcp install`: idempotent
       client-config merge (DEC-034), `--dry-run`, never clobbers other
       `mcpServers`.
-- [ ] SPEC-057 (design) — close the unregistered-project gap: `brag project
-      ensure <name>` (idempotent upsert) + document the soft-link facts
-      (`project list` locations authoritative-but-incomplete; a project may
-      have multiple locations). Creates DEC-036.
+- [~] SPEC-057 (design) — close the unregistered-project gap:
+      `brag project ensure <name> [--location PATH]`, an idempotent
+      create-or-no-op storage primitive (`EnsureProject`/`EnsureLocation`)
+      + document the two soft-link facts (`project list` locations
+      authoritative-but-incomplete; a project may have multiple
+      locations). `brag_add` stays free-text — no silent auto-register
+      (DEC-036). Full agent-facing MCP docs are SPEC-058.
 - [ ] SPEC-058 (frame) — MCP + "For AI agents" docs (README + docs page,
       full tool schemas, gotchas, impact-framing convention). Comes last,
       once install + project-ensure shapes are final.
 
 **Count:** 1 shipped / 1 active / 1 pending
+
+*(Numbering note: the "unregistered gap" work landed as SPEC-057 and the
+docs work as SPEC-058 — the earlier backlog's SPEC-056 label was consumed
+by the unrelated `ListFilter.Until` promotion. IDs are repo-global and
+monotonic, §2.)*
 
 ## Design Notes
 
