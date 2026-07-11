@@ -71,11 +71,15 @@ while its deeper stages (memory, provenance, completeness, benchmark) are framed
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [~] SPEC-068 (verify) — `brag list --day <YYYY-MM-DD|today|yesterday>`: scope
-      the listing to one local calendar day via Since+Until (+ DEC-039 day
-      semantics; fixes since.go clock impurity / audit L4).
+- [x] SPEC-068 (shipped on 2026-07-11) — `brag list --day
+      <YYYY-MM-DD|today|yesterday>`: scope the listing to one local calendar day
+      via Since+Until (+ DEC-039 day semantics; fixes since.go clock impurity /
+      audit L4).
+- [~] SPEC-069 (verify) — v0.5.1 release cut: the stage's closing release action
+      (CHANGELOG `[0.5.1]` + plugin version pin + §4 pre-flight; the irreversible
+      tag/publish is orchestrator-driven after this PR merges).
 
-**Count:** 0 shipped / 1 active / 0 pending
+**Count:** 1 shipped / 1 active / 0 pending
 
 ## Design Notes
 
