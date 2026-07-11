@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-016
-  status: active
+  status: shipped
   priority: medium
   target_complete: null
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-07-10
-shipped_at: null
+shipped_at: 2026-07-10
 ---
 
 # STAGE-016: v0.4.x polish
@@ -89,20 +89,42 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       (Total + top-8 by-project) over rolling `--week|--month|--quarter`
       (default `--month`); new `aggregate.RollingBuckets` sub-month bucketer
       + DEC-037.
-- [ ] SPEC-060 (frame) — R5: set `type` on milestone-generated writes (they
-      land untyped today, diluting by-type analytics). No back-migration of
-      historical rows. + fold in the `sprint:<id>` freeform-tag convention
-      doc note (agreed: sprint is just a tag, no schema).
+- [x] SPEC-060 (shipped on 2026-07-10) — fix `brag spark` upper-bound query:
+      bound the corpus to the same `[start, now)` axis as the bucketer so the
+      header count + top-8 exclude out-of-window entries (applies DEC-035).
+- [x] SPEC-061 (shipped on 2026-07-10) — fix `brag project ensure` name cap to
+      count bytes (not runes), restoring DEC-036 parity with the capture paths.
+- [x] SPEC-062 (shipped on 2026-07-10) — fix SQLite concurrency: `busy_timeout`
+      + `_txlock=immediate` + single connection so concurrent access WAITS
+      instead of failing `database is locked` (+ DEC-038, WAL deferred).
+- [x] SPEC-063 (shipped on 2026-07-10) — fix `brag tag rename`: canonicalize /
+      reject the target (trim, reject comma/empty) so a rename can't silently
+      corrupt membership on the next edit.
+- [x] SPEC-064 (shipped on 2026-07-10) — harden capture input validation across
+      all four ingress paths via one shared `internal/capture.Validate`
+      (byte-caps + control-char rejection + reserved-numeric-tag checks).
+- [x] SPEC-065 (shipped on 2026-07-10) — escape `|` as `\|` in markdown
+      table cells so a pipe in a value keeps the row at two columns.
+- [x] SPEC-066 (shipped on 2026-07-10) — treat a normal `brag mcp serve`
+      shutdown (in-flight client close) as a clean exit (RC 0) instead of the
+      RC-2 `server is closing: EOF` crash.
 
-**Micro-fix cut (post-scan decision, 2026-07-10):**
-- INCLUDE — SPEC-060 R5 milestone `type` (real data-quality bug, testable).
-- INCLUDE — `sprint:<id>` tag convention doc note (cheap; rides with SPEC-060).
-- DEFER — `project status` trailing empty column when `state_note` blank
-  (pure cosmetic; not consumed by `standup`, which reads JSON).
-- DROP — WAL-safe backup doc: `journal_mode=WAL` is not set and `backup.go`
-  is already WAL-safe, so bare `cp` guidance is not unsafe — moot.
+**What shipped vs. what was cut (reconciled at stage ship, 2026-07-10):**
+- SHIPPED — the two planned pieces (SPEC-056 `ListFilter.Until`, SPEC-059 `brag
+  spark`) plus SPEC-060/061 (the batch's own MEDIUM fixes) and SPEC-062–066
+  (a pre-release hardening pass: concurrency, tag-rename, capture-validation,
+  markdown-escape, mcp-shutdown).
+- SHIPPED as a doc chore — the `sprint:<id>` freeform-tag convention (sprint is
+  just a tag; no schema, no reserved namespace).
+- DROPPED — R5 milestone-write `type`: investigation found no auto-generated
+  write path (the milestone notifier doesn't insert), and untyped entries are
+  legitimately optional, so there was nothing to fix.
+- DROPPED — WAL-safe backup doc note: `journal_mode=WAL` is not set and
+  `backup.go` is already WAL-safe, so bare `cp` guidance is not unsafe — moot.
+- DEFERRED — cosmetic `project status` trailing empty column when `state_note`
+  is blank (not consumed by `standup`, which reads JSON).
 
-**Count:** 2 shipped / 1 active / 0 pending
+**Count:** 9 shipped / 0 active / 0 pending
 
 ## Design Notes
 
@@ -143,12 +165,30 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped.*
-
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes. The two planned
+  substrate-tidying pieces shipped (SPEC-056 `ListFilter.Until` storage
+  promotion; SPEC-059 `brag spark`), and on top of them a full pre-release audit
+  hardening pass landed six fixes across concurrency (SPEC-062), tag-rename
+  canonicalization (SPEC-063), capture-input validation (SPEC-064),
+  markdown-cell escaping (SPEC-065), and mcp-serve clean shutdown (SPEC-066),
+  plus the batch's own two MEDIUMs (SPEC-060/061). The deeper agent-native work
+  lands on a genuinely clean base.
+- **How many specs did it actually take?** 9 shipped, vs. a plan that named 2
+  real pieces + a loose "tier-1 micro-fix" bucket. The expansion was the audit.
+- **What changed between starting and shipping?** The user asked for a bug check
+  before the v0.5.0 release; that audit turned up pre-existing HIGH/MEDIUM issues
+  (SQLite `database is locked`, silent tag-rename corruption, capture-validation
+  drift) — several amplified by this batch's own MCP-first-class work — which
+  became SPEC-062–066, and the planned R5 micro-fix was dropped when it proved
+  to be a non-bug.
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
+  - Run the pre-release adversarial audit *before* cutting the release, not
+    after — here it caught a HIGH concurrency bug the headline MCP server would
+    have hit in normal use.
+  - "Validate at the boundary, once" (SPEC-064's shared `internal/capture`
+    package) is the pattern that ends per-path input-validation drift; worth
+    reaching for whenever a new ingress is added.
 - **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <one-line items>
+  - A shared cli-reachable canonicalizer for tag tokens (SPEC-063 follow-up)
+    and running the edit path through `capture.Validate` (SPEC-064 follow-up)
+    are the two open threads for a later polish/hardening spec.

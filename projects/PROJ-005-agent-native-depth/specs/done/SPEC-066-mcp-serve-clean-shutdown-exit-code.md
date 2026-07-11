@@ -7,7 +7,7 @@
 task:
   id: SPEC-066
   type: bug                        # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -186,10 +186,16 @@ match is what recognizes it.
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing material. Extracting a testable `serve()` seam and matching the
+   SDK's `ErrServerClosing` by code `-32004` (empirically confirmed via a
+   throwaway `IOTransport` harness rather than guessed) lets a normal in-flight
+   client close exit 0 instead of the RC-2 `server is closing: EOF` crash.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. The fix operationalizes DEC-024's transport choice at the CLI boundary;
+   it does not revisit the SDK/transport decision.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None. The clean-shutdown sentinel set (nil / EOF / context.Canceled /
+   wrapped `ErrServerClosing`) is covered and genuine failures still propagate
+   nonzero.

@@ -7,7 +7,7 @@
 task:
   id: SPEC-061
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -156,10 +156,15 @@ multibyte name, so the test fails before the fix and passes after.
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing material — a one-token rune→byte change. Outcome: `brag project
+   ensure` now rejects exactly the multibyte names the capture paths reject,
+   so any ensured name is always writable (DEC-036 parity restored).
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. DEC-036 already mandates the ensure↔capture parity this fix restores;
+   no template or constraint change.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — The remaining asymmetry is `brag project new`, which still has no name cap
+   at all — a candidate for a future small-wins spec. (The title/tags/type
+   byte-cap parity was subsequently closed by SPEC-064's shared validator.)

@@ -7,7 +7,7 @@
 task:
   id: SPEC-062
   type: bug                        # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: S                    # S | M | L  (L means split it)
@@ -188,10 +188,17 @@ dev/prod guard.
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Outcome is solid: two `Store` handles/processes now WAIT and succeed
+   (zero `database is locked`) via `busy_timeout(5000)` + `_txlock=immediate` +
+   `SetMaxOpenConns(1)`, journal mode unchanged. The one lesson is reaching for
+   `_txlock=immediate` from the start rather than finding the deferred-txn
+   upgrade deadlock via the residual 1/20 failure.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. DEC-038 already records the full policy (busy_timeout + IMMEDIATE +
+   single-conn, rollback retained, WAL deferred) and its backup-vs-WAL rationale.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None now. WAL is deliberately deferred (DEC-038); revisit only if a
+   workload needs concurrent readers during long writes, which would also
+   require updating the single-file backup docs — its own future DEC.

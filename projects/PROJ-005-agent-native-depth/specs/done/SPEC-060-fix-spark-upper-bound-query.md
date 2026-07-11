@@ -7,7 +7,7 @@
 task:
   id: SPEC-060
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -192,10 +192,15 @@ identical to the query `Since`.
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing material — a small, well-scoped fix. Threading one truncated
+   `now` into both the `[start, now)` filter and the bucketer (a single axis)
+   is what made the header count, top-8, and bucket sums agree; it landed
+   clean with no export-layer change.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. This applies DEC-035 (`ListFilter.Until`) and DEC-037 (spark's
+   half-open window) rather than introducing policy; nothing to update.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None. DEC-035 named this the anticipated "fifth bounded consumer" and no
+   further unbounded spark consumers remain.

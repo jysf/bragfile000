@@ -7,7 +7,7 @@
 task:
   id: SPEC-065
   type: bug                        # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -161,10 +161,15 @@ Gotchas, style preferences, reuse opportunities.
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing material. One shared `escapeTableCell` helper on the
+   tags/project/type/impact cell values keeps every row at exactly two columns,
+   and the DEC-013 goldens stayed byte-identical (their fixtures carry no `|`).
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. This is a bug fix within DEC-013's fixed output shape; escaping a cell
+   value does not change the documented shape.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — None. SPEC-064's control-char rejection at ingress guarantees `|` is the
+   only cell-breaking char that can reach the renderer, so this fix is
+   complete; summary-block bullets render list items, not table cells.
