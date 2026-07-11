@@ -339,6 +339,62 @@ func TestRenderEntry_OmitsEmptyMetadataAndDescription(t *testing.T) {
 	}
 }
 
+// TestRenderEntry_EscapesPipeInTableCells locks that a `|` in any field
+// rendered into a markdown table cell is escaped as `\|`, so the value
+// stays in ONE cell and the row keeps exactly two columns. Fixes
+// pre-release-audit MEDIUM #6: a raw `|` split the cell, garbling the
+// table. Escaping is scoped to table cells; the description body block
+// (below the table) is left untouched.
+func TestRenderEntry_EscapesPipeInTableCells(t *testing.T) {
+	e := storage.Entry{
+		ID: 1, Title: "pipe-entry",
+		Description: "body prose | stays literal",
+		Tags:        "a|b",
+		Project:     "team | platform",
+		Type:        "shipped|maybe",
+		Impact:      "cut latency | doubled QPS",
+		CreatedAt:   time.Date(2026, 4, 20, 10, 0, 0, 0, time.UTC),
+		UpdatedAt:   time.Date(2026, 4, 20, 10, 0, 0, 0, time.UTC),
+	}
+	var buf bytes.Buffer
+	RenderEntry(&buf, e, 1)
+	got := buf.String()
+
+	// Each value cell must carry the escaped form, keeping two columns.
+	for _, want := range []string{
+		"| tags        | a\\|b |",
+		"| project     | team \\| platform |",
+		"| type        | shipped\\|maybe |",
+		"| impact      | cut latency \\| doubled QPS |",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("want escaped cell %q in output, got:\n%s", want, got)
+		}
+	}
+
+	// No table row may split into >2 columns: every table line (starting
+	// with "| ") must have exactly 3 unescaped pipes (leading, mid,
+	// trailing).
+	for _, ln := range strings.Split(got, "\n") {
+		if !strings.HasPrefix(ln, "| ") {
+			continue
+		}
+		unescaped := strings.Count(ln, "|") - strings.Count(ln, "\\|")
+		if unescaped != 3 {
+			t.Errorf("table row split into wrong column count (%d unescaped pipes, want 3): %q", unescaped, ln)
+		}
+	}
+
+	// The description body block is prose, not a cell — its `|` stays
+	// literal (unescaped).
+	if !strings.Contains(got, "body prose | stays literal") {
+		t.Errorf("description body `|` should stay literal, got:\n%s", got)
+	}
+	if strings.Contains(got, "body prose \\| stays literal") {
+		t.Errorf("description body `|` should NOT be escaped, got:\n%s", got)
+	}
+}
+
 // TestToMarkdown_GroupingOrderRules walks the level-2 headings to prove
 // alphabetical-ASC group ordering with (no project) forced last, then
 // checks within-group chrono-ASC and separator placement.

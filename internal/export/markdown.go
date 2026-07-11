@@ -44,20 +44,33 @@ func RenderEntry(w io.Writer, e storage.Entry, headingLevel int) {
 	fmt.Fprintf(w, "| created_at  | %s |\n", e.CreatedAt.UTC().Format(time.RFC3339))
 	fmt.Fprintf(w, "| updated_at  | %s |\n", e.UpdatedAt.UTC().Format(time.RFC3339))
 	if e.Tags != "" {
-		fmt.Fprintf(w, "| tags        | %s |\n", e.Tags)
+		fmt.Fprintf(w, "| tags        | %s |\n", escapeTableCell(e.Tags))
 	}
 	if e.Project != "" {
-		fmt.Fprintf(w, "| project     | %s |\n", e.Project)
+		fmt.Fprintf(w, "| project     | %s |\n", escapeTableCell(e.Project))
 	}
 	if e.Type != "" {
-		fmt.Fprintf(w, "| type        | %s |\n", e.Type)
+		fmt.Fprintf(w, "| type        | %s |\n", escapeTableCell(e.Type))
 	}
 	if e.Impact != "" {
-		fmt.Fprintf(w, "| impact      | %s |\n", e.Impact)
+		fmt.Fprintf(w, "| impact      | %s |\n", escapeTableCell(e.Impact))
 	}
+	// Description renders as a body block (prose), not a table cell, so a
+	// literal `|` there is harmless and is left unescaped.
 	if e.Description != "" {
 		fmt.Fprintf(w, "\n%sDescription\n\n%s\n", descPrefix, e.Description)
 	}
+}
+
+// escapeTableCell escapes characters that would break a GFM table cell
+// in a value rendered into a `| field | value |` row. A raw `|` splits
+// the cell into extra columns; escaping it as `\|` keeps the value in a
+// single cell (pre-release-audit MEDIUM #6). Single-line fields reject
+// control chars at ingress (SPEC-064), so `|` is the only cell-breaking
+// char that can reach here. Scoped to table cells only — headings and
+// body prose treat `|` literally.
+func escapeTableCell(s string) string {
+	return strings.ReplaceAll(s, "|", "\\|")
 }
 
 const noProjectKey = "(no project)"
