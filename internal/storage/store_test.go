@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 	"testing"
 	"time"
 
@@ -1461,5 +1462,104 @@ func TestList_TagFilterThroughJoin(t *testing.T) {
 			t.Errorf("List(Tag=%q) len=%d, want %d (titles=%v)",
 				tc.tag, len(got), tc.wantLen, titlesOf(got))
 		}
+	}
+}
+
+// TestOpen_BusyTimeoutPragma pins the SQLite concurrency policy (DEC-038):
+// every Store opens with busy_timeout=5000ms so a contended writer WAITS and
+// retries instead of erroring instantly, and serializes this process through a
+// single pooled connection so the pool cannot self-conflict.
+func TestOpen_BusyTimeoutPragma(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	var busyTimeout int
+	if err := s.db.QueryRow("PRAGMA busy_timeout").Scan(&busyTimeout); err != nil {
+		t.Fatalf("PRAGMA busy_timeout: %v", err)
+	}
+	if busyTimeout != 5000 {
+		t.Errorf("busy_timeout = %d, want 5000", busyTimeout)
+	}
+
+	// SetMaxOpenConns(1) is observable via the pool stats.
+	if got := s.db.Stats().MaxOpenConnections; got != 1 {
+		t.Errorf("MaxOpenConnections = %d, want 1", got)
+	}
+
+	// Journal mode stays rollback (delete), NOT WAL (DEC-038): WAL would add
+	// -wal/-shm sidecars and make the documented bare-cp backup unsafe.
+	var journalMode string
+	if err := s.db.QueryRow("PRAGMA journal_mode").Scan(&journalMode); err != nil {
+		t.Fatalf("PRAGMA journal_mode: %v", err)
+	}
+	if journalMode != "delete" {
+		t.Errorf("journal_mode = %q, want %q (rollback, not WAL)", journalMode, "delete")
+	}
+}
+
+// TestOpen_ConcurrentWritesAcrossHandles simulates two processes writing to the
+// same DB file at once — exactly what happens when `brag mcp serve` holds a
+// long-lived Store for the whole process while a shell `brag add` (or a Claude
+// Code hook firing `brag add`) opens a SECOND Store on the same file. Without a
+// busy_timeout, SQLite returns "database is locked (SQLITE_BUSY)" the instant a
+// second writer contends instead of waiting, so most concurrent writes fail.
+//
+// This test opens two separate *Store handles on one temp-DB path and drives N
+// concurrent Adds across both; it asserts every write succeeds (no "database is
+// locked") and that all rows land. It fails on the pre-fix code (bare path, no
+// busy_timeout) and passes with busy_timeout(5000) + SetMaxOpenConns(1).
+//
+// Not flaky: the generous 5s busy_timeout dwarfs the microsecond-scale contention
+// window for 20 tiny single-row inserts, and t.TempDir() gives each run an
+// isolated file, so the wait always resolves well within budget.
+func TestOpen_ConcurrentWritesAcrossHandles(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "db.sqlite")
+
+	s1, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open s1: %v", err)
+	}
+	defer func() { _ = s1.Close() }()
+	s2, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open s2: %v", err)
+	}
+	defer func() { _ = s2.Close() }()
+
+	const perHandle = 10
+	stores := []*Store{s1, s2}
+	total := len(stores) * perHandle
+
+	var wg sync.WaitGroup
+	errCh := make(chan error, total)
+	for si, s := range stores {
+		for i := 0; i < perHandle; i++ {
+			wg.Add(1)
+			go func(s *Store, si, i int) {
+				defer wg.Done()
+				if _, err := s.Add(Entry{Title: fmt.Sprintf("h%d-e%d", si, i)}); err != nil {
+					errCh <- err
+				}
+			}(s, si, i)
+		}
+	}
+	wg.Wait()
+	close(errCh)
+
+	var failures []error
+	for err := range errCh {
+		failures = append(failures, err)
+	}
+	if len(failures) != 0 {
+		t.Fatalf("concurrent Add: %d/%d writes failed; first error: %v",
+			len(failures), total, failures[0])
+	}
+
+	got, err := s1.List(ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != total {
+		t.Fatalf("final row count = %d, want %d", len(got), total)
 	}
 }
