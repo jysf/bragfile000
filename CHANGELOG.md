@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-07-11
+
+A small ergonomics release. **No schema change, no migration.**
+
+### Added
+
+- **`brag list --day <YYYY-MM-DD|today|yesterday>`** — scope a listing to a single
+  **local** calendar day (the half-open `[local-midnight, next-local-midnight)`
+  window), built on the `ListFilter.Until` bound from v0.5.0. `today`/`yesterday`
+  resolve against your local clock (so an entry logged at 9pm your time reads as
+  that day, not the next UTC day); mutually exclusive with `--since`; composes
+  with `--project`/`--type`/`--tag`/`--limit`/`-P`/`--format`. (DEC-039)
+
+### Fixed
+
+- `--since <duration>` and the new `--day` keywords now resolve the current time
+  through an injectable clock seam instead of reading the wall clock inline — an
+  internal testability fix with no behavior change to `--since`.
+
 ## [0.5.0] - 2026-07-10
 
 The **agent-native depth (opening)** release. bragfile makes its MCP path
@@ -396,7 +415,8 @@ Each decision file under `/decisions/` carries the full rationale.
   payload keys; markdown convention reuses DEC-013's provenance
   + summary-block style.
 
-[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/jysf/bragfile000/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/jysf/bragfile000/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/jysf/bragfile000/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/jysf/bragfile000/compare/v0.3.0...v0.3.1

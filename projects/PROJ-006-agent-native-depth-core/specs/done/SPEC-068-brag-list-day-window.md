@@ -7,7 +7,7 @@
 task:
   id: SPEC-068
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -228,10 +228,24 @@ Written during **design**, BEFORE build. Made to pass during **build**.
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing structural — the plan's own pivot was the win. Collapsing the
+   originally-sketched `--until` primitive + `--today`/`--yesterday` presets into
+   ONE `--day <value>` flag was the right simplification: users think in whole
+   days, one flag sets both bounds off the already-shipped `ListFilter.Until`, and
+   there is no arbitrary-range surface to test or document. Resisting the more
+   "general" API kept this a clean CLI wire-up plus one clock seam.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. DEC-039 records the one real fork (LOCAL calendar day, not UTC) with its
+   rationale and the DEC-022 precedent, and that is the right home for it — no
+   template, constraint, or AGENTS.md change is warranted. The distinct local
+   `clock` seam (vs. `impact.go`'s UTC `nowFunc`) is documented at both call sites,
+   so the two-seams-in-one-package choice is self-explaining.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No new spec now, but one revisit note for the backlog (flagged in DEC-039):
+   "local" here is the single host's wall-clock zone. If a future caller is NOT a
+   local CLI — the MCP `brag_list` tool, or a multi-host/agent reader — "local"
+   becomes ambiguous and that caller would need to source the zone explicitly
+   (e.g. an explicit tz input) rather than inherit the process clock. That is a
+   later stage's concern, not a gap in this spec.
