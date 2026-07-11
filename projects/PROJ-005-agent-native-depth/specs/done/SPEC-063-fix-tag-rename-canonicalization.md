@@ -7,7 +7,7 @@
 task:
   id: SPEC-063
   type: bug                        # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: S                    # S | M | L  (L means split it)
@@ -184,10 +184,15 @@ reject-comma + reject-empty — implemented explicitly in `tag.go`.
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing material. Trim + reject-comma + reject-empty at the CLI boundary
+   closes the silent-corruption round-trip: outcome is a renamed tag can no
+   longer re-split or vanish on the entry's next edit.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. The fix follows DEC-004 (comma is the separator) and DEC-016 (tag
+   mutation / FTS re-sync); no update needed.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — Worth one: a shared, cli-reachable tag-token canonicalizer so add/edit/
+   rename share one code path instead of a duplicated subset — a refactor,
+   not a fix. It could live alongside SPEC-064's `internal/capture` package.

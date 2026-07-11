@@ -7,7 +7,7 @@
 task:
   id: SPEC-064
   type: bug                        # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -175,10 +175,17 @@ Written before build; the build made them pass.
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing material. The shared `internal/capture.Validate` package ended the
+   per-path drift that caused the cap gap across all four capture ingresses;
+   validating the caller's raw tags *before* MCP provenance stamping was the one
+   ordering subtlety and it resolved cleanly.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No new DEC. The load-bearing choice — validate at each boundary rather than
+   in `Store.Add`, so the 64-byte tags cap sees pre-stamp input — is recorded in
+   this spec's Build Completion; it needs no template or constraint change.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — Yes: the edit path (`Store.Update` / `brag edit`) is not a capture ingress
+   and does not yet run through `capture.Validate`. A defensive follow-up spec
+   should route it through the same validator.
