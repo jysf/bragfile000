@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/jysf/bragfile000/internal/capture"
 	"github.com/jysf/bragfile000/internal/config"
 	"github.com/jysf/bragfile000/internal/editor"
 	"github.com/jysf/bragfile000/internal/storage"
@@ -139,6 +140,17 @@ func runAddFlags(cmd *cobra.Command, _ []string) error {
 		return UserErrorf("--title is required and must not be empty")
 	}
 
+	if err := capture.Validate(capture.Fields{
+		Title:       title,
+		Description: getFlagString(cmd, "description"),
+		Tags:        getFlagString(cmd, "tags"),
+		Project:     getFlagString(cmd, "project"),
+		Type:        getFlagString(cmd, "type"),
+		Impact:      getFlagString(cmd, "impact"),
+	}); err != nil {
+		return UserErrorf("%v", err)
+	}
+
 	dbFlag := getFlagString(cmd, "db")
 	path, err := config.ResolveDBPath(dbFlag)
 	if err != nil {
@@ -186,6 +198,17 @@ func runAddEditor(cmd *cobra.Command) error {
 	parsed, err := editor.Parse(edited)
 	if err != nil {
 		return UserErrorf("invalid buffer: %v", err)
+	}
+
+	if err := capture.Validate(capture.Fields{
+		Title:       parsed.Title,
+		Description: parsed.Description,
+		Tags:        parsed.Tags,
+		Project:     parsed.Project,
+		Type:        parsed.Type,
+		Impact:      parsed.Impact,
+	}); err != nil {
+		return UserErrorf("%v", err)
 	}
 
 	dbFlag := getFlagString(cmd, "db")

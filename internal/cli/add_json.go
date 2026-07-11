@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/jysf/bragfile000/internal/capture"
 	"github.com/jysf/bragfile000/internal/config"
 	"github.com/jysf/bragfile000/internal/storage"
 	"github.com/spf13/cobra"
@@ -68,23 +69,17 @@ func parseAddJSON(r io.Reader) (storage.Entry, error) {
 	if strings.TrimSpace(in.Title) == "" {
 		return storage.Entry{}, UserErrorf(`--json input: "title" is required and must not be empty`)
 	}
-	if len(in.Title) > 200 {
-		return storage.Entry{}, UserErrorf(`--json input: "title" exceeds 200-character limit`)
-	}
-	if len(in.Description) > 100000 {
-		return storage.Entry{}, UserErrorf(`--json input: "description" exceeds 100000-character limit`)
-	}
-	if len(string(in.Tags)) > 64 {
-		return storage.Entry{}, UserErrorf(`--json input: "tags" exceeds 64-character limit`)
-	}
-	if len(in.Project) > 64 {
-		return storage.Entry{}, UserErrorf(`--json input: "project" exceeds 64-character limit`)
-	}
-	if len(in.Type) > 64 {
-		return storage.Entry{}, UserErrorf(`--json input: "type" exceeds 64-character limit`)
-	}
-	if len(in.Impact) > 256 {
-		return storage.Entry{}, UserErrorf(`--json input: "impact" exceeds 256-character limit`)
+	// Byte caps, control-char rejection, and reserved-numeric-tag validation
+	// are shared with every other capture ingress path (SPEC-064).
+	if err := capture.Validate(capture.Fields{
+		Title:       in.Title,
+		Description: in.Description,
+		Tags:        string(in.Tags),
+		Project:     in.Project,
+		Type:        in.Type,
+		Impact:      in.Impact,
+	}); err != nil {
+		return storage.Entry{}, UserErrorf("--json input: %v", err)
 	}
 	return storage.Entry{
 		Title:       in.Title,
