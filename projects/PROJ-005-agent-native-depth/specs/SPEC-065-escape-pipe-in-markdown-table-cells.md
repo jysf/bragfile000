@@ -6,8 +6,8 @@
 
 task:
   id: SPEC-065
-  type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  type: bug                        # epic | story | task | bug | chore
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -19,57 +19,67 @@ repo:
   id: bragfile
 
 agents:
-  architect: claude-opus-4-7
-  implementer: claude-opus-4-7     # usually same Claude, different session
+  architect: claude-opus-4-8
+  implementer: claude-opus-4-8     # usually same Claude, different session
   created_at: 2026-07-10
 
 references:
-  decisions: []
-  constraints: []
-  related_specs: []
+  decisions: [DEC-013]
+  constraints: [stdout-is-for-data-stderr-is-for-humans]
+  related_specs: [SPEC-015, SPEC-064]
 ---
 
 # SPEC-065: escape pipe in markdown table cells
 
 ## Context
 
-Why does this spec exist? What problem does it solve? Link to:
-- The parent `STAGE-016` and this spec's place in its backlog
-- The project `PROJ-005`
-- Any related discussions or prior decisions
+Pre-release audit MEDIUM #6. `internal/export/markdown.go`
+`RenderEntry` (used by `brag show` and `brag export --format markdown`)
+writes field values raw into `| field | value |` GFM table cells. A `|`
+in a value splits the cell, producing extra columns and garbling the
+rendered table. Repro: `brag add -i 'cut latency | doubled QPS'` then
+`brag show 1` renders `| impact | cut latency | doubled QPS |` — four
+columns instead of two. The same breaks for a `|` in tags / project /
+type. Sits under `STAGE-016` (polish) in `PROJ-005`.
 
 ## Goal
 
-1–2 sentences. Unambiguous. If you can't write the goal in two
-sentences, split the spec.
+Escape `|` as `\|` (the standard GFM table-cell escape) in every field
+value rendered into a markdown table cell, so a `|` in a value keeps
+the row at exactly two columns. Do not escape `|` in non-table contexts
+(headings, description body prose), where it is literal and harmless.
 
 ## Inputs
 
-- **Files to read:** `path/to/file.ext` — why
-- **External APIs:** <name, docs link, auth>
-- **Related code paths:** `src/some/module/`
+- **Files to read:** `internal/export/markdown.go` — the `RenderEntry`
+  table-cell rendering; `internal/export/markdown_test.go` — existing
+  golden/render tests.
+- **Related code paths:** `internal/cli/show.go`,
+  `internal/cli/export.go` (both call `RenderEntry`).
 
 ## Outputs
 
-- **Files created:** `path/to/new.ext` — purpose
-- **Files modified:** `path/to/existing.ext` — what changes
-- **New exports:** <names and signatures>
-- **Database changes:** <migrations>
+- **Files modified:**
+  - `internal/export/markdown.go` — wrap tags/project/type/impact cell
+    values in a new `escapeTableCell` helper.
+  - `internal/export/markdown_test.go` — new fail-first test.
 
 ## Acceptance Criteria
 
-Testable outcomes. Cover happy path, error cases, edge cases.
-
-- [ ] Criterion 1 (testable)
-- [ ] Criterion 2 (testable)
+- [x] A `|` in tags / project / type / impact renders as `\|`, keeping
+      the table row at exactly two columns.
+- [x] A `|` in the description body block stays literal (not escaped).
+- [x] Existing DEC-013 golden tests stay green (their fixtures contain
+      no `|`, so their bytes are unchanged).
 
 ## Failing Tests
 
-Written during **design**, BEFORE build. The implementer's job in
-**build** is to make these pass.
-
-- **`path/to/test.file`**
-  - `"test description 1"` — asserts: ...
+- **`internal/export/markdown_test.go`**
+  - `TestRenderEntry_EscapesPipeInTableCells` — renders an entry whose
+    tags/project/type/impact each contain a `|`; asserts each value
+    cell carries the escaped `\|`, every table row has exactly 3
+    unescaped pipes (two columns), and the description body `|` stays
+    literal.
 
 ## Implementation Context
 
@@ -112,28 +122,36 @@ Gotchas, style preferences, reuse opportunities.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `fix/spec-065-markdown-cell-escape` (stacked on
+  `fix/spec-064-capture-input-hardening`)
+- **PR (if applicable):** see PR opened against `main`
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+  - none — this is a bug fix within DEC-013's fixed shape; escaping a
+    cell value does not change the documented shape.
 - **Deviations from spec:**
-  - [list]
+  - none
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - none. Summary-block bullets (`writeSummaryByType` /
+    `writeSummaryByProject`) render type/project as list items, not
+    table cells, so a `|` there is harmless — deliberately left out of
+    scope.
 
 ### Build-phase reflection (3 questions, short answers)
 
-Process-focused: how did the build go? What friction did the spec create?
-
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing. The one judgment call — whether description needs
+   escaping — resolved on reading the code: description renders as a
+   body block below the table, not a cell, so its `|` is harmless.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. DEC-013 (shape) and SPEC-064 (control-char rejection at
+   ingress, which guarantees `|` is the only cell-breaking char that
+   can reach the renderer) were the relevant references and both fit.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing material. A single-char escape via one shared helper was
+   the minimal correct fix.
 
 ---
 
