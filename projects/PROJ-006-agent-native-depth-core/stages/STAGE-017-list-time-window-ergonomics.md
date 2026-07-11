@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-017
-  status: active
+  status: shipped
   priority: medium
   target_complete: null
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-07-10
-shipped_at: null
+shipped_at: 2026-07-11
 ---
 
 # STAGE-017: list time-window ergonomics
@@ -75,11 +75,11 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       <YYYY-MM-DD|today|yesterday>`: scope the listing to one local calendar day
       via Since+Until (+ DEC-039 day semantics; fixes since.go clock impurity /
       audit L4).
-- [~] SPEC-069 (verify) — v0.5.1 release cut: the stage's closing release action
-      (CHANGELOG `[0.5.1]` + plugin version pin + §4 pre-flight; the irreversible
-      tag/publish is orchestrator-driven after this PR merges).
+- [x] SPEC-069 (shipped on 2026-07-11) — v0.5.1 release cut: the stage's closing
+      release action. v0.5.1 published — GitHub release latest, Homebrew tap at
+      0.5.1, clean `brew upgrade` from v0.5.0 verified.
 
-**Count:** 1 shipped / 1 active / 0 pending
+**Count:** 2 shipped / 0 active / 0 pending
 
 ## Design Notes
 
@@ -115,12 +115,26 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped.*
+*Shipped 2026-07-11 as v0.5.1.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
-- **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
+- **Did we deliver the outcome in "What This Stage Is"?** Yes. `brag list --day
+  <YYYY-MM-DD|today|yesterday>` scopes a listing to one local calendar day, live-
+  verified against the real corpus (the evening-PDT skew is fixed: entries logged
+  ~9pm local read under `--day yesterday`, not the next UTC day). A ship-early
+  read win that opened PROJ-006 while its deeper stages stay unframed.
+- **How many specs did it actually take?** 2 (SPEC-068 feature + SPEC-069 the
+  v0.5.1 cut). SPEC-068 itself was scoped down mid-flight — see below.
+- **What changed between starting and shipping?** The design was simplified on
+  user feedback from a heavier `--until` primitive + `--today`/`--yesterday`
+  boolean presets to a single `--day` flag — one concept for one need (YAGNI on
+  arbitrary ranges). The stopped-agent's `--until` work was discarded cleanly.
+- **Lessons that should update AGENTS.md, templates, or constraints?** (candidates)
+  - Sequenced the release right this time: kept the stage `active` through the
+    cut and closed it *after* publish (the v0.5.0 reopen lesson applied).
+  - When two clock seams coexist in one package (`nowFunc` UTC vs `clock` local),
+    name and document the distinction — reusing the wrong one silently breaks
+    "local day." Worth a testing-conventions note if it recurs.
 - **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <one-line items>
+  - The "simplify on the user's simpler idea" move (SPEC-068's `--until`→`--day`
+    pivot) — prefer the one-flag/one-concept shape over a general primitive when
+    the actual need is narrow.

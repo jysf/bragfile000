@@ -8,7 +8,7 @@
 task:
   id: SPEC-069
   type: story                      # a release cut is a story-sized closing action
-  cycle: verify
+  cycle: ship
   blocked: false                   # SPEC-068 (the only v0.5.1 feature) is on main
   priority: high
   complexity: S
@@ -429,10 +429,23 @@ process-focused build reflection above. This spec's ship = the mechanical prep
 merged to main; the irreversible tag/publish is the orchestrator's.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Nothing on mechanics — the cut went clean and, unlike v0.5.0, the stage
+   (STAGE-017) was left `active` through the cut and closed *after* publish, so
+   no reopen was needed (the v0.5.0 lesson applied). One judgment call worth
+   remembering: this shipped as a **patch (v0.5.1) despite adding a flag** —
+   semver-strict that's minor, but for a solo tool a single additive flag +
+   an internal fix as a patch is a defensible, deliberate call (recorded here,
+   not as a rule).
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No. §4 Pattern-1 held exactly: RC (`v0.5.1-rc1`) validated goreleaser,
+   the RC release+tag were deleted before tagging `v0.5.1` at the same commit
+   (no dual-tag 422), and the macOS Gatekeeper quarantine on the fresh cask
+   binary needed the documented `xattr -dr com.apple.quarantine`. brew-trust
+   did not re-prompt (tap trusted since v0.2.0).
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No. STAGE-017's ergonomics goal is delivered. The deeper PROJ-006
+   pillars (corpus-as-memory, signed provenance, capture completeness,
+   benchmark) + the inherited audit LOW/NIT backlog remain for the dedicated
+   PROJ-006 framing session — they now start at STAGE-018.
