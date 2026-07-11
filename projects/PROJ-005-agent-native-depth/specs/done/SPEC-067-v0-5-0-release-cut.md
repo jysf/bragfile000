@@ -8,7 +8,7 @@
 task:
   id: SPEC-067
   type: story                      # a release cut is a story-sized closing action
-  cycle: verify
+  cycle: ship
   blocked: false                   # all v0.5.0 feature specs are on main (see Context)
   priority: high
   complexity: S
@@ -464,10 +464,25 @@ process-focused build reflection above. This spec's ship = the mechanical prep
 merged to main; the irreversible tag/publish is the orchestrator's.*
 
 1. **What would I do differently next time?**
-   — (filled at ship)
+   — Cut the release cut BEFORE closing its stage. STAGE-016 was marked
+   shipped one step early (during the fix-spec archival), so this spec had to
+   reopen it — the stage's own success criteria include the v0.5.0 cut, so the
+   cut is its closing action (as SPEC-054 was for STAGE-013). Sequence: ship
+   the last feature/fix specs → cut the release → then close the stage.
 
 2. **Does any template, constraint, or decision need updating?**
-   — (filled at ship)
+   — No. The §4 Pattern-1 pre-flight held exactly: the RC (`v0.5.0-rc1`)
+   validated the goreleaser workflow, the RC release+tag were deleted before
+   tagging `v0.5.0` at the same commit (no dual-tag 422), and the macOS
+   Gatekeeper quarantine on the fresh cask binary needed the documented
+   `xattr -dr com.apple.quarantine` — every §4 lesson-earned item fired as a
+   ticked step, none as a surprise. brew-trust did not re-prompt (tap already
+   trusted since v0.2.0).
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — (filled at ship)
+   — Not for this release. One minor observation for the backlog: `brag spark`
+   excludes an entry created in the same truncated-second as the spark run
+   (the SPEC-060 exclusive `[start, now)` upper edge) — self-resolves the next
+   second, consistent header/bucket behavior, low-priority polish only. The
+   deferred audit LOW/NITs and the full provenance-signing work belong to the
+   deeper PROJ-005 stages, which stay ahead (PROJ-005 remains active).
