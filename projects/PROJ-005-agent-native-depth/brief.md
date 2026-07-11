@@ -4,7 +4,7 @@
 
 project:
   id: PROJ-005
-  status: active
+  status: shipped
   priority: high
   target_ship: null
 
@@ -12,7 +12,7 @@ repo:
   id: bragfile
 
 created_at: 2026-07-10
-shipped_at: null
+shipped_at: 2026-07-10
 ---
 
 # PROJ-005: Agent-Native Depth
@@ -113,12 +113,41 @@ Format: `- [status] STAGE-ID — one-line summary`
 
 ## Project-Level Reflection
 
-*Filled in when status moves to shipped.*
+*Shipped 2026-07-10 as v0.5.0.*
 
-- **Did we deliver the outcome in "What This Project Is"?** <yes/no + notes>
-- **How many stages did it actually take?** <number, compare to plan>
-- **What changed between starting and shipping?** <one or two sentences>
-- **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
-- **What did we defer to the next project?**
-  - <one-line items>
+- **Did we deliver the outcome in "What This Project Is"?** Yes for the wave's
+  **opening**, which is what this project was scoped to (all five Success
+  Criteria met). The MCP path is first-class (agents self-register + log
+  correctly-mapped wins with a documented contract), the unregistered-project
+  gap is closed, and PROJ-004's debt is cleared (`ListFilter.Until` + `brag
+  spark`). The **deeper** agent-native depth named in the vision paragraph
+  (corpus-as-memory, signed provenance, capture completeness, benchmark) was
+  always "explicitly out of scope / a successor" — it moves to PROJ-006.
+- **How many stages did it actually take?** 2 (STAGE-015 MCP first-class,
+  STAGE-016 v0.4.x polish) — matched the plan. STAGE-016 grew a pre-release
+  hardening pass (6 fixes) beyond its two planned pieces.
+- **What changed between starting and shipping?** The scope held (the opening),
+  but a **user-requested pre-release bug audit** turned STAGE-016 into a
+  hardening wave — a 4-agent whole-codebase sweep caught two pre-existing HIGH
+  bugs the batch's own MCP-first-class work *amplified* (SQLite concurrent-access
+  failures on the MCP path; silent `tag rename` corruption), fixed before the
+  cut. That audit materially de-risked the release.
+- **Lessons that should update AGENTS.md, templates, or constraints?** (candidates,
+  not yet codified — hold to the §12 N=2/N=3 bar)
+  - Cut the release BEFORE closing its stage — STAGE-016 was marked shipped a
+    step early and had to reopen for SPEC-067 (the cut is the stage's closing
+    action, per SPEC-054/STAGE-013).
+  - A pre-release adversarial audit of the *whole* codebase (not just the diff)
+    earns its keep when a release amplifies pre-existing surfaces — worth a
+    release-cut pre-flight line.
+  - Orchestration: writing sub-agents must run in isolated worktrees, and never
+    `git add -A` with live worktrees / uncommitted WIP present (two accidental-
+    capture incidents this project).
+- **What did we defer to the next project (PROJ-006)?**
+  - Corpus-as-agent-memory (read-side MCP resources) — the synthesis's #1.
+  - Signed / attestable provenance — subsumes the deferred tag-forgery audit gap.
+  - Capture completeness (inbox → git-import → evidence-links); agent/model
+    benchmark.
+  - The audit LOW/NIT backlog (mcp_install atomic-write, negative-`limit` MCP
+    parity, `search -foo`, `brag project new` uncapped, the `spark` same-second
+    edge, and the rest — see the STAGE-016 record).
