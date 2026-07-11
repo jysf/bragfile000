@@ -133,13 +133,21 @@ the cwd. See `brag project here` (SPEC-031) for the shared resolver.
 ### `brag list` — list entries
 
 ```
-brag list [-P|--show-project] [--format json|tsv] [--tag T] [--project P] [--type T] [--since 2026-01-01] [--author agent|human] [--limit N]
+brag list [-P|--show-project] [--format json|tsv] [--tag T] [--project P] [--type T] [--since 2026-01-01] [--day today] [--author agent|human] [--limit N]
 ```
 
 - `--tag`, `--project`, `--type` filter on exact field value
   (tags filter uses exact tag-name membership via the normalized
   `taggings` join — DEC-015 / SPEC-025).
 - `--since` accepts `YYYY-MM-DD` or a duration like `7d`, `2w`, `3m`.
+- `--day` accepts `YYYY-MM-DD`, `today`, or `yesterday` (case-insensitive)
+  and scopes the listing to exactly that single **local** calendar day —
+  the half-open window `[local-midnight, next-local-midnight)`, via
+  `ListFilter.Since` + `Until` (SPEC-068 / DEC-039). A "day" is the user's
+  LOCAL calendar day (consistent with DEC-022's local-day streak),
+  deliberately unlike bare-date `--since` (UTC midnight). `--day` is
+  mutually exclusive with `--since` (user error on conflict); it composes
+  with every other filter.
 - `--author` distinguishes provenance authorship (SPEC-043): `agent`
   selects entries carrying a reserved `agent:`/`model:` provenance tag
   (the namespace the MCP `brag_add` tool stamps — DEC-024), `human`
