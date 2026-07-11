@@ -178,6 +178,9 @@ brag list --tag auth                            # entries tagged "auth"
 brag list --project platform --since 7d         # last week, one project
 brag list --type shipped --limit 5              # 5 most recent shipped
 brag list --since 2026-01-01                    # since a specific date
+brag list --day today                           # just today (local calendar day)
+brag list --day yesterday                       # just yesterday
+brag list --day 2026-07-05                       # exactly one local calendar day
 ```
 
 - `--tag` matches a single tag as a comma-separated token — `--tag
@@ -185,6 +188,12 @@ brag list --since 2026-01-01                    # since a specific date
 - `--project` and `--type` are exact, case-sensitive.
 - `--since` accepts `YYYY-MM-DD` (midnight UTC) or a duration like
   `7d`, `2w`, `3m` (days / weeks / 30-day months).
+- `--day` accepts `YYYY-MM-DD`, `today`, or `yesterday` and scopes the
+  list to exactly that single **local** calendar day (midnight to
+  midnight in your timezone). Unlike `--since`, it sets both ends of the
+  window, so it's the clean way to ask "just yesterday" without a `jq`
+  upper bound. It's mutually exclusive with `--since` and composes with
+  the other filters.
 - `--limit N` caps the row count.
 - Multiple filters combine via AND.
 

@@ -71,11 +71,11 @@ while its deeper stages (memory, provenance, completeness, benchmark) are framed
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-068 (design) — `brag list --day <YYYY-MM-DD|today|yesterday>`: scope
+- [~] SPEC-068 (verify) — `brag list --day <YYYY-MM-DD|today|yesterday>`: scope
       the listing to one local calendar day via Since+Until (+ DEC-039 day
-      semantics; fix since.go clock impurity).
+      semantics; fixes since.go clock impurity / audit L4).
 
-**Count:** 0 shipped / 0 active / 1 pending
+**Count:** 0 shipped / 1 active / 0 pending
 
 ## Design Notes
 
