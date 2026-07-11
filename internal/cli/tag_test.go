@@ -3,7 +3,9 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -68,6 +70,161 @@ func TestTagCmd_Rename(t *testing.T) {
 	}
 	if rows := runListForTag(t, dbPath, "auth"); len(rows) != 0 {
 		t.Errorf("list --tag auth: got %d rows, want 0", len(rows))
+	}
+}
+
+// TestTagCmd_RenameCommaRejected asserts the serious silent-corruption
+// case: renaming a tag to a name containing the DEC-004 comma separator
+// must be rejected as a UserError with nothing on stdout, and the entry's
+// membership must be left completely unchanged (still tagged `auth`).
+func TestTagCmd_RenameCommaRejected(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "e1", "auth,perf", "", "")
+
+	out, errOut, err := runTagSubCmd(t, dbPath, "rename", "auth", "a,b")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for comma in new name, got %v", err)
+	}
+	if out != "" {
+		t.Errorf("stdout must be empty on a rejected rename, got %q", out)
+	}
+	if errOut != "" {
+		t.Errorf("expected no 'Renamed.' confirmation on rejection, got stderr %q", errOut)
+	}
+	// Membership is untouched: `auth` still resolves, the bogus `a,b` never
+	// became a tag, and the entry did not silently drift.
+	if rows := runListForTag(t, dbPath, "auth"); len(rows) != 1 {
+		t.Errorf("list --tag auth: got %d rows, want 1 (unchanged)", len(rows))
+	}
+	if rows := runListForTag(t, dbPath, "perf"); len(rows) != 1 {
+		t.Errorf("list --tag perf: got %d rows, want 1 (unchanged)", len(rows))
+	}
+	if rows := runListForTag(t, dbPath, "a,b"); len(rows) != 0 {
+		t.Errorf("list --tag 'a,b': got %d rows, want 0 (never created)", len(rows))
+	}
+}
+
+// TestTagCmd_RenameWhitespaceOnlyRejected asserts a whitespace-only new
+// name (which trims to empty) is rejected rather than stored and later
+// vanishing on the next edit round-trip.
+func TestTagCmd_RenameWhitespaceOnlyRejected(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "e1", "auth", "", "")
+
+	out, _, err := runTagSubCmd(t, dbPath, "rename", "auth", "   ")
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser for whitespace-only new name, got %v", err)
+	}
+	if out != "" {
+		t.Errorf("stdout must be empty on a rejected rename, got %q", out)
+	}
+	if rows := runListForTag(t, dbPath, "auth"); len(rows) != 1 {
+		t.Errorf("list --tag auth: got %d rows, want 1 (unchanged)", len(rows))
+	}
+}
+
+// TestTagCmd_RenameTrimsSurroundingWhitespace asserts a new name with
+// surrounding whitespace is canonicalized (trimmed) before storage, so it
+// matches what the add/edit capture paths would store — no drift or
+// orphan on the next round-trip.
+func TestTagCmd_RenameTrimsSurroundingWhitespace(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "e1", "auth", "", "")
+
+	_, errOut, err := runTagSubCmd(t, dbPath, "rename", "auth", "  spaced  ")
+	if err != nil {
+		t.Fatalf("unexpected error renaming to a trimmable name: %v", err)
+	}
+	if !strings.Contains(errOut, "Renamed.") {
+		t.Errorf("expected 'Renamed.' in stderr, got %q", errOut)
+	}
+	// The tag is stored trimmed, matching the capture-path canonical form.
+	if rows := runListForTag(t, dbPath, "spaced"); len(rows) != 1 {
+		t.Errorf("list --tag spaced: got %d rows, want 1", len(rows))
+	}
+	if rows := runListForTag(t, dbPath, "auth"); len(rows) != 0 {
+		t.Errorf("list --tag auth: got %d rows, want 0", len(rows))
+	}
+}
+
+// TestTagCmd_RenameRoundTripPreservesMembership is the strong regression:
+// after a valid rename, editing the entry (changing only the title) must
+// preserve tag membership — no drift, no orphan. This is the round-trip
+// that the pre-fix comma/whitespace bug corrupted.
+func TestTagCmd_RenameRoundTripPreservesMembership(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "e1", "auth,perf", "", "")
+
+	if _, _, err := runTagSubCmd(t, dbPath, "rename", "auth", "authz"); err != nil {
+		t.Fatalf("valid rename failed: %v", err)
+	}
+
+	// Edit the entry, changing ONLY the title. The editor buffer already
+	// carries the renamed tags; Update re-canonicalizes them, so a
+	// non-canonical rename target would drift here.
+	editOnlyTitle(t, dbPath, 1)
+
+	if rows := runListForTag(t, dbPath, "authz"); len(rows) != 1 {
+		t.Errorf("after edit, list --tag authz: got %d rows, want 1 (membership drifted)", len(rows))
+	}
+	if rows := runListForTag(t, dbPath, "perf"); len(rows) != 1 {
+		t.Errorf("after edit, list --tag perf: got %d rows, want 1 (membership drifted)", len(rows))
+	}
+}
+
+// TestTagCmd_RenameCommaBugStaysFixed proves the original silent-corruption
+// path is gone end-to-end: after a rejected comma rename, editing the entry
+// must NOT re-split the (unchanged) tags into different membership.
+func TestTagCmd_RenameCommaBugStaysFixed(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedListEntry(t, dbPath, "e1", "auth,perf", "", "")
+
+	// Rejected — tag stays `auth`.
+	if _, _, err := runTagSubCmd(t, dbPath, "rename", "auth", "a,b"); !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser, got %v", err)
+	}
+
+	// A later edit must not silently re-tag the entry.
+	editOnlyTitle(t, dbPath, 1)
+
+	if rows := runListForTag(t, dbPath, "auth"); len(rows) != 1 {
+		t.Errorf("after edit, list --tag auth: got %d rows, want 1 (membership corrupted)", len(rows))
+	}
+	if rows := runListForTag(t, dbPath, "a,b"); len(rows) != 0 {
+		t.Errorf("after edit, list --tag 'a,b': got %d rows, want 0 (bogus tag leaked)", len(rows))
+	}
+	if rows := runListForTag(t, dbPath, "a"); len(rows) != 0 {
+		t.Errorf("after edit, list --tag a: got %d rows, want 0 (comma re-split)", len(rows))
+	}
+}
+
+// editOnlyTitle runs `brag edit <id>` through the CLI with a test editor
+// hook that rewrites only the Title header, leaving Tags/Project/etc. as
+// rendered. This exercises the Update→canonicalizeTags round-trip.
+func editOnlyTitle(t *testing.T, dbPath string, id int64) {
+	t.Helper()
+	prev := testEditFunc
+	testEditFunc = func(path string) error {
+		buf, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		lines := strings.Split(string(buf), "\n")
+		for i, ln := range lines {
+			if strings.HasPrefix(ln, "Title:") {
+				lines[i] = "Title: edited-title"
+				break
+			}
+		}
+		return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o600)
+	}
+	t.Cleanup(func() { testEditFunc = prev })
+
+	root, outBuf, errBuf := newTagTestRoot(t)
+	root.AddCommand(NewEditCmd())
+	root.SetArgs([]string{"--db", dbPath, "edit", strconv.FormatInt(id, 10)})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("edit %d: %v (stderr=%q, stdout=%q)", id, err, errBuf.String(), outBuf.String())
 	}
 }
 

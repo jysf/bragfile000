@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jysf/bragfile000/internal/config"
 	"github.com/jysf/bragfile000/internal/storage"
@@ -41,9 +42,20 @@ func runTagRename(cmd *cobra.Command, args []string) error {
 	if len(args) != 2 {
 		return UserErrorf("rename requires exactly <old> and <new> tag names")
 	}
-	oldName, newName := args[0], args[1]
+	oldName := args[0]
+	// Canonicalize the rename target the same way every capture path
+	// (add/edit → canonicalizeTags) does, so a renamed tag can never
+	// round-trip into different or missing membership. A tag stored in a
+	// non-canonical form (untrimmed, whitespace-only, or containing the
+	// DEC-004 comma separator) is silently re-split or dropped on the
+	// entry's next edit — corrupting membership. Reject or normalize here,
+	// at the CLI input boundary, before touching storage.
+	newName := strings.TrimSpace(args[1])
 	if oldName == "" || newName == "" {
 		return UserErrorf("tag names must not be empty")
+	}
+	if strings.Contains(newName, ",") {
+		return UserErrorf("tag name %q must not contain a comma (%q is the tag separator)", newName, ",")
 	}
 	if oldName == newName {
 		return UserErrorf("old and new tag names are the same (%q)", oldName)
