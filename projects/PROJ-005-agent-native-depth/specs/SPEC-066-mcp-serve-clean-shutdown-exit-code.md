@@ -6,8 +6,8 @@
 
 task:
   id: SPEC-066
-  type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  type: bug                        # epic | story | task | bug | chore
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -19,13 +19,16 @@ repo:
   id: bragfile
 
 agents:
-  architect: claude-opus-4-7
-  implementer: claude-opus-4-7     # usually same Claude, different session
+  architect: claude-opus-4-8
+  implementer: claude-opus-4-8     # usually same Claude, different session
   created_at: 2026-07-10
 
 references:
-  decisions: []
-  constraints: []
+  decisions:
+    - DEC-024
+  constraints:
+    - errors-wrap-with-context
+    - stdout-is-for-data-stderr-is-for-humans
   related_specs: []
 ---
 
@@ -33,78 +36,113 @@ references:
 
 ## Context
 
-Why does this spec exist? What problem does it solve? Link to:
-- The parent `STAGE-016` and this spec's place in its backlog
-- The project `PROJ-005`
-- Any related discussions or prior decisions
+A pre-release audit flagged this as MEDIUM #4 (part of STAGE-016 polish
+under PROJ-005). `internal/cli/mcp.go` (`runMCPServe`) returned
+`srv.Run(cmd.Context(), &mcp.StdioTransport{})` verbatim.
+
+On a NORMAL client shutdown — the client closes stdin with a request still
+in flight — the go-sdk's `Server.Run` does not return nil. It returns the
+internal `jsonrpc2.ErrServerClosing` sentinel wrapped with the underlying
+`io.EOF`, so `err.Error()` is `"server is closing: EOF"`. `cmd/brag/main.go`
+maps every non-`ErrUser` error to **exit 2** and prints
+`brag: server is closing: EOF`. A supervising MCP client reasonably logs
+that nonzero exit + line as a crash of the headline `brag mcp serve`
+feature.
+
+This is a shutdown race, not a real failure: a clean close with **no**
+in-flight request already drains to `nil` (RC 0). Only when a request is in
+flight does the closing sentinel surface.
 
 ## Goal
 
-1–2 sentences. Unambiguous. If you can't write the goal in two
-sentences, split the spec.
+Treat a normal MCP transport shutdown as a clean exit (RC 0): if
+`srv.Run` returns an error that is `io.EOF`, `context.Canceled`, or the
+SDK's `ErrServerClosing`, exit 0. Propagate every other error unchanged so
+a genuine serve failure still exits nonzero.
 
 ## Inputs
 
-- **Files to read:** `path/to/file.ext` — why
-- **External APIs:** <name, docs link, auth>
-- **Related code paths:** `src/some/module/`
+- **Files to read:** `internal/cli/mcp.go` — `runMCPServe`;
+  `cmd/brag/main.go` — the exit-code mapping (non-`ErrUser` → exit 2).
+- **SDK source (module cache):**
+  `github.com/modelcontextprotocol/go-sdk@v1.6.1/mcp/server.go`
+  (`Server.Run` → `ServerSession.Wait` → `Connection.wait`),
+  `internal/jsonrpc2/conn.go` (`shuttingDown`, `wait`), and
+  `internal/jsonrpc2/wire.go` (`ErrServerClosing = NewError(-32004, "server is closing")`,
+  `WireError.Is` compares by `Code`). The public `jsonrpc` package
+  re-exports the wire error type as `jsonrpc.Error = jsonrpc2.WireError`.
 
 ## Outputs
 
-- **Files created:** `path/to/new.ext` — purpose
-- **Files modified:** `path/to/existing.ext` — what changes
-- **New exports:** <names and signatures>
-- **Database changes:** <migrations>
+- **Files modified:** `internal/cli/mcp.go` — add `isCleanShutdown(err) bool`
+  and a thin `serve(ctx, srv, transport)` wrapper; `runMCPServe` calls
+  `serve` instead of returning `srv.Run` verbatim.
+  `internal/cli/mcp_test.go` — new fail-first tests.
+- **New exports:** none (helpers are package-private).
+- **Database changes:** none.
 
 ## Acceptance Criteria
 
-Testable outcomes. Cover happy path, error cases, edge cases.
-
-- [ ] Criterion 1 (testable)
-- [ ] Criterion 2 (testable)
+- [x] A client that closes the transport with a request in flight makes
+      `serve` return `nil` (would map to RC 0), not the
+      `"server is closing: EOF"` error.
+- [x] `isCleanShutdown` returns true for `nil`, bare/wrapped `io.EOF`,
+      `context.Canceled` (bare/wrapped), and the SDK's wrapped
+      `ErrServerClosing` shape.
+- [x] `isCleanShutdown` returns false for a generic error and for a
+      wrapped `open store: ...` failure (real serve failures stay nonzero).
+- [x] A propagated genuine failure is wrapped with context (`errors.Is`
+      still works through it).
+- [x] Full gate set passes.
 
 ## Failing Tests
 
-Written during **design**, BEFORE build. The implementer's job in
-**build** is to make these pass.
-
-- **`path/to/test.file`**
-  - `"test description 1"` — asserts: ...
+- **`internal/cli/mcp_test.go`**
+  - `TestIsCleanShutdown` — table: `nil`, `io.EOF`, wrapped `io.EOF`,
+    `context.Canceled`, wrapped `context.Canceled`, the SDK
+    `fmt.Errorf("%w: %v", &jsonrpc.Error{Code:-32004}, io.EOF)` shape → all
+    true; generic error and wrapped `open store` failure → false.
+  - `TestServe_InFlightClientCloseIsCleanExit` — end-to-end over an
+    `mcp.IOTransport` pipe with a deliberately blocked tool handler:
+    handshake, call the blocking tool, wait until the handler is entered,
+    then close the read side (in-flight EOF). Asserts `serve` returns nil.
+    Deterministically fails against the verbatim `srv.Run` (returns
+    `server is closing: EOF`); passes with the fix.
 
 ## Implementation Context
 
-*Read this section (and the files it points to) before starting
-the build cycle. It is the equivalent of a handoff document, folded
-into the spec since there is no separate receiving agent.*
-
 ### Decisions that apply
 
-- `DEC-NNN` — <one-line summary of why this matters here>
-- `DEC-MMM` — <one-line summary>
+- `DEC-024` — MCP server SDK/transport choice (go-sdk, local stdio
+  `StdioTransport`). This fix hardens that transport's shutdown contract at
+  the CLI boundary; it does not revisit the SDK/transport decision.
 
 ### Constraints that apply
 
-These constraints apply to the paths touched by this task (see
-`/guidance/constraints.yaml` for full text):
-
-- `constraint-id-1` — <one-line summary>
-- `constraint-id-2` — <one-line summary>
-
-### Prior related work
-
-- `SPEC-YYY` (shipped) — <one-line summary, if relevant>
-- `PR #NNN` — <link, if relevant>
+- `errors-wrap-with-context` — the clean-shutdown sentinels must be
+  recognized via `errors.Is` even when the SDK wraps them; a propagated
+  genuine failure is wrapped `fmt.Errorf("run mcp server: %w", err)` so it
+  stays legible and `errors.Is`-transparent.
+- `stdout-is-for-data-stderr-is-for-humans` — unchanged: `mcp serve` still
+  writes only protocol frames to stdout; nothing human-facing is added
+  there.
 
 ### Out of scope (for this spec specifically)
 
-Explicit list of what this spec does NOT include. If any of these feel
-necessary during build, create a new spec rather than expanding this one.
-
-- ...
+- Changing `cmd/brag/main.go`'s exit-code mapping (the fix returns nil so
+  the existing mapping already yields RC 0).
+- Any change to `internal/mcpserver` behavior or the tool set.
 
 ## Notes for the Implementer
 
-Gotchas, style preferences, reuse opportunities.
+The `ErrServerClosing` sentinel lives in the SDK's **internal**
+`jsonrpc2` package and cannot be imported. It is a `*jsonrpc2.WireError`
+(code `-32004`), and the public `jsonrpc` package re-exports that type as
+`jsonrpc.Error`. `WireError.Is` compares by `Code`, so a local
+`&jsonrpc.Error{Code: -32004}` sentinel matches the wrapped SDK error via
+`errors.Is`. Note the SDK appends the underlying `io.EOF` with `%v` (not
+`%w`), so `errors.Is(err, io.EOF)` is **false** for that shape — the code
+match is what recognizes it.
 
 ---
 
@@ -112,28 +150,33 @@ Gotchas, style preferences, reuse opportunities.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `fix/spec-066-mcp-clean-shutdown`
+- **PR (if applicable):** see PR opened against `main`
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+  - none — the fix operationalizes DEC-024's transport choice; no new
+    decision needed.
 - **Deviations from spec:**
-  - [list]
+  - none.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - none.
 
 ### Build-phase reflection (3 questions, short answers)
 
-Process-focused: how did the build go? What friction did the spec create?
-
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — The scaffold pointed at `ErrServerClosing` as "the SDK sentinel", but
+   it turned out to live in an internal package (not importable). Reading
+   the SDK source resolved it: match the public `jsonrpc.Error` by code.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. `errors-wrap-with-context` and DEC-024 covered it. I confirmed the
+   exact returned shape empirically (a throwaway harness over `IOTransport`)
+   before writing the matcher rather than guessing.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing material. Extracting a testable `serve()` seam up front let the
+   integration test drive the real SDK shutdown deterministically (block the
+   handler, wait for it to enter, then EOF) instead of racing.
 
 ---
 

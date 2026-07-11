@@ -1,11 +1,15 @@
 package cli
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"io"
 
 	"github.com/jysf/bragfile000/internal/config"
 	"github.com/jysf/bragfile000/internal/mcpserver"
 	"github.com/jysf/bragfile000/internal/storage"
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/spf13/cobra"
 )
@@ -66,5 +70,41 @@ func runMCPServe(cmd *cobra.Command, _ []string) error {
 	defer s.Close()
 
 	srv := mcpserver.New(s)
-	return srv.Run(cmd.Context(), &mcp.StdioTransport{})
+	return serve(cmd.Context(), srv, &mcp.StdioTransport{})
+}
+
+// codeServerClosing is the JSON-RPC error code carried by the go-sdk's internal
+// jsonrpc2.ErrServerClosing sentinel ("server is closing"). That sentinel is
+// unexported by the SDK, but it is a *jsonrpc.Error (WireError) whose Is method
+// compares by Code, so a value carrying the same code matches it via errors.Is.
+const codeServerClosing = -32004
+
+// errServerClosing mirrors the SDK's jsonrpc2.ErrServerClosing so a normal
+// shutdown can be recognized through errors.Is even when the SDK wraps it (it
+// arrives as `server is closing: EOF`, i.e. wrapped with the underlying EOF).
+var errServerClosing = &jsonrpc.Error{Code: codeServerClosing}
+
+// isCleanShutdown reports whether err represents a normal MCP transport
+// shutdown rather than a genuine serve failure. When a client closes stdin —
+// even with a request still in flight — the go-sdk's Server.Run returns a
+// context.Canceled, a bare io.EOF, or the "server is closing" sentinel. None of
+// these are crashes, so `brag mcp serve` must exit 0 rather than have a
+// supervising client log a nonzero exit as a failure.
+func isCleanShutdown(err error) bool {
+	if err == nil {
+		return true
+	}
+	return errors.Is(err, io.EOF) ||
+		errors.Is(err, context.Canceled) ||
+		errors.Is(err, errServerClosing)
+}
+
+// serve runs srv over t, folding a normal transport shutdown into a clean exit
+// (nil) while propagating every genuine serve failure with context so it still
+// maps to a nonzero exit code.
+func serve(ctx context.Context, srv *mcp.Server, t mcp.Transport) error {
+	if err := srv.Run(ctx, t); err != nil && !isCleanShutdown(err) {
+		return fmt.Errorf("run mcp server: %w", err)
+	}
+	return nil
 }
