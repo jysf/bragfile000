@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-016
-  status: shipped
+  status: active
   priority: medium
   target_complete: null
 
@@ -15,10 +15,16 @@ repo:
   id: bragfile
 
 created_at: 2026-07-10
-shipped_at: 2026-07-10
+shipped_at: null
 ---
 
 # STAGE-016: v0.4.x polish
+
+> **Reopened 2026-07-10 for the release cut.** This stage was marked `shipped`
+> one step early — its own success criteria include "a v0.5.0 minor release cut
+> ships the batch," so the cut (SPEC-067) is its closing action. Status is back
+> to `active` (and `shipped_at: null`); the orchestrator re-closes it once
+> v0.5.0 publishes (mirrors how SPEC-054 closed STAGE-013).
 
 ## What This Stage Is
 
@@ -108,6 +114,9 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 - [x] SPEC-066 (shipped on 2026-07-10) — treat a normal `brag mcp serve`
       shutdown (in-flight client close) as a clean exit (RC 0) instead of the
       RC-2 `server is closing: EOF` crash.
+- [ ] SPEC-067 (verify) — v0.5.0 minor release cut: the stage's closing release
+      action (CHANGELOG + version pin + pre-flight prep in one PR; the
+      irreversible tag/publish follows from `main`).
 
 **What shipped vs. what was cut (reconciled at stage ship, 2026-07-10):**
 - SHIPPED — the two planned pieces (SPEC-056 `ListFilter.Until`, SPEC-059 `brag
@@ -124,7 +133,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 - DEFERRED — cosmetic `project status` trailing empty column when `state_note`
   is blank (not consumed by `standup`, which reads JSON).
 
-**Count:** 9 shipped / 0 active / 0 pending
+**Count:** 9 shipped / 1 active (SPEC-067 release cut) / 0 pending
 
 ## Design Notes
 

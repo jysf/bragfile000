@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-10
+
+The **agent-native depth (opening)** release. bragfile makes its MCP path
+first-class for AI agents and hardens the substrate underneath. Local-first as
+ever — no network in the binary, no CGO, and **no schema change or migration**.
+Capture input validation is now enforced consistently across every ingress path
+(a title/field that the CLI accepts is exactly what `--json`/MCP accept).
+
+### Added
+
+- **`brag mcp install [--client claude-code|claude-desktop|cursor] [--scope
+  user|project] [--dir PATH] [--dry-run]`** — one command to register the `brag
+  mcp serve` MCP server into a client's config. Idempotent and never clobbers
+  other servers already in the file (DEC-034).
+- **`brag project ensure <name> [--location PATH]`** — idempotent project
+  registration (create-or-no-op), closing the unregistered-project gap so
+  entries map cleanly for downstream consumers (DEC-036).
+- **`brag spark [--week|--month|--quarter] [--project <name>]`** — a
+  sparklines-only "pulse" (a Total row + top-8 by-project) over a rolling recent
+  window; markdown default, `--format json` for raw counts, `--no-spark`/
+  `NO_COLOR` to suppress glyphs (DEC-037).
+- **`docs/for-ai-agents.md`** + a README "Using brag from an AI agent (MCP)"
+  section — the full MCP tool contract (schemas for `brag_add`/`brag_list`/
+  `brag_search`/`brag_stats`), the `project`-not-auto-filled gotcha, provenance
+  stamping, and a how-to-log-a-win playbook.
+- The `sprint:<id>` freeform-tag convention, documented in the tutorial (sprint
+  is just a tag — no schema field).
+- `just lifetime-report` — a dated whole-repo lifetime-report prompt generator
+  (workflow tooling).
+
+### Changed
+
+- **Concurrency:** the SQLite database now opens with `busy_timeout` + immediate
+  transactions + a single connection, so concurrent access — e.g. `brag mcp
+  serve` running while a shell `brag add` or a hook fires — waits and succeeds
+  instead of failing with `database is locked` (DEC-038).
+- **Capture validation is unified** across all ingress paths (flags, `$EDITOR`,
+  `--json`, MCP) through one shared validator: the same field byte-caps and the
+  same rejection of embedded control characters everywhere. (A flag/editor-
+  captured entry can no longer exceed limits that `--json`/MCP would reject.)
+- Internal: the calendar-window upper bound moved into
+  `storage.ListFilter.Until`, de-duplicating Go-side filtering across
+  `impact`/`story`/`wrapped`/`coverage` (DEC-035).
+
+### Fixed
+
+- `brag tag rename` now canonicalizes/rejects its target, so a comma or blank
+  name can no longer silently corrupt tag membership on a later edit.
+- `brag mcp serve` exits cleanly (status 0) on a normal client shutdown instead
+  of reporting a spurious `server is closing` error.
+- Field values containing `|` no longer break markdown tables in `brag show` /
+  `brag export --format markdown` (the `|` is escaped).
+- `brag spark` no longer counts out-of-window (future-dated) entries in its
+  header or top-8 selection.
+- Invalid `cost:`/`tokens:` reserved tags supplied via the freeform tags field
+  are now rejected, matching the dedicated params.
+
+### Upgrading from v0.4.0
+
+No manual steps and **no migration** — v0.5.0 adds no schema changes. `brew
+upgrade jysf/bragfile/bragfile` moves a v0.4.0 install to v0.5.0 in place; `brag
+--version` then reports `0.5.0`. On a first tap install, the two one-time
+frictions still apply: on **Homebrew 6.0+**, run `brew trust --cask
+jysf/bragfile/bragfile` once; on **macOS**, clear an unsigned binary's Gatekeeper
+quarantine with `xattr -dr com.apple.quarantine` (see the README install note).
+To register the MCP server and slash-command inside your AI client, reinstall
+the plugin (or run `brag mcp install`) so it runs the v0.5.0 binary.
+
 ## [0.4.0] - 2026-07-07
 
 The **story surface** release. bragfile grows from "capture and list" into a
@@ -328,7 +396,8 @@ Each decision file under `/decisions/` carries the full rationale.
   payload keys; markdown convention reuses DEC-013's provenance
   + summary-block style.
 
-[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/jysf/bragfile000/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/jysf/bragfile000/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/jysf/bragfile000/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/jysf/bragfile000/compare/v0.2.0...v0.3.0
