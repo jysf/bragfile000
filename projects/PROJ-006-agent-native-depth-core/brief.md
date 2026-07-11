@@ -82,15 +82,21 @@ same-second exclusive-edge; `ParseSince` wall-clock impurity; backup-filename
 same-second collision; empty-`type` sentinel; export-md sort id-tiebreak;
 `MergeTags` position dup; double-wrapped db-path error; `$EDITOR`-with-spaces.
 
-## Candidate stage plan (NOT framed — for next session's discussion)
+## Stage plan
 
-- [ ] (STAGE-017?) — corpus-as-agent-memory (read-side MCP resources)
-- [ ] (STAGE-018?) — signed / attestable provenance (+ closes the tag-forgery gap)
-- [ ] (STAGE-019?) — capture completeness (inbox / git-import / evidence links)
-- [ ] (STAGE-020?) — agent/model benchmark
+**Shipped (a tactical read-ergonomics opener, not one of the deeper pillars):**
+- [x] STAGE-017 (shipped 2026-07-11) — list time-window ergonomics: `brag list
+      --day` (v0.5.1). A quick win that opened PROJ-006; not agent-native depth.
+
+**Candidate deeper pillars (NOT framed — for next session's discussion):**
+- [ ] (STAGE-018?) — corpus-as-agent-memory (read-side MCP resources) — the
+      synthesis' #1; likely the first deep stage.
+- [ ] (STAGE-019?) — signed / attestable provenance (+ closes the tag-forgery gap)
+- [ ] (STAGE-020?) — capture completeness (inbox / git-import / evidence links)
+- [ ] (STAGE-021?) — agent/model benchmark
 - (sequence, split, and de-scope at framing; IDs assigned at creation)
 
-**Count:** 0 shipped / 0 active / 0 pending (unframed)
+**Count:** 1 shipped / 0 active / (deeper pillars unframed)
 
 ## Dependencies
 
