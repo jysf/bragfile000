@@ -225,6 +225,42 @@ entry, auto-populated by the MCP `brag_add` tool (rarely hand-typed). They
 ride the normalized tags model (DEC-015) with zero schema change, so
 `brag list --tag model:claude-opus-4-8` filters and `brag tags` counts them.
 
+## Evidence links: the `commit:` tag
+
+To tie a brag to the commit that proves it, add a `commit:<hash>` tag. This
+works **today, with no new code** — it rides the same normalized tags model as
+`agent:`/`model:` above (zero schema change), so `brag list --tag commit:<hash>`
+filters and `brag tags` counts it.
+
+```bash
+brag add \
+  -t "Shipped brag list --day for local calendar-day windows" \
+  -p "bragfile" \
+  -k "shipped" \
+  -T "cli,ergonomics,commit:22d9f3a" \
+  -i "One-liner for 'what did I do today/yesterday'; closes the since.go clock impurity."
+```
+
+Why a commit tag is worth the habit: it's **self-attesting** provenance. Anyone
+with the repo can check that `22d9f3a` exists and read its author, date, and
+message — no trust in the brag's own metadata required. That makes it a cheaper,
+stronger evidence link than signing self-reported tags, and it pairs a career
+claim with the artifact that backs it for retros and promo packets.
+
+Conventions for now (this is a documented pattern, not yet a validated field):
+
+- Use the **abbreviated hash** the repo shows (≥7 chars), e.g. `commit:22d9f3a`.
+  The entry's `project` already says which repo, so the bare hash is enough.
+- Same family, same shape when you have them: `pr:<number>`, `issue:<id>`.
+- One evidence tag per artifact; add more than one only if several commits truly
+  constitute the win.
+
+> **Status (PROJ-006):** `commit:`/`pr:`/`issue:` are a *convention we are
+> dogfooding* right now, not yet enforced. A future PROJ-006 stage may promote
+> them to typed, validated evidence links (rows, not freeform tags) — see the
+> "capture completeness" pillar in the project brief. Until then: just use the
+> tag.
+
 ## Three good examples
 
 ### Example 1 — shipped

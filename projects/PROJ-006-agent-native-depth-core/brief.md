@@ -66,7 +66,13 @@ shipped_at: null
 >
 > **Observations log (requirements captured as they surface — the working
 > output of this phase):**
-> - _(none yet — 2026-07-11)_
+> - **Git-hash evidence links (2026-07-12).** Establishing the *pattern* before
+>   framing a stage: a `commit:<hash>` freeform tag (works today, no code) ties a
+>   brag to the commit that proves it — self-attesting provenance. Documented the
+>   convention in [`BRAG.md`](../../BRAG.md) ("Evidence links: the `commit:` tag");
+>   now dogfooding it in real project brags. Signal to watch: does the tag get
+>   used naturally, and do we start wanting it *validated/typed*? If yes, that
+>   graduates the capture-completeness pillar (evidence-links slice) into framing.
 
 ## What This Project Is
 
@@ -140,15 +146,22 @@ same-second collision; empty-`type` sentinel; export-md sort id-tiebreak;
 - [x] STAGE-017 (shipped 2026-07-11) — list time-window ergonomics: `brag list
       --day` (v0.5.1). A quick win that opened PROJ-006; not agent-native depth.
 
+**Proposed (parked, not scheduled):**
+- [ ] STAGE-018 (proposed) — v0.5.0 audit backlog (LOW/NITs): a framed parking
+      lot for the small correctness nits, to slot in opportunistically. Not a
+      deeper pillar; created so the backlog lives in the hierarchy, not just here.
+
 **Candidate deeper pillars (NOT framed — for next session's discussion):**
-- [ ] (STAGE-018?) — corpus-as-agent-memory (read-side MCP resources) — the
+- [ ] (STAGE-019?) — corpus-as-agent-memory (read-side MCP resources) — the
       synthesis' #1; likely the first deep stage.
-- [ ] (STAGE-019?) — signed / attestable provenance (+ closes the tag-forgery gap)
-- [ ] (STAGE-020?) — capture completeness (inbox / git-import / evidence links)
-- [ ] (STAGE-021?) — agent/model benchmark
+- [ ] (STAGE-020?) — signed / attestable provenance (+ closes the tag-forgery gap)
+- [ ] (STAGE-021?) — capture completeness (inbox / git-import / evidence links) —
+      includes promoting the `commit:`/`pr:`/`issue:` evidence-link convention
+      (now documented in BRAG.md + being dogfooded) to typed, validated links.
+- [ ] (STAGE-022?) — agent/model benchmark
 - (sequence, split, and de-scope at framing; IDs assigned at creation)
 
-**Count:** 1 shipped / 0 active / (deeper pillars unframed)
+**Count:** 1 shipped / 1 proposed (parked) / 0 active / (deeper pillars unframed)
 
 ## Dependencies
 
