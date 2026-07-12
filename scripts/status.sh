@@ -11,10 +11,23 @@ VARIANT=$(get_variant)
 ACTIVE_PROJECT=$(get_active_project)
 ACTIVE_PROJECT_DIR="${REPO_ROOT}/projects/${ACTIVE_PROJECT}"
 
+# Optional `activity:` under `project:` in the brief front-matter — the type of
+# work currently active within the project (requirements/design/build/test/…).
+# Coarse `status` stays what the resolver keys on; this is human-facing detail.
+ACTIVE_ACTIVITY=$(awk '
+    /^---$/ { f = !f; next }
+    f && /^project:/ { inproj = 1; next }
+    f && inproj && /^[a-zA-Z_]+:/ { inproj = 0 }
+    f && inproj && /^[[:space:]]+activity:/ { print $2; exit }
+' "${ACTIVE_PROJECT_DIR}/brief.md" 2>/dev/null || echo "")
+
 echo "${BOLD}Repo status${RESET}"
 echo ""
 echo "  Variant:         ${VARIANT}"
 echo "  Active project:  ${ACTIVE_PROJECT}"
+if [ -n "$ACTIVE_ACTIVITY" ]; then
+    echo "  Activity:        ${ACTIVE_ACTIVITY}"
+fi
 echo ""
 
 # --- Active project: stages ---
