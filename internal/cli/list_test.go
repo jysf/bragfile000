@@ -650,10 +650,176 @@ func TestListCmd_HelpShowsFilters(t *testing.T) {
 		t.Fatalf("expected empty stderr, got %q", errBuf.String())
 	}
 	out := outBuf.String()
-	for _, needle := range []string{"--tag", "--project", "--type", "--since", "--limit", "--author", "Examples:"} {
+	for _, needle := range []string{"--tag", "--project", "--type", "--since", "--day", "--limit", "--author", "Examples:"} {
 		if !strings.Contains(out, needle) {
 			t.Errorf("expected help to contain %q, got:\n%s", needle, out)
 		}
+	}
+}
+
+// -----------------------------------------------------------------------------
+// SPEC-068: `brag list --day <YYYY-MM-DD|today|yesterday>` (DEC-039)
+//
+// --day scopes the listing to exactly one LOCAL calendar day by setting BOTH
+// window bounds on the existing ListFilter (Since = local midnight, Until = the
+// next local midnight; the exclusive-upper-edge Until shipped in SPEC-056/
+// DEC-035). A "day" is a LOCAL calendar day (DEC-039 / DEC-022 precedent), so
+// day boundaries and today/yesterday keywords resolve through an injectable
+// local-wall-clock seam (the since.go `clock` var — audit L4 fix). --day is
+// mutually exclusive with --since; the other filters compose.
+// -----------------------------------------------------------------------------
+
+// stubDayClock swaps the package-level local-wall-clock seam (since.go `clock`)
+// for one returning a fixed instant+zone, and restores it after the test. The
+// injected time's Location() IS the "local" zone --day computes against, so a
+// test can pin both the instant and the timezone deterministically (DEC-022's
+// "location rides on the injected now").
+func stubDayClock(t *testing.T, now time.Time) {
+	t.Helper()
+	prev := clock
+	clock = func() time.Time { return now }
+	t.Cleanup(func() { clock = prev })
+}
+
+// pdt is a fixed UTC-7 zone standing in for a non-UTC local zone, used to prove
+// the local-vs-UTC day skew --day exists to fix without depending on the host's
+// real TZ.
+var pdt = time.FixedZone("PDT", -7*3600)
+
+func TestListCmd_DayFilter_LocalDayBoundsExclusiveUpperEdge(t *testing.T) {
+	// clock's Location() supplies the zone the explicit date resolves in; the
+	// instant is irrelevant for an explicit YYYY-MM-DD.
+	stubDayClock(t, time.Date(2026, 7, 5, 12, 0, 0, 0, pdt))
+
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	inDay := seedListEntry(t, dbPath, "in-day-2330-local", "", "", "")
+	nextDay := seedListEntry(t, dbPath, "next-day-0030-local", "", "", "")
+
+	// 23:30 LOCAL on 2026-07-05 is inside the day; 00:30 LOCAL on 2026-07-06 is
+	// the first instant of the NEXT day and must fall on the exclusive upper edge.
+	mustBackdate(t, dbPath, inDay.ID, time.Date(2026, 7, 5, 23, 30, 0, 0, pdt))
+	mustBackdate(t, dbPath, nextDay.ID, time.Date(2026, 7, 6, 0, 30, 0, 0, pdt))
+
+	out, errOut, err := runListCmd(t, dbPath, "--day", "2026-07-05")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "in-day-2330-local") {
+		t.Errorf("expected 23:30-local entry IN the day window, got %q", out)
+	}
+	if strings.Contains(out, "next-day-0030-local") {
+		t.Errorf("expected 00:30-next-day entry EXCLUDED (exclusive upper edge), got %q", out)
+	}
+}
+
+func TestListCmd_DayFilter_TodayYesterdayLocalSkew(t *testing.T) {
+	// Morning of 2026-07-06 in PDT == 2026-07-06T15:00Z. Local "today" is Jul 6,
+	// local "yesterday" is Jul 5.
+	stubDayClock(t, time.Date(2026, 7, 6, 8, 0, 0, 0, pdt))
+
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	// Evening of Jul 5 PDT == 2026-07-06T04:00Z: the LOCAL day is Jul 5
+	// (yesterday) but the UTC day is Jul 6 (today). This is the exact skew --day
+	// fixes: a naive UTC "today" bucket would wrongly capture it.
+	eveningYesterday := seedListEntry(t, dbPath, "evening-jul5-pdt", "", "", "")
+	mustBackdate(t, dbPath, eveningYesterday.ID, time.Date(2026, 7, 5, 21, 0, 0, 0, pdt))
+	// A genuine today-local entry, to prove --day today is not simply empty.
+	morningToday := seedListEntry(t, dbPath, "morning-jul6-pdt", "", "", "")
+	mustBackdate(t, dbPath, morningToday.ID, time.Date(2026, 7, 6, 7, 0, 0, 0, pdt))
+
+	yOut, yErr, err := runListCmd(t, dbPath, "--day", "yesterday")
+	if err != nil {
+		t.Fatalf("--day yesterday: unexpected error: %v", err)
+	}
+	if yErr != "" {
+		t.Fatalf("--day yesterday: expected empty stderr, got %q", yErr)
+	}
+	if !strings.Contains(yOut, "evening-jul5-pdt") {
+		t.Errorf("--day yesterday: expected the evening-PDT entry (yesterday LOCAL, today UTC) IN window, got %q", yOut)
+	}
+	if strings.Contains(yOut, "morning-jul6-pdt") {
+		t.Errorf("--day yesterday: expected today's entry EXCLUDED, got %q", yOut)
+	}
+
+	tOut, tErr, err := runListCmd(t, dbPath, "--day", "today")
+	if err != nil {
+		t.Fatalf("--day today: unexpected error: %v", err)
+	}
+	if tErr != "" {
+		t.Fatalf("--day today: expected empty stderr, got %q", tErr)
+	}
+	if !strings.Contains(tOut, "morning-jul6-pdt") {
+		t.Errorf("--day today: expected today's entry IN window, got %q", tOut)
+	}
+	if strings.Contains(tOut, "evening-jul5-pdt") {
+		t.Errorf("--day today: expected the evening-PDT entry EXCLUDED (it is yesterday LOCAL), got %q", tOut)
+	}
+}
+
+func TestListCmd_DayFilter_GarbageIsUserError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	out, _, err := runListCmd(t, dbPath, "--day", "notaday")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrUser) {
+		t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+	msg := err.Error()
+	for _, form := range []string{"today", "yesterday", "YYYY-MM-DD"} {
+		if !strings.Contains(msg, form) {
+			t.Errorf("expected error to name accepted form %q, got %q", form, msg)
+		}
+	}
+}
+
+func TestListCmd_DayFilter_MutuallyExclusiveWithSince(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	out, _, err := runListCmd(t, dbPath, "--day", "today", "--since", "7d")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrUser) {
+		t.Errorf("expected errors.Is(err, ErrUser); got %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty stdout, got %q", out)
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "--day") || !strings.Contains(msg, "--since") {
+		t.Errorf("expected error to name both --day and --since, got %q", msg)
+	}
+}
+
+func TestListCmd_DayFilter_ComposesWithProject(t *testing.T) {
+	stubDayClock(t, time.Date(2026, 7, 5, 12, 0, 0, 0, pdt))
+
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	hit := seedListEntry(t, dbPath, "same-day-platform", "", "platform", "")
+	missProject := seedListEntry(t, dbPath, "same-day-growth", "", "growth", "")
+
+	sameDay := time.Date(2026, 7, 5, 10, 0, 0, 0, pdt)
+	mustBackdate(t, dbPath, hit.ID, sameDay)
+	mustBackdate(t, dbPath, missProject.ID, sameDay)
+
+	out, errOut, err := runListCmd(t, dbPath, "--day", "2026-07-05", "--project", "platform")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if errOut != "" {
+		t.Fatalf("expected empty stderr, got %q", errOut)
+	}
+	if !strings.Contains(out, "same-day-platform") {
+		t.Errorf("expected the in-day platform entry, got %q", out)
+	}
+	if strings.Contains(out, "same-day-growth") {
+		t.Errorf("expected the in-day growth entry filtered out by --project, got %q", out)
 	}
 }
 

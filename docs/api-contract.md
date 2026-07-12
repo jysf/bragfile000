@@ -133,13 +133,21 @@ the cwd. See `brag project here` (SPEC-031) for the shared resolver.
 ### `brag list` — list entries
 
 ```
-brag list [-P|--show-project] [--format json|tsv] [--tag T] [--project P] [--type T] [--since 2026-01-01] [--author agent|human] [--limit N]
+brag list [-P|--show-project] [--format json|tsv] [--tag T] [--project P] [--type T] [--since 2026-01-01] [--day today] [--author agent|human] [--limit N]
 ```
 
 - `--tag`, `--project`, `--type` filter on exact field value
   (tags filter uses exact tag-name membership via the normalized
   `taggings` join — DEC-015 / SPEC-025).
 - `--since` accepts `YYYY-MM-DD` or a duration like `7d`, `2w`, `3m`.
+- `--day` accepts `YYYY-MM-DD`, `today`, or `yesterday` (case-insensitive)
+  and scopes the listing to exactly that single **local** calendar day —
+  the half-open window `[local-midnight, next-local-midnight)`, via
+  `ListFilter.Since` + `Until` (SPEC-068 / DEC-039). A "day" is the user's
+  LOCAL calendar day (consistent with DEC-022's local-day streak),
+  deliberately unlike bare-date `--since` (UTC midnight). `--day` is
+  mutually exclusive with `--since` (user error on conflict); it composes
+  with every other filter.
 - `--author` distinguishes provenance authorship (SPEC-043): `agent`
   selects entries carrying a reserved `agent:`/`model:` provenance tag
   (the namespace the MCP `brag_add` tool stamps — DEC-024), `human`
@@ -669,6 +677,79 @@ its classifier means exactly what `brag list --author` means. Zero windows,
 two windows, `--previous --since`, or an unknown `--format` value exits 1
 (user error), stdout empty.
 
+### `brag spark [--week|--month|--quarter] [--project <name>] (STAGE-016)`
+
+```
+brag spark                                  # last 28 days, weekly bars, markdown
+brag spark --week                           # last 7 days, one bar per day
+brag spark --quarter --project alpha        # 13 weekly bars: Total vs alpha
+brag spark --month --format json            # raw per-bucket counts, JSON envelope
+```
+
+A sparklines-only **pulse** of recent activity: a `Total` row plus up to
+the top-8 by-project rows, each a compact Unicode block-glyph **sparkline**
+over a **rolling** recent window with the row's entry count in parentheses.
+The **seventh** DEC-014 consumer; rule-based, deterministic, no LLM, no
+schema change. A quick "what does my last stretch look like?" glance, not a
+full digest. Locked by
+[DEC-037](../decisions/DEC-037-brag-spark-rolling-windows-and-multirow-pulse.md).
+
+Document structure:
+
+- **Provenance:** `Generated:` (RFC3339), `Scope:` (the rolling-window
+  token — `week`/`month`/`quarter`), `Filters:` (`--project <name>` when
+  set, else `(none)`), and a headline `Entries: N` count (the whole
+  in-window corpus, matching the `Total` row's sum).
+- **Body** (markdown; omitted entirely on an empty window per
+  [DEC-014](../decisions/DEC-014-rule-based-output-shape.md)):
+  - `## Pulse` — a `Total (<count>): <glyphs>` row followed by
+    `<project> (<count>): <glyphs>` rows. Each row's sparkline is scaled to
+    its own min→max shape; the parenthesized count is the sum of that row's
+    buckets, so a steady project and a bursty one are both legible. Every
+    row is bucketed over the **same** shared axis, so glyph position *i* is
+    the same time bucket in every row. `(no project)` renders last.
+
+Window selection (**rolling**, ending now — NOT a calendar period):
+
+- Exactly one of `--week`/`--month`/`--quarter` may be given; they are
+  **mutually exclusive** and default to `--month`. Each maps to a fixed
+  (bucket-width, bucket-count) axis ending at now:
+  - `--week` → last **7 days**, **7 daily** bars.
+  - `--month` → last **28 days**, **4 weekly** bars (default).
+  - `--quarter` → last **91 days**, **13 weekly** bars.
+- Note `--month` here is a **rolling 28 days** — deliberately different from
+  `brag review`'s rolling 30 days and the calendar month in
+  `impact`/`coverage`/`wrapped` (DEC-037; the `Scope:`/`Generated:` lines
+  disambiguate).
+
+Flags:
+
+- `--project <name>` is a **row selector, not a corpus filter**: the
+  by-project rows collapse to that one project (`Total` still spans the
+  whole in-window corpus, so it reads as "this project vs everything"). A
+  named project with zero in-window entries still renders (an all-`▁` /
+  zero-count row). This diverges from the corpus-filtering `--project` on
+  `coverage`/`wrapped`/`impact` — see DEC-037 choice 3.
+- `--format markdown|json` defaults to `markdown`. JSON is the single-object
+  envelope. Top-level keys: `generated_at`, `scope`, `filters`, `window`
+  (`{buckets, bucket_width_days, start, end}`), `total` (`{count, series}`),
+  `by_project` (`[{project, count, series}]`). Each `series` is the **raw
+  per-bucket int array** — JSON never contains glyphs
+  ([DEC-031](../decisions/DEC-031-sparkline-primitive.md) choice f). On an
+  empty window `total.series` is the full zero-filled series, `by_project`
+  is `[]`, and `filters` is `{}`.
+- `--no-spark`, or a present `NO_COLOR` env var (any value, per
+  no-color.org), drops the glyphs and prints the **raw per-bucket counts**
+  instead (a sparkline-only command that suppressed its glyphs still emits
+  its data). No effect on `--format json` (already raw).
+- Output goes to stdout. Redirect with `>` if you want a file.
+
+The window is queried once via `ListFilter{Since: now - width*n}` (no SQL in
+the CLI layer); the pure `aggregate.RollingBuckets` bucketer assigns each
+entry to `[start+k*width, start+(k+1)*width)` (lower-inclusive,
+upper-exclusive). Two windows, an empty `--project`, or an unknown
+`--format` value exits 1 (user error), stdout empty.
+
 ### `brag story --audience <name> [window] [--theme <tag>]` (STAGE-012)
 
 ```
@@ -845,6 +926,46 @@ concern, STAGE-007).
 - Exit 1 (user error) if `<name>` is empty, `--path` is missing/empty, the
   name already exists, or the path is already registered to another project
   (in which case nothing is created — the path is checked first).
+
+### `brag project ensure <name> [--location PATH]` — idempotent registration (STAGE-015)
+
+```
+brag project ensure standup
+brag project ensure standup --location ~/code/standup
+brag project ensure platform --location /srv/platform
+```
+
+Idempotently registers a project by name: creates it with status `active` if
+absent, and does nothing if it already exists. Unlike `brag project new`, ensure
+**never errors when the project already exists**, so it is safe to run before
+every capture or from an agent's setup script.
+
+- With `--location PATH`, the path is attached if it is not already registered;
+  re-attaching the same path to the same project is a no-op. A project may have
+  **multiple** locations. `--location` defaults to unset — no location (and no
+  current directory) is registered unless you pass it.
+- The name is trimmed and must be **64 characters or fewer** (matching the cap
+  `brag add --json` / MCP enforce on the `project` field, so an ensured name can
+  always soft-match a normally-added entry).
+- Exits 0 on both create and no-op. stdout empty. stderr carries composable
+  confirmations: a project line — `Created project "<name>".` or `Project
+  "<name>" already exists.` — and, only with `--location`, a location line —
+  `Attached location "<path>".` or `Location "<path>" already attached.`
+- Exit 1 (user error) if `<name>` is empty or over 64 characters, or if
+  `--location` names a path already registered to a **different** project (the
+  project is still ensured; only the location step fails — re-run after fixing
+  the path is safe).
+
+> **Two soft-link facts for consumers that map entries → projects/repos.**
+> (1) `brag project list` (and `brag project status`) read the `projects`
+> table, which is **authoritative but incomplete**: an entry's `project` is
+> free text (DEC-017) and MCP `brag_add` does not auto-fill it from cwd, so an
+> entry may reference a project name that was never registered. Use
+> `brag project ensure <name>` to register such a name. (2) A single project
+> may have **multiple** on-disk `locations`, so any mapping from an entry (or a
+> path) to a repo must handle a one-project-many-directories shape — see the
+> `locations` array in `brag project list --format json` / `brag project show
+> --format json`.
 
 ### `brag project list` — list projects (STAGE-007)
 
@@ -1078,6 +1199,53 @@ CLI flags).
 form of `stdout-is-for-data-stderr-is-for-humans` at this transport). See
 [DEC-024](../decisions/DEC-024-mcp-server-sdk-transport-and-provenance.md).
 
+### `brag mcp install` — register the server in a client's config (STAGE-015)
+
+```
+brag mcp install [--client claude-code|claude-desktop|cursor] [--scope user|project] [--dir PATH] [--dry-run]
+```
+
+Writes or merges the `brag` MCP server block
+(`{"command":"brag","args":["mcp","serve"]}`) under `mcpServers` in the target
+client's config file, **idempotently** and **without clobbering** any other
+MCP server or unrelated top-level key. Re-running is always safe: a
+byte-identical result is detected and reported as a no-op (exit 0, no write).
+A present-but-different `brag` block is overwritten with the canonical block.
+
+**Flags** (defaults explicit):
+
+- `--client` (default `claude-code`) — one of `claude-code`,
+  `claude-desktop`, `cursor`.
+- `--scope` (default `project`) — `project` (the checked-in, shareable file)
+  or `user` (the per-user file).
+- `--dir` (default: current working directory) — the project directory for
+  `project` scope; a `UserError` if combined with `--scope user`.
+- `--dry-run` — prints the exact JSON that would be written to **stdout** and
+  a `Would write to <path>:` line to **stderr**, writing nothing to disk.
+
+**Target paths** (client × scope):
+
+| client         | scope   | path |
+|----------------|---------|------|
+| claude-code    | project | `<dir>/.mcp.json` |
+| claude-code    | user    | `~/.claude.json` |
+| cursor         | project | `<dir>/.cursor/mcp.json` |
+| cursor         | user    | `~/.cursor/mcp.json` |
+| claude-desktop | user    | macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`; Windows: `%APPDATA%\Claude\claude_desktop_config.json` |
+
+Unsupported combinations are `UserError`s (exit 1, stdout empty), never silent
+fallbacks: an unknown `--client` or `--scope`, `claude-desktop --scope
+project` (Desktop has no project config), `--dir` with `--scope user`, and
+`claude-desktop` on a non-macOS/non-Windows OS.
+
+**Output contract.** A real write prints `Registered brag MCP server in
+<path>` to stderr (stdout empty); a no-op prints `brag MCP server already
+registered in <path> (no changes)` to stderr (stdout empty). Only `--dry-run`
+emits data (the would-be JSON) on stdout. The command imports no storage and
+no SQL (`no-sql-in-cli-layer`). MCP servers connect at client startup —
+restart/reconnect the session after installing. See
+[DEC-034](../decisions/DEC-034-mcp-install-config-merge-scheme.md).
+
 ## Error output
 
 All human-readable errors go to stderr with the prefix `brag: `. Example:
@@ -1113,6 +1281,7 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-019` — `brag project here` / `brag add` cwd auto-fill: nearest-ancestor (longest-prefix) match against registered project locations
 - `DEC-020` — `brag project edit` location editing: `RemoveLocation`/`EditLocations`; remove-not-attached and remove-other-project are user errors; verbatim path matching; one invocation's location changes are atomic (removes before adds); location edits don't bump `updated_at`.
 - `DEC-024` — `brag mcp serve`: official Go MCP SDK, stdio-only subcommand (not a separate binary), transport-purity generalization of the stdout/stderr spine, and provenance via reserved-namespace tags (explicit `agent`/`model` params with an `agent`/`clientInfo.Name` fallback).
+- `DEC-034` — `brag mcp install`: idempotent, no-clobber merge of the `brag` server block into a client's `mcpServers` config (claude-code/claude-desktop/cursor), per-client×scope target-path table, unsupported combos as `UserError`s, and the dry-run(JSON→stdout)/human(→stderr) output contract. Storage-free (`no-sql-in-cli-layer`).
 - `DEC-028` — `brag impact`: fourth DEC-014 consumer. CALENDAR time windows (`--quarter`/`--month`/`--year`, current in-progress period; `--since` via ParseSince) deliberately diverging from summary/review's rolling windows; initiative = the `project` axis (reuses `GroupEntriesByProject`); impact-first body (only entries with a non-empty `impact`, plus a `<shown>/<in-window>` tally); a narrow 4-key `{id,title,project,impact}` per-entry JSON projection.
 - `DEC-033` — `brag coverage`: sixth DEC-014 consumer. Provenance-share metric — per-month agent-vs-human split + share, an agent-share sparkline (DEC-031, markdown-only), and a self-reference density measure — over the shared DEC-028/DEC-032 calendar window. The classifier is single-sourced: a pure `aggregate.IsAgentAuthored` Go predicate kept in agreement with storage's `provenanceExistsClause` SQL clause by a cross-package drift-guard test (`brag list --author` stays SQL, unregressed).
 - `DEC-029` — `brag story --audience`: deterministic threads (initiative = the `project` axis, time-ordered, impact beats marked via `WithImpact`; an opt-in `--theme` cross-project cross-cut) + a throughline SKELETON that bragfile assembles and the caller's LLM weaves into an arc — the pure-pipe posture (no model/network in the binary) preserved. Audiences are DATA-DRIVEN shaping profiles (bundled `embed.FS` defaults + user override, override-wins, a flat `key: value` schema parsed by a hand-rolled stdlib parser — no new YAML dep), not a Go enum. The bundle EXTENDS DEC-014's envelope with an arc-aware body (`audience`/`threads`/`throughline`/`framing_directive`; a 7-key beat projection); framing directives ship as bundled per-audience assets, printable via `--print-directive`. Ships the gradient endpoints `me`/`exec` (`manager`/`skip` deferred to SPEC-050 as config-only).

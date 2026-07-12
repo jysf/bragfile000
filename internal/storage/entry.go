@@ -27,7 +27,8 @@ type ListFilter struct {
 	Tag     string    // exact tag-name membership via normalized join (DEC-015)
 	Project string    // exact equality on entries.project
 	Type    string    // exact equality on entries.type
-	Since   time.Time // entries.created_at >= Since (RFC3339 UTC)
+	Since   time.Time // entries.created_at >= Since (RFC3339 UTC, inclusive lower bound)
+	Until   time.Time // entries.created_at < Until (RFC3339 UTC, exclusive upper bound)
 	Limit   int       // LIMIT N; 0 = no limit
 	Author  string    // "agent" | "human" | "" (all); classifies by presence of a reserved agent:/model: provenance tag (DEC-024). Invalid values are an error.
 }

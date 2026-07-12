@@ -60,6 +60,10 @@ binaries don't trigger Gatekeeper.
 
 - **Claude Code plugin:** `claude plugin marketplace add jysf/bragfile000`
   then `claude plugin install brag@bragfile` — see `plugin/README.md`.
+- **MCP server (any client):** `brag mcp install` registers the `brag mcp
+  serve` server in a client's config idempotently (`--client
+  claude-code|claude-desktop|cursor`, `--scope project|user`, `--dry-run` to
+  preview) — see [`docs/api-contract.md`](docs/api-contract.md).
 
 ## Capture an entry
 
@@ -167,12 +171,28 @@ Back up by copying the file. Move to a new machine by copying the
 file. Override the path with the `--db` flag or the `BRAGFILE_DB`
 environment variable.
 
+## Using brag from an AI agent (MCP)
+
+`brag` ships a local, stdio-only MCP server so AI coding agents can capture and
+retrieve entries as typed tool calls. Register it in one command:
+
+```bash
+brag mcp install                 # claude-code, project scope (writes ./.mcp.json)
+```
+
+Then reconnect your client (MCP servers connect at startup). The full agent
+playbook — the four tool schemas, the `project`-not-auto-filled gotcha,
+provenance stamping, and the `--db` override — is in
+[`docs/for-ai-agents.md`](docs/for-ai-agents.md).
+
 ## Where to go next
 
 - [`docs/tutorial.md`](docs/tutorial.md) — the deep-dive
   walkthrough: every command, every flag, every gotcha.
 - [`BRAG.md`](BRAG.md) — guide for AI coding agents that want to
   propose brag entries from work sessions.
+- [`docs/for-ai-agents.md`](docs/for-ai-agents.md) — the MCP playbook for AI
+  agents: register the server, the four tool schemas, and the gotchas.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — how this repo is built
   and how to contribute.
 - [`docs/api-contract.md`](docs/api-contract.md) — full CLI

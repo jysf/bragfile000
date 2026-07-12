@@ -26,6 +26,9 @@ Examples:
   brag list --project platform --since 7d         # last week, one project
   brag list --type shipped --limit 5              # 5 most recent shipped
   brag list --since 2026-01-01                    # since a specific date
+  brag list --day today                           # only today's entries (local calendar day)
+  brag list --day yesterday                       # only yesterday's entries
+  brag list --day 2026-07-05                       # exactly one local calendar day
   brag list --author agent                        # only agent-authored (has an agent:/model: tag)
   brag list --author human                        # only human-authored (has neither)
   brag list -P                                    # include project column
@@ -37,6 +40,7 @@ Examples:
 	cmd.Flags().String("project", "", "filter to entries with this project (exact match)")
 	cmd.Flags().String("type", "", "filter to entries with this type (exact match)")
 	cmd.Flags().String("since", "", "filter to entries on or after this point (YYYY-MM-DD or Nd/Nw/Nm)")
+	cmd.Flags().String("day", "", "scope to a single local calendar day (YYYY-MM-DD, today, or yesterday); mutually exclusive with --since")
 	cmd.Flags().String("author", "", "filter by provenance authorship: 'agent' (has an agent:/model: tag) or 'human' (has neither)")
 	cmd.Flags().Int("limit", 0, "cap the number of rows returned (must be > 0 when set)")
 	cmd.Flags().BoolP("show-project", "P", false, "include project in output (adds column between created_at and title)")
@@ -75,6 +79,20 @@ func runList(cmd *cobra.Command, _ []string) error {
 			return UserErrorf("invalid --since %q: %v", raw, err)
 		}
 		filter.Since = t
+	}
+	if cmd.Flags().Changed("day") {
+		// --day sets the WHOLE window (both bounds), so it cannot coexist with
+		// --since, which sets only the lower bound (DEC-039).
+		if cmd.Flags().Changed("since") {
+			return UserErrorf("--day and --since are mutually exclusive (--day sets the full day window)")
+		}
+		raw, _ := cmd.Flags().GetString("day")
+		start, end, err := ParseDay(raw)
+		if err != nil {
+			return UserErrorf("invalid --day %q: %v", raw, err)
+		}
+		filter.Since = start
+		filter.Until = end
 	}
 	if cmd.Flags().Changed("author") {
 		v, _ := cmd.Flags().GetString("author")

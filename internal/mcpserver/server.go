@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jysf/bragfile000/internal/capture"
 	"github.com/jysf/bragfile000/internal/export"
 	"github.com/jysf/bragfile000/internal/storage"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -71,23 +72,20 @@ func handleAdd(s *storage.Store) func(context.Context, *mcp.CallToolRequest, add
 		if strings.TrimSpace(in.Title) == "" {
 			return nil, nil, fmt.Errorf("brag_add: title is required and must not be empty")
 		}
-		if len(in.Title) > 200 {
-			return nil, nil, fmt.Errorf("brag_add: title exceeds 200-character limit")
-		}
-		if len(in.Description) > 100000 {
-			return nil, nil, fmt.Errorf("brag_add: description exceeds 100000-character limit")
-		}
-		if len(in.Tags) > 64 {
-			return nil, nil, fmt.Errorf("brag_add: tags exceeds 64-character limit")
-		}
-		if len(in.Project) > 64 {
-			return nil, nil, fmt.Errorf("brag_add: project exceeds 64-character limit")
-		}
-		if len(in.Type) > 64 {
-			return nil, nil, fmt.Errorf("brag_add: type exceeds 64-character limit")
-		}
-		if len(in.Impact) > 256 {
-			return nil, nil, fmt.Errorf("brag_add: impact exceeds 256-character limit")
+		// Byte caps, control-char rejection, and reserved-numeric-tag validation
+		// are shared with every capture ingress path (SPEC-064). Validate the
+		// caller's raw tags here, before stampProvenance appends the reserved
+		// agent:/model:/session:/cost:/tokens: tokens (so the 64-byte tags cap
+		// applies to what the caller sent, not the post-stamp string).
+		if err := capture.Validate(capture.Fields{
+			Title:       in.Title,
+			Description: in.Description,
+			Tags:        in.Tags,
+			Project:     in.Project,
+			Type:        in.Type,
+			Impact:      in.Impact,
+		}); err != nil {
+			return nil, nil, fmt.Errorf("brag_add: %w", err)
 		}
 
 		agent := in.Agent
@@ -98,11 +96,11 @@ func handleAdd(s *storage.Store) func(context.Context, *mcp.CallToolRequest, add
 		// Validate the seed numerics at the handler boundary, before stamping,
 		// so a bad value is a tool error and never a coerced/inserted tag
 		// (DEC-027). session: is opaque and needs no numeric check.
-		cost, err := normalizeCost(in.Cost)
+		cost, err := capture.NormalizeCost(in.Cost)
 		if err != nil {
 			return nil, nil, fmt.Errorf("brag_add: %w", err)
 		}
-		tokens, err := normalizeTokens(in.Tokens)
+		tokens, err := capture.NormalizeTokens(in.Tokens)
 		if err != nil {
 			return nil, nil, fmt.Errorf("brag_add: %w", err)
 		}

@@ -35,10 +35,37 @@ func Open(path string) (*Store, error) {
 		_ = f.Close()
 	}
 
-	db, err := sql.Open("sqlite", path)
+	// Concurrency policy (DEC-038). The on-disk PATH stays clean — callers,
+	// backup.go (VACUUM INTO), and config.ResolveDBPath all use the bare path;
+	// pragmas live ONLY in the sql.Open DSN and must not leak into the file name.
+	//
+	//   - busy_timeout(5000): a contended writer WAITS up to 5s and retries
+	//     instead of failing instantly with "database is locked (SQLITE_BUSY)".
+	//     This is reachable and amplified by `brag mcp serve` holding one
+	//     long-lived Store while a shell `brag add` (or a Claude Code hook)
+	//     opens a second handle on the same file. The modernc.org/sqlite DSN
+	//     pragma form is `_pragma=busy_timeout(5000)` (verified against
+	//     v1.53.0; the `_busy_timeout=` form is a no-op).
+	//   - _txlock=immediate: every transaction begins as BEGIN IMMEDIATE so it
+	//     takes the write lock up front. Without this, database/sql's default
+	//     deferred transaction takes a read lock and only upgrades on the first
+	//     write; two handles both holding a read lock then deadlock on upgrade,
+	//     and busy_timeout returns SQLITE_BUSY immediately (it cannot wait out a
+	//     deadlock). IMMEDIATE turns write-write contention into a plain wait
+	//     that busy_timeout resolves. All of this package's transactions are
+	//     writes, so serializing them at BEGIN costs nothing here.
+	//   - SetMaxOpenConns(1) below serializes THIS process through a single
+	//     pooled connection so database/sql cannot self-conflict across pooled
+	//     connections (fine for a local single-user CLI + stdio MCP server).
+	//   - Journal mode is left at the default (rollback/delete), NOT WAL: WAL
+	//     would add -wal/-shm sidecars and make the documented bare-cp backup
+	//     unsafe (DEC-038 defers WAL for that reason).
+	dsn := path + "?_pragma=busy_timeout(5000)&_txlock=immediate"
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open store: %w", err)
 	}
+	db.SetMaxOpenConns(1)
 
 	sub, err := fs.Sub(migrationsFS, "migrations")
 	if err != nil {
@@ -347,6 +374,10 @@ func (s *Store) List(f ListFilter) ([]Entry, error) {
 	if !f.Since.IsZero() {
 		conds = append(conds, "e.created_at >= ?")
 		args = append(args, f.Since.UTC().Format(time.RFC3339))
+	}
+	if !f.Until.IsZero() {
+		conds = append(conds, "e.created_at < ?")
+		args = append(args, f.Until.UTC().Format(time.RFC3339))
 	}
 	switch f.Author {
 	case authorAgent:

@@ -1280,3 +1280,135 @@ func TestEditLocations_DoesNotBumpUpdatedAt(t *testing.T) {
 		t.Errorf("UpdatedAt = %v, want %v (location edit must not bump updated_at)", got.UpdatedAt, backdated)
 	}
 }
+
+// --- SPEC-057: idempotent project + location ensure (DEC-036) ---
+
+func TestEnsureProject_CreatesWhenAbsent(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	p, created, err := s.EnsureProject("standup")
+	if err != nil {
+		t.Fatalf("EnsureProject: %v", err)
+	}
+	if !created {
+		t.Errorf("created = false, want true (project was absent)")
+	}
+	if p.ID <= 0 {
+		t.Fatalf("ID = %d, want > 0", p.ID)
+	}
+	if p.Name != "standup" {
+		t.Errorf("Name = %q, want %q", p.Name, "standup")
+	}
+	if p.Status != "active" {
+		t.Errorf("Status = %q, want %q (ensure creates active)", p.Status, "active")
+	}
+	if p.CreatedAt.IsZero() {
+		t.Error("CreatedAt is zero on a freshly created project")
+	}
+
+	got, err := s.GetProjectByName("standup")
+	if err != nil {
+		t.Fatalf("GetProjectByName: %v", err)
+	}
+	if got.ID != p.ID {
+		t.Errorf("persisted ID = %d, want %d", got.ID, p.ID)
+	}
+}
+
+func TestEnsureProject_NoOpWhenExists(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	first, created, err := s.EnsureProject("standup")
+	if err != nil {
+		t.Fatalf("first EnsureProject: %v", err)
+	}
+	if !created {
+		t.Fatalf("first call created = false, want true")
+	}
+
+	// Second call: must return the SAME existing row, created=false, no error,
+	// and NO ErrProjectExists surfaced.
+	second, created2, err := s.EnsureProject("standup")
+	if err != nil {
+		t.Fatalf("second EnsureProject returned error, want nil: %v", err)
+	}
+	if created2 {
+		t.Errorf("second call created = true, want false (project already existed)")
+	}
+	if second.ID != first.ID {
+		t.Errorf("second.ID = %d, want %d (same row returned)", second.ID, first.ID)
+	}
+
+	// No duplicate row was inserted.
+	projects, err := s.ListProjects()
+	if err != nil {
+		t.Fatalf("ListProjects: %v", err)
+	}
+	if len(projects) != 1 {
+		t.Errorf("ListProjects len = %d, want 1 (no duplicate insert)", len(projects))
+	}
+}
+
+func TestEnsureLocation_AttachesIdempotently(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	p, _, err := s.EnsureProject("standup")
+	if err != nil {
+		t.Fatalf("EnsureProject: %v", err)
+	}
+
+	// First attach: the path is free, so it is added.
+	attached, err := s.EnsureLocation(p.ID, "/repo/standup")
+	if err != nil {
+		t.Fatalf("first EnsureLocation: %v", err)
+	}
+	if !attached {
+		t.Errorf("first attached = false, want true (path was free)")
+	}
+
+	// Second attach of the SAME path to the SAME project: idempotent no-op,
+	// no error, attached=false.
+	attached2, err := s.EnsureLocation(p.ID, "/repo/standup")
+	if err != nil {
+		t.Fatalf("second EnsureLocation returned error, want nil: %v", err)
+	}
+	if attached2 {
+		t.Errorf("second attached = true, want false (already attached to this project)")
+	}
+
+	// Exactly one location row — no duplicate; a project may hold many
+	// locations, but the same path is not doubled.
+	got, err := s.GetProject(p.ID)
+	if err != nil {
+		t.Fatalf("GetProject: %v", err)
+	}
+	if len(got.Locations) != 1 || got.Locations[0] != "/repo/standup" {
+		t.Errorf("Locations = %v, want [/repo/standup] (idempotent)", got.Locations)
+	}
+}
+
+func TestEnsureLocation_DifferentProjectErrLocationOtherProject(t *testing.T) {
+	s, _ := newTestStore(t)
+
+	owner, _, err := s.EnsureProject("owner")
+	if err != nil {
+		t.Fatalf("EnsureProject owner: %v", err)
+	}
+	other, _, err := s.EnsureProject("other")
+	if err != nil {
+		t.Fatalf("EnsureProject other: %v", err)
+	}
+	if _, err := s.EnsureLocation(owner.ID, "/repo/shared"); err != nil {
+		t.Fatalf("EnsureLocation to owner: %v", err)
+	}
+
+	// Attaching a path already owned by a DIFFERENT project is refused —
+	// paths are globally UNIQUE (DEC-036); this is not a silent no-op.
+	attached, err := s.EnsureLocation(other.ID, "/repo/shared")
+	if !errors.Is(err, ErrLocationOtherProject) {
+		t.Fatalf("err = %v, want ErrLocationOtherProject", err)
+	}
+	if attached {
+		t.Errorf("attached = true, want false on cross-project conflict")
+	}
+}

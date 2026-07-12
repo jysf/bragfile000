@@ -75,7 +75,7 @@ func runCoverage(cmd *cobra.Command, _ []string) error {
 		return UserErrorf("unknown --format value %q (accepted: markdown, json)", format)
 	}
 
-	filter := storage.ListFilter{Since: cutoff}
+	filter := storage.ListFilter{Since: cutoff, Until: end}
 	if cmd.Flags().Changed("tag") {
 		v, _ := cmd.Flags().GetString("tag")
 		if v == "" {
@@ -116,21 +116,6 @@ func runCoverage(cmd *cobra.Command, _ []string) error {
 	entries, err := s.List(filter)
 	if err != nil {
 		return fmt.Errorf("list entries: %w", err)
-	}
-
-	// Bounded-window upper edge for --previous (DEC-032 choice 1): a non-zero
-	// end is the current-period start (the exclusive upper bound of the
-	// last-completed period). The created_at < end filter runs here in Go so
-	// no-sql-in-cli-layer stays intact. A zero end (the current-period path)
-	// skips the filter, preserving [cutoff, now].
-	if !end.IsZero() {
-		bounded := entries[:0]
-		for _, e := range entries {
-			if e.CreatedAt.Before(end) {
-				bounded = append(bounded, e)
-			}
-		}
-		entries = bounded
 	}
 
 	// Derive the ordered "YYYY-MM" labels covering the window so the monthly

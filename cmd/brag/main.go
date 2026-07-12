@@ -37,6 +37,7 @@ func main() {
 	root.AddCommand(cli.NewImpactCmd())
 	root.AddCommand(cli.NewWrappedCmd())
 	root.AddCommand(cli.NewCoverageCmd())
+	root.AddCommand(cli.NewSparkCmd())
 	root.AddCommand(cli.NewStoryCmd())
 	root.AddCommand(cli.NewTagsCmd())
 	root.AddCommand(cli.NewTagCmd())

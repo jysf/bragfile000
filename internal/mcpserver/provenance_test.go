@@ -64,42 +64,6 @@ func TestStampProvenance_SeedTags(t *testing.T) {
 	}
 }
 
-// TestNormalizeCost ▲ DEC-027 — non-negative USD decimal string; reject
-// non-numeric / negative; trims; empty → ("", ok, no tag).
-func TestNormalizeCost(t *testing.T) {
-	ok := map[string]string{"0.42": "0.42", "12": "12", "  3.5 ": "3.5", "0": "0"}
-	for in, want := range ok {
-		got, err := normalizeCost(in)
-		if err != nil || got != want {
-			t.Errorf("normalizeCost(%q)=%q,%v want %q,nil", in, got, err, want)
-		}
-	}
-	if got, err := normalizeCost(""); err != nil || got != "" {
-		t.Errorf("empty cost → (\"\",nil), got %q,%v", got, err)
-	}
-	for _, bad := range []string{"abc", "-1", "1.2.3", "$5", "1e3"} {
-		if _, err := normalizeCost(bad); err == nil {
-			t.Errorf("normalizeCost(%q) expected error", bad)
-		}
-	}
-}
-
-// TestNormalizeTokens ▲ DEC-027 — non-negative integer; reject non-integer /
-// negative; empty → ("", ok, no tag).
-func TestNormalizeTokens(t *testing.T) {
-	ok := map[string]string{"18000": "18000", " 0 ": "0", "42": "42"}
-	for in, want := range ok {
-		got, err := normalizeTokens(in)
-		if err != nil || got != want {
-			t.Errorf("normalizeTokens(%q)=%q,%v want %q,nil", in, got, err, want)
-		}
-	}
-	if got, err := normalizeTokens(""); err != nil || got != "" {
-		t.Errorf("empty tokens → (\"\",nil), got %q,%v", got, err)
-	}
-	for _, bad := range []string{"abc", "-5", "1.5", "1,000", "0x10"} {
-		if _, err := normalizeTokens(bad); err == nil {
-			t.Errorf("normalizeTokens(%q) expected error", bad)
-		}
-	}
-}
+// NOTE: TestNormalizeCost / TestNormalizeTokens moved to
+// internal/capture/validate_test.go when the normalizers moved to the shared
+// capture package (SPEC-064).

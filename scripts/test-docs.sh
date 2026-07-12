@@ -1000,6 +1000,136 @@ else
     fail "S12-jq" "$PLUGIN_MCP_JSON missing brag.command==\"brag\" or brag.args==[\"mcp\",\"serve\"]"
 fi
 
+# ===== Group T — for-ai-agents docs (SPEC-058) =====
+
+AGENT_DOC="docs/for-ai-agents.md"
+
+# T1 — page exists
+assert_file_exists "T1" "$AGENT_DOC"
+
+# T2 — page is a full playbook, not a stub
+assert_line_count_band "T2" "$AGENT_DOC" 120 500
+
+# T3 — names all four MCP tools
+if [ ! -f "$AGENT_DOC" ]; then
+    fail "T3" "$AGENT_DOC does not exist"
+else
+    t3_missing=""
+    for tool in brag_add brag_list brag_search brag_stats; do
+        if ! grep -F -q -- "$tool" "$AGENT_DOC"; then
+            t3_missing="$t3_missing $tool"
+        fi
+    done
+    if [ -z "$t3_missing" ]; then
+        ok "T3"
+    else
+        fail "T3" "$AGENT_DOC missing tool names:$t3_missing"
+    fi
+fi
+
+# T4 — documents the registration command
+assert_contains_literal "T4" "$AGENT_DOC" "brag mcp install"
+
+# T5 — gives the manual mcpServers JSON snippet
+assert_contains_literal "T5" "$AGENT_DOC" '{"mcpServers":{"brag":{"command":"brag","args":["mcp","serve"]}}}'
+
+# T6 — states the client-startup-reconnect note
+if [ ! -f "$AGENT_DOC" ]; then
+    fail "T6" "$AGENT_DOC does not exist"
+else
+    has_startup=no; has_reconnect=no
+    if grep -F -q -- "connect at client startup" "$AGENT_DOC"; then has_startup=yes; fi
+    if grep -F -q -- "reconnect" "$AGENT_DOC"; then has_reconnect=yes; fi
+    if [ "$has_startup" = yes ] && [ "$has_reconnect" = yes ]; then
+        ok "T6"
+    else
+        fail "T6" "reconnect note (startup=$has_startup reconnect=$has_reconnect)"
+    fi
+fi
+
+# T7 — states the project-not-auto-filled gotcha (names the field)
+if [ ! -f "$AGENT_DOC" ]; then
+    fail "T7" "$AGENT_DOC does not exist"
+else
+    has_phrase=no; has_field=no
+    if grep -F -q -- "does not auto-fill" "$AGENT_DOC"; then has_phrase=yes; fi
+    if grep -F -q -- "project" "$AGENT_DOC"; then has_field=yes; fi
+    if [ "$has_phrase" = yes ] && [ "$has_field" = yes ]; then
+        ok "T7"
+    else
+        fail "T7" "gotcha (phrase=$has_phrase field=$has_field)"
+    fi
+fi
+
+# T8 — cross-links the fix
+assert_contains_literal "T8" "$AGENT_DOC" "brag project ensure"
+
+# T9 — documents provenance stamping (all five reserved namespaces)
+if [ ! -f "$AGENT_DOC" ]; then
+    fail "T9" "$AGENT_DOC does not exist"
+else
+    t9_missing=""
+    for tok in "agent:<name>" "model:<id>" "session:<id>" "cost:<n>" "tokens:<n>"; do
+        if ! grep -F -q -- "$tok" "$AGENT_DOC"; then
+            t9_missing="$t9_missing $tok"
+        fi
+    done
+    if [ -z "$t9_missing" ]; then
+        ok "T9"
+    else
+        fail "T9" "$AGENT_DOC missing provenance tokens:$t9_missing"
+    fi
+fi
+
+# T10 — documents the DB resolution order
+if [ ! -f "$AGENT_DOC" ]; then
+    fail "T10" "$AGENT_DOC does not exist"
+else
+    t10_missing=""
+    for tok in "--db" "BRAGFILE_DB" "~/.bragfile/db.sqlite"; do
+        if ! grep -F -q -- "$tok" "$AGENT_DOC"; then
+            t10_missing="$t10_missing $tok"
+        fi
+    done
+    if [ -z "$t10_missing" ]; then
+        ok "T10"
+    else
+        fail "T10" "$AGENT_DOC missing db-resolution tokens:$t10_missing"
+    fi
+fi
+
+# T11 — carries the impact-framing convention (distinctive phrase)
+assert_contains_literal "T11" "$AGENT_DOC" "a metric or a named outcome"
+
+# T12 — gives the resolved per-client config paths
+if [ ! -f "$AGENT_DOC" ]; then
+    fail "T12" "$AGENT_DOC does not exist"
+else
+    t12_missing=""
+    for tok in ".mcp.json" "~/.claude.json" ".cursor/mcp.json" "claude_desktop_config.json"; do
+        if ! grep -F -q -- "$tok" "$AGENT_DOC"; then
+            t12_missing="$t12_missing $tok"
+        fi
+    done
+    if [ -z "$t12_missing" ]; then
+        ok "T12"
+    else
+        fail "T12" "$AGENT_DOC missing config-path tokens:$t12_missing"
+    fi
+fi
+
+# T13 — README links the page
+assert_contains_literal "T13" "README.md" "docs/for-ai-agents.md"
+
+# T14 — README has an agent/MCP section heading (line-regex avoids substring trap)
+if [ ! -f README.md ]; then
+    fail "T14" "README.md does not exist"
+elif grep -E -q '^## .*[Aa]gent' README.md; then
+    ok "T14"
+else
+    fail "T14" "README.md missing an agent/MCP '## ' section heading"
+fi
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

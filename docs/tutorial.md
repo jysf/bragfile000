@@ -178,6 +178,9 @@ brag list --tag auth                            # entries tagged "auth"
 brag list --project platform --since 7d         # last week, one project
 brag list --type shipped --limit 5              # 5 most recent shipped
 brag list --since 2026-01-01                    # since a specific date
+brag list --day today                           # just today (local calendar day)
+brag list --day yesterday                       # just yesterday
+brag list --day 2026-07-05                       # exactly one local calendar day
 ```
 
 - `--tag` matches a single tag as a comma-separated token — `--tag
@@ -185,6 +188,12 @@ brag list --since 2026-01-01                    # since a specific date
 - `--project` and `--type` are exact, case-sensitive.
 - `--since` accepts `YYYY-MM-DD` (midnight UTC) or a duration like
   `7d`, `2w`, `3m` (days / weeks / 30-day months).
+- `--day` accepts `YYYY-MM-DD`, `today`, or `yesterday` and scopes the
+  list to exactly that single **local** calendar day (midnight to
+  midnight in your timezone). Unlike `--since`, it sets both ends of the
+  window, so it's the clean way to ask "just yesterday" without a `jq`
+  upper bound. It's mutually exclusive with `--since` and composes with
+  the other filters.
 - `--limit N` caps the row count.
 - Multiple filters combine via AND.
 
@@ -660,6 +669,25 @@ brag tag merge auth perf
 - The `auth` tag row is deleted; `perf`'s count rises by the previously
   `auth`-only memberships.
 
+#### Namespaced tag conventions (sprint, and friends)
+
+Tags are the extension point for organizational metadata bragfile does not
+model as a first-class field. If your team works in **sprints**, record the
+sprint as a namespaced freeform tag rather than asking for a dedicated field —
+there is no `sprint` column and no `--sprint` flag by design:
+
+```bash
+brag add --title "Ship checkout v2" --tag "sprint:2026-q3-s4"
+brag list --tag sprint:2026-q3-s4          # everything in that sprint
+```
+
+Any `key:value` tag works this way (`quarter:2026-q3`, `epic:billing`, …); the
+`key:` prefix just keeps related values grouped and greppable. This is distinct
+from the **reserved** provenance namespaces (`agent:`/`model:`/`session:`/
+`cost:`/`tokens:`) that the MCP `brag_add` tool stamps and validates — those are
+machine-written; a `sprint:` tag is yours to write freely and is never
+validated or auto-filled.
+
 ### Projects
 
 A **project** is a first-class, named workspace you register once and
@@ -675,6 +703,10 @@ brag project new bragfile --path ~/code/bragfile
 
 `--path` is required and stored verbatim; a path already registered to
 another project is rejected.
+
+For a re-runnable, script-safe alternative (create if absent, no-op if
+present), use `brag project ensure <name> [--location PATH]` — it never
+errors when the project already exists.
 
 Ask which project the current directory belongs to:
 
@@ -944,6 +976,23 @@ server over stdio (no network) that exposes four tools —
 your existing database. An MCP-client agent can capture and recall brags
 without spawning a shell. The protocol stream owns stdout; nothing
 human-facing is ever written there.
+
+### `brag mcp install` — register the server with a client
+
+Rather than hand-editing a client's config, let `brag` write it:
+
+```bash
+brag mcp install                          # claude-code, this repo's .mcp.json
+brag mcp install --client cursor          # cursor's .cursor/mcp.json
+brag mcp install --dry-run                # print the exact JSON + path, write nothing
+```
+
+This merges the `brag` server block into the target client's config
+idempotently — re-running is safe, and any other MCP server already there is
+preserved. Supported clients are `claude-code` (default), `claude-desktop`,
+and `cursor`; `--scope` is `project` (default, the checked-in file) or `user`.
+MCP servers connect at client startup, so restart or reconnect the session
+after installing.
 
 ### The Claude Code plugin
 
