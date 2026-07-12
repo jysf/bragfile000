@@ -5,11 +5,28 @@
 project:
   id: PROJ-006
   status: active
+  # activity = the type of work currently active within the project. The coarse
+  # `status` (active/shipped/archived) is what tooling keys on; `activity` is the
+  # human-facing detail. Suggested vocabulary (extend as needed):
+  #   requirements | design | build | test | blocked
+  activity: requirements
   priority: high
   target_ship: null
 
 repo:
   id: bragfile
+
+roadmap:
+  - pillar: Corpus-as-memory
+    resume_when: "repeatedly asking 'what did I do on X', or re-deriving context"
+  - pillar: Signed provenance
+    resume_when: "acting on agent/model/cost data, or sharing the corpus"
+  - pillar: Git-hash / evidence links
+    resume_when: "wanting to tie a brag to the commit that proves it"
+  - pillar: Benchmark
+    resume_when: "reliably stamping cost/tokens and wanting to compare models"
+  - pillar: Capture completeness
+    resume_when: "the corpus feels sparse, or you notice unlogged work"
 
 created_at: 2026-07-10
 shipped_at: null
@@ -17,21 +34,26 @@ shipped_at: null
 
 # PROJ-006: Agent-Native Depth — Memory, Trust & Completeness
 
-> **Shell / direction-only.** Opened 2026-07-10 as the successor to PROJ-005
-> (which shipped the *opening* of agent-native depth as v0.5.0). The direction
-> below is set by `docs/research/proj-005-idea-synthesis.md`; the **stages and
-> specs are NOT framed yet** — that is the job of a dedicated next session. Treat
-> everything under "Candidate scope" and "Candidate stage plan" as the
-> discussion starting point, not a commitment.
+> **Requirements-gathering phase (active).** Opened 2026-07-10 as the successor
+> to PROJ-005 (which shipped the *opening* of agent-native depth as v0.5.0). The
+> direction below is set by `docs/research/proj-005-idea-synthesis.md`; the
+> **stages and specs are NOT framed yet — and that is deliberate, not overdue.**
+> This project is in *requirements gathering*: we are actively deciding *which*
+> pillar is worth building and *what shape* it should take before any spec is
+> written. Treat everything under "Candidate scope" and "Candidate stage plan" as
+> requirements input, not a commitment.
 >
-> **PAUSED pending a usage signal (2026-07-11).** After v0.5.0/v0.5.1, the
-> product is a complete personal tool; the deeper pillars here are bets on a
-> future (agents reading history, provenance-driven decisions, benchmarking)
-> that real usage should confirm before we build. Deliberate stance: *use it,
-> and let the next spec come from a recurring annoyance* (as `brag spark` and
-> `brag list --day` did). Resume when a signal below fires.
+> **Why we gather before we frame (2026-07-11).** After v0.5.0/v0.5.1 the product
+> is a complete personal tool; the deeper pillars here are bets on a future
+> (agents reading history, provenance-driven decisions, benchmarking) that real
+> usage should confirm before we build. Deliberate stance: *use it, and let the
+> next spec come from a recurring annoyance* (as `brag spark` and `brag list
+> --day` did). A pillar graduates from requirement → framed stage when its signal
+> below actually shows up in practice — not on a schedule. Having no specs in
+> flight is the *expected* state of this phase, not a sign the project is done.
 >
-> **Resume triggers (which pillar, on what signal):**
+> **Requirements signals we're gathering (which pillar, and the evidence that
+> would pull it into framing):**
 > - Corpus-as-memory — you/an agent repeatedly asking "what did I do on X" or
 >   re-deriving project context (note: `--day` + `spark` may already scratch this).
 > - Signed provenance — you *acting on* `agent:`/`model:`/`cost:` data, or sharing
@@ -41,6 +63,10 @@ shipped_at: null
 >   tag works today).
 > - Benchmark — you reliably stamping `cost:`/`tokens:` AND wanting to compare models.
 > - Capture completeness — the corpus starts feeling sparse / you notice unlogged work.
+>
+> **Observations log (requirements captured as they surface — the working
+> output of this phase):**
+> - _(none yet — 2026-07-11)_
 
 ## What This Project Is
 
