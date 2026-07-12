@@ -23,6 +23,24 @@ shipped_at: null
 > specs are NOT framed yet** — that is the job of a dedicated next session. Treat
 > everything under "Candidate scope" and "Candidate stage plan" as the
 > discussion starting point, not a commitment.
+>
+> **PAUSED pending a usage signal (2026-07-11).** After v0.5.0/v0.5.1, the
+> product is a complete personal tool; the deeper pillars here are bets on a
+> future (agents reading history, provenance-driven decisions, benchmarking)
+> that real usage should confirm before we build. Deliberate stance: *use it,
+> and let the next spec come from a recurring annoyance* (as `brag spark` and
+> `brag list --day` did). Resume when a signal below fires.
+>
+> **Resume triggers (which pillar, on what signal):**
+> - Corpus-as-memory — you/an agent repeatedly asking "what did I do on X" or
+>   re-deriving project context (note: `--day` + `spark` may already scratch this).
+> - Signed provenance — you *acting on* `agent:`/`model:`/`cost:` data, or sharing
+>   the corpus with anyone.
+> - **Git-hash / evidence links** — you wanting to tie a brag to the actual commit
+>   that proves it (see the note in Candidate scope; a `commit:<hash>` freeform
+>   tag works today).
+> - Benchmark — you reliably stamping `cost:`/`tokens:` AND wanting to compare models.
+> - Capture completeness — the corpus starts feeling sparse / you notice unlogged work.
 
 ## What This Project Is
 
@@ -66,6 +84,14 @@ The four "act soon" pillars, ranked by the synthesis:
 3. **Capture completeness** — a staging inbox (`status=proposed` + `brag
    promote`), a local git-import cold-start miner, and typed evidence links
    (commit/PR/issue refs as rows).
+   - **Git-hash evidence links may be the highest-value / cheapest provenance
+     slice** (idea, 2026-07-11). Tying a brag to the commit that proves it is a
+     *self-attesting* form of provenance — anyone can check the commit exists,
+     its author, and its date against the repo — so it's arguably a stronger and
+     cheaper win than #2's signing (which makes *self-reported* tags unforgeable
+     via crypto). A `commit:<hash>` freeform tag works TODAY with no code; the
+     spec would promote it to a typed, validated evidence link (and pairs with
+     the git-import miner). Strong candidate for an early PROJ-006 stage.
 4. **Agent/model benchmark** — `brag benchmark --by model`: impact-per-1k-tokens-
    per-dollar over the provenance tags; pure aggregation, no model in the binary.
    Gated on #2 (trust) being real.
