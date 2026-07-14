@@ -7,10 +7,15 @@ for retros, reviews, and resumes. Entries live in an embedded SQLite
 database at `~/.bragfile/db.sqlite` on your machine. No cloud, no
 sync, no account.
 
-> **Status:** v0.2.0 shipped. Capture, retrieve, search, export, and
-> weekly/monthly digests, plus first-class tags and projects with
-> cwd-aware capture, are all available, and `brew install
-> jysf/bragfile/bragfile` installs the binary on macOS.
+> **Status:** v0.5.1 shipped. Capture, retrieve, search, export,
+> weekly/monthly/quarterly digests, tags, and cwd-aware projects are all
+> here — and a local MCP server now lets AI coding agents capture and read
+> entries as typed tool calls. `brew install jysf/bragfile/bragfile` installs
+> the binary on macOS.
+>
+> Working with an AI agent? `brag mcp install` wires brag into Claude Code,
+> Cursor, or Claude Desktop as four typed tools — see
+> [Using brag from an AI agent (MCP)](#using-brag-from-an-ai-agent-mcp) below.
 
 ## Install
 
@@ -43,7 +48,7 @@ The Homebrew install pulls a prebuilt binary — no Go required.
 Requires Go 1.26+ if you build from source instead.
 
 **macOS Gatekeeper note.** The Homebrew-installed binary is not
-Apple-signed/notarized (v0.2.0 ships unsigned to keep the personal
+Apple-signed/notarized (it ships unsigned to keep the personal
 project free of Apple Developer Program dues). The first time you
 run `brag` after `brew install`, macOS may say *"Apple could not
 verify 'brag' is free of malware…"* and refuse to execute it.
@@ -159,6 +164,7 @@ brag impact --quarter                   # this quarter's impact, by initiative
 brag wrapped 2026                       # shareable year-in-review; also: brag wrapped 2026 Q3
 brag coverage --year                    # agent-vs-human provenance share + monthly trend
 brag story --audience exec --quarter    # audience-shaped narrative bundle for an LLM
+brag spark                              # sparkline pulse of recent activity (Total + per-project)
 ```
 
 ## Where the data lives

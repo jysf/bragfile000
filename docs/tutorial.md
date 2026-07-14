@@ -181,6 +181,7 @@ brag list --since 2026-01-01                    # since a specific date
 brag list --day today                           # just today (local calendar day)
 brag list --day yesterday                       # just yesterday
 brag list --day 2026-07-05                       # exactly one local calendar day
+brag list --author agent                        # only agent-authored entries
 ```
 
 - `--tag` matches a single tag as a comma-separated token — `--tag
@@ -194,6 +195,8 @@ brag list --day 2026-07-05                       # exactly one local calendar da
   window, so it's the clean way to ask "just yesterday" without a `jq`
   upper bound. It's mutually exclusive with `--since` and composes with
   the other filters.
+- `--author` is `human` or `agent`, classifying each entry on its
+  `agent:`/`model:` provenance tags (see §11 for how those get stamped).
 - `--limit N` caps the row count.
 - Multiple filters combine via AND.
 
@@ -637,6 +640,31 @@ in your story-profiles directory to add one. Pipe it into an LLM to finish:
 brag story --audience exec --quarter | claude "weave these threads into one headline arc"
 ```
 
+### A quick pulse: `brag spark`
+
+When you just want a glance — *what does my last stretch look like?* — `brag
+spark` prints a sparklines-only pulse: a **Total** row plus a row per project,
+each a compact `▁▂▃▄▅▆▇█` sparkline over a rolling recent window with the entry
+count in parentheses. Rule-based and deterministic, no LLM — a lighter touch
+than the full digests above.
+
+```bash
+brag spark                                  # last 28 days, 4 weekly bars (default)
+brag spark --week                           # last 7 days, one bar per day
+brag spark --quarter --project alpha        # 13 weekly bars: Total vs alpha
+brag spark --month --format json            # raw per-bucket counts, JSON envelope
+```
+
+Exactly one window may be given and they are mutually exclusive: `--week` (7
+daily bars), `--month` (4 weekly bars, the default), `--quarter` (13 weekly
+bars). The window is **rolling** (it ends now), not a calendar period. Every row
+shares the same axis so bar positions line up; each row is scaled to its own
+min–max shape, with the parenthesized count carrying the magnitude. By default
+the Total plus the top 8 projects by entry count are shown; `--project <name>`
+narrows the by-project rows to one (Total still spans everything). The sparkline
+is markdown-only — `--format json` carries raw per-bucket counts, and
+`--no-spark` (or a `NO_COLOR` env var) drops the glyphs for raw counts too.
+
 ### Tag taxonomy
 
 See every tag you've used, with usage counts:
@@ -926,7 +954,7 @@ see §3 above.
 
 ## 9. Power-user escape hatch
 
-Everything in this tutorial is shipped in v0.2.0. For corner cases
+Everything in this tutorial is shipped as of v0.5.1. For corner cases
 `brag list` doesn't surface, `sqlite3 ~/.bragfile/db.sqlite` is your
 escape hatch.
 

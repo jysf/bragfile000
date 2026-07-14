@@ -25,12 +25,12 @@ graph TD
     Main --> Config[internal/config<br/>DB path: flag → env → default]
     Main --> Capture[Capture<br/>add / add --json / edit]
     Main --> Retrieve[Retrieve<br/>list / show / search]
-    Main --> Digest[Digest<br/>summary / review / stats]
+    Main --> Digest[Digest<br/>summary / review / stats / impact<br/>/ wrapped / coverage / story / spark]
     Main --> ExportCmd[Export<br/>export --format md / json]
     Main --> DeleteCmd[Delete<br/>delete + y/N confirm]
     Main --> Completion[Completion<br/>completion zsh / bash / fish]
     Main --> Tags[Tags<br/>tags / tag rename / tag merge]
-    Main --> Project[Project<br/>project new / list / show / status<br/>/ here / edit / archive / delete]
+    Main --> Project[Project<br/>project new / ensure / list / show / status<br/>/ here / edit / archive / delete]
     Tags --> Store
     Project --> Store
 
