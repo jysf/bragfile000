@@ -105,8 +105,8 @@ as a brag?" is always better than posting noise.
 |---|---|---|
 | `-t` / `--title` | **Required** | Short, specific, action-verb. The headline. |
 | `-p` / `--project` | Strongly recommended | Work context: repo name, client, team, initiative. Enables `brag list --project X` filtering. |
-| `-k` / `--type` | Recommended | Category: `shipped`, `fixed`, `learned`, `documented`, `mentored`, `unblocked`, `proposed`, `reviewed`, etc. Free-form — pick whatever's useful. |
-| `-T` / `--tags` | Recommended | 2–4 comma-joined topic tags for future filtering. Example: `auth,perf,backend`. |
+| `-k` / `--type` | Recommended | Category. **Always set one, from this small set:** `shipped` (user-facing change merged/deployed), `fixed` (real debug-and-repair), `milestone` (stage/project close, version cut), `learned` (a measured insight applied to something specific), `planning` (framing/design/decision work). Keep the set small — a category that only ever describes one entry is a **tag**, not a type (use `type: shipped` + `tags: hardening`). |
+| `-T` / `--tags` | Recommended | 2–4 comma-joined topic tags for future filtering. Example: `auth,perf,backend`. **Lowercase kebab-case, always** — filters are exact-match, so `PROJ-002` and `proj-002` are different tags and a query for one silently misses the other. **Don't restate the type** — no `ship`/`shipped`/`release` tag; let the `type` field carry "done." |
 | `-i` / `--impact` | **Important** | The concrete outcome: metric, quote, unlock, business result. **This is the most load-bearing field for reviews.** |
 | `-d` / `--description` | Optional | Free-form narrative. What you did, why it mattered, relevant context. Use single quotes to embed `"`. |
 
@@ -275,13 +275,13 @@ brag add \
   -d 'Replaced per-request JOIN between users and sessions with a Redis-backed session cache. Changed query pattern in internal/auth/session.go and rolled out behind feature flag over a week. Full postmortem in doc-042.'
 ```
 
-### Example 2 — documented
+### Example 2 — shipped (a documentation artifact)
 
 ```bash
 brag add \
   -t "Authored migration guide that shipped 3 teams from legacy SOAP to internal gRPC service" \
   -p "platform-infra" \
-  -k "documented" \
+  -k "shipped" \
   -T "documentation,grpc,migration" \
   -i "Three teams (Fulfillment, Returns, Inventory) migrated within the quarter, eliminating the last SOAP services in the fleet." \
   -d 'Wrote comprehensive migration guide with per-language examples (Java, Python, Go) and a runbook for cutover. Ran 2 office-hour sessions answering team-specific questions. Published in internal wiki at /docs/soap-to-grpc.'
@@ -315,10 +315,18 @@ brag add -t "..." -i "Improved things"
 
 # ❌ Non-specific description
 brag add -t "..." -d "worked on stuff"
+
+# ❌ Flag leaked into the title — pass -p as a real flag, not inside -t.
+#    Here "-p my-project" becomes part of the title string.
+brag add -t "-p my-project Shipped the thing"
+# ✅ Correct: the flag is a flag, the title is just the title.
+brag add -p my-project -t "Shipped the thing"
 ```
 
-The pattern in all of these: **no specific outcome.** A brag
+The pattern in the first four: **no specific outcome.** A brag
 entry without a specific outcome is a reminder, not an artifact.
+The last one is a mechanical trap — before submitting, re-read the
+title: if it starts with `-`, a flag leaked in.
 
 ---
 
