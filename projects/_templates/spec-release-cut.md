@@ -132,6 +132,12 @@ Gotchas, style preferences, reuse opportunities.
 - **Branch:**
 - **PR (if applicable):**
 - **All acceptance criteria met?** yes/no
+- **Cut record (one line):** the user-facing outcome now live, plus the clean-
+  upgrade check that confirms the publish landed — the one line a review or brag
+  would quote. E.g. *"v0.4.0→v0.5.0 `brew upgrade` clean; MCP-install now
+  first-class; prod DB opened, 189 entries intact."* If the release is pure infra
+  with no user-facing change, say so — a real, greppable outcome, not a blank.
+  Filled once the tag is published.
 - **New decisions emitted:**
   - `DEC-NNN` — <title> (if any)
 - **Deviations from spec:**
@@ -167,3 +173,10 @@ from the process-focused build reflection above.*
 
 3. **Is there a follow-up spec I should write now before I forget?**
    — <answer>
+
+4. **What can a user do now that they couldn't before?** — one sentence,
+   before → after; quote the confirming number if one exists, name the outcome
+   if not. Write `none` if this release has no user-visible change — that is a
+   real, greppable result, not a blank. Pairs with the Cut record above (the
+   confirmed publish); this is the line a brag's `impact` field is transcribed
+   from.

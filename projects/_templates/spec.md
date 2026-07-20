@@ -150,3 +150,11 @@ from the process-focused build reflection above.*
 
 3. **Is there a follow-up spec I should write now before I forget?**
    — <answer>
+
+4. **What can a user do now that they couldn't before?** — one sentence,
+   before → after; quote the confirming number if one exists, name the outcome
+   if not. Write `none` if this spec has no user-visible outcome — that is a
+   real, greppable result, not a blank. This is the line a brag's `impact` field
+   is transcribed from, and both halves are already written above (## Context is
+   the before, ## Goal is the after): confirm the prediction, don't reconstruct
+   it from memory.
