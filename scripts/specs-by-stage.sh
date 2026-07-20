@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# scripts/specs-by-stage.sh — print all specs grouped by stage with
-# ship dates and complexity sizes, derived from the stage files'
+# scripts/specs-by-stage.sh — print all specs grouped by project and stage
+# with ship dates and complexity sizes, derived from the stage files'
 # Spec Backlog sections.
 #
 # Usage: just specs-by-stage [--no-names]   (or ./scripts/specs-by-stage.sh)
@@ -63,7 +63,19 @@ total_shipped=0
 total_deferred=0
 total_pending=0
 
+prev_proj=""
+
 for stage in "${stages[@]}"; do
+    # Which project owns this stage? The glob sorts by path, so all of a
+    # project's stages are contiguous — print a banner when the project changes.
+    proj_dir=$(basename "$(dirname "$(dirname "$stage")")")
+    proj_id=$(printf '%s' "$proj_dir" | grep -oE 'PROJ-[0-9]+')
+    proj_name=$(printf '%s' "$proj_dir" | sed -E 's/^PROJ-[0-9]+-//' | tr '-' ' ')
+    if [ "$proj_dir" != "$prev_proj" ]; then
+        printf "\n########## %s — %s ##########\n" "$proj_id" "$proj_name"
+        prev_proj="$proj_dir"
+    fi
+
     sname=$(basename "$stage" .md | cut -d- -f1-2)
     sst=$(grep -E "^  status:" "$stage" | head -1 | awk '{print $2}')
     sdate=$(grep -E "^shipped_at:" "$stage" | awk '{print $2}')
