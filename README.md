@@ -26,12 +26,12 @@ brew install jysf/tap/bragfile
 brag --version
 ```
 
-> **Homebrew 6.0+ note.** bragfile ships from a third-party tap. Newer Homebrew
-> may refuse to load an untrusted third-party tap on first install (*"Refusing
-> to load … from untrusted tap"*). This gate has historically applied to
-> **casks**; bragfile is now a **formula** (DEC-040), which may not trigger it.
-> If you do hit it, run the one-time trust command Homebrew prints in the error,
-> then re-run the install.
+> bragfile is distributed as a Homebrew **formula** (DEC-040), not a cask — so
+> installing needs no code-signing, no Gatekeeper "Apple could not verify…"
+> prompt, no `xattr`, and no `brew trust` step, even though the binary is
+> unsigned. (Being a formula is what avoids Apple Developer Program dues without
+> the signing friction a cask would require; the `crustyimg` formula on the same
+> tap installs the same clean way.)
 
 From source (works today):
 
@@ -44,12 +44,6 @@ brag --version               # confirm ~/go/bin is on $PATH
 
 The Homebrew install pulls a prebuilt binary — no Go required.
 Requires Go 1.26+ if you build from source instead.
-
-> bragfile is distributed as a Homebrew **formula** (DEC-040), not a cask.
-> Formula-installed binaries are not Gatekeeper-quarantined, so there is **no
-> "Apple could not verify…" prompt and no `xattr` step** — even though the
-> binary is unsigned. (This is why it's a formula: it avoids Apple Developer
-> Program dues without the signing friction a cask would require.)
 
 - **Claude Code plugin:** `claude plugin marketplace add jysf/bragfile000`
   then `claude plugin install brag@bragfile` — see `plugin/README.md`.

@@ -4,7 +4,7 @@
 insight:
   id: DEC-040
   type: decision
-  confidence: 0.82
+  confidence: 0.9
   audience:
     - developer
     - agent
@@ -123,16 +123,21 @@ version. Revisit if: (a) goreleaser removes `brews:` → switch to a hand-mainta
 tap formula; (b) a large non-Homebrew, non-Go audience emerges → reconsider a
 signed+notarized cask for that channel specifically.
 
-**Open question (verify at the clean-host cut):** does a *formula* from
-`jysf/homebrew-tap` trigger Homebrew's untrusted-tap gate, and what is the exact
-trust command? The gate and its `brew trust --cask …` command were researched
-against a **cask** (AGENTS.md §4); a formula may not trigger it. Docs currently
-tell the user to run whatever command Homebrew prints, rather than asserting one.
+**Open question — resolved by precedent.** Would a *formula* from
+`jysf/homebrew-tap` trigger Homebrew's untrusted-tap gate (the gate + its
+`brew trust --cask …` command were researched against a **cask**, AGENTS.md §4)?
+**No, per a live precedent:** `crustyimg` is already a binary formula on this same
+tap (`Formula/crustyimg.rb`) and installs with **neither** a Gatekeeper prompt
+**nor** a trust step. So bragfile-as-formula on this tap needs no `brew trust` and
+no `xattr`. bragfile's own clean-host cut is final confirmation, but the risk is
+now precedented-away, not open.
 
-Confidence: 0.82. The mechanism is well-understood and established Homebrew
-behavior (formulae are not quarantined; casks are). Residual uncertainty is the
-longevity of goreleaser's `brews:` support and whether a non-Go/non-brew audience
-ever appears — both have named fallbacks above, so neither blocks the decision.
+Confidence: 0.9. The mechanism is established Homebrew behavior (formulae are not
+quarantined; casks are), and it has a live same-tap precedent: `crustyimg` is a
+binary formula on `jysf/homebrew-tap` that installs with no Gatekeeper prompt and
+no trust step. Residual uncertainty is only the longevity of goreleaser's `brews:`
+support and whether a non-Go/non-brew audience ever appears — both have named
+fallbacks above, so neither blocks the decision.
 
 ## References
 
@@ -140,4 +145,6 @@ ever appears — both have named fallbacks above, so neither blocks the decision
 - Related decisions: DEC-001 (no-cgo driver — the reason the compile-based paths
   are costly)
 - Code: `.goreleaser.yaml`; commit `1582572` (the undocumented cask switch)
+- Precedent: `jysf/homebrew-tap` `Formula/crustyimg.rb` — a binary formula on the
+  same tap that installs with no Gatekeeper prompt and no trust step
 - Docs: `docs/distribution-decisions.md`, `AGENTS.md` §4, `docs/macos-notarization-checklist.md`

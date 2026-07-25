@@ -60,9 +60,9 @@ prompt.
 
 - **Files modified:**
   - `.goreleaser.yaml` — `homebrew_casks:` → `brews:` on `homebrew-tap` (block below)
-  - `README.md` — new install (`jysf/tap/bragfile`); remove the `xattr` step
-    (obsolete: formulae aren't quarantined); soften the tap-trust note (may not
-    fire for a formula — tell the user to run whatever Homebrew prints)
+  - `README.md` — new install (`jysf/tap/bragfile`); remove the `xattr` step and
+    the `brew trust` step (both obsolete for a formula — precedent: `crustyimg`
+    on the same tap installs with neither)
   - `CHANGELOG.md` — `[Unreleased]` entry for the cask→formula + tap move
   - `docs/macos-notarization-checklist.md` — superseded-by-DEC-040 banner (kept
     for the record; only relevant if a signed cask channel is ever revived)
@@ -80,17 +80,19 @@ prompt.
 - [ ] `goreleaser check` passes; the `brews:` deprecation warning is present and
       **accepted** (documented in the CHANGELOG/PR per DEC-040 — a nudge, not a wall).
 - [ ] On a clean Mac: `brew install jysf/tap/bragfile`, then `brag --version` →
-      **no Gatekeeper prompt**, prints the tagged version. (If Homebrew demands
-      tap trust, run the command it prints — see the open question below.)
-- [ ] README no longer instructs `xattr`; the tap-trust note is present but
-      softened (formula may not trigger the gate).
+      **no Gatekeeper prompt, no trust step**, prints the tagged version
+      (matching the `crustyimg` formula precedent on the same tap).
+- [ ] README no longer instructs `xattr` or `brew trust`; it asserts a clean
+      formula install.
 - [ ] No `homebrew_casks:` remains in `.goreleaser.yaml`; the tap is `homebrew-tap`.
 
 ## Failing Tests
 
 Release-cut-style doc/harness assertions (there is no Go surface here):
-- **`scripts/test-docs.sh`** — assert README §Install contains `brew trust` and
-  does **not** contain `xattr -dr com.apple.quarantine`.
+- **`scripts/test-docs.sh`** — assert `.goreleaser.yaml` declares `brews:` (not
+  `homebrew_casks:`) on `homebrew-tap` (L6/L7/L11); README install literal is
+  `brew install jysf/tap/bragfile`; README §Install does **not** contain
+  `xattr -dr com.apple.quarantine`.
 
 ## Implementation Context
 
@@ -134,11 +136,11 @@ added `binaries: [brag]`. Reverting restores all three.)
 - Fallback (not this spec): if a future goreleaser removes `brews:`, hand-maintain
   a binary formula (`url` + `sha256` + `bin.install "brag"`) in the tap — still
   unquarantined, still no signing.
-- **Open question — verify at the clean-host cut (DEC-040):** does a *formula*
-  from `jysf/homebrew-tap` trigger Homebrew's untrusted-tap gate at all, and what
-  is the exact trust command? The gate was researched against a cask; a formula
-  may install with no trust step. Do not hard-code a `brew trust --cask …`
-  command in the docs — the README tells the user to run whatever Homebrew prints.
+- **Tap-trust — resolved by precedent (DEC-040):** `crustyimg`, a binary formula
+  on this same `jysf/homebrew-tap`, installs with no trust step and no Gatekeeper
+  prompt. So a formula from this tap needs neither; docs assert a clean
+  `brew install` with no `brew trust`. bragfile's own clean-host cut is final
+  confirmation, but this is precedented, not open.
 
 ---
 
