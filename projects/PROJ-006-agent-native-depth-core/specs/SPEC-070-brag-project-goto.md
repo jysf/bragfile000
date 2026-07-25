@@ -25,7 +25,7 @@ agents:
   created_at: 2026-07-16
 
 references:
-  decisions: []                    # will emit DEC-040 (multi-location primary policy)
+  decisions: []                    # will emit DEC-041 (multi-location primary policy)
   constraints: [one-spec-per-pr]
   related_specs: []                # SPEC-031 (project here / ProjectForPath), SPEC-032 (cwd auto-fill), SPEC-024 (completion / shell-script generation)
 ---
@@ -98,7 +98,7 @@ directory to stdout (exit 1 if unknown or location-less), and `brag shell-init
 - [ ] Project exists but has **no** registered location → exit 1, a distinct
       stderr message, stdout empty.
 - [ ] Multi-location project → prints the **primary** (first-registered) path
-      per DEC-040; `--all` lists every location, one per line, exit 0.
+      per DEC-041; `--all` lists every location, one per line, exit 0.
 - [ ] `brag shell-init zsh|bash|fish` prints a syntactically valid `bragcd`
       function for that shell to stdout; an unknown shell → exit 1 (user error).
 - [ ] The emitted `bragcd` function, sourced, changes directory to the project
@@ -113,7 +113,7 @@ Written during **design**, before build.
   - `"goto by id resolves same as name"`
   - `"goto unknown project → exit 1, stderr set, stdout empty"`
   - `"goto project with zero locations → exit 1, distinct message"`
-  - `"goto multi-location prints first-registered (DEC-040)"`
+  - `"goto multi-location prints first-registered (DEC-041)"`
   - `"goto --all lists every location, one per line"`
 - **`internal/cli/shell_init_test.go`** (golden per shell)
   - `"shell-init zsh emits bragcd (golden)"` / bash / fish
@@ -123,7 +123,7 @@ Written during **design**, before build.
 
 ### Decisions that apply / to emit
 
-- **DEC-040 (to emit) — multi-location primary policy.** When a project has
+- **DEC-041 (to emit) — multi-location primary policy.** When a project has
   more than one location, `goto` returns the **first-registered** (lowest
   `project_locations.position`/rowid). Rationale: deterministic, matches the
   `new --path` seed, zero prompts, keeps the stdout-is-just-a-path contract
@@ -171,7 +171,7 @@ Written during **design**, before build.
 - **PR (if applicable):**
 - **All acceptance criteria met?** yes/no
 - **New decisions emitted:**
-  - `DEC-040` — multi-location primary policy (if emitted as specified)
+  - `DEC-041` — multi-location primary policy (if emitted as specified)
 - **Deviations from spec:**
 - **Follow-up work identified:**
 
