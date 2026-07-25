@@ -41,6 +41,19 @@ The takeaway that keeps getting relearned: **notarization ≠ tap-trust ≠
 artifact-type.** Only leaving Homebrew entirely (`go install`, install script)
 clears *both* gates without paying for signing.
 
+## GUI apps invert this (future — decided ahead of time)
+
+The matrix above is for a **CLI binary**, which can ship as a formula and dodge
+signing. A **GUI app** (`.app` bundle) cannot: apps are distributed as Homebrew
+**casks** (quarantined), and any `.app` downloaded and launched from Finder is
+Gatekeeper-checked regardless of channel — there is no formula escape hatch. So a
+GUI app **genuinely needs Developer ID signing + notarization**
+(`docs/macos-notarization-checklist.md` stops being hypothetical). That is the
+case that justifies enrolling in the **Apple Developer Program** ($99/yr, one
+account covering all your tools); once enrolled, signing is available to
+everything. Decide this at design time of the first GUI app, not at its release
+cut — it's a known input now, not a surprise later.
+
 ## Before merge
 
 - [ ] All four framing questions answered in the PR/spec.
