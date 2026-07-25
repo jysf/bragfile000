@@ -134,6 +134,14 @@ For personal-scale CLI distribution, default to pattern 1.
 
 **Release specs must include the runtime/operational pre-flight checklist** (the release-cut spec template, `projects/_templates/spec-release-cut.md`). Every production escape in PROJ-001..003 was operational/runtime (goreleaser dual-tag, Gatekeeper, brew-trust, prod-DB migration); the checklist makes each one a ticked design-time item, not a re-learned prod surprise.
 
+**Packaging-shape changes are decisions, not hygiene** (lesson earned retroactively from the v0.1.0 formula→cask switch — SPEC-023 verify punch-list, commit `1582572`). That switch was made to silence a goreleaser deprecation warning: framed as a lint fix, a four-line YAML diff. It silently changed the artifact's OS-trust path — casks are quarantined by Gatekeeper, formulae are not — and the entire signing/notarization pain (and the deferred $99/yr backlog item) traces to that one unreviewed line. The cost was discovered on a clean-host smoke test ~two weeks later, never at decision time. The failure was not a knowledge gap (that casks quarantine is not obscure); it was a *scrutiny* gap — the change was categorized by its trigger (a warning) instead of its consequence (a new trust path), and it fell below every design/DEC safeguard because it lived in a verify punch-list.
+
+Rule: **any diff that touches the distribution mechanism is a decision requiring a downsides pass — regardless of how small the diff or how mechanical its framing.** The distribution mechanism = the goreleaser packaging blocks (`brews:`, `homebrew_casks:`, `nfpms:`, `archives:`, `signs:`/`notarize:`), the tap/channel type, or the install path. Such a change must run the distribution-decision checklist (`docs/distribution-decisions.md`) — at minimum its clean-host-trust category — *before merge*, even inside a verify punch-list.
+
+- **Deprecation reclassification.** A deprecation migration that changes an artifact's **type or trust path** is a decision (run the checklist). A deprecation fix that preserves the artifact and its behavior (a renamed field, byte-identical output) is hygiene. Categorize by consequence, not by the trigger that prompted it.
+- **Why a tripwire, not advice.** Agents (and tired humans) scope work to the task as stated and anchor scrutiny to diff size, so a "resolve deprecation warnings" task resolves them correctly and never widens to "should I change how this ships?". The check must bind to the *file/field touched*, not to anyone remembering to widen scope — a CI flag on any packaging-block diff is the agent-proof form.
+- **Disproportion is a signal.** When the fix to a problem is wildly out of scale with the problem (notarization: $99/yr + certs + Apple latency, to let a stranger run a CLI), re-examine the upstream decision that created it before paying the remediation.
+
 ---
 
 ## 5. Directory Structure
