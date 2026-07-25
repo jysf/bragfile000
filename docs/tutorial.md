@@ -1033,7 +1033,7 @@ claude plugin install brag@bragfile
 ```
 
 The plugin runs the `brag` binary from your `PATH`, so install it first
-(`brew install jysf/bragfile/bragfile`). The capture-nudge hook only
+(`brew install jysf/tap/bragfile`). The capture-nudge hook only
 suggests a brag after a session that plausibly shipped something, never
 posts on its own, and can be silenced with `BRAG_CAPTURE_NUDGE=off`. See
 [`BRAG.md`](../BRAG.md) and [`plugin/README.md`](../plugin/README.md) for

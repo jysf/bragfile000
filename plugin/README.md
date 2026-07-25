@@ -15,8 +15,9 @@ session:
 The plugin's MCP server runs the `brag` binary from your `PATH`. Install it
 first:
 
-    brew trust --cask jysf/bragfile/bragfile   # one-time (Homebrew 6.0+)
-    brew install jysf/bragfile/bragfile
+    brew install jysf/tap/bragfile
+    # (Homebrew 6.0+ may ask you to trust the tap on first install — run the
+    #  one-time command it prints, then re-run install.)
 
 Verify: `brag --version`.
 

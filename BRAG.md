@@ -207,7 +207,7 @@ brag entry, but you still review and approve before `brag add
 The three integration pieces above — the slash-command, a session-capture
 nudge, and a typed MCP write surface — ship as one Claude Code plugin:
 
-    brew install jysf/bragfile/bragfile      # the binary the MCP server runs
+    brew install jysf/tap/bragfile      # the binary the MCP server runs
     claude plugin marketplace add jysf/bragfile000
     claude plugin install brag@bragfile
 

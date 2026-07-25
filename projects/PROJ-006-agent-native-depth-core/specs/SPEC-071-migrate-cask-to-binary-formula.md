@@ -44,37 +44,47 @@ there is **no** version-stamping code change and **no** compile cost.
 ## Goal
 
 Replace the `homebrew_casks:` block in `.goreleaser.yaml` with a binary `brews:`
-formula, update the docs to drop the Gatekeeper `xattr` workaround, and verify a
-clean-host `brew install` runs with no Gatekeeper prompt.
+formula on the **shared `jysf/homebrew-tap`** (install `jysf/tap/bragfile`),
+update every live install doc to drop the Gatekeeper `xattr` workaround and the
+old tap/command, and verify a clean-host `brew install` runs with no Gatekeeper
+prompt.
 
 ## Inputs
 
 - **Files to read:** `.goreleaser.yaml` (the `homebrew_casks:` block);
   `README.md` §Install (the `xattr` note + brew-trust note); `AGENTS.md` §4
   (Gatekeeper + brew-trust addenda); `docs/macos-notarization-checklist.md`
-- **Related code paths:** the tap repo `github.com/jysf/homebrew-bragfile`
+- **Related code paths:** the tap repo `github.com/jysf/homebrew-tap`
 
 ## Outputs
 
 - **Files modified:**
-  - `.goreleaser.yaml` — `homebrew_casks:` → `brews:` (block below)
-  - `README.md` — remove the `xattr -dr com.apple.quarantine` install step
-    (obsolete: formulae aren't quarantined); **keep** the one-time
-    `brew trust` step (tap-trust gate is unchanged)
-  - `CHANGELOG.md` — note the distribution change under the next version
-  - `docs/macos-notarization-checklist.md` — mark superseded-by-DEC-040 (kept for
-    the record; only relevant if a signed cask channel is ever revived)
+  - `.goreleaser.yaml` — `homebrew_casks:` → `brews:` on `homebrew-tap` (block below)
+  - `README.md` — new install (`jysf/tap/bragfile`); remove the `xattr` step
+    (obsolete: formulae aren't quarantined); soften the tap-trust note (may not
+    fire for a formula — tell the user to run whatever Homebrew prints)
+  - `CHANGELOG.md` — `[Unreleased]` entry for the cask→formula + tap move
+  - `docs/macos-notarization-checklist.md` — superseded-by-DEC-040 banner (kept
+    for the record; only relevant if a signed cask channel is ever revived)
+  - Live install references retargeted to `jysf/tap/bragfile` / `homebrew-tap`:
+    `AGENTS.md` (§3 Distribution, §4 addenda, glossary), `.repo-context.yaml`,
+    `.github/workflows/release.yml`, `plugin/README.md`, `BRAG.md`,
+    `docs/architecture.md`, `docs/for-ai-agents.md`, `docs/tutorial.md`
+  - **NOT touched (historical record):** past `CHANGELOG` version entries, the
+    closed `PROJ-001` backlog, and prior DECs (e.g. DEC-025) — they describe what
+    was true at the time
 - **Database changes:** none
 
 ## Acceptance Criteria
 
 - [ ] `goreleaser check` passes; the `brews:` deprecation warning is present and
       **accepted** (documented in the CHANGELOG/PR per DEC-040 — a nudge, not a wall).
-- [ ] On a clean Mac: `brew trust --cask jysf/bragfile/bragfile` (unchanged),
-      then `brew install jysf/bragfile/bragfile`, then `brag --version` → **no
-      Gatekeeper prompt**, prints the tagged version.
-- [ ] README no longer instructs `xattr`; still documents `brew trust`.
-- [ ] No `homebrew_casks:` remains in `.goreleaser.yaml`.
+- [ ] On a clean Mac: `brew install jysf/tap/bragfile`, then `brag --version` →
+      **no Gatekeeper prompt**, prints the tagged version. (If Homebrew demands
+      tap trust, run the command it prints — see the open question below.)
+- [ ] README no longer instructs `xattr`; the tap-trust note is present but
+      softened (formula may not trigger the gate).
+- [ ] No `homebrew_casks:` remains in `.goreleaser.yaml`; the tap is `homebrew-tap`.
 
 ## Failing Tests
 
@@ -91,7 +101,7 @@ brews:
   - name: bragfile
     repository:
       owner: jysf
-      name: homebrew-bragfile
+      name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: "https://github.com/jysf/bragfile000"
@@ -124,6 +134,11 @@ added `binaries: [brag]`. Reverting restores all three.)
 - Fallback (not this spec): if a future goreleaser removes `brews:`, hand-maintain
   a binary formula (`url` + `sha256` + `bin.install "brag"`) in the tap — still
   unquarantined, still no signing.
+- **Open question — verify at the clean-host cut (DEC-040):** does a *formula*
+  from `jysf/homebrew-tap` trigger Homebrew's untrusted-tap gate at all, and what
+  is the exact trust command? The gate was researched against a cask; a formula
+  may install with no trust step. Do not hard-code a `brew trust --cask …`
+  command in the docs — the README tells the user to run whatever Homebrew prints.
 
 ---
 

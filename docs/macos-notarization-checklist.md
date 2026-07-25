@@ -1,6 +1,6 @@
 # macOS code signing + notarization — implementer checklist
 
-**Status:** deferred. See [backlog entry](../projects/PROJ-001-mvp/backlog.md#macos-code-signing--notarization-apple-developer-id) for "why deferred" + trigger conditions for revisiting.
+**Status:** superseded by [DEC-040](../decisions/DEC-040-distribution-binary-formula-over-cask.md) (2026-07-16). bragfile now ships as a Homebrew **formula**, which is not Gatekeeper-quarantined — so notarization is no longer needed to avoid the "Apple could not verify…" prompt. This checklist is retained only for the case where a signed **cask** channel is ever revived (e.g. a non-Homebrew, non-Go audience). Original status was: deferred — see the [backlog entry](../projects/PROJ-001-mvp/backlog.md#macos-code-signing--notarization-apple-developer-id).
 
 **Why this file exists:** the backlog entry captures the *decision* to defer; this file captures the *step-by-step actions* a future implementer (you, or a fresh agent session) walks through to actually do the work. Pick up cold from here.
 

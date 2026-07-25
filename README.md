@@ -10,7 +10,7 @@ sync, no account.
 > **Status:** v0.5.1 shipped. Capture, retrieve, search, export,
 > weekly/monthly/quarterly digests, tags, and cwd-aware projects are all
 > here — and a local MCP server now lets AI coding agents capture and read
-> entries as typed tool calls. `brew install jysf/bragfile/bragfile` installs
+> entries as typed tool calls. `brew install jysf/tap/bragfile` installs
 > the binary on macOS.
 >
 > Working with an AI agent? `brag mcp install` wires brag into Claude Code,
@@ -22,18 +22,16 @@ sync, no account.
 Homebrew (recommended):
 
 ```bash
-brew install jysf/bragfile/bragfile
+brew install jysf/tap/bragfile
 brag --version
 ```
 
-> **Homebrew 6.0+ note.** bragfile is distributed as a cask from a
-> third-party tap, and newer Homebrew refuses to load such casks until
-> you trust the tap once (you'll see *"Refusing to load cask … from
-> untrusted tap"*). If that happens, run this one-time, per-machine step,
-> then re-run the install:
-> ```bash
-> brew trust --cask jysf/bragfile/bragfile
-> ```
+> **Homebrew 6.0+ note.** bragfile ships from a third-party tap. Newer Homebrew
+> may refuse to load an untrusted third-party tap on first install (*"Refusing
+> to load … from untrusted tap"*). This gate has historically applied to
+> **casks**; bragfile is now a **formula** (DEC-040), which may not trigger it.
+> If you do hit it, run the one-time trust command Homebrew prints in the error,
+> then re-run the install.
 
 From source (works today):
 
@@ -47,21 +45,11 @@ brag --version               # confirm ~/go/bin is on $PATH
 The Homebrew install pulls a prebuilt binary — no Go required.
 Requires Go 1.26+ if you build from source instead.
 
-**macOS Gatekeeper note.** The Homebrew-installed binary is not
-Apple-signed/notarized (it ships unsigned to keep the personal
-project free of Apple Developer Program dues). The first time you
-run `brag` after `brew install`, macOS may say *"Apple could not
-verify 'brag' is free of malware…"* and refuse to execute it.
-Clear the quarantine attribute once:
-
-```bash
-sudo xattr -dr com.apple.quarantine /opt/homebrew/Caskroom/bragfile/
-```
-
-Then `brag --version` works normally. You only need to do this
-once per `brew install` / `brew upgrade`. If you'd rather avoid
-the warning entirely, build from source instead — locally-built
-binaries don't trigger Gatekeeper.
+> bragfile is distributed as a Homebrew **formula** (DEC-040), not a cask.
+> Formula-installed binaries are not Gatekeeper-quarantined, so there is **no
+> "Apple could not verify…" prompt and no `xattr` step** — even though the
+> binary is unsigned. (This is why it's a formula: it avoids Apple Developer
+> Program dues without the signing friction a cask would require.)
 
 - **Claude Code plugin:** `claude plugin marketplace add jysf/bragfile000`
   then `claude plugin install brag@bragfile` — see `plugin/README.md`.

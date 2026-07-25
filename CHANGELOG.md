@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Distribution: Homebrew cask → binary formula, on the shared `jysf/homebrew-tap`**
+  (DEC-040). Install is now `brew install jysf/tap/bragfile`. Because Homebrew
+  formulae are not Gatekeeper-quarantined, **the macOS "Apple could not verify…"
+  prompt and the `xattr -dr com.apple.quarantine` workaround are gone** — no code
+  signing required. `--version` is unaffected (still the ldflags-stamped release
+  binary). This reverses the undocumented v0.1.0 cask switch that introduced the
+  signing friction. Note: `goreleaser` emits a `brews:` deprecation warning,
+  accepted deliberately per DEC-040. The old per-project `homebrew-bragfile` tap
+  is retired.
+
 ## [0.5.1] - 2026-07-11
 
 A small ergonomics release. **No schema change, no migration.**

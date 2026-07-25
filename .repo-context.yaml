@@ -27,7 +27,7 @@ spec:
     runtime: "go-1.26"                # latest stable as of project start (2026-04-19)
     framework: "cobra"
     database: "sqlite-3 (embedded, via modernc.org/sqlite — pure Go, no CGO)"
-    hosting: "local CLI; distributed via homebrew tap github.com/jysf/homebrew-bragfile"
+    hosting: "local CLI; distributed via homebrew tap github.com/jysf/homebrew-tap"
 
   # Standard paths; do not change without also updating AGENTS.md.
   paths:

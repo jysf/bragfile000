@@ -142,8 +142,8 @@ iterate rows → format → print.
 There is none. `brag` is a single static binary that runs on the user's
 machine. Distribution (STAGE-005) uses goreleaser to produce macOS
 (arm64, amd64) and Linux (arm64, amd64) binaries; a homebrew tap at
-`github.com/jysf/homebrew-bragfile` ships the macOS ones via
-`brew install jysf/bragfile/bragfile`.
+`github.com/jysf/homebrew-tap` ships the macOS ones via
+`brew install jysf/tap/bragfile`.
 
 ## References
 

@@ -147,7 +147,7 @@ if [ ! -f README.md ]; then
 else
     has_heading=no; has_brew=no; has_local=no
     if grep -E -q '^## .*[Ii]nstall' README.md; then has_heading=yes; fi
-    if grep -F -q 'brew install jysf/bragfile/bragfile' README.md; then has_brew=yes; fi
+    if grep -F -q 'brew install jysf/tap/bragfile' README.md; then has_brew=yes; fi
     if grep -F -q 'go install ./cmd/brag' README.md || grep -F -q 'just install' README.md; then
         has_local=yes
     fi
@@ -624,19 +624,19 @@ assert_contains_literal "L4b" "$GORELEASER" "- linux"
 assert_contains_literal "L5a" "$GORELEASER" "- amd64"
 assert_contains_literal "L5b" "$GORELEASER" "- arm64"
 
-# L6 — declares a top-level `homebrew_casks:` block
+# L6 — declares a top-level `brews:` block (binary formula, not a cask — DEC-040)
 if [ ! -f "$GORELEASER" ]; then
     fail "L6" "$GORELEASER does not exist"
-elif grep -E -q '^homebrew_casks:[[:space:]]*$' "$GORELEASER"; then
+elif grep -E -q '^brews:[[:space:]]*$' "$GORELEASER"; then
     ok "L6"
 else
-    fail "L6" "$GORELEASER does not declare a top-level 'homebrew_casks:' block"
+    fail "L6" "$GORELEASER does not declare a top-level 'brews:' block"
 fi
 
-# L7 — homebrew_casks block points at homebrew-bragfile
-assert_contains_literal "L7" "$GORELEASER" "name: homebrew-bragfile"
+# L7 — brews block points at the shared homebrew-tap (DEC-040)
+assert_contains_literal "L7" "$GORELEASER" "name: homebrew-tap"
 
-# L8 — homebrew_casks block has `skip_upload: auto`
+# L8 — brews block has `skip_upload: auto`
 assert_contains_literal "L8" "$GORELEASER" "skip_upload: auto"
 
 # L9 — declares `-X main.version=` ldflag
@@ -645,8 +645,8 @@ assert_contains_literal "L9" "$GORELEASER" "-X main.version="
 # L10 — archive format is `tar.gz` (goreleaser v2 list form)
 assert_contains_literal "L10" "$GORELEASER" "formats: [tar.gz]"
 
-# L11 — homebrew_casks block symlinks the `brag` binary onto $PATH
-assert_contains_literal "L11" "$GORELEASER" "- brag"
+# L11 — brews block installs the `brag` binary onto $PATH
+assert_contains_literal "L11" "$GORELEASER" 'bin.install "brag"'
 
 # ===== Group M — .github/workflows/ci.yml shape =====
 

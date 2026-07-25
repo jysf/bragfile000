@@ -46,7 +46,7 @@ hand:
 {"mcpServers":{"brag":{"command":"brag","args":["mcp","serve"]}}}
 ```
 
-The `brag` binary must be on your `PATH` — `brew install jysf/bragfile/bragfile`
+The `brag` binary must be on your `PATH` — `brew install jysf/tap/bragfile`
 or `go install ./cmd/brag`. The client launches the server as `brag mcp serve`.
 
 (If you use Claude Code, the same tools also ship as a plugin —

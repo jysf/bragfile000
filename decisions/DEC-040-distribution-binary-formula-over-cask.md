@@ -39,8 +39,10 @@ tags:
 bragfile is distributed as a **binary Homebrew formula** (goreleaser installs the
 pre-built release binary via a `brews:`-generated formula), **not** a cask —
 because Homebrew does not quarantine formula-installed binaries, so no macOS
-code-signing or notarization is required. `go install` remains a valid secondary
-path for Go developers.
+code-signing or notarization is required. The formula lives on the **shared
+`jysf/homebrew-tap`** (install: `brew install jysf/tap/bragfile`), consolidating
+off the per-project `homebrew-bragfile` tap so one tap and one trust cover all
+jysf tools. `go install` remains a valid secondary path for Go developers.
 
 ## Context
 
@@ -109,17 +111,23 @@ question, and it is a cask problem.
   real signing/UX cost, which is the exact reasoning the original switch inverted.
   If goreleaser removes `brews:`, migrate to a hand-maintained tap formula (still
   a binary formula, still unquarantined) — tracked as the fallback.
-- **Neutral:** The one-time `brew trust --cask jysf/bragfile/bragfile` (tap-trust
-  gate) is unchanged — independent of artifact type. `go install` stays available
-  for Go devs. The cask is retired.
+- **Neutral:** The Homebrew tap-trust gate (if it fires) is independent of
+  artifact type. `go install` stays available for Go devs. The cask, and the
+  per-project `homebrew-bragfile` tap, are retired.
 
 ## Validation
 
-Right if: on a clean Mac, `brew install jysf/bragfile/bragfile` followed by
+Right if: on a clean Mac, `brew install jysf/tap/bragfile` followed by
 `brag --version` runs with **no Gatekeeper prompt** and prints the tagged
 version. Revisit if: (a) goreleaser removes `brews:` → switch to a hand-maintained
 tap formula; (b) a large non-Homebrew, non-Go audience emerges → reconsider a
 signed+notarized cask for that channel specifically.
+
+**Open question (verify at the clean-host cut):** does a *formula* from
+`jysf/homebrew-tap` trigger Homebrew's untrusted-tap gate, and what is the exact
+trust command? The gate and its `brew trust --cask …` command were researched
+against a **cask** (AGENTS.md §4); a formula may not trigger it. Docs currently
+tell the user to run whatever command Homebrew prints, rather than asserting one.
 
 Confidence: 0.82. The mechanism is well-understood and established Homebrew
 behavior (formulae are not quarantined; casks are). Residual uncertainty is the
