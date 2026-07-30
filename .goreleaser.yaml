@@ -60,18 +60,26 @@ changelog:
     - title: Other
       order: 999
 
-homebrew_casks:
+# Binary Homebrew FORMULA (not a cask) on the shared jysf tap — DEC-040.
+# Formulae are not Gatekeeper-quarantined, so no code-signing/notarization is
+# required (a cask would be). `brews:` emits a goreleaser deprecation warning;
+# we accept it deliberately (DEC-040) — a cosmetic warning beats a real signing
+# cost. If goreleaser removes `brews:`, hand-maintain the formula in the tap.
+brews:
   - name: bragfile
-    binaries:
-      - brag
     repository:
       owner: jysf
-      name: homebrew-bragfile
+      name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: "https://github.com/jysf/bragfile000"
     description: "Local-first Go CLI to capture and retrieve career-worthy moments."
+    license: "MIT"
     skip_upload: auto
+    test: |
+      system "#{bin}/brag", "--version"
+    install: |
+      bin.install "brag"
 
 release:
   github:

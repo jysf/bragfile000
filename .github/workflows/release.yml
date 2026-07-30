@@ -1,6 +1,6 @@
 # .github/workflows/release.yml — tag-push triggered release
 # Cross-compiles via goreleaser, publishes the GitHub release, pushes
-# the bragfile.rb formula to github.com/jysf/homebrew-bragfile on
+# the bragfile.rb formula to github.com/jysf/homebrew-tap on
 # stable tags (skipped automatically on prerelease tags via
 # brews.skip_upload: auto in .goreleaser.yaml).
 

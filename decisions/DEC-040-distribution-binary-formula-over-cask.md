@@ -4,7 +4,7 @@
 insight:
   id: DEC-040
   type: decision
-  confidence: 0.82
+  confidence: 0.9
   audience:
     - developer
     - agent
@@ -39,8 +39,10 @@ tags:
 bragfile is distributed as a **binary Homebrew formula** (goreleaser installs the
 pre-built release binary via a `brews:`-generated formula), **not** a cask —
 because Homebrew does not quarantine formula-installed binaries, so no macOS
-code-signing or notarization is required. `go install` remains a valid secondary
-path for Go developers.
+code-signing or notarization is required. The formula lives on the **shared
+`jysf/homebrew-tap`** (install: `brew install jysf/tap/bragfile`), consolidating
+off the per-project `homebrew-bragfile` tap so one tap and one trust cover all
+jysf tools. `go install` remains a valid secondary path for Go developers.
 
 ## Context
 
@@ -109,22 +111,33 @@ question, and it is a cask problem.
   real signing/UX cost, which is the exact reasoning the original switch inverted.
   If goreleaser removes `brews:`, migrate to a hand-maintained tap formula (still
   a binary formula, still unquarantined) — tracked as the fallback.
-- **Neutral:** The one-time `brew trust --cask jysf/bragfile/bragfile` (tap-trust
-  gate) is unchanged — independent of artifact type. `go install` stays available
-  for Go devs. The cask is retired.
+- **Neutral:** The Homebrew tap-trust gate (if it fires) is independent of
+  artifact type. `go install` stays available for Go devs. The cask, and the
+  per-project `homebrew-bragfile` tap, are retired.
 
 ## Validation
 
-Right if: on a clean Mac, `brew install jysf/bragfile/bragfile` followed by
+Right if: on a clean Mac, `brew install jysf/tap/bragfile` followed by
 `brag --version` runs with **no Gatekeeper prompt** and prints the tagged
 version. Revisit if: (a) goreleaser removes `brews:` → switch to a hand-maintained
 tap formula; (b) a large non-Homebrew, non-Go audience emerges → reconsider a
 signed+notarized cask for that channel specifically.
 
-Confidence: 0.82. The mechanism is well-understood and established Homebrew
-behavior (formulae are not quarantined; casks are). Residual uncertainty is the
-longevity of goreleaser's `brews:` support and whether a non-Go/non-brew audience
-ever appears — both have named fallbacks above, so neither blocks the decision.
+**Open question — resolved by precedent.** Would a *formula* from
+`jysf/homebrew-tap` trigger Homebrew's untrusted-tap gate (the gate + its
+`brew trust --cask …` command were researched against a **cask**, AGENTS.md §4)?
+**No, per a live precedent:** `crustyimg` is already a binary formula on this same
+tap (`Formula/crustyimg.rb`) and installs with **neither** a Gatekeeper prompt
+**nor** a trust step. So bragfile-as-formula on this tap needs no `brew trust` and
+no `xattr`. bragfile's own clean-host cut is final confirmation, but the risk is
+now precedented-away, not open.
+
+Confidence: 0.9. The mechanism is established Homebrew behavior (formulae are not
+quarantined; casks are), and it has a live same-tap precedent: `crustyimg` is a
+binary formula on `jysf/homebrew-tap` that installs with no Gatekeeper prompt and
+no trust step. Residual uncertainty is only the longevity of goreleaser's `brews:`
+support and whether a non-Go/non-brew audience ever appears — both have named
+fallbacks above, so neither blocks the decision.
 
 ## References
 
@@ -132,4 +145,6 @@ ever appears — both have named fallbacks above, so neither blocks the decision
 - Related decisions: DEC-001 (no-cgo driver — the reason the compile-based paths
   are costly)
 - Code: `.goreleaser.yaml`; commit `1582572` (the undocumented cask switch)
+- Precedent: `jysf/homebrew-tap` `Formula/crustyimg.rb` — a binary formula on the
+  same tap that installs with no Gatekeeper prompt and no trust step
 - Docs: `docs/distribution-decisions.md`, `AGENTS.md` §4, `docs/macos-notarization-checklist.md`
