@@ -148,11 +148,25 @@ added `binaries: [brag]`. Reverting restores all three.)
 
 *Filled at the end of the build cycle, before verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
-- **New decisions emitted:** DEC-040 (if not already committed)
-- **Deviations from spec:**
+- **Branch:** `distribution/cask-to-formula-shared-tap` → squash-merged as `a5da3e5`.
+- **PR (if applicable):** #121 (merged).
+- **All acceptance criteria met?** Phase 1 (config + docs) **yes** — `test-docs`
+  green, `goreleaser check` validated. Phase 2 (clean-host install) **NO** — see
+  Cut record.
+- **New decisions emitted:** DEC-040 (committed).
+- **Deviations from spec:** none in Phase 1.
+- **Cut record (HONEST — the publish did NOT fully land):** v0.5.2 was tagged at
+  `a5da3e5`; goreleaser built and published the **GitHub release + binary
+  tarballs**, but the formula push to `jysf/homebrew-tap` **403'd** —
+  `PUT .../homebrew-tap/contents/bragfile.rb: 403 Resource not accessible by
+  personal access token`. So `Formula/bragfile.rb` never reached the tap and
+  `brew install jysf/tap/bragfile` fails ("no formula"). **Root cause:** the
+  `HOMEBREW_TAP_GITHUB_TOKEN` PAT has write to the old `homebrew-bragfile` tap,
+  not the shared `homebrew-tap`. Secondary: goreleaser targeted the tap **root**,
+  not `Formula/` (crustyimg's layout). **Fixes:** (1) grant the PAT
+  Contents:read/write on `jysf/homebrew-tap` [owner action]; (2) `directory:
+  Formula` added to the `brews:` block (branch `fix/tap-formula-publish`);
+  (3) re-cut. **Status: published-but-broken; NOT verified.**
 
 ---
 
@@ -162,18 +176,24 @@ added `binaries: [brag]`. Reverting restores all three.)
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Make the pre-flight token check a **hard gate**, not a note. SPEC-071's own
+   pre-flight named it ("confirm HOMEBREW_TAP_GITHUB_TOKEN is valid — the one
+   thing that silently breaks the tap push") and it still wasn't checked before
+   the cut, so a tap switch shipped a published-but-broken v0.5.2. A tap/channel
+   change must verify token write-access to the *new* tap before tagging.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Yes: the release pre-flight should assert token write-access **to the
+   specific tap being pushed to** (not just "token exists"), especially when the
+   tap changes. Feed this to the framework harvest (distribution lessons).
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No new spec; the fix is `fix/tap-formula-publish` (directory: Formula) plus
+   the owner's PAT-scope fix plus a re-cut. Tracked in the Cut record above.
 
-4. **What can a user do now that they couldn't before?** — one sentence,
-   before → after; quote the confirming number if one exists, name the outcome
-   if not. Write `none` if this spec has no user-visible outcome — that is a
-   real, greppable result, not a blank. This is the line a brag's `impact` field
-   is transcribed from, and both halves are already written above (## Context is
-   the before, ## Goal is the after): confirm the prediction, don't reconstruct
-   it from memory.
+4. **What can a user do now that they couldn't before?**
+   — **Nothing yet — pending re-cut.** The intended outcome (a clean
+   `brew install jysf/tap/bragfile` with no Gatekeeper prompt, no `xattr`, no
+   `brew trust`) is not delivered until the PAT gains write to `homebrew-tap`,
+   the `directory: Formula` fix merges, and v0.5.2 is re-cut. Confirm on a clean
+   host, then rewrite this line with the verified outcome.
