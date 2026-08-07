@@ -166,7 +166,14 @@ added `binaries: [brag]`. Reverting restores all three.)
   not `Formula/` (crustyimg's layout). **Fixes:** (1) grant the PAT
   Contents:read/write on `jysf/homebrew-tap` [owner action]; (2) `directory:
   Formula` added to the `brews:` block (branch `fix/tap-formula-publish`);
-  (3) re-cut. **Status: published-but-broken; NOT verified.**
+  (3) re-cut. **Status: RESOLVED & VERIFIED (2026-08-07).** After pointing the
+  secret at a PAT with `push` on `jysf/homebrew-tap` and re-cutting, the release
+  run went green — `Formula/bragfile.rb` (v0.5.2) landed on the tap beside
+  `crustyimg.rb`, and `brew install jysf/tap/bragfile` installs clean on a real
+  host: no Gatekeeper "Apple could not verify" prompt, no `brew trust` step,
+  `brag --version` = 0.5.2. It took **two** failed cuts (the 403 recurred
+  because the token wasn't fixed before re-cutting) — the N=2 that promotes
+  "check the tap token" from a pre-flight note to a hard gate.
 
 ---
 
@@ -192,8 +199,8 @@ from the process-focused build reflection above.*
    the owner's PAT-scope fix plus a re-cut. Tracked in the Cut record above.
 
 4. **What can a user do now that they couldn't before?**
-   — **Nothing yet — pending re-cut.** The intended outcome (a clean
-   `brew install jysf/tap/bragfile` with no Gatekeeper prompt, no `xattr`, no
-   `brew trust`) is not delivered until the PAT gains write to `homebrew-tap`,
-   the `directory: Formula` fix merges, and v0.5.2 is re-cut. Confirm on a clean
-   host, then rewrite this line with the verified outcome.
+   — Install bragfile with a single clean `brew install jysf/tap/bragfile` —
+   **no macOS "Apple could not verify" prompt, no `xattr` quarantine step, and no
+   `brew trust`** — where before (the v0.1.0 cask) first run was blocked by
+   Gatekeeper until the user ran a `sudo xattr` command. Verified end-to-end on a
+   real host at v0.5.2.
