@@ -67,10 +67,15 @@ changelog:
 # cost. If goreleaser removes `brews:`, hand-maintain the formula in the tap.
 brews:
   - name: bragfile
+    # Write into Formula/ (matches crustyimg on this shared tap); goreleaser's
+    # brews default is the repo root, which would split the tap layout.
+    directory: Formula
     repository:
       owner: jysf
       name: homebrew-tap
       branch: main
+      # PAT must have Contents:read/write on jysf/homebrew-tap (the shared tap),
+      # not just the old homebrew-bragfile — the 403 that broke the v0.5.2 cut.
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: "https://github.com/jysf/bragfile000"
     description: "Local-first Go CLI to capture and retrieve career-worthy moments."
