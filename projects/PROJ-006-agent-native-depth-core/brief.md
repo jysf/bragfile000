@@ -27,6 +27,8 @@ roadmap:
     resume_when: "reliably stamping cost/tokens and wanting to compare models"
   - pillar: Capture completeness
     resume_when: "the corpus feels sparse, or you notice unlogged work"
+  - pillar: Narrative / story surface (v2)
+    resume_when: "wanting a report that shows the arc (foundation -> payoff), not a flat win-list"
 
 created_at: 2026-07-10
 shipped_at: null
@@ -73,6 +75,17 @@ shipped_at: null
 >   now dogfooding it in real project brags. Signal to watch: does the tag get
 >   used naturally, and do we start wanting it *validated/typed*? If yes, that
 >   graduates the capture-completeness pillar (evidence-links slice) into framing.
+> - **Outward-impact capture landed in the templates (2026-07-16).** The spec
+>   `Reflection (Ship)` gained a Q4 "what can a user do now that they couldn't?"
+>   and the release template gained a one-line Cut record — so per-spec outcomes
+>   are now captured at ship (before → after), the raw material the story surface
+>   reads. This is the *enabler* for the new Narrative / story-surface (v2)
+>   candidate below; its signal to watch: once a stage's specs carry real Q4
+>   answers, do we want them assembled into a stage story / an arc in `wrapped`?
+> - **Corpus-as-memory baseline is more built than first framed (2026-08-07).**
+>   Code check: the MCP read *tools* already ship; the remaining work is MCP
+>   resources + `Since/Until/Author` filter parity + a token-budgeted retrieval.
+>   Re-scoped in Candidate scope #1 so framing starts from the true baseline.
 
 ## What This Project Is
 
@@ -105,10 +118,22 @@ CGO.
 
 The four "act soon" pillars, ranked by the synthesis:
 
-1. **Corpus-as-agent-memory** — read-side MCP *resources/tools* an agent
-   consults (ranked by project/recency/FTS) before working. Nearly free (wraps
-   the shipped query layer); the single highest leverage/effort item. Likely the
-   first stage.
+1. **Corpus-as-agent-memory** — read-side MCP an agent consults (ranked by
+   project/recency/FTS) before working; the single highest leverage/effort item,
+   likely the first stage. **Baseline already ships** (correction, verified in
+   code 2026-08-07): the read *tools* exist — `brag_list` (recency-ordered),
+   `brag_search` (bm25-ranked), `brag_stats` — so this is *not* "build read-side."
+   The real remaining work is three smaller additions:
+   - **(a) MCP resources** — today the corpus is exposed only as *tools* (pull:
+     the agent must decide to call one). No **resources** exist (push: context the
+     client auto-loads before the agent works). Memory = the resource surface.
+   - **(b) Filter parity** — the MCP `list` input omits `Since`/`Until`/`Author`,
+     which `storage.ListFilter` already supports; add them so an agent can ask for
+     "recent" / "agent-authored" history over MCP.
+   - **(c) Blended, token-budgeted retrieval** — recency (list) and relevance
+     (search) are separate axes today, and `Limit` is a row count, not a token
+     cost. The "memory slice" is a ranked blend (project + recency + match)
+     trimmed to a token budget so it's cheap enough to auto-load every session.
 2. **Signed / attestable provenance** — sign the `agent:/model:/cost:` block at
    capture with a local secret/keypair → `verified` vs `claimed` + `brag verify`.
    The trust primitive everything downstream rests on. **Subsumes the deferred
@@ -127,6 +152,29 @@ The four "act soon" pillars, ranked by the synthesis:
 4. **Agent/model benchmark** — `brag benchmark --by model`: impact-per-1k-tokens-
    per-dollar over the provenance tags; pure aggregation, no model in the binary.
    Gated on #2 (trust) being real.
+
+**Narrative / story surface (v2) — new candidate (2026-08-07, NOT from the
+synthesis).** Make the story surface first-class to the *process* and to
+*agents*. Four parts:
+- **Stage-close story (the storytelling ladder).** Force an outcome story at
+  stage close, assembled from each spec's Reflection-**Q4** answers. Ladder:
+  spec = capability (Q4) → stage = paragraph → project/release = chapter.
+- **`brag wrapped` impact-arc.** `wrapped` today does counts + cadence and does
+  **not** read `.Impact`; compose the existing `aggregate.WithImpact` digest,
+  window by month/quarter, and surface a **foundation → payoff arc** (not a flat
+  win-list) via reference-thread hints + an LLM framing directive, cross-window
+  via `--previous`.
+- **`arc:foundation` / `arc:payoff` reserved tag.** LLM-classified by default
+  (impact language + position tags + reference threads); the explicit tag is
+  authoritative where present; untagged = neutral connective work. Rides the
+  reserved-tag model, zero schema change.
+- **MCP exposure** of story/wrapped: deterministic bundle from the binary, prose
+  from the LLM (DEC-029).
+*Depends on* the outward-impact capture (Reflection-Q4/Q5 + release Cut record,
+landed in the templates 2026-07-16) being populated, and shares the MCP read
+surface with #1. *Why it matters:* foundation work gets credit **through the
+payoff it enabled** — a progression story only the corpus can tell (it has the
+reference threads linking cause to effect).
 
 Promising-but-spike-first (from the synthesis §B): bragfmt interchange /
 `import --format jsonl`; outcome reconciliation ("did the brag hold up");
@@ -159,6 +207,9 @@ same-second collision; empty-`type` sentinel; export-md sort id-tiebreak;
       includes promoting the `commit:`/`pr:`/`issue:` evidence-link convention
       (now documented in BRAG.md + being dogfooded) to typed, validated links.
 - [ ] (STAGE-022?) — agent/model benchmark
+- [ ] (STAGE-023?) — narrative / story surface v2 (stage-close story + `wrapped`
+      impact-arc + `arc:` tag + MCP exposure); depends on Q4 capture being
+      populated + shares #1's MCP read surface
 - (sequence, split, and de-scope at framing; IDs assigned at creation)
 
 **Count:** 1 shipped / 1 proposed (parked) / 0 active / (deeper pillars unframed)
