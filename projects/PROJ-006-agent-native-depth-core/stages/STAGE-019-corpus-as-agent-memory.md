@@ -132,7 +132,7 @@ corpus should be answering.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-072 (verify) — MCP `brag_list` filter parity (`since`/`until`/`day`/
+- [x] SPEC-072 (shipped on 2026-08-07) — MCP `brag_list` filter parity (`since`/`until`/`day`/
       `author`) + extract the time-window parser into `internal/timewindow`,
       retiring the `cli↔mcpserver` cycle that deferred `--since` at SPEC-040.
       **DEC-042 emitted** (parser home + the MCP time vocabulary + the `until`
@@ -148,7 +148,12 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       plus the `brag_memory` tool. Emits **DEC-045** (resource set, URI scheme,
       MIME/rendering, and per-resource size policy). Complexity M.
 
-**Count:** 0 shipped / 1 active / 2 pending
+**Count:** 1 shipped / 0 active / 2 pending (SPEC-073, SPEC-074 — not yet written)
+
+> **The stage is NOT complete.** `just archive-spec` reports "all specs shipped"
+> when the last *written* spec ships; SPEC-073 and SPEC-074 are framed in this
+> backlog but not yet scaffolded, so the script cannot see them. Do not run the
+> Stage Ship prompt until all three have shipped.
 
 ## Design Notes
 
