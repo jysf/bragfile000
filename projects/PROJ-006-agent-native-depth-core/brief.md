@@ -36,6 +36,18 @@ shipped_at: null
 
 # PROJ-006: Agent-Native Depth — Memory, Trust & Completeness
 
+> **Goal — make bragfile's corpus a working memory, not a write-only log.**
+> bragfile already captures what you and your agents ship; PROJ-006 makes that
+> corpus something the agents **read back, trust, and are measured by.** The
+> insight: *the corpus's highest-frequency reader is the agent that produced it.*
+> So the arc is write-only journal → **working memory** — history an agent
+> consults *before* it acts (stops re-deriving context, stops repeating dead
+> ends), with provenance it **can't fake** (so it can drive real decisions),
+> complete enough to be worth reading, and measurable enough to answer "which
+> model earned its keep." All local, all developer-owned — the one memory layer
+> an agent has that no cloud console can see. The pillars are that arc as a
+> causal chain: **consult → trust → complete → measure.**
+
 > **Requirements-gathering phase (active).** Opened 2026-07-10 as the successor
 > to PROJ-005 (which shipped the *opening* of agent-native depth as v0.5.0). The
 > direction below is set by `docs/research/proj-005-idea-synthesis.md`; the
