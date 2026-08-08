@@ -7,6 +7,26 @@ source "${SCRIPT_DIR}/_lib.sh"
 
 require_initialized
 
+# count_matching <dir> <name-glob> — number of matching files, or 0 when the
+# directory does not exist.
+#
+# Every count below walks a project subdirectory that is only created on
+# demand: a project scaffolded as `proposed` may carry a brief.md and nothing
+# else (PROJ-007 is exactly this). Under `set -euo pipefail` the naive form
+#
+#     n=$(find "$dir" -name "$glob" 2>/dev/null | wc -l | tr -d ' ')
+#
+# aborts the whole report when $dir is missing: `2>/dev/null` hides find's
+# message but not its exit status, and `pipefail` promotes it to the
+# pipeline's. The report printed fine and `just status` still exited 1 — which
+# would fail any CI step that ran it. Guarding on the directory keeps the
+# counts honest (a missing dir really is zero) without disabling pipefail for
+# the whole script.
+count_matching() {
+    [ -d "$1" ] || { echo 0; return 0; }
+    find "$1" -name "$2" 2>/dev/null | wc -l | tr -d ' '
+}
+
 VARIANT=$(get_variant)
 ACTIVE_PROJECT=$(get_active_project)
 ACTIVE_PROJECT_DIR="${REPO_ROOT}/projects/${ACTIVE_PROJECT}"
@@ -129,9 +149,9 @@ fi
 echo ""
 
 # --- Summary counts ---
-total_specs=$(find "${ACTIVE_PROJECT_DIR}/specs" -name "SPEC-*.md" 2>/dev/null | wc -l | tr -d ' ')
-shipped_specs=$(find "${ACTIVE_PROJECT_DIR}/specs/done" -name "SPEC-*.md" 2>/dev/null | wc -l | tr -d ' ')
-total_decisions=$(find "$decisions_dir" -name "DEC-*.md" 2>/dev/null | wc -l | tr -d ' ')
+total_specs=$(count_matching "${ACTIVE_PROJECT_DIR}/specs" "SPEC-*.md")
+shipped_specs=$(count_matching "${ACTIVE_PROJECT_DIR}/specs/done" "SPEC-*.md")
+total_decisions=$(count_matching "$decisions_dir" "DEC-*.md")
 echo "${BOLD}Summary${RESET}"
 echo "  Total specs in ${ACTIVE_PROJECT}:     ${total_specs}"
 echo "  Shipped (archived):                   ${shipped_specs}"
@@ -156,9 +176,9 @@ for p in "${REPO_ROOT}"/projects/PROJ-*; do
     fi
     marker=" "
     if [ "$pname" = "$ACTIVE_PROJECT" ]; then marker="${GREEN}*${RESET}"; fi
-    st_count=$(find "${p}/stages" -name "STAGE-*.md" 2>/dev/null | wc -l | tr -d ' ')
-    sp_total=$(find "${p}/specs" -name "SPEC-*.md" 2>/dev/null | wc -l | tr -d ' ')
-    sp_done=$(find "${p}/specs/done" -name "SPEC-*.md" 2>/dev/null | wc -l | tr -d ' ')
+    st_count=$(count_matching "${p}/stages" "STAGE-*.md")
+    sp_total=$(count_matching "${p}/specs" "SPEC-*.md")
+    sp_done=$(count_matching "${p}/specs/done" "SPEC-*.md")
     printf "  %s %-40s  status: %-9s  ${DIM}%s stages · %s/%s specs shipped${RESET}\n" \
         "$marker" "$pname" "$status" "$st_count" "$sp_done" "$sp_total"
 done
@@ -188,8 +208,8 @@ for p in "${REPO_ROOT}"/projects/PROJ-*; do
         fi
     done
     [ -z "$stage_lines" ] && continue
-    st_count=$(find "$pstages_dir" -name "STAGE-*.md" 2>/dev/null | wc -l | tr -d ' ')
-    sh_count=$(find "${p}/specs/done" -name "SPEC-*.md" 2>/dev/null | wc -l | tr -d ' ')
+    st_count=$(count_matching "$pstages_dir" "STAGE-*.md")
+    sh_count=$(count_matching "${p}/specs/done" "SPEC-*.md")
     pshipped=$(awk '/^---$/{f=!f; next} f && /^shipped_at:/{print $2; exit}' "${p}/brief.md" 2>/dev/null || echo "")
     if [ -n "$pshipped" ] && [ "$pshipped" != "null" ]; then
         printf "  ${BOLD}%s${RESET}  ${DIM}(shipped %s — %s stages, %s specs)${RESET}\n" "$pname" "$pshipped" "$st_count" "$sh_count"
