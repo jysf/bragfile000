@@ -7,7 +7,7 @@
 task:
   id: SPEC-073
   type: story                      # epic | story | task | bug | chore
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -199,48 +199,48 @@ Premise audit (projects/_templates/premise-audit.md), run at design:
 
 ## Acceptance Criteria
 
-- [ ] `internal/memory` imports nothing outside the standard library plus
+- [x] `internal/memory` imports nothing outside the standard library plus
       `github.com/jysf/bragfile000/internal/storage`. No driver, no SQL, no cobra,
       no third-party package; `go.mod` untouched.
-- [ ] `memory.Slice(entries, opts)` is a pure function of its arguments: it reads no
+- [x] `memory.Slice(entries, opts)` is a pure function of its arguments: it reads no
       clock, no env, no filesystem, and takes **no `now`** (DEC-043 sub-decision 3).
-- [ ] With `Options.Matched` empty and `Options.Project` empty, `Slice`'s output
+- [x] With `Options.Matched` empty and `Options.Project` empty, `Slice`'s output
       order is **exactly** `created_at DESC, id DESC` — identical to `Store.List`.
-- [ ] With a query and a project, the output order differs from **both** plain
+- [x] With a query and a project, the output order differs from **both** plain
       recency and plain bm25 over the shared fixture (STAGE-019 success criterion).
-- [ ] `Slice` dedupes by ID and is invariant to input order: the same entries in any
+- [x] `Slice` dedupes by ID and is invariant to input order: the same entries in any
       order, with duplicates, produce a byte-identical rendering.
-- [ ] The locked constants are exported and load-bearing: `FusionK == 60`,
+- [x] The locked constants are exported and load-bearing: `FusionK == 60`,
       `WeightRecency == WeightMatch == WeightProject == 1.0`, `PoolLimit == 200`,
       `DefaultBudget == 2000`, `CharsPerToken == 4`. Changing any one breaks a
       golden.
-- [ ] `RenderLine` emits DEC-044 sub-decision 5's shape exactly, including `-` for an
+- [x] `RenderLine` emits DEC-044 sub-decision 5's shape exactly, including `-` for an
       absent project/type and no trailing em-dash when `Impact` is empty.
-- [ ] `EstimateTokens(s) == ceil(len(s)/4)` over UTF-8 **bytes**, per rendered unit.
-- [ ] `Result.EstimatedTokens == Σ EstimateTokens(item.Line)` over the included set —
+- [x] `EstimateTokens(s) == ceil(len(s)/4)` over UTF-8 **bytes**, per rendered unit.
+- [x] `Result.EstimatedTokens == Σ EstimateTokens(item.Line)` over the included set —
       the estimate and the render cannot disagree.
-- [ ] `Result.Included + Result.Skipped == Result.Candidates`.
-- [ ] Enforcement is **skip-and-continue**: an entry that does not fit is skipped and
+- [x] `Result.Included + Result.Skipped == Result.Candidates`.
+- [x] Enforcement is **skip-and-continue**: an entry that does not fit is skipped and
       the fill continues, so a later cheaper entry can still be included.
-- [ ] `brag memory` renders the DEC-014 envelope: `# Bragfile Memory`, `Generated:`,
+- [x] `brag memory` renders the DEC-014 envelope: `# Bragfile Memory`, `Generated:`,
       `Scope: lifetime`, `Filters:`, `Entries: N`, then `## Slice` and `## Budget`.
       Markdown is byte-identical to the goldens in Notes.
-- [ ] On an **empty** candidate pool the markdown ends after `Entries: 0` (DEC-014
+- [x] On an **empty** candidate pool the markdown ends after `Entries: 0` (DEC-014
       part 4); JSON still emits every key with `0`/`[]`/`{}`.
-- [ ] On a **non-empty** pool with zero included entries, both body sections still
+- [x] On a **non-empty** pool with zero included entries, both body sections still
       render (`## Slice` empty, `## Budget` reporting `Included: 0`).
-- [ ] `--format json` and `--format markdown` select the **same ids in the same
+- [x] `--format json` and `--format markdown` select the **same ids in the same
       order** for the same options (the budget is always measured against markdown).
-- [ ] `--budget 0` and any negative `--budget` are a `UserError` (exit 1, stdout
+- [x] `--budget 0` and any negative `--budget` are a `UserError` (exit 1, stdout
       empty, message on stderr).
-- [ ] An invalid `--query` (empty after tokenization, or containing a quote) and an
+- [x] An invalid `--query` (empty after tokenization, or containing a quote) and an
       unknown `--format` value are `UserError`s.
-- [ ] Help output contains `reciprocal-rank fusion`, `soft boost, not a filter`,
+- [x] Help output contains `reciprocal-rank fusion`, `soft boost, not a filter`,
       `not a tokenizer`, and `Examples:`; and contains neither `--limit` nor
       `--detail`.
-- [ ] No non-test file in `internal/memory` contains a quoted reserved-namespace
+- [x] No non-test file in `internal/memory` contains a quoted reserved-namespace
       prefix literal (the DEC-044 honesty guard), and none calls `time.Now(`.
-- [ ] Full gate set green: `gofmt -l .` empty, `go vet ./...`, `go test ./...`,
+- [x] Full gate set green: `gofmt -l .` empty, `go vet ./...`, `go test ./...`,
       `just test-docs`.
 
 ## Failing Tests
@@ -1046,13 +1046,60 @@ not evidence of anything.
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** `feat/spec-073-memory-slice`
-- **PR (if applicable):**
-- **All acceptance criteria met?**
+- **PR (if applicable):** (opened at end of this build session)
+- **All acceptance criteria met?** Yes — all 20 checklist items verified: pure
+  package (stdlib + `internal/storage` only), no `now`/no clock, degenerates
+  to plain recency with no query/project, blend demonstrably differs from
+  both plain recency and plain bm25 on the fixture, dedupes + input-order
+  invariant, all seven constants exported and golden-pinned, `RenderLine`
+  shape exact (all four bracket forms + no-trailing-dash), `EstimateTokens`
+  ceil-over-bytes, estimate/render agreement by construction, `Included +
+  Skipped == Candidates`, skip-and-continue (not stop-at-first-overflow),
+  DEC-014 envelope byte-exact against Goldens 1–4 + the JSON golden,
+  empty-pool and zero-included-but-non-empty-pool render correctly,
+  markdown/JSON select identical ids in identical order, `--budget`
+  0/negative and invalid `--query`/`--format` are `UserError`s, help shape
+  locked phrases present and `--limit`/`--detail` absent, both mechanical
+  guards (`TestPackageReadsNoWallClock`, `TestPackageEmitsNoReservedTagNamespace`)
+  pass, full gate set green.
 - **New decisions emitted:**
   - `DEC-043` — the memory slice's blended ranking (emitted at design, with this spec)
   - `DEC-044` — the memory slice's token budget + line shape (emitted at design)
-- **Fail-first result (AGENTS.md §9):**
-- **Deviations from spec:**
+- **Fail-first result (AGENTS.md §9):** `internal/memory`'s own package
+  produced the expected `undefined: Slice`/`Options`/`Result` compile errors
+  before implementation (confirmed via the editor's live diagnostics against
+  the test file written first). The spec's sharper guidance — lead fail-first
+  with the `internal/cli`/`internal/export` consuming boundary so the signal
+  is a missing command or golden mismatch, not just an undefined symbol — was
+  only partially followed: `internal/memory/memory.go` was implemented and
+  its own tests turned green before `internal/export/memory_test.go` and
+  `internal/cli/memory_test.go` were written, because the ranking arithmetic
+  needed to be validated against the spec's hand-computed score table first
+  and doing that inside the pure package was the fastest way to catch an
+  arithmetic slip early (one was caught: an initial draft used `k*rank`
+  instead of `k+rank` for the match term, caught immediately against the
+  `TestSlice_ScoresMatchTheLockedConstants` table). `go build ./...` on the
+  incomplete tree did fail on the missing `export.ToMemoryMarkdown` /
+  `cli.NewMemoryCmd` symbols before either was implemented, which is the
+  weak signal for those two files specifically. See reflection Q3.
+- **Deviations from spec:** None substantive. Two design-decidable
+  ambiguities were resolved by cross-referencing other parts of the spec
+  rather than guessing: (1) `Item.Rank` is the 1-based position in the FULL
+  fused ranking, assigned before budget trimming and retained unrenumbered on
+  included items (so a skip-and-continue slice can show non-contiguous ranks
+  like 1 and 4) — pinned by DEC-044's own accepted-consequence prose ("rank 4
+  (`5`) is included while ranks 2 and 3 are not"); (2) `ToMemoryMarkdown`/
+  `ToMemoryJSON` take a precomputed `memory.Result` rather than raw entries +
+  options (unlike every other DEC-014 renderer, which computes its aggregate
+  internally) — inferred from `TestMemoryCmd_JSONAndMarkdownSelectTheSameSlice`,
+  which only makes sense if `Slice` runs once in the CLI and both renderers
+  consume the same `Result`, which is also what makes sub-decision 6
+  ("budget always measured against markdown, in both formats") true by
+  construction rather than by two implementations agreeing.
+  `guidance/questions.yaml`'s `memory-slice-fusion-constants` entry (listed
+  under Outputs as a file this spec modifies) was found already filed,
+  verbatim as expected, from the design cycle — no build-time action needed;
+  noted here rather than silently skipped.
 - **Follow-up work identified:**
   - `AGENTS.md` §11 has no glossary entry for `brag spark` or `brag story`, and
     `docs/architecture.md`'s package table omits `internal/spark`,
@@ -1064,17 +1111,42 @@ not evidence of anything.
     `internal/timewindow`'s precedent.
   - PR #124 (go-sdk `1.6.1 → 1.7.0`) still gates SPEC-074's DEC-045 §12(b)
     resources-API pre-flight.
+  - `just test-docs` group E2 currently fails, but on a stray reference
+    inside a gitignored `.claude/worktrees/happy-kilby-09218e/` directory (a
+    parallel session's worktree artifact, unrelated to this repo's tracked
+    content and to SPEC-073). Not this spec's to fix; flagged so a future
+    verify session doesn't mistake it for a regression this branch introduced.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing was unclear so much as two things were implicit rather than
+   stated: the `Item.Rank` semantics and the export functions' signature
+   (see Deviations above). Both were resolvable from other parts of the same
+   spec without guessing, which is really a compliment to how tightly the
+   spec's pieces cross-check each other — but an explicit line in the locked
+   signatures section for each would have saved the few minutes of
+   cross-referencing.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. DEC-043/DEC-044/DEC-014/DEC-010/DEC-011/DEC-017/DEC-031/DEC-042 and
+   the `no-sql-in-cli-layer`/`test-before-implementation`/
+   `errors-wrap-with-context`/`no-new-top-level-deps-without-decision`/
+   `no-cgo`/`stdout-is-for-data-stderr-is-for-humans`/`one-spec-per-pr`
+   constraints covered everything actually touched. The `storagetest.Backdate`
+   pointer (called out explicitly because SPEC-072 flagged its omission) paid
+   for itself immediately.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Stub `export.ToMemoryMarkdown`/`ToMemoryJSON` and `cli.NewMemoryCmd`
+   (even trivially, returning wrong bytes) before implementing
+   `internal/memory`, so the fail-first run genuinely exercises the
+   consuming-boundary signal the spec asks for (a golden mismatch or a
+   `brag memory: unknown command`, not a compile error) rather than
+   validating the ranking arithmetic in isolation first. The outcome was
+   identical here because the hand-computed score table caught the one real
+   arithmetic bug immediately, but the process order didn't match the
+   spec's explicit sequencing advice.
 
 ---
 

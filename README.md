@@ -147,6 +147,7 @@ brag wrapped 2026                       # shareable year-in-review; also: brag w
 brag coverage --year                    # agent-vs-human provenance share + monthly trend
 brag story --audience exec --quarter    # audience-shaped narrative bundle for an LLM
 brag spark                              # sparkline pulse of recent activity (Total + per-project)
+brag memory --query auth --project orbit # ranked, token-budgeted slice of your history
 ```
 
 ## Where the data lives
