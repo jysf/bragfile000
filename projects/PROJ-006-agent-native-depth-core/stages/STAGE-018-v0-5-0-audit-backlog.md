@@ -50,7 +50,11 @@ stage touches the same code.
 The v0.5.0 audit LOW/NIT backlog (inherited verbatim from the project brief):
 
 - `mcp_install` atomic write (temp + rename).
-- MCP `list`/`search` negative-`limit` parity with the CLI.
+- ~~MCP `list`/`search` negative-`limit` parity with the CLI.~~ **DONE — folded
+  into SPEC-072** (STAGE-019), which already edited both handlers. A negative
+  `limit` is now a tool error on `brag_list` and `brag_search`; `0` still means
+  unlimited. This is the "fold into the stage touching the same code" rule in
+  Design Notes doing its job.
 - `search -foo` → clear cobra-flag error (not an FTS query).
 - `brag project new` name cap; run the edit / `Store.Update` path through
   `internal/capture.Validate`.
