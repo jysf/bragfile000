@@ -10,12 +10,19 @@ import (
 	"github.com/jysf/bragfile000/internal/capture"
 	"github.com/jysf/bragfile000/internal/export"
 	"github.com/jysf/bragfile000/internal/storage"
+	"github.com/jysf/bragfile000/internal/timewindow"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // nowFunc is the clock brag_stats reads (package-level injectable seam, per
 // AGENTS.md §9). Kept local (not .UTC()'d) so the streak buckets by local
 // day, matching cli.runStats / DEC-022.
+//
+// Since SPEC-072 it also anchors brag_list's time filters: `day` resolves its
+// calendar-day boundary off nowFunc().Location() (DEC-039) and `since`/`until`
+// resolve relative Nd/Nw/Nm durations from it. Do NOT "tidy" this to
+// .UTC() — that would silently turn a caller's local day into the UTC day,
+// which is the exact skew DEC-039 exists to prevent.
 var nowFunc = time.Now
 
 // New builds the MCP server advertising exactly four typed tools —
@@ -165,24 +172,29 @@ func marshalEntry(e storage.Entry) ([]byte, error) {
 	}, "", "  ")
 }
 
-// listIn is brag_list's input shape: the same exact-match filters `brag
-// list` supports minus --since (deferred, see Out of scope — ParseSince
-// lives in package cli and importing it would risk a cli↔mcpserver cycle).
+// listIn is brag_list's input shape: full parity with `brag list`'s filter
+// set, plus `until` (which storage supports and the CLI deliberately does
+// not — DEC-042). The time fields use the CLI's exact grammar because they
+// are parsed by the same shared package: DEC-008 for since/until, DEC-039
+// for day.
 type listIn struct {
 	Tag     string `json:"tag,omitempty"`
 	Project string `json:"project,omitempty"`
 	Type    string `json:"type,omitempty"`
-	Limit   int    `json:"limit,omitempty"`
+	Since   string `json:"since,omitempty" jsonschema:"inclusive lower time bound: YYYY-MM-DD (UTC midnight) or a relative Nd/Nw/Nm (e.g. 7d = last week)"`
+	Until   string `json:"until,omitempty" jsonschema:"exclusive upper time bound, same grammar as since; combine with since for a bounded window"`
+	Day     string `json:"day,omitempty" jsonschema:"scope to a single LOCAL calendar day: YYYY-MM-DD, today, or yesterday; mutually exclusive with since/until"`
+	Author  string `json:"author,omitempty" jsonschema:"provenance filter: \"agent\" (entry carries an agent:/model: tag) or \"human\" (carries neither)"`
+	Limit   int    `json:"limit,omitempty" jsonschema:"maximum rows to return; omit or 0 for unlimited"`
 }
 
 func handleList(s *storage.Store) func(context.Context, *mcp.CallToolRequest, listIn) (*mcp.CallToolResult, any, error) {
 	return func(_ context.Context, _ *mcp.CallToolRequest, in listIn) (*mcp.CallToolResult, any, error) {
-		rows, err := s.List(storage.ListFilter{
-			Tag:     in.Tag,
-			Project: in.Project,
-			Type:    in.Type,
-			Limit:   in.Limit,
-		})
+		filter, err := listFilterFrom(in)
+		if err != nil {
+			return nil, nil, err
+		}
+		rows, err := s.List(filter)
 		if err != nil {
 			return nil, nil, fmt.Errorf("brag_list: %w", err)
 		}
@@ -194,6 +206,62 @@ func handleList(s *storage.Store) func(context.Context, *mcp.CallToolRequest, li
 	}
 }
 
+// listFilterFrom validates brag_list's input and translates it into a
+// storage.ListFilter. The validation ORDER is locked (DEC-042) so the error a
+// caller sees names the real problem rather than a downstream symptom:
+// structural checks (limit, author) first, then the day/since-until conflict
+// BEFORE any parsing — a caller who sends both a malformed since and a day
+// should be told about the conflict, not the parse failure.
+//
+// Time values are parsed by internal/timewindow against nowFunc(), which is
+// LOCAL by design (see nowFunc): ParseDay reads the calendar-day boundary off
+// now.Location(), and ParseSince normalizes to UTC on its own.
+func listFilterFrom(in listIn) (storage.ListFilter, error) {
+	if in.Limit < 0 {
+		return storage.ListFilter{}, fmt.Errorf("brag_list: limit must not be negative, got %d (omit limit for unlimited)", in.Limit)
+	}
+	switch in.Author {
+	case "", "agent", "human":
+	default:
+		return storage.ListFilter{}, fmt.Errorf("brag_list: author must be %q or %q, got %q", "agent", "human", in.Author)
+	}
+	if in.Day != "" && (in.Since != "" || in.Until != "") {
+		return storage.ListFilter{}, fmt.Errorf("brag_list: day is mutually exclusive with since/until (day sets the full day window)")
+	}
+
+	filter := storage.ListFilter{
+		Tag:     in.Tag,
+		Project: in.Project,
+		Type:    in.Type,
+		Author:  in.Author,
+		Limit:   in.Limit,
+	}
+	now := nowFunc()
+	if in.Since != "" {
+		t, err := timewindow.ParseSince(in.Since, now)
+		if err != nil {
+			return storage.ListFilter{}, fmt.Errorf("brag_list: invalid since %q: %w", in.Since, err)
+		}
+		filter.Since = t
+	}
+	if in.Until != "" {
+		t, err := timewindow.ParseSince(in.Until, now)
+		if err != nil {
+			return storage.ListFilter{}, fmt.Errorf("brag_list: invalid until %q: %w", in.Until, err)
+		}
+		filter.Until = t
+	}
+	if in.Day != "" {
+		start, end, err := timewindow.ParseDay(in.Day, now)
+		if err != nil {
+			return storage.ListFilter{}, fmt.Errorf("brag_list: invalid day %q: %w", in.Day, err)
+		}
+		filter.Since = start
+		filter.Until = end
+	}
+	return filter, nil
+}
+
 // searchIn is brag_search's input shape: query is required (no
 // `,omitempty`); limit mirrors `brag search --limit` (0 = unlimited).
 type searchIn struct {
@@ -203,6 +271,13 @@ type searchIn struct {
 
 func handleSearch(s *storage.Store) func(context.Context, *mcp.CallToolRequest, searchIn) (*mcp.CallToolResult, any, error) {
 	return func(_ context.Context, _ *mcp.CallToolRequest, in searchIn) (*mcp.CallToolResult, any, error) {
+		// A negative limit is a caller mistake, not "unlimited": Store.Search
+		// treats limit <= 0 as no LIMIT, so without this guard `-1` silently
+		// returns the whole corpus while `brag search --limit -1` errors
+		// (v0.5.0 audit item, folded in per DEC-042).
+		if in.Limit < 0 {
+			return nil, nil, fmt.Errorf("brag_search: limit must not be negative, got %d (omit limit for unlimited)", in.Limit)
+		}
 		match, err := buildMatch(in.Query)
 		if err != nil {
 			return nil, nil, fmt.Errorf("brag_search: %w", err)

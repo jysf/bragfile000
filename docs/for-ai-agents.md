@@ -94,11 +94,26 @@ a milestone line.
 | `tag`     | string  | optional | exact-match filter |
 | `project` | string  | optional | exact-match filter |
 | `type`    | string  | optional | exact-match filter |
-| `limit`   | integer | optional | `0` = unlimited |
+| `since`   | string  | optional | inclusive lower bound: `YYYY-MM-DD` (UTC midnight) or relative `Nd`/`Nw`/`Nm` — `7d` is "last week" |
+| `until`   | string  | optional | **exclusive** upper bound, same grammar as `since` |
+| `day`     | string  | optional | one **local** calendar day: `YYYY-MM-DD`, `today`, or `yesterday`. Mutually exclusive with `since`/`until` |
+| `author`  | string  | optional | `agent` (entry carries an `agent:`/`model:` tag) or `human` (carries neither) |
+| `limit`   | integer | optional | `0` or omitted = unlimited; a **negative** value is a tool error |
 
 Returns a JSON array of entry objects, byte-identical to
-`brag list --format json` on the same rows. There is **no `--since` filter**
-over MCP (deferred); filter by time on the CLI if you need it.
+`brag list --format json` on the same rows.
+
+**This is the memory call.** `{"project":"acme-api","since":"7d"}` is how you
+find out what has already been tried before you start work; `{"author":"agent"}`
+narrows to what agents logged. The time grammar is *identical* to the CLI's
+because both call the same parser — so `since: "7d"` means exactly what
+`brag list --since 7d` means, and `day: "today"` is the user's local day, not
+the UTC day (which for a UTC-7 user starts at 17:00 the previous evening).
+
+One deliberate asymmetry: `until` exists here but there is **no `brag list
+--until`** on the CLI. Agents compose bounded windows programmatically; humans
+say "yesterday" and use `--day`. See
+[DEC-042](../decisions/DEC-042-mcp-time-window-filter-parity.md).
 
 ### `brag_search` — full-text search
 

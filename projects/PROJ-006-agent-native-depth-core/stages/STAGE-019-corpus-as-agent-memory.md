@@ -132,11 +132,12 @@ corpus should be answering.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-072 (design) — MCP `brag_list` filter parity (`since`/`until`/`day`/
-      `author`) + extract the time-window parser into a shared package, retiring
-      the `cli↔mcpserver` cycle that deferred `--since` at SPEC-040. Emits
-      **DEC-042** (parser home + the MCP time vocabulary + the `until`
-      asymmetry). Complexity S–M.
+- [ ] SPEC-072 (verify) — MCP `brag_list` filter parity (`since`/`until`/`day`/
+      `author`) + extract the time-window parser into `internal/timewindow`,
+      retiring the `cli↔mcpserver` cycle that deferred `--since` at SPEC-040.
+      **DEC-042 emitted** (parser home + the MCP time vocabulary + the `until`
+      asymmetry; folds in STAGE-018's negative-`limit` parity item).
+      Complexity M.
 - [ ] SPEC-073 (not yet written) — the memory slice: `internal/memory`
       deterministic blended ranking + token-budget trim, surfaced as
       `brag memory` (markdown + JSON, DEC-014 envelope) with byte-exact goldens.
