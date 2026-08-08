@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jysf/bragfile000/internal/timewindow"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +69,15 @@ func windowCutoff(window, sinceRaw string, now time.Time, previous bool) (start,
 		if previous {
 			return time.Time{}, time.Time{}, "", UserErrorf("--previous cannot be combined with --since (--since is an explicit anchor, not a calendar period)")
 		}
-		start, err = ParseSince(sinceRaw)
+		// NOTE: deliberately clock(), NOT this function's `now` argument.
+		// windowCutoff's now is UTC-anchored for the calendar branches, while
+		// --since has always resolved relative durations off the LOCAL clock
+		// seam. In production the two agree (both time.Now, and ParseSince
+		// normalizes to UTC); in tests they do not, because impact/story stub
+		// nowFunc while leaving clock real. SPEC-072 was a no-behavior-change
+		// package move, so it preserves today's semantics verbatim.
+		// Unifying the two seams is a follow-up, not a drive-by.
+		start, err = timewindow.ParseSince(sinceRaw, clock())
 		if err != nil {
 			return time.Time{}, time.Time{}, "", UserErrorf("invalid --since value: %v", err)
 		}
