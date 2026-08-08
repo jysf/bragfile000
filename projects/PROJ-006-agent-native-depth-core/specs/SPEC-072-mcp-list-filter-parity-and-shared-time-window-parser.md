@@ -7,7 +7,7 @@
 task:
   id: SPEC-072
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: ship
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -143,38 +143,38 @@ new pure `internal/timewindow` package that both `internal/cli` and
 
 ## Acceptance Criteria
 
-- [ ] `internal/timewindow` compiles with only `fmt`, `strconv`, `strings`,
+- [x] `internal/timewindow` compiles with only `fmt`, `strconv`, `strings`,
       `time` imported, and contains no package-level `var`.
-- [ ] `timewindow.ParseSince(s, now)` reproduces DEC-008 exactly: `YYYY-MM-DD` →
+- [x] `timewindow.ParseSince(s, now)` reproduces DEC-008 exactly: `YYYY-MM-DD` →
       that day's UTC midnight; `Nd`/`Nw`/`Nm` → `now - N×{24h,7×24h,30×24h}`
       normalized to UTC; anything else → error.
-- [ ] `timewindow.ParseDay(value, now)` reproduces DEC-039 exactly: `today` /
+- [x] `timewindow.ParseDay(value, now)` reproduces DEC-039 exactly: `today` /
       `yesterday` / `YYYY-MM-DD` resolved in `now.Location()`, returning
       `[local midnight, next local midnight)` via `AddDate` (never `+24h`).
-- [ ] Neither function reads the wall clock; results depend only on arguments.
-- [ ] `brag_list` accepts `since`, `until`, `day`, `author` and each narrows the
+- [x] Neither function reads the wall clock; results depend only on arguments.
+- [x] `brag_list` accepts `since`, `until`, `day`, `author` and each narrows the
       result set identically to the equivalent `brag list` invocation over the
       same rows.
-- [ ] `until` is an **exclusive** upper bound (an entry whose `created_at`
+- [x] `until` is an **exclusive** upper bound (an entry whose `created_at`
       equals `until` is excluded).
-- [ ] `day` resolves to a LOCAL calendar day via `mcpserver.nowFunc`, so a
+- [x] `day` resolves to a LOCAL calendar day via `mcpserver.nowFunc`, so a
       non-UTC caller's "today" is their day, not the UTC day.
-- [ ] `day` combined with `since` **or** `until` is a tool error naming the
+- [x] `day` combined with `since` **or** `until` is a tool error naming the
       conflict; the message does not merely report a parse failure.
-- [ ] An `author` value other than `agent` / `human` is a tool error naming the
+- [x] An `author` value other than `agent` / `human` is a tool error naming the
       accepted values.
-- [ ] An unparseable `since` / `until` / `day` is a tool error quoting the bad
+- [x] An unparseable `since` / `until` / `day` is a tool error quoting the bad
       value and the accepted grammar.
-- [ ] `brag_list` and `brag_search` reject `limit < 0` as a tool error
+- [x] `brag_list` and `brag_search` reject `limit < 0` as a tool error
       (folded-in v0.5.0 audit item); `limit == 0` still means unlimited.
-- [ ] `tools/list` advertises `since`/`until`/`day`/`author` as `brag_list`
+- [x] `tools/list` advertises `since`/`until`/`day`/`author` as `brag_list`
       input properties, and the server still advertises exactly **four** tools
       (this spec adds no tool).
-- [ ] Output stays byte-identical to `brag list --format json` over the same
+- [x] Output stays byte-identical to `brag list --format json` over the same
       rows — the filters change *which* rows, never their rendering.
-- [ ] **Every existing `internal/cli` test passes unchanged.** This is the
+- [x] **Every existing `internal/cli` test passes unchanged.** This is the
       no-behavior-change bar for the package move.
-- [ ] Full gate set green: `gofmt -l .` empty, `go vet ./...`, `go test ./...`,
+- [x] Full gate set green: `gofmt -l .` empty, `go vet ./...`, `go test ./...`,
       `just test-docs`.
 
 ## Failing Tests
@@ -422,27 +422,151 @@ edits keep it well inside; no test-docs change is needed.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?**
+- **Branch:** `feat/spec-072-mcp-list-filter-parity`
+- **PR (if applicable):** see stage backlog / PR body
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
   - `DEC-042` — MCP time-window filter parity (emitted at design, with this spec)
-- **Deviations from spec:**
+- **Fail-first result (AGENTS.md §9):** run before any implementation.
+  `internal/timewindow` failed to build (`undefined: ParseSince` — expected for
+  a new package). The 14 `mcpserver` failures were all the *right* failures and
+  two distinct kinds, which is the useful signal: the filter tests failed with
+  `validating "arguments": unexpected additional properties`, proving the SDK's
+  `additionalProperties:false` schema genuinely did not carry the fields; and
+  `TestBragList_NegativeLimitIsToolError` failed with *"expected a tool error,
+  got success"*, independently confirming the folded-in audit item was a real
+  defect and not a hypothetical.
+- **Deviations from spec:** none. Two spec instructions were followed as
+  written where the tempting alternative was visible:
+  - The `window.go` trap: `timewindow.ParseSince(sinceRaw, clock())` preserves
+    today's semantics rather than using `windowCutoff`'s `now` argument. The
+    reasoning is now a code comment at the call site, so the next reader does
+    not "fix" it either.
+  - `TestServer_StillExactlyFourTools` was **not** added — `server_test.go`'s
+    existing `TestServer_ToolsListed` already asserts it, so per the spec it got
+    an extended comment instead, carrying the enumeration of the six other
+    places that name the four tools (for SPEC-074, which will bump the count).
 - **Follow-up work identified:**
+  - **`windowCutoff`'s unused `now` (small, real).** `windowCutoff(window,
+    sinceRaw, now, previous)` takes a `now` its `--since` branch does not use,
+    reaching for `clock()` instead. Harmless in production (both are
+    `time.Now`, and `ParseSince` normalizes to UTC); visible only in tests,
+    which stub `nowFunc` while leaving `clock` real. Worth a small spec that
+    unifies the seam *with* the test updates that implies — deliberately not
+    bundled here, where the acceptance bar was "no behavior change."
+  - **`buildFTS5Query` extraction.** DEC-024's noted duplication is now the
+    only remaining instance of the pattern this spec retired, and
+    `internal/timewindow` is the precedent to copy. Still gated on DEC-024's
+    own trigger (a third consumer) — but the cost of doing it dropped.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
+   — Nothing blocking. The one thing the spec did not pin was the *test* seam
+   for backdating rows in `internal/mcpserver`: the package's own
+   `import_audit_test.go` forbids `database/sql` in every file including tests,
+   so the obvious "just write an UPDATE" is unavailable. The answer already
+   existed (`internal/storage/storagetest.Backdate`, which exists precisely so
+   non-storage packages can seed past-dated rows), but the spec named
+   `server_test.go`'s helpers as the harness and did not mention it. A one-line
+   Inputs entry would have saved the lookup.
+
 2. **Was there a constraint or decision that should have been listed but wasn't?**
+   — The `no-sql-in-cli-layer` entry should have noted that `internal/mcpserver`
+   enforces the same rule *by test convention* rather than by the constraint's
+   path glob (which covers `internal/cli/**` only), and that the enforcement
+   walks test files too. That is the constraint that actually shaped a build
+   decision here, and it was listed without the detail that made it binding.
+
 3. **If you did this task again, what would you do differently?**
+   — Write the `mcpserver` failing tests *first* and the `timewindow` ones
+   second. The MCP tests produced a genuinely informative fail-first (two
+   distinct, meaningful failure modes); the `timewindow` ones could only produce
+   `undefined: ParseSince`, which is the "stray compilation error" AGENTS.md
+   warns is a weak signal. For a package-*move* spec the real fail-first
+   evidence lives entirely at the consuming boundary, and leading with it would
+   have made that explicit rather than incidental.
 
 ---
+
+## Verify
+
+**✅ APPROVED.**
+
+- Acceptance criteria: 15/15 met.
+- Gate set green: `gofmt -l .` empty, `go vet ./...` clean, `go test ./...`
+  929 pass across 13 packages, `just test-docs` ALL OK.
+- No decision drift: DEC-042's three sub-decisions are each implemented as
+  written (pure parser with explicit `now`; CLI grammar verbatim; `until`
+  MCP-only) and each is pinned by a test.
+- No constraint violations. Worth noting explicitly:
+  `internal/mcpserver/list_filters_test.go` reaches SQL only through
+  `internal/storage/storagetest`, which exists for exactly this purpose, so
+  `mcpserver`'s own `import_audit_test.go` (which walks test files too) stays
+  green.
+- **Live behavioral check beyond the unit tests** (§12(b) discipline applied at
+  verify — a real stdio round-trip, not just the in-memory transport). Drove
+  `brag mcp serve` over a pipe with a hand-written JSON-RPC session:
+  `{"since":"7d","project":"demo"}` → 1 row; `{"day":"today","since":"7d"}` →
+  `isError`, *"day is mutually exclusive with since/until"*;
+  `brag_search {"limit":-1}` → `isError`, *"limit must not be negative"*;
+  `{"author":"human","day":"today"}` → both CLI-authored rows. **stderr was
+  empty and stdout carried protocol frames only**, so DEC-024's transport
+  purity holds with the new code paths.
+  - *Incidental finding, pre-existing, NOT a regression:* if the client closes
+    stdin immediately after writing, the server exits without flushing
+    responses. Reproduced identically on the released `/opt/homebrew/bin/brag`
+    v0.5.2, so it predates this spec. Real clients hold the pipe open, so this
+    is a test-harness footgun rather than a user-facing defect — recorded here
+    so the next person who writes a pipe-based smoke test does not spend the
+    ten minutes I did.
+- CLI regression check: `brag list --day today`, `--since 7d --project demo`,
+  and the `--day`+`--since` UserError all behave byte-identically to before the
+  package move.
 
 ## Reflection (Ship)
 
 *Appended during the **ship** cycle.*
 
 1. **What would I do differently next time?**
+   — Lead the fail-first run with the *consuming* boundary. For a package-move
+   spec, `undefined: ParseSince` in the new package proves nothing; the useful
+   evidence was entirely in `mcpserver`, where two distinct failure modes
+   (`unexpected additional properties` for the missing fields, *"expected a
+   tool error, got success"* for the negative limit) independently confirmed
+   both halves of the spec were real problems. I got that signal by accident of
+   ordering rather than by design.
+
 2. **Does any template, constraint, or decision need updating?**
+   — Two candidates, neither at the codification bar yet (AGENTS.md's N=3
+   same-outcome / N=2 paired-opposing rule):
+   - **`no-sql-in-cli-layer`'s path glob is narrower than its enforcement.** The
+     constraint covers `internal/cli/**`, but `internal/mcpserver` enforces the
+     same rule by test convention over *all* its files including tests. That is
+     load-bearing (it dictated using `storagetest` here) and invisible from
+     `constraints.yaml`. Worth either widening the glob or adding a one-line
+     note pointing at `import_audit_test.go`. N=1 so far.
+   - **A "purity guard" test idiom.** `TestPackageReadsNoWallClock` (this spec)
+     and `TestNoSQLImport` (SPEC-040) are the same mechanical shape: walk the
+     package's own sources, fail on a forbidden literal. It is a cheap way to
+     make an architectural claim *enforced* rather than documented. N=2, but
+     same-outcome, so it holds for a third instance before codifying.
+
 3. **Is there a follow-up spec I should write now before I forget?**
+   — Yes, one small one, already recorded under Follow-up work: unify the
+   `windowCutoff` seam so its `now` argument is actually used by the `--since`
+   branch (currently it reaches for `clock()`), together with the impact/story
+   test updates that implies. Deliberately excluded here because this spec's
+   acceptance bar was "no behavior change," and that fix *is* a behavior change
+   in tests. The `buildFTS5Query` extraction stays gated on DEC-024's own
+   third-consumer trigger, but is now cheaper: `internal/timewindow` is the
+   precedent to copy.
+
 4. **What can a user do now that they couldn't before?**
+   — An agent connected over MCP can now ask for *"the last 7 days on this
+   project"* or *"only what agents logged"* in a single `brag_list` call —
+   before, MCP exposed only `tag`/`project`/`type`/`limit`, so any time or
+   authorship question meant pulling the whole corpus and filtering
+   client-side, or dropping to the shell. Four filters (`since`, `until`,
+   `day`, `author`), one call, with the CLI's exact grammar because both
+   surfaces now share one parser.

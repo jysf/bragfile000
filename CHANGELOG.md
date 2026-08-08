@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **MCP `brag_list` time-window and provenance filters** (SPEC-072 / DEC-042).
+  The tool now accepts `since`, `until`, `day`, and `author` alongside
+  `tag`/`project`/`type`/`limit`, so a connected agent can ask for "the last
+  week on this project" or "what agents logged" without pulling the whole
+  corpus and filtering client-side. The grammar is identical to the CLI's —
+  `since`/`until` take DEC-008's `YYYY-MM-DD`|`Nd`/`Nw`/`Nm`, `day` takes
+  DEC-039's `YYYY-MM-DD`|`today`|`yesterday` local calendar day — because both
+  surfaces now call the same parser (`internal/timewindow`), retiring the
+  `cli↔mcpserver` import cycle that deferred `--since` at SPEC-040. `until` is
+  an exclusive upper bound and is MCP-only by design; the CLI keeps `--day`.
+
+### Fixed
+
+- **A negative `limit` is now a tool error on MCP `brag_list` / `brag_search`**
+  instead of silently meaning "unlimited" (v0.5.0 pre-release audit item;
+  `brag list --limit -1` already errored). `0` or omitted still means
+  unlimited.
+
 ## [0.5.2] - 2026-07-30
 
 ### Changed

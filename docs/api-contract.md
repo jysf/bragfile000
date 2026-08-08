@@ -1159,9 +1159,20 @@ same `~/.bragfile/db.sqlite` the CLI uses:
   `brag add`, the MCP tool does **not** emit a SPEC-039 milestone line and
   does **not** auto-fill `project` from a server-side cwd — the MCP server
   has no meaningful cwd relative to the calling agent.
-- **`brag_list`** — filters `tag`/`project`/`type`/`limit` (exact match,
-  same semantics as `brag list`, minus `--since`); returns the DEC-011
-  array, byte-identical to `brag list --format json` on the same rows.
+- **`brag_list`** — filters `tag`/`project`/`type` (exact match), the time
+  window `since`/`until`/`day`, `author` (`agent`|`human`), and `limit`.
+  Same semantics as `brag list`, and literally the same parsers: `since`/
+  `until` take [DEC-008](../decisions/DEC-008-since-date-format.md)'s
+  `YYYY-MM-DD`|`Nd`/`Nw`/`Nm`, `day` takes
+  [DEC-039](../decisions/DEC-039-brag-list-day-local-calendar-window.md)'s
+  `YYYY-MM-DD`|`today`|`yesterday` LOCAL calendar day, and `day` is mutually
+  exclusive with `since`/`until`
+  ([DEC-042](../decisions/DEC-042-mcp-time-window-filter-parity.md)).
+  `until` is an **exclusive** upper bound and is deliberately MCP-only — the
+  CLI has no `--until` because `--day` covers the human need (DEC-042 Option
+  D). A negative `limit` is a tool error; `0`/omitted means unlimited.
+  Returns the DEC-011 array, byte-identical to `brag list --format json` on
+  the same rows.
 - **`brag_search`** — `query` (required), `limit`; applies the same
   [DEC-010](../decisions/DEC-010-search-query-syntax.md) whitespace-
   tokenize + phrase-quote transform as `brag search` and returns the

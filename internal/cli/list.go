@@ -7,6 +7,7 @@ import (
 	"github.com/jysf/bragfile000/internal/config"
 	"github.com/jysf/bragfile000/internal/export"
 	"github.com/jysf/bragfile000/internal/storage"
+	"github.com/jysf/bragfile000/internal/timewindow"
 	"github.com/spf13/cobra"
 )
 
@@ -74,7 +75,7 @@ func runList(cmd *cobra.Command, _ []string) error {
 	}
 	if cmd.Flags().Changed("since") {
 		raw, _ := cmd.Flags().GetString("since")
-		t, err := ParseSince(raw)
+		t, err := timewindow.ParseSince(raw, clock())
 		if err != nil {
 			return UserErrorf("invalid --since %q: %v", raw, err)
 		}
@@ -87,7 +88,7 @@ func runList(cmd *cobra.Command, _ []string) error {
 			return UserErrorf("--day and --since are mutually exclusive (--day sets the full day window)")
 		}
 		raw, _ := cmd.Flags().GetString("day")
-		start, end, err := ParseDay(raw)
+		start, end, err := timewindow.ParseDay(raw, clock())
 		if err != nil {
 			return UserErrorf("invalid --day %q: %v", raw, err)
 		}
