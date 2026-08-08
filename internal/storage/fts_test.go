@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jysf/bragfile000/internal/storage/storagetest"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -591,6 +593,74 @@ func TestSearch_ZeroLimitMeansUnlimited(t *testing.T) {
 	}
 	if len(neg) != 7 {
 		t.Errorf("Search(.., -1) len = %d, want 7", len(neg))
+	}
+}
+
+// TestSearch_SPEC073FixtureOrdersAuthQuery pins the exact bm25 order
+// Store.Search("auth") returns over SPEC-073's shared 8-entry memory-slice
+// fixture (transcribed from the spec's Notes -> §12(b) pre-flight -> B): id
+// 5, then 1, then 2, then 4. internal/memory.Slice trusts Options.Matched as
+// given, in order (DEC-043 sub-decision 1) -- it never re-derives relevance
+// itself. This test is the seam that guards that trust: an FTS5 tokenizer,
+// bm25 weighting, or driver change that silently re-ranks this query would
+// change what internal/cli/memory.go feeds into Slice without any other
+// test in the suite going red (SPEC-073 punch-list item 1 -- reversing
+// runMemory's matchedIDs left `go test ./...` entirely green).
+func TestSearch_SPEC073FixtureOrdersAuthQuery(t *testing.T) {
+	s, path := newTestStore(t)
+
+	type row struct {
+		entry     Entry
+		createdAt string
+	}
+	// Same 8 rows, same order, as SPEC-073 Notes -> "The fixture".
+	rows := []row{
+		{Entry{Title: "Auth is mostly caching", Type: "learned"}, "2026-01-09T21:45:00Z"},
+		{Entry{Title: "Auth token rotation", Project: "orbit", Type: "shipped", Impact: "removed the last shared secret"}, "2026-03-14T10:10:00Z"},
+		{Entry{Title: "FTS5 triggers fight attach", Project: "bragfile", Type: "learned"}, "2026-05-02T19:30:00Z"},
+		{Entry{Title: "Auth refactor for the gateway", Project: "orbit", Type: "shipped", Impact: "cut p99 login latency from 600ms to 120ms"}, "2026-06-11T14:25:00Z"},
+		{Entry{Title: "Read the auth spec"}, "2026-07-20T08:00:00Z"},
+		{Entry{Title: "Sparkline pulse command", Project: "bragfile", Type: "shipped"}, "2026-08-01T11:02:00Z"},
+		{Entry{Title: "Retry storms need jitter", Project: "orbit", Type: "learned"}, "2026-08-05T17:40:00Z"},
+		{Entry{Title: "MCP list filter parity", Project: "bragfile", Type: "shipped", Impact: "agents can ask for a bounded window in one call"}, "2026-08-07T09:15:00Z"},
+	}
+	ids := make([]int64, len(rows))
+	for i, r := range rows {
+		e, err := s.Add(r.entry)
+		if err != nil {
+			t.Fatalf("Add %q: %v", r.entry.Title, err)
+		}
+		ids[i] = e.ID
+	}
+	for i, r := range rows {
+		at, err := time.Parse(time.RFC3339, r.createdAt)
+		if err != nil {
+			t.Fatalf("parse createdAt %q: %v", r.createdAt, err)
+		}
+		if err := storagetest.Backdate(path, ids[i], at); err != nil {
+			t.Fatalf("backdate id %d: %v", ids[i], err)
+		}
+	}
+
+	got, err := s.Search(`"auth"`, 0)
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	// ids[0]="Auth is mostly caching" (fixture id 1), ids[1]="Auth token
+	// rotation" (id 2), ids[3]="Auth refactor for the gateway" (id 4),
+	// ids[4]="Read the auth spec" (id 5). Locked order: 5, 1, 2, 4.
+	want := []int64{ids[4], ids[0], ids[1], ids[3]}
+	gotIDs := make([]int64, len(got))
+	for i, e := range got {
+		gotIDs[i] = e.ID
+	}
+	if len(got) != len(want) {
+		t.Fatalf("len(got) = %d, want %d (got ids %v, want %v)", len(got), len(want), gotIDs, want)
+	}
+	for i, e := range got {
+		if e.ID != want[i] {
+			t.Errorf("position %d: id=%d, want %d (full: got=%v want=%v)", i, e.ID, want[i], gotIDs, want)
+		}
 	}
 }
 

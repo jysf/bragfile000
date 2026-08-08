@@ -154,9 +154,13 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       (`brag://memory/recent`, `brag://memory/project/{name}`, `brag://projects`)
       plus the `brag_memory` tool. Emits **DEC-045** (resource set, URI scheme,
       MIME/rendering, and per-resource size policy). Complexity M.
-      **Gate:** PR #124 bumps the go-sdk `1.6.1 → 1.7.0`, which invalidates the
-      resources-API pre-flight recorded below — re-run §12(b) against whatever is
-      in `go.mod` before locking DEC-045.
+      **Gate:** PR #124 bumped the go-sdk `1.6.1 → 1.7.0` (merged 2026-08-08),
+      which invalidated the resources-API pre-flight recorded below. The re-run
+      is done, not pending: see PR #131 (open), which edits this section's own
+      **Design Notes** with the three deltas the bump introduced (the
+      `Cacheable`/wire-shape addition, `CacheScope` clobbered to `public`, and
+      `CodeResourceNotFound` moving `-32002 → -32602`). Merge #131 before
+      locking DEC-045.
 
 **Count:** 1 shipped / 1 active (SPEC-073, in verify) / 1 pending (SPEC-074 — not
 yet written)

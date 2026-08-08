@@ -143,9 +143,13 @@ Entries: 8
 - Skipped: 0
 `
 
-// TestMemoryCmd_EndToEndMarkdownGolden proves the declared Matched order is
-// real: the CLI does not receive [5 1 2 4], it derives it from FTS5.
-// Verified at design (SPEC-073 Notes → §12(b) pre-flight → B).
+// TestMemoryCmd_EndToEndMarkdownGolden pins the end-to-end markdown body —
+// the three-read pool composition, the fusion, and the rendering — against
+// Golden 1 over a real store. It does NOT prove the declared Matched order
+// is real: the final ordering here is insensitive to the internal order of
+// Options.Matched (see TestSearch_SPEC073FixtureOrdersAuthQuery in
+// internal/storage and TestMemoryCmd_JSONScoresReflectFTS5MatchOrder below
+// for the two tests that actually pin it — SPEC-073 punch-list item 1).
 func TestMemoryCmd_EndToEndMarkdownGolden(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	seedMemoryFixture(t, dbPath)
@@ -157,6 +161,60 @@ func TestMemoryCmd_EndToEndMarkdownGolden(t *testing.T) {
 	}
 	if out != memoryCmdGolden1 {
 		t.Errorf("stdout mismatch:\n--- got ---\n%s\n--- want ---\n%s", out, memoryCmdGolden1)
+	}
+}
+
+// TestMemoryCmd_JSONScoresReflectFTS5MatchOrder pins the wiring seam the
+// markdown golden cannot: that runMemory passes Store.Search's bm25 order
+// through to memory.Options.Matched UNMODIFIED. On this fixture the final
+// ranking is insensitive to Matched's internal order (reversing it to
+// [4 2 1 5] yields the identical id sequence — see SPEC-073 §12(b) pre-
+// flight → B), so only the per-item `score` values can catch a scrambled
+// order; a test that only pins ids/positions cannot. Asserts the four ids
+// in the match list (SPEC-073 Notes → §12(b) pre-flight → A hand-computed
+// table, score rounded to 6dp as the JSON envelope does) — under a reversed
+// Matched these four scores each land on a different value, while the
+// other four (never in Matched) would not move, which is why all four are
+// asserted rather than one (SPEC-073 punch-list item 1).
+func TestMemoryCmd_JSONScoresReflectFTS5MatchOrder(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedMemoryFixture(t, dbPath)
+	withNowFunc(t, time.Date(2026, 8, 8, 12, 0, 0, 0, time.UTC))
+
+	out, errStr, err := runMemoryCmd(t, dbPath, "--query", "auth", "--project", "orbit", "--format", "json")
+	if err != nil {
+		t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+	}
+
+	var env struct {
+		Slice []struct {
+			ID    int64   `json:"id"`
+			Score float64 `json:"score"`
+		} `json:"slice"`
+	}
+	if err := json.Unmarshal([]byte(out), &env); err != nil {
+		t.Fatalf("unmarshal json output: %v (stderr: %s)\n%s", err, errStr, out)
+	}
+
+	wantScore := map[int64]float64{
+		4: 0.047139,
+		2: 0.046671,
+		5: 0.032018,
+		1: 0.030835,
+	}
+	gotScore := make(map[int64]float64, len(env.Slice))
+	for _, it := range env.Slice {
+		gotScore[it.ID] = it.Score
+	}
+	for id, want := range wantScore {
+		got, ok := gotScore[id]
+		if !ok {
+			t.Errorf("id %d missing from slice: %v", id, gotScore)
+			continue
+		}
+		if got != want {
+			t.Errorf("id %d: score = %v, want %v", id, got, want)
+		}
 	}
 }
 
@@ -222,6 +280,48 @@ func TestMemoryCmd_JSONAndMarkdownSelectTheSameSlice(t *testing.T) {
 	}
 	if fmt.Sprint(mdIDs) != fmt.Sprint(jsonIDs) {
 		t.Errorf("markdown ids = %v, json ids = %v", mdIDs, jsonIDs)
+	}
+}
+
+// TestMemoryCmd_RankIsPositionInFullRankingNotIncludedSet pins Item.Rank's
+// semantics, which are otherwise unpinned at CLI level: rank is the 1-based
+// position in the FULL fused ranking (assigned before budget trimming), not
+// the position within the included set. DEC-044 sub-decision 3 states the
+// accepted consequence explicitly — "rank 4 (5) is included while ranks 2
+// and 3 are not" — but until this test, nothing failed if a build silently
+// renumbered included items 1..N (per AGENTS.md §9, a locked decision with
+// no failing test is aspirational). Uses Golden 3's bare `--budget 40`
+// case: id 8 (rank 1 in the plain-recency full ranking) and id 5 (rank 4)
+// are the two entries that fit; the gap at 2 and 3 (ids 7 and 6, skipped for
+// size) is the non-contiguous evidence (SPEC-073 punch-list item 2).
+func TestMemoryCmd_RankIsPositionInFullRankingNotIncludedSet(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedMemoryFixture(t, dbPath)
+	withNowFunc(t, time.Date(2026, 8, 8, 12, 0, 0, 0, time.UTC))
+
+	out, errStr, err := runMemoryCmd(t, dbPath, "--budget", "40", "--format", "json")
+	if err != nil {
+		t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+	}
+
+	var env struct {
+		Slice []struct {
+			ID   int64 `json:"id"`
+			Rank int   `json:"rank"`
+		} `json:"slice"`
+	}
+	if err := json.Unmarshal([]byte(out), &env); err != nil {
+		t.Fatalf("unmarshal json output: %v (stderr: %s)\n%s", err, errStr, out)
+	}
+
+	if len(env.Slice) != 2 {
+		t.Fatalf("len(slice) = %d, want 2 (got %v)\n%s", len(env.Slice), env.Slice, out)
+	}
+	if env.Slice[0].ID != 8 || env.Slice[0].Rank != 1 {
+		t.Errorf("slice[0] = {id:%d rank:%d}, want {id:8 rank:1}", env.Slice[0].ID, env.Slice[0].Rank)
+	}
+	if env.Slice[1].ID != 5 || env.Slice[1].Rank != 4 {
+		t.Errorf("slice[1] = {id:%d rank:%d}, want {id:5 rank:4} (non-contiguous: ranks 2 and 3 were skipped for size)", env.Slice[1].ID, env.Slice[1].Rank)
 	}
 }
 

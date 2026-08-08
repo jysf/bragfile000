@@ -356,6 +356,19 @@ by a test rather than by a paragraph.
 - **Neutral:** the fixed line shape freezes a small amount of the CLI contract. It is
   the intended trade — the line shape is the token model, so a stable budget requires
   a stable line. Changing it is a golden diff plus a DEC edit, which is the point.
+- **Neutral (recorded at punch-list verify, so a `DEC-045` author sees it here rather
+  than only in a build note that gets archived at ship):** `export.ToMemoryMarkdown` /
+  `export.ToMemoryJSON` take a precomputed `memory.Result`, not raw entries + options —
+  the only DEC-014 renderer pair built this way. All seven prior consumers
+  (`impact`, `wrapped`, `coverage`, `spark`, `summary`, `review`, `stats`) compute
+  their own aggregate internally from entries. The divergence is forced by sub-decision
+  6 (`budget always measured against markdown, in both formats`): `Slice` must run
+  **once** in `internal/cli/memory.go` and both renderers must consume the same
+  `Result`, or "same ids, same order, both formats" becomes two implementations
+  agreeing rather than one computation rendered twice. Named here because SPEC-074's
+  MCP resources inherit this same body (sub-decision 6's own consequence,
+  above) — a `DEC-045` author reaching for the "renderer takes entries + options"
+  template from the other seven would silently break the one-`Slice`-call property.
 
 ## Validation
 
@@ -451,3 +464,9 @@ each individually revisitable without touching anything else.
   adopts its four sub-choices, its skip-and-continue lean, and its instruction that
   budget accounting be a pure function of the rendered bytes; PROJ-006 brief
   (`consult → trust → complete → measure`).
+- Build-time deviation: SPEC-073's Build Completion records why
+  `export.ToMemoryMarkdown`/`ToMemoryJSON` take a precomputed `memory.Result` rather
+  than raw entries + options, unlike the seven prior DEC-014 renderers — cross-
+  referenced above under Consequences (recorded there at punch-list verify precisely
+  because the Build Completion section is archived at ship and `DEC-045` would
+  otherwise inherit the shape without the rationale).

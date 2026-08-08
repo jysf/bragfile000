@@ -344,9 +344,29 @@ fixture's `created_at`.
 - `"TestMemoryCmd_EndToEndMarkdownGolden"` — seeds the fixture, runs
   `memory --query auth --project orbit` with `nowFunc` stubbed to
   `2026-08-08T12:00:00Z`, and asserts stdout equals **Golden 1** plus one trailing
-  newline. **This is the test that proves the declared `Matched` order is real**:
-  the CLI does not receive `[5 1 2 4]`, it derives it from FTS5. Verified at design
-  (Notes → §12(b) pre-flight → B).
+  newline. Pins the end-to-end markdown body — the three-read pool composition,
+  the fusion, and the rendering — against the golden over a real store.
+  **Correction (punch-list item 1, verify):** this test does **not** prove the
+  declared `Matched` order is real. On this fixture the final ordering is
+  insensitive to `Matched`'s internal order — reversing `matchedIDs` in
+  `runMemory` right after the FTS5 read leaves `go test ./...` entirely green,
+  this golden included, because only the per-item `score` moves, not the
+  ordering (Notes → §12(b) pre-flight → B: the *assumed* and *real* bm25 orders
+  likewise produced the same final ordering and differed only in scores). The
+  order-pinning is actually done by two tests added at verify:
+  `internal/storage`'s `"TestSearch_SPEC073FixtureOrdersAuthQuery"` (pins
+  `Store.Search("auth")` itself against an FTS5/driver regression) and
+  `"TestMemoryCmd_JSONScoresReflectFTS5MatchOrder"` below (pins that `runMemory`
+  passes that order through to `Options.Matched` unmodified, via `--format json`
+  score assertions — the one signal a reordering actually changes).
+- `"TestMemoryCmd_JSONScoresReflectFTS5MatchOrder"` — **added at verify
+  (punch-list item 1)**, immediately after the above. Runs
+  `--query auth --project orbit --format json` and asserts the `score` field
+  for the four ids in the match list (`4`, `2`, `5`, `1`) against the
+  hand-computed values (Notes → §12(b) pre-flight → A, rounded to 6dp). Under a
+  reversed `Matched` these four scores each land on a different value while
+  ordering is unchanged — this is the seam that actually catches `runMemory`
+  scrambling the FTS5 order before it reaches `memory.Slice`.
 - `"TestMemoryCmd_BareInvocationIsPlainRecency"` — `brag memory` with no flags
   produces **Golden 2**, and `Filters: (none)`.
 - `"TestMemoryCmd_JSONAndMarkdownSelectTheSameSlice"` — runs both formats with the
@@ -394,6 +414,18 @@ fixture's `created_at`.
 - `"TestMemoryCmd_StdoutOnlyCarriesTheDocument"` — on success `errBuf.Len() == 0`;
   on a `UserError` `outBuf.Len() == 0`
   (`stdout-is-for-data-stderr-is-for-humans`).
+
+### `internal/storage/fts_test.go` — added at verify (punch-list item 1)
+
+- `"TestSearch_SPEC073FixtureOrdersAuthQuery"` — seeds the SPEC-073 fixture
+  directly into a `Store` (`storagetest.Backdate` per row, same as the CLI
+  fixture) and asserts `Store.Search(`"auth"`, 0)` returns ids in the order
+  `[5 1 2 4]` — the real bm25 order recorded in Notes → §12(b) pre-flight → B.
+  This is the seam that catches an FTS5 tokenizer, bm25 weighting, or driver
+  change silently re-ranking the query out from under `runMemory`; a CLI- or
+  export-level test cannot isolate this from the fusion or the rendering.
+  Confirmed to pass against `modernc.org/sqlite` 1.55.0 (the version on this
+  branch as of `5448868`) before being kept.
 
 ### `scripts/test-docs.sh` — new Group U
 
@@ -1109,8 +1141,11 @@ not evidence of anything.
     `internal/mcpserver` (DEC-024's recorded debt). SPEC-074 will be the **third**
     consumer, which is DEC-042 revisit trigger (b) — extract it there, copying
     `internal/timewindow`'s precedent.
-  - PR #124 (go-sdk `1.6.1 → 1.7.0`) still gates SPEC-074's DEC-045 §12(b)
-    resources-API pre-flight.
+  - **Updated at punch-list verify:** PR #124 (go-sdk `1.6.1 → 1.7.0`) merged
+    2026-08-08. It no longer gates anything by itself — the §12(b) re-run it
+    required is done, in the open PR #131, which edits STAGE-019's own Design
+    Notes with the three deltas the bump introduced. What SPEC-074/DEC-045
+    actually needs before locking is **#131 merged to main**.
   - `just test-docs` group E2 currently fails, but on a stray reference
     inside a gitignored `.claude/worktrees/happy-kilby-09218e/` directory (a
     parallel session's worktree artifact, unrelated to this repo's tracked
@@ -1147,6 +1182,72 @@ not evidence of anything.
    identical here because the hand-computed score table caught the one real
    arithmetic bug immediately, but the process order didn't match the
    spec's explicit sequencing advice.
+
+## Punch-List Iteration
+
+*A verify pass on PR #132 returned four items — two gating, two cheap. No ranking
+or budget behavior changed; every new test below passes against the existing
+implementation. Per the punch list's own rule, each new test was first run against
+a deliberately broken version of the code it pins and confirmed red before being
+kept.*
+
+- **Item 1 (gating) — the FTS5 → `Matched` seam was unpinned.** Confirmed the
+  premise independently: reversing `matchedIDs` in `runMemory` right after the
+  `for _, e := range hits` loop left `go test ./...` at 976/976 passing — the
+  entire suite, `TestMemoryCmd_EndToEndMarkdownGolden` included, stayed green,
+  because on this fixture the final ordering is insensitive to `Matched`'s
+  internal order (only per-item `score` moves). Two tests added:
+  - `internal/storage/fts_test.go`: `"TestSearch_SPEC073FixtureOrdersAuthQuery"`
+    seeds the fixture directly into a `Store` and pins `Store.Search("auth")` →
+    `[5 1 2 4]`. Passed on first run against `modernc.org/sqlite` 1.55.0 (the
+    driver on this branch since `5448868`), confirming the design-time hand
+    check still holds under the newer driver.
+  - `internal/cli/memory_test.go`:
+    `"TestMemoryCmd_JSONScoresReflectFTS5MatchOrder"` runs
+    `--query auth --project orbit --format json` and asserts the `score` field
+    for the four matched ids (`4`, `2`, `5`, `1`) against the hand-computed
+    table. **Red-then-green evidence:** against the reversed-`matchedIDs`
+    mutation above, this was the *only* failing test in the whole suite
+    (976 passed, 1 failed) — `id 4: score = 0.047907, want 0.047139`,
+    `id 2: 0.046927 vs 0.046671`, `id 5: 0.03125 vs 0.032018`,
+    `id 1: 0.030579 vs 0.030835` — all four hand-verified against the reversed
+    match-rank arithmetic before the mutation was reverted. Reverting restored
+    977/977 green (976 + this new test).
+  - Corrected the false claim in `## Failing Tests` (that
+    `TestMemoryCmd_EndToEndMarkdownGolden` "proves the declared `Matched` order
+    is real") and the identical claim in the PR #132 description.
+- **Item 2 (gating) — `Item.Rank` semantics were unpinned.** Confirmed the
+  premise: renumbering `Rank` to the included-set position (added a
+  `for i := range included { included[i].Rank = i + 1 }` pass after the
+  skip-and-continue loop in `internal/memory/memory.go`) also left the full
+  suite green except one test. Added
+  `"TestMemoryCmd_RankIsPositionInFullRankingNotIncludedSet"` to
+  `internal/cli/memory_test.go`: `--budget 40 --format json` (Golden 3's case)
+  asserts `slice[0] = {id:8, rank:1}` and `slice[1] = {id:5, rank:4}` — the
+  non-contiguous gap at ranks 2–3 (ids `7`, `6`, skipped for size) is DEC-044
+  sub-decision 3's accepted consequence made visible in JSON. **Red-then-green
+  evidence:** under the renumbering mutation this test alone failed —
+  `slice[1] = {id:5 rank:2}, want {id:5 rank:4}` — while the rest of the suite
+  (976 tests) stayed green. Reverting restored 977/977 green.
+- **Item 3 (cheap) — recorded the renderer-signature divergence where a
+  `DEC-045` author will look.** Added a Consequences bullet to `DEC-044` (not
+  just SPEC-073's Build Completion, which archives at ship) explaining why
+  `ToMemoryMarkdown`/`ToMemoryJSON` take a precomputed `memory.Result` rather
+  than raw entries + options, unlike the seven prior DEC-014 renderers — forced
+  by sub-decision 6's "one `Slice` call, both formats" property. Cross-
+  referenced from a new References line.
+- **Item 4 (cheap) — re-tensed the stale gate notes.** PR #124 merged
+  2026-08-08; its go-sdk bump's required §12(b) re-run is done, in the open PR
+  #131 (not yet merged), not pending. Updated STAGE-019's `## Spec Backlog` gate
+  note (touching only that section — PR #131 edits `## Design Notes`
+  exclusively, so the two stay non-conflicting) and this spec's Build
+  Completion follow-up bullet to point at #131 as the thing that actually
+  gates `DEC-045` now (merging it), rather than at #124.
+
+**Full gate set:** `gofmt -l .` empty, `go vet ./...` clean, `go test ./...`
+green, `just test-docs` green (E2's pre-existing `.claude/worktrees/` failure
+persists, unrelated to this branch — see the original Build Completion
+follow-up), `just test-hook` green.
 
 ---
 
