@@ -9,7 +9,7 @@ project:
   # `status` (active/shipped/archived) is what tooling keys on; `activity` is the
   # human-facing detail. Suggested vocabulary (extend as needed):
   #   requirements | design | build | test | blocked
-  activity: requirements
+  activity: design
   priority: high
   target_ship: null
 
@@ -98,6 +98,15 @@ shipped_at: null
 >   Code check: the MCP read *tools* already ship; the remaining work is MCP
 >   resources + `Since/Until/Author` filter parity + a token-budgeted retrieval.
 >   Re-scoped in Candidate scope #1 so framing starts from the true baseline.
+> - **Corpus-as-memory GRADUATED requirement → framed stage (2026-08-07).** The
+>   first deep pillar is now `STAGE-019` (active), with a three-spec backlog
+>   (SPEC-072/073/074) and four DECs identified (DEC-042 filter parity + parser
+>   home, DEC-043 ranking, DEC-044 token budget, DEC-045 resource shape). The
+>   pull was the *cost* signal, not a new annoyance: once the true baseline was
+>   verified, the remaining work turned out to be additive plumbing plus one
+>   algorithm — no storage change, no migration, no new dependency. The project's
+>   requirements phase stays open for the other four pillars; this is one pillar
+>   graduating, not the phase closing.
 
 ## What This Project Is
 
@@ -211,9 +220,15 @@ same-second collision; empty-`type` sentinel; export-md sort id-tiebreak;
       lot for the small correctness nits, to slot in opportunistically. Not a
       deeper pillar; created so the backlog lives in the hierarchy, not just here.
 
-**Candidate deeper pillars (NOT framed — for next session's discussion):**
-- [ ] (STAGE-019?) — corpus-as-agent-memory (read-side MCP resources) — the
-      synthesis' #1; likely the first deep stage.
+**Active (the first deep pillar, framed 2026-08-07):**
+- [ ] STAGE-019 (active) — **corpus as agent memory**: MCP `brag_list` filter
+      parity (`since`/`until`/`day`/`author`, retiring the `cli↔mcpserver` cycle),
+      a deterministic blended + token-budgeted memory slice (`internal/memory` +
+      `brag memory`), and the MCP **resources** push surface. Backlog:
+      SPEC-072/073/074; DECs: DEC-042 (parser home + MCP time vocabulary),
+      DEC-043 (ranking), DEC-044 (token budget), DEC-045 (resource shape).
+
+**Candidate deeper pillars (NOT framed — for a later session's discussion):**
 - [ ] (STAGE-020?) — signed / attestable provenance (+ closes the tag-forgery gap)
 - [ ] (STAGE-021?) — capture completeness (inbox / git-import / evidence links) —
       includes promoting the `commit:`/`pr:`/`issue:` evidence-link convention
@@ -224,7 +239,7 @@ same-second collision; empty-`type` sentinel; export-md sort id-tiebreak;
       populated + shares #1's MCP read surface
 - (sequence, split, and de-scope at framing; IDs assigned at creation)
 
-**Count:** 1 shipped / 1 proposed (parked) / 0 active / (deeper pillars unframed)
+**Count:** 1 shipped / 1 proposed (parked) / 1 active / (remaining deeper pillars unframed)
 
 ## Dependencies
 
