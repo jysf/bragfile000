@@ -491,3 +491,60 @@ questions:
       TTY-aware DEFAULT with an explicit override, or a magnitude-aware
       normalization variant). Both are localized, additive changes — the
       primitive's signature and the JSON envelope are unaffected either way.
+
+  - id: memory-slice-fusion-constants
+    question: "Are the memory slice's fusion constants (k=60 and equal weights for the recency/relevance/project lists) right for a PERSONAL-scale corpus, given they are TREC-scale defaults applied to hundreds of entries rather than thousands of documents?"
+    priority: medium
+    status: open
+    raised_by: claude-opus-5
+    raised_at: 2026-08-08
+    assigned_to: null
+    notes: |
+      Filed at SPEC-073 design (DEC-043, confidence 0.75). The STRUCTURE is
+      locked and strong: reciprocal-rank fusion over three ORDINAL lists
+      (recency, relevance, project), chosen because Store.List's ordinal
+      position and Store.Search's bm25 rank (negative, unbounded,
+      corpus-relative) have no shared unit, and because fusing positions
+      needs no invented normalization. It degenerates to exactly plain
+      recency when no query/project is given, and reads no wall clock at
+      all. None of that is in question.
+
+      The CONSTANTS are (sub-decision 2, self-scored 0.55). k=60 is the
+      published RRF value (Cormack/Clarke/Buettcher, SIGIR 2009), taken
+      BECAUSE it is published — a hand-picked value would be indefensible —
+      and the weights are 1.0 each because RRF's premise is that the fused
+      lists are peers and no personal corpus tells us otherwise. Both are
+      borrowed defaults applied to a corpus two to three orders of
+      magnitude smaller than the one they were derived on. Two consequences
+      are already visible in the arithmetic and are recorded in DEC-043 as
+      accepted negatives:
+
+      (1) k=60 COMPRESSES THE TOP. Ranks 1 and 20 differ by only ~24% of
+      their own magnitude, so the ORDER is right but the scores look nearly
+      flat to anyone inspecting `--format json`.
+
+      (2) THE PROJECT BOOST IS STRONG. The whole recency term spans
+      1/61 -> 0 (~0.0164), so a project term of 1/(60+rank_p) is
+      comparable to the ENTIRE recency range — a same-project entry
+      effectively outranks a non-project entry of similar relevance almost
+      regardless of age. Soft in mechanism (nothing is removed, a strong
+      match still competes), close to a hard filter in effect.
+
+      Resolve/harden by dogfooding `brag memory` against this repo's own
+      corpus. If the top of the slice reads wrong, or `score` inspection
+      shows the ordering is being decided by a term the user did not
+      intend, the FIRST move is to lower k (10-20): that sharpens the top
+      of a personal-scale corpus AND weakens the project boost relative to
+      recency, addressing both consequences at once. The SECOND move is
+      unequal weights, which needs a fixture set richer than one hand-built
+      corpus to justify. The fallback if the constants prove indefensible
+      is DEC-043's Option C (lexicographic tiers) — most explainable, no
+      constants at all, at the cost of tunability — NOT Option B (weighted
+      linear over normalized components), which trades one borrowed
+      constant for two invented ones.
+
+      Every constant is exported (memory.FusionK, memory.WeightRecency /
+      WeightMatch / WeightProject) and pinned by byte-exact goldens, so any
+      change is a visible golden diff, not a silent behavior change.
+      (Above §14's 0.7 hard threshold; filed proactively per DEC-031's
+      precedent of recording the softest sub-choice.)

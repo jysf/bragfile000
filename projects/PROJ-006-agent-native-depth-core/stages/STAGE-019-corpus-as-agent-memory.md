@@ -138,17 +138,28 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       **DEC-042 emitted** (parser home + the MCP time vocabulary + the `until`
       asymmetry; folds in STAGE-018's negative-`limit` parity item).
       Complexity M.
-- [ ] SPEC-073 (not yet written) — the memory slice: `internal/memory`
-      deterministic blended ranking + token-budget trim, surfaced as
-      `brag memory` (markdown + JSON, DEC-014 envelope) with byte-exact goldens.
-      Emits **DEC-043** (ranking algorithm) and **DEC-044** (budget expression,
-      estimator, and enforcement). Complexity M.
+- [ ] SPEC-073 (build) — the memory slice: `internal/memory` deterministic
+      blended ranking + token-budget trim, surfaced as `brag memory` (markdown +
+      JSON, DEC-014 envelope) with byte-exact goldens. The **EIGHTH** DEC-014
+      consumer. **DEC-043 emitted** (reciprocal-rank fusion over three ORDINAL
+      lists — recency, relevance, project — because bm25 rank and recency have no
+      shared unit; `k=60` and unit weights locked and golden-pinned; `--project`
+      is a soft boost, not a filter; ordinal recency means the ranking reads no
+      clock at all). **DEC-044 emitted** (a positive-only `--budget` token count
+      defaulting to 2000, a documented `ceil(bytes/4)` estimate scoped away from
+      DEC-027's caller-reported token-count tag by a mechanical guard, greedy
+      skip-and-continue enforcement, and the one-line entry rendering that *is*
+      the unit of cost). Complexity M.
 - [ ] SPEC-074 (not yet written) — the MCP push surface: resources
       (`brag://memory/recent`, `brag://memory/project/{name}`, `brag://projects`)
       plus the `brag_memory` tool. Emits **DEC-045** (resource set, URI scheme,
       MIME/rendering, and per-resource size policy). Complexity M.
+      **Gate:** PR #124 bumps the go-sdk `1.6.1 → 1.7.0`, which invalidates the
+      resources-API pre-flight recorded below — re-run §12(b) against whatever is
+      in `go.mod` before locking DEC-045.
 
-**Count:** 1 shipped / 0 active / 2 pending (SPEC-073, SPEC-074 — not yet written)
+**Count:** 1 shipped / 1 active (SPEC-073, in build) / 1 pending (SPEC-074 — not
+yet written)
 
 > **The stage is NOT complete.** `just archive-spec` reports "all specs shipped"
 > when the last *written* spec ships; SPEC-073 and SPEC-074 are framed in this
@@ -270,6 +281,17 @@ change, and DEC-045 must start from them, not from the v1.6.1 shape:**
 `(entries, options, now)`. `now` is injected, never read inside the package
 (AGENTS.md §9 os-level-seam habit). This is what makes byte-exact goldens
 possible for a ranking that is otherwise time-dependent.
+
+> **Settled stronger at SPEC-073 design (2026-08-08).** There is no `now` at all.
+> DEC-043 makes the recency signal **ordinal** (a rank, not an age), so the
+> ranking is time-INVARIANT rather than time-dependent-but-injected — a strictly
+> stronger determinism property than this note anticipated. `memory.Options`
+> therefore carries no `Now` field (the renderer owns the wall clock, as in every
+> other DEC-014 consumer), and `TestPackageReadsNoWallClock` enforces the absence
+> mechanically. Ordinal recency also self-normalizes to the developer's capture
+> cadence and is what lets the fusion stay principled — mixing a continuous decay
+> with an ordinal bm25 rank would reintroduce the normalization problem RRF exists
+> to avoid.
 
 **Reuse, don't re-query.** The slice composes `Store.List` and `Store.Search`
 results in Go. No new storage method unless a spec proves one is needed — and if
