@@ -215,9 +215,13 @@ an unpinned weight is a silent behavior change later.
   bytes — the estimate and the render cannot disagree.
 
 **The resource surface (SPEC-074 / DEC-045).** SDK API confirmed present at
-v1.6.1 (`Server.AddResource(*Resource, ResourceHandler)`,
-`Server.AddResourceTemplate`, contents as `[]*ResourceContents{URI, MIMEType,
-Text}`). Forks: the resource **set** (fixed vs template vs both — lean both);
+v1.6.1 and **re-confirmed against v1.7.0** (the version in `go.mod` since #124;
+see the delta note below) — `Server.AddResource(*Resource, ResourceHandler)`,
+`Server.AddResourceTemplate(*ResourceTemplate, ResourceHandler)`, contents as
+`ReadResourceResult.Contents []*ResourceContents{URI, MIMEType, Text}`. All
+three signatures are byte-identical across the bump, as are the `Resource` and
+`ResourceTemplate` structs (so `Resource.Size` is still available for the size
+fork). Forks: the resource **set** (fixed vs template vs both — lean both);
 the **URI scheme** (`brag://…` custom scheme vs `file://` — lean custom, this is
 not a file); the **MIME/rendering** (markdown vs JSON — lean `text/markdown` for
 the memory slices, because a resource is context for a model, not a data pipe,
@@ -227,6 +231,40 @@ budgeting — decide whether to populate it, given the content is generated per
 read). Per §12(b), stand the resources up against a real in-memory `mcp.Client`
 at design and confirm `resources/list` + `resources/read` round-trip *and* that
 the template actually matches — shape validation is not registration.
+
+**go-sdk v1.7.0 delta (re-run of the §12(b) pre-flight, 2026-08-08).** The
+v1.6.1 finding above was re-verified behaviorally, not just by shape: a
+throwaway server registering one static resource (`brag://memory/recent`) plus
+one template (`brag://memory/project/{name}`) over `mcp.NewInMemoryTransports()`
+driven by a real `mcp.Client` confirmed that `resources/list` advertises the
+static resource, `resources/templates/list` advertises the template,
+`resources/read` round-trips both, and the template genuinely matches a concrete
+URI (`brag://memory/project/bragfile` reached the template handler carrying the
+concrete URI). The custom `brag://` scheme survives both `url.Parse` (which
+`AddResource` panics on) and `uritemplate.New` (which `AddResourceTemplate`
+panics on), so the lean on a custom scheme still holds. **Three things did
+change, and DEC-045 must start from them, not from the v1.6.1 shape:**
+- *`ReadResourceResult` grew fields.* It now embeds `Cacheable`, adding the
+  JSON fields `ttlMs` (int) and `cacheScope` (string) — **neither tagged
+  `omitempty`** — and carries `InputRequests` / `RequestState` / `NeedsInput()`
+  for multi-round-trip elicitation, plus a custom `MarshalJSON`. A read response
+  now serializes as `{"_meta":…,"ttlMs":0,"cacheScope":"public","contents":[…],
+  "resultType":"complete"}`, not `{"contents":[…]}`. `Contents` itself is
+  unchanged, so the *handler* contract is untouched — but any golden pinned on
+  the resources/read **wire** shape must include these fields.
+- *`CacheScope` is server-clobbered; `TTLMs` is not.* `Server.readResource`
+  calls `setDefaultCacheableValues()`, which assigns `CacheScope = "public"`
+  unconditionally — a handler setting `"private"` is overwritten (observed:
+  handler set `private`, client saw `public`). `TTLMs` passes through intact.
+  This is a real input to the size/caching fork: a per-read TTL hint is
+  expressible, a private cache scope is not.
+- *`CodeResourceNotFound` changed value and is deprecated.* It went from
+  `const = -32002` to `var int64 = jsonrpc.CodeInvalidParams` (**-32602**) per
+  SEP-2164, and the symbol is now marked deprecated ("use
+  `jsonrpc.CodeInvalidParams` directly; will be removed"). Pre-1.7.0 behavior is
+  restorable only via `MCPGODEBUG=customresnotfounderrcode=1`. Any SPEC-074
+  error-path test for an unregistered URI must assert `-32602` /
+  `jsonrpc.CodeInvalidParams` and must not reference the deprecated constant.
 
 **Determinism.** Everything in `internal/memory` is a pure function of
 `(entries, options, now)`. `now` is injected, never read inside the package
