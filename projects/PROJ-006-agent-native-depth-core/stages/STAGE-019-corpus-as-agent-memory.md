@@ -132,7 +132,7 @@ corpus should be answering.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-072 (design) — MCP `brag_list` filter parity (`since`/`until`/`day`/
+- [ ] SPEC-072 (verify) — MCP `brag_list` filter parity (`since`/`until`/`day`/
       `author`) + extract the time-window parser into `internal/timewindow`,
       retiring the `cli↔mcpserver` cycle that deferred `--since` at SPEC-040.
       **DEC-042 emitted** (parser home + the MCP time vocabulary + the `until`
