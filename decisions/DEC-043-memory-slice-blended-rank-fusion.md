@@ -108,11 +108,28 @@ sub-decisions are locked:
    caller composes **`Store.List` + `Store.Search` + a project-scoped `Store.List`**
    in Go — no new storage method, no new SQL. Each read is capped at
    `memory.PoolLimit` (200), so the pool is ≤ 600 rows before dedup. The cap is an
-   implementation bound, **not a user knob**, and it is near-lossless *by
-   construction*: an entry outside the top 200 by recency, the top 200 by bm25, and
-   the top 200 in its project has all three terms ≤ 1/260 and cannot outrank an
-   entry that is in any list's top 200. One pool per list is what keeps it true —
-   drop the project read and old same-project history becomes unreachable.
+   implementation bound, **not a user knob**.
+
+   **What the cap actually guarantees** (corrected at design review — an earlier
+   draft of this paragraph claimed the cap "cannot" cost a ranking, which does not
+   follow, because the three terms *sum*). The worst-case excluded entry sits at
+   rank 201 in all three lists and would have scored `3/261 ≈ 0.011494`; the
+   weakest *included* entry sits at recency rank 200 with no match and no project
+   and scores `1/260 ≈ 0.003846`. So an excluded entry **can** outrank an included
+   one, and the cap is lossy in the tail. The guarantee that does hold is a head
+   guarantee: `1/(60 + r) > 3/261` for all `r ≤ 26`, so **any entry in the top 26
+   of any single list cannot be displaced by anything the cap excluded.** Below
+   that, ordering may be perturbed — and at the default budget (≈110 entries) the
+   tail of a typical slice is inside that zone.
+
+   This is accepted, not hidden: the head is what a memory slice is read for, the
+   perturbation is confined to entries that are marginal on *all three* axes at
+   once, and the alternative (uncapped reads) trades a bounded tail imprecision
+   for an unbounded read on every invocation. Raising `PoolLimit` widens the head
+   guarantee — it is exported and golden-pinned, so the change is visible.
+
+   One pool per list is what keeps even the head guarantee true — drop the project
+   read and old same-project history becomes unreachable at any rank.
 
 6. **Determinism details.** `Slice` **dedupes by ID** (keeping one copy; the sort
    key makes duplicates adjacent), sorts by `score DESC` with a **stable** sort over
@@ -306,8 +323,11 @@ Two properties made the choice, beyond "it is standard":
   worse for reasons that are structural, not preferential.
 - Sub-decision 4 (project as a soft boost) — **0.80**. Well-argued and cheaply
   reversible, but genuinely a product call rather than a forced one.
-- Sub-decision 5 (pool cap, one read per list) — **0.85**. The near-losslessness
-  argument is arithmetic; the specific value 200 is round.
+- Sub-decision 5 (pool cap, one read per list) — **0.80** (was 0.85 before design
+  review). The head guarantee is arithmetic and holds; the tail is knowingly lossy
+  and the specific value 200 is round. Lowered because the first draft of this
+  sub-decision asserted a stronger property than the arithmetic supports — the
+  structure survived the check, the claimed bound did not.
 - Sub-decision 2 (`k = 60`, equal weights) — **0.55**. These are borrowed defaults
   applied to a corpus two to three orders of magnitude smaller than the one they
   were derived on, and the accepted negatives above are their direct consequence.
