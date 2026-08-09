@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -84,41 +85,21 @@ func runMemory(cmd *cobra.Command, _ []string) error {
 	}
 	defer s.Close()
 
-	// One bounded read per ranked list (DEC-043 sub-decision 5). Dropping the
-	// project read makes old same-project history unreachable; dropping the
-	// match read makes an old top-relevance entry unreachable. memory.Slice
-	// dedupes the union by id.
-	pool, err := s.List(storage.ListFilter{Limit: memory.PoolLimit})
-	if err != nil {
-		return fmt.Errorf("list entries: %w", err)
-	}
-	var matchedIDs []int64
-	if query != "" {
-		fts5, qerr := buildFTS5Query(query)
-		if qerr != nil {
-			return UserErrorf("%v", qerr)
+	// One bounded read per ranked list (DEC-043 sub-decision 5), shared with
+	// the MCP surfaces so both run the SAME composition (SPEC-074 LD9).
+	pool, gerr := memory.Gather(s, memory.GatherOptions{Query: query, Project: project})
+	if gerr != nil {
+		var qe *memory.ErrQuery
+		if errors.As(gerr, &qe) {
+			return UserErrorf("%v", qe)
 		}
-		hits, serr := s.Search(fts5, memory.PoolLimit)
-		if serr != nil {
-			return fmt.Errorf("search entries: %w", serr)
-		}
-		for _, e := range hits {
-			matchedIDs = append(matchedIDs, e.ID)
-		}
-		pool = append(pool, hits...)
-	}
-	if project != "" {
-		scoped, perr := s.List(storage.ListFilter{Project: project, Limit: memory.PoolLimit})
-		if perr != nil {
-			return fmt.Errorf("list entries: %w", perr)
-		}
-		pool = append(pool, scoped...)
+		return gerr
 	}
 
-	result := memory.Slice(pool, memory.Options{
+	result := memory.Slice(pool.Entries, memory.Options{
 		Query:   query,
 		Project: project,
-		Matched: matchedIDs,
+		Matched: pool.Matched,
 		Budget:  budget,
 	})
 

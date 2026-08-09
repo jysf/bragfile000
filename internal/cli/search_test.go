@@ -13,65 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// --- buildFTS5Query tests (pure function, no DB, no cobra) ---------
-
-func TestBuildFTS5Query_SingleWord(t *testing.T) {
-	got, err := buildFTS5Query("latency")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	want := `"latency"`
-	if got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-}
-
-func TestBuildFTS5Query_MultiWordAnd(t *testing.T) {
-	got, err := buildFTS5Query("cut latency")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	want := `"cut" "latency"`
-	if got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-}
-
-func TestBuildFTS5Query_HyphenatedLiteral(t *testing.T) {
-	got, err := buildFTS5Query("auth-refactor")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	want := `"auth-refactor"`
-	if got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-}
-
-func TestBuildFTS5Query_EmptyIsError(t *testing.T) {
-	got, err := buildFTS5Query("")
-	if err == nil {
-		t.Fatalf("expected error, got nil (output=%q)", got)
-	}
-	if got != "" {
-		t.Errorf("expected empty output on error, got %q", got)
-	}
-}
-
-func TestBuildFTS5Query_WhitespaceOnlyIsError(t *testing.T) {
-	_, err := buildFTS5Query("   \t  ")
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-}
-
-func TestBuildFTS5Query_QuoteInQueryIsError(t *testing.T) {
-	_, err := buildFTS5Query(`with "quote"`)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-}
-
 // --- CLI helpers ----------------------------------------------------
 
 // newRootWithSearch builds a fresh root + search subcommand, separate
