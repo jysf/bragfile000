@@ -7,7 +7,7 @@
 task:
   id: SPEC-074
   type: story                      # epic | story | task | bug | chore
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -1009,24 +1009,75 @@ confirm the named test reddens, revert.
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** `feat/spec-074-mcp-resources`
-- **PR (if applicable):**
-- **All acceptance criteria met?**
+- **PR (if applicable):** (opened at hand-off; see PR description)
+- **All acceptance criteria met?** Yes — all bullets under `## Acceptance
+  Criteria` verified: exact resource/template sets, MIME/Description/no-`size`
+  on all three, real-client round-trips (§12(b)), byte-identical resource
+  bodies (recent and project-boosted), the soft-boost positive proof (contains
+  other-project entries) and its two error semantics (unknown name → slice,
+  empty name → `-32602`), percent-decoding, `a/b` and unregistered-URI both
+  `-32602`, `ttlMs`/`cacheScope` cache hints, the projects resource (names,
+  status, count, no locations, empty-state message), five-tool `tools/list`,
+  `brag_memory` byte-parity in both formats, budget `*int` semantics
+  (0/negative error, honoured, default), format validation, no
+  since/until/day in the schema, `ftsquery.Build`/`memory.Gather` (already
+  landed, re-verified here), single pool composition on both surfaces, the
+  two `internal/memory` mechanical guards, zero stray stdout bytes across a
+  five-tool + `resources/read` round-trip, `no-sql-in-cli-layer` extension,
+  unchanged `go.mod`, and the full six-gate set green.
 - **New decisions emitted:**
   - `DEC-045` — The MCP push surface: three `brag://` resources, markdown
     bodies, and `brag_memory` as the fifth tool (written at design)
 - **Deviations from spec:**
-- **Follow-up work identified:**
+  - `internal/cli/mcp.go` has **two** `Long` strings that enumerate the tool
+    names — `NewMCPCmd`'s (the spec's named line ~26) and
+    `newMCPServeCmd`'s (a second one, a few lines below, whose tool list wraps
+    across two source lines). The design-time premise-audit grep only caught
+    the first: its single-line regex doesn't match text split across a line
+    break. Re-running the same grep fresh at build (per AGENTS.md's
+    audit-grep cross-check discipline) surfaced no *new* file, but did
+    surface that the second `Long` in the *same* file the Outputs entry
+    already named was about to go stale next to a freshly-updated one.
+    Updated both — leaving one four-tool string beside a five-tool string in
+    the same file would have been a self-contradiction the grep's line-break
+    blind spot would otherwise have shipped silently.
+  - LD9's already-landed `internal/memory/pool_test.go` (PR #135/#136) uses
+    test names (`TestGather_ProjectAddsScopedRead`,
+    `TestGather_QueryAddsMatchedInSearchOrder`,
+    `TestGather_UnknownProjectIsNotAnError`, …) that differ from the
+    illustrative names in this spec's `Decision↔test traceability` table
+    (`TestGather_QueryAndProject_ThreeReads`, etc.) — same coverage, different
+    names, because that extraction shipped ahead of this spec's design being
+    finalized. Verified against the actual names during the mutation-check
+    pass (rows 11–12); not renamed, per "LD8/LD9 already landed — verify,
+    don't write."
+- **Follow-up work identified:** None beyond DEC-045's own revisit triggers
+  (a–g), which already cover the live open questions (the soft-boost rename
+  fallback, `Resource.Size` population, multi-resource attachment cost, a
+  networked-transport `cacheScope` reckoning, `state_note` on
+  `brag://projects`).
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing substantive. DEC-045's nine sub-decisions plus the §12(b)
+   pre-flight transcript answered essentially every API question before a
+   line of code was written — the one small gap was the second `cli/mcp.go`
+   `Long` string not being named explicitly (see Deviations above), and
+   that cost a grep re-run, not real time.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. `DEC-045/044/043/024/017/042/010/011/034` together covered the
+   ranking, the budget, the envelope, the soft-boost semantics, the time
+   vocabulary boundary, the search transform, and the JSON shape with no
+   gaps found during implementation.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing structural. The one process step that earned its keep was
+   re-running the design-time premise-audit grep fresh at build (AGENTS.md's
+   audit-grep cross-check) — it is what caught the second `mcp.go` `Long`
+   string before it shipped stale, which is exactly the discipline's stated
+   purpose.
 
 ---
 
