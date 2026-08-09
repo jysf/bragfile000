@@ -150,7 +150,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       DEC-027's caller-reported token-count tag by a mechanical guard, greedy
       skip-and-continue enforcement, and the one-line entry rendering that *is*
       the unit of cost). Complexity M.
-- [ ] SPEC-074 (build) — the MCP push surface: resources
+- [ ] SPEC-074 (verify) — the MCP push surface: resources
       (`brag://memory/recent`, `brag://memory/project/{name}`, `brag://projects`)
       plus the `brag_memory` tool — the server's **FIFTH** tool. **DEC-045
       emitted** (nine locked sub-decisions: the resource set, the custom

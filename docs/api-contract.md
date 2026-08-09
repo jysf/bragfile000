@@ -1229,7 +1229,7 @@ brag mcp serve
 ```
 
 Runs a local, **stdio-only** Model Context Protocol (MCP) server (no network
-transport, no separate binary/install) exposing four typed tools over the
+transport, no separate binary/install) exposing five typed tools over the
 same `~/.bragfile/db.sqlite` the CLI uses:
 
 - **`brag_add`** — `title` (required, non-empty, ≤200 chars), optional
@@ -1263,6 +1263,13 @@ same `~/.bragfile/db.sqlite` the CLI uses:
 - **`brag_stats`** — no arguments; returns the
   [DEC-014](../decisions/DEC-014-rule-based-output-shape.md) envelope,
   byte-identical to `brag stats --format json` for the same corpus.
+- **`brag_memory`** — `query`, `project`, `budget` (`*int`; omitted uses the
+  2000-token default, `0`/negative is a tool error), `format` (`markdown`
+  default or `json`). No `since`/`until`/`day` — the ranking already prefers
+  recent entries, and hard windows are `brag_list`'s job
+  ([DEC-045](../decisions/DEC-045-mcp-push-surface-resources-and-brag-memory.md)).
+  Byte-identical to `brag memory` at the same options, in both formats. See
+  the Resources subsection below for the auto-attachable counterpart.
 
 **Provenance.** `brag_add` stamps caller-provided `agent`/`model` as
 reserved-namespace tags — `agent:<name>` / `model:<id>` (lowercase,
@@ -1292,6 +1299,28 @@ CLI flags).
 `os.Stdout`; nothing human-facing is ever printed there (the generalized
 form of `stdout-is-for-data-stderr-is-for-humans` at this transport). See
 [DEC-024](../decisions/DEC-024-mcp-server-sdk-transport-and-provenance.md).
+
+#### Resources (STAGE-019 / DEC-045)
+
+Alongside its five tools, the server advertises three **resources** — the
+protocol's auto-attachable primitive: context a client can put in front of a
+model before the agent works, with no tool call and no configuration. All
+three are `text/markdown`:
+
+| URI | kind | body |
+|---|---|---|
+| `brag://memory/recent` | static | the default memory slice — byte-identical to `brag memory` at the 2000-token default budget |
+| `brag://memory/project/{name}` | template | the same slice with `{name}` as a SOFT boost, never a filter — entries from other projects still appear, ranked lower; an unknown `{name}` is not an error, an **empty** `{name}` is |
+| `brag://projects` | static | every registered, non-archived project with its status and brag count (no locations, no `state_note`) — the template's lookup table, so `{name}` is filled with a real name instead of a guess |
+
+Every read carries `ttlMs: 0` (chosen — the corpus changes on every capture,
+so a cached slice is worse than no slice) and `cacheScope: "public"`
+(clobbered by the SDK regardless of what the server sets; vacuous over this
+stdio-only, single-user transport — see DEC-045 sub-decision 5 for the
+networked-transport revisit trigger). `Resource.Size` is left unpopulated
+(DEC-045 sub-decision 4). See
+[DEC-045](../decisions/DEC-045-mcp-push-surface-resources-and-brag-memory.md)
+for the full reasoning.
 
 ### `brag mcp install` — register the server in a client's config (STAGE-015)
 
@@ -1381,3 +1410,4 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-029` — `brag story --audience`: deterministic threads (initiative = the `project` axis, time-ordered, impact beats marked via `WithImpact`; an opt-in `--theme` cross-project cross-cut) + a throughline SKELETON that bragfile assembles and the caller's LLM weaves into an arc — the pure-pipe posture (no model/network in the binary) preserved. Audiences are DATA-DRIVEN shaping profiles (bundled `embed.FS` defaults + user override, override-wins, a flat `key: value` schema parsed by a hand-rolled stdlib parser — no new YAML dep), not a Go enum. The bundle EXTENDS DEC-014's envelope with an arc-aware body (`audience`/`threads`/`throughline`/`framing_directive`; a 7-key beat projection); framing directives ship as bundled per-audience assets, printable via `--print-directive`. Ships the gradient endpoints `me`/`exec` (`manager`/`skip` deferred to SPEC-050 as config-only).
 - `DEC-043` — `brag memory`: eighth DEC-014 consumer, the ranking half. Reciprocal-rank fusion (`k=60`, unit weights, both locked and golden-pinned) over three ORDINAL lists — recency (re-derived, `created_at DESC, id DESC`), relevance (`Store.Search`'s bm25 order, passed in as an ordered id list), and project membership (a soft boost, never a filter — `entries.project` is a soft string match, DEC-017). Fuses positions, not scores, so there is no invented normalization and the ranking degenerates to plain recency for free when no query is given. Reads no clock at all (the recency signal is a rank, not an age) — a stronger determinism property than an injected `now`. One bounded read per list (`PoolLimit=200`); the cap gives a head guarantee (anything in the top 26 of any single list cannot be displaced by what the cap excluded) but is knowingly lossy in the tail.
 - `DEC-044` — `brag memory`: eighth DEC-014 consumer, the budget half. A positive-only `--budget` token count (default 2000; `0`/negative is a `UserError`, unlike `--limit`'s `0=unlimited`), a documented `ceil(bytes/4)` estimate, greedy skip-and-continue enforcement (a long entry at rank 1 cannot starve the slice behind it), and the locked one-line entry rendering (`- <id> <date> [<project>/<type>] <title> — <impact>`) that IS the unit of cost — `internal/memory` owns both the line and the estimate, so they cannot disagree. The budget is always measured against the markdown rendering in both formats, so `--format json` returns the same entries in the same order. The estimate is scoped away from DEC-027's caller-reported `tokens:` provenance tag by a mechanical guard test: it sizes a retrieval, it is never written to storage, and it never enters the reserved tag namespace.
+- `DEC-045` — the MCP **push** surface: three `brag://` resources (a custom scheme, `text/markdown`, `Resource.Size` left unpopulated) plus `brag_memory` as the server's fifth tool. The two memory resources serve `export.ToMemoryMarkdown`'s output unmodified — CLI↔MCP parity by construction. `brag://memory/project/{name}` is a SOFT boost (never a filter), corrected in its `Title`/`Description`/self-describing body; an unknown `{name}` is not an error, an empty one is (`-32602`). Every read carries `ttlMs: 0` (chosen) and `cacheScope: "public"` (SDK-clobbered, vacuous over stdio). Amends `DEC-024`'s "four typed tools" line without rewriting it.

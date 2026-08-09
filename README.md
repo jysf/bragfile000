@@ -14,7 +14,8 @@ sync, no account.
 > the binary on macOS.
 >
 > Working with an AI agent? `brag mcp install` wires brag into Claude Code,
-> Cursor, or Claude Desktop as four typed tools — see
+> Cursor, or Claude Desktop as five typed tools plus an auto-loadable memory
+> resource — see
 > [Using brag from an AI agent (MCP)](#using-brag-from-an-ai-agent-mcp) below.
 
 ## Install

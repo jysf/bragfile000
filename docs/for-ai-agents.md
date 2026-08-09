@@ -62,8 +62,8 @@ mid-flight.
 
 ## 3. The tools
 
-The server advertises exactly four typed tools over stdio. All read and write
-the same `~/.bragfile/db.sqlite` the CLI uses (see §6 to change that).
+The server advertises exactly five typed tools over stdio. All read and write
+the same `~/.bragfile/db.sqlite` the CLI uses (see §7 to change that).
 
 ### `brag_add` — capture an entry
 
@@ -72,10 +72,10 @@ the same `~/.bragfile/db.sqlite` the CLI uses (see §6 to change that).
 | `title`       | string  | **required** | non-empty; ≤200 characters |
 | `description` | string  | optional | ≤100000 characters |
 | `tags`        | string  | optional | comma-joined string (DEC-004), NOT an array; ≤64 characters |
-| `project`     | string  | optional | ≤64 characters — **read §4** |
+| `project`     | string  | optional | ≤64 characters — **read §5** |
 | `type`        | string  | optional | ≤64 characters, e.g. `shipped`, `fixed`, `learned` |
-| `impact`      | string  | optional | ≤256 characters — **read §7** |
-| `agent`       | string  | optional | provenance; stamped `agent:<name>` (see §5) |
+| `impact`      | string  | optional | ≤256 characters — **read §8** |
+| `agent`       | string  | optional | provenance; stamped `agent:<name>` (see §6) |
 | `model`       | string  | optional | provenance; stamped `model:<id>` |
 | `session`     | string  | optional | provenance; stamped `session:<id>` |
 | `cost`        | string  | optional | provenance; stamped `cost:<n>` |
@@ -129,7 +129,45 @@ Returns a JSON array of entry objects (same shape as `brag_list`).
 Takes **no parameters**. Returns the lifetime stats envelope, byte-identical
 to `brag stats --format json` for the same corpus.
 
-## 4. Gotcha: `project` is not auto-filled over MCP
+### `brag_memory` — the corpus as working memory
+
+| param     | type    | required | notes |
+|-----------|---------|----------|-------|
+| `query`   | string  | optional | boost entries matching this full-text query (FTS5, DEC-010) |
+| `project` | string  | optional | boost entries in this project (a soft boost, not a filter) |
+| `budget`  | integer | optional | token budget for the entry lines; omitted uses the default (2000); `0` or negative is a **tool error** |
+| `format`  | string  | optional | `markdown` (default) or `json` |
+
+Byte-identical to `brag memory` at the same options, in both formats. No
+`since`/`until`/`day` — the ranking already prefers recent entries, and hard
+windows are `brag_list`'s job. This is the **pull** counterpart to §4's
+resources: call it when you want a different budget or a targeted query
+instead of the auto-loaded default slice. See
+[DEC-045](../decisions/DEC-045-mcp-push-surface-resources-and-brag-memory.md).
+
+## 4. The resources
+
+Alongside its five tools, the server advertises three MCP **resources** —
+context a client can auto-load in front of the model, with no tool call and
+no configuration. All three are `text/markdown`:
+
+- **`brag://memory/recent`** (static) — the default memory slice, the same
+  bytes as `brag memory` at the 2000-token default budget. Attach this once
+  and stop re-deriving "where were we" at the start of every session.
+- **`brag://memory/project/{name}`** (template) — the same slice with
+  `{name}` ranked higher. `{name}` is **a soft boost, not a filter**:
+  entries from other projects still appear, ranked lower, because a
+  decision made elsewhere is often the one that matters here. Use
+  `brag://projects` to get real names — a guessed `{name}` produces a
+  silently unboosted slice.
+- **`brag://projects`** (static) — every registered, non-archived project
+  with its status and brag count (no locations, no `state_note`). The
+  template's lookup table.
+
+Every read carries `ttlMs: 0` — the corpus changes on every capture, so a
+cached slice is worse than no slice at all.
+
+## 5. Gotcha: `project` is not auto-filled over MCP
 
 On the CLI, `brag add` auto-fills `project` from your current directory when
 you omit it (nearest registered project location). The MCP `brag_add` tool
@@ -152,7 +190,7 @@ it already exists. See [`api-contract.md`](./api-contract.md) for its full
 contract. Capture stays free text — bragfile never silently auto-registers an
 unknown `project` for you (DEC-036).
 
-## 5. Provenance stamping
+## 6. Provenance stamping
 
 `brag_add` records *who* and *what* produced an entry as reserved-namespace
 tags. Each is appended after your own `tags` and canonicalized like any tag
@@ -179,7 +217,7 @@ author-provenance, so an entry carrying only those still classifies as
 `human`. Query any of them with the normal filters, e.g.
 `brag list --tag model:claude-opus-4-8`. See DEC-024 and DEC-027.
 
-## 6. Choosing the database
+## 7. Choosing the database
 
 The server reads and writes the same database the CLI resolves, in this order
 (DEC-003):
@@ -192,14 +230,14 @@ To point an agent at a scratch database, either register the server with a
 `--db` flag in its `args`, or set `BRAGFILE_DB` in the client's environment
 before it launches the server.
 
-## 7. Logging a win
+## 8. Logging a win
 
 To capture a win, call `brag_add` with at least:
 
 - `title` — a specific, action-verb headline;
 - `type` — usually `"shipped"` (or `fixed`, `learned`, `documented`, …);
 - `impact` — the concrete outcome (see below); and
-- `project` — the name (see §4).
+- `project` — the name (see §5).
 
 **Frame `impact` as the outcome, not the output.** State a metric or a named outcome —
 who is better off, and by how much — not the change you made.

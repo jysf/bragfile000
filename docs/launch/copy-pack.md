@@ -77,8 +77,9 @@ Repo: <repo-url>   Install: brew install <tap>/bragfile
 
 ```
 bragfile — a local-first work-journal MCP server. Agents log what they shipped
-via brag_add (with brag_list / brag_search / brag_stats read tools), stamped
-with agent/model/cost/session provenance. Backed by a single local SQLite file
+via brag_add (with brag_list / brag_memory / brag_search / brag_stats read
+tools, plus auto-loadable brag:// memory resources), stamped with
+agent/model/cost/session provenance. Backed by a single local SQLite file
 the user owns — no account, no network. Go, no cgo.
 ```
 
