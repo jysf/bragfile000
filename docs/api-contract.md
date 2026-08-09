@@ -851,6 +851,89 @@ Empty-window: provenance renders (`Threads: 0`, `Beats: 0/0`); the
 `throughline.arcs` `[]`, `framing_directive` the directive string,
 `filters` `{}`.
 
+### `brag memory [--query <text>] [--project <name>] [--budget <n>]` (STAGE-019)
+
+```
+brag memory                                   # the session opener: recent history, 2000 tokens
+brag memory --project bragfile                # boost one project without hiding the rest
+brag memory --query "auth rate limit"         # what do I already know about this?
+brag memory --query auth --project orbit      # both signals at once
+brag memory --budget 500                      # a tighter slice
+brag memory --format json | jq .slice[].id    # just the ids, for a follow-up call
+```
+
+A ranked, token-budgeted slice of your own history — the corpus read back as
+working memory, cheap enough for an agent to load at the start of every
+session. Rule-based, deterministic, no LLM, no network. The **eighth** DEC-014 consumer. Locked by
+[DEC-043](../decisions/DEC-043-memory-slice-blended-rank-fusion.md) (the
+ranking) and
+[DEC-044](../decisions/DEC-044-memory-slice-token-budget-and-line-shape.md)
+(the budget and line shape).
+
+Ranking blends three signals by **reciprocal-rank fusion** (DEC-043): how
+recent an entry is, how well it matches `--query`, and whether it belongs to
+`--project`. With neither flag the blend degenerates to plain recency, so a
+bare `brag memory` is the zero-config session opener. `--project` is a
+**soft boost, not a filter**: it raises that project's entries without
+hiding anyone else's — reach for `brag list --project` when you want a hard
+filter.
+
+The slice is bounded by an estimated **token** budget, not a row count.
+Entries are packed greedily in rank order via skip-and-continue: an entry
+that does not fit is skipped and the fill continues, so one long entry
+cannot starve the rest. The estimate is a documented `ceil(bytes/4)`
+heuristic that sizes this one retrieval. It is not a tokenizer, it is
+**never stored**, and it is **never stamped on an entry** — DEC-044's
+honesty clause keeps it out of DEC-027's reserved token-count tag
+namespace.
+
+Document structure:
+
+- **Provenance:** `Generated:` (RFC3339), `Scope: lifetime` (memory ranks
+  the whole corpus, like `stats`), `Filters:` (`--query <text> --project
+  <name>` in that declared order, or `(none)`), and `Entries: N` — the
+  **candidate-pool** size, not the included count.
+- **Body** (markdown; omitted entirely on an empty pool per
+  [DEC-014](../decisions/DEC-014-rule-based-output-shape.md)):
+  - `## Slice` — one line per included entry, in rank order:
+    `- <id> <YYYY-MM-DD> [<project>/<type>] <title> — <impact>`, with `-`
+    for an absent project or type and the impact clause only when non-empty.
+    No truncation, ever — an entry is included whole or skipped whole.
+  - `## Budget` — `Budget:`, `Estimated:`, `Included:`, `Skipped:` (tokens
+    and counts). `Included + Skipped == Entries`.
+
+Flags:
+
+- `--query <text>` boosts entries matching the full-text query (reuses
+  `brag search`'s DEC-010 tokenization: whitespace-split tokens,
+  phrase-quoted, AND semantics). Empty-after-tokenization or
+  quote-containing input is a user error.
+- `--project <name>` boosts entries in that project (soft, never a filter).
+  An explicit empty value is a user error.
+- `--budget <n>` (default **2000**) is the token budget for the `## Slice`
+  body; the surrounding envelope is a small fixed overhead on top. `0` or
+  negative is a **user error** — unlike `--limit`'s `0 = unlimited`
+  convention, an unbounded memory slice has no safe reading (`brag list` is
+  the unbounded form).
+- `--format markdown|json` defaults to `markdown`. The budget is **always**
+  measured against the markdown line in both formats, so the two formats
+  return the same entries in the same order. JSON top-level keys:
+  `generated_at`, `scope`, `filters`, `entries`, `budget`,
+  `estimated_tokens`, `included`, `skipped`, `slice`. Each `slice` item is a
+  narrow 9-key projection: `id`, `created_at`, `project`, `type`, `title`,
+  `impact`, `rank`, `score` (rounded to 6 decimal places), `tokens`.
+  `filters` keys are alphabetical (Go's JSON encoder) — a deliberate
+  asymmetry with the markdown line's declared `--query`-then-`--project`
+  order.
+
+No `--limit`, no `--detail`/`--verbose` line shape, and no time-window
+flags (`--since`/`--day`/`--until`) — the blend already prefers recent
+history, and a window would make `Scope: lifetime` a lie.
+
+The candidate pool composes three bounded reads (`Store.List` +
+`Store.Search` + a project-scoped `Store.List`, each capped at 200 rows) in
+Go — no new storage method, no new SQL.
+
 ### `brag tags` — tag taxonomy view (STAGE-006)
 
 ```
@@ -1296,3 +1379,5 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-028` — `brag impact`: fourth DEC-014 consumer. CALENDAR time windows (`--quarter`/`--month`/`--year`, current in-progress period; `--since` via ParseSince) deliberately diverging from summary/review's rolling windows; initiative = the `project` axis (reuses `GroupEntriesByProject`); impact-first body (only entries with a non-empty `impact`, plus a `<shown>/<in-window>` tally); a narrow 4-key `{id,title,project,impact}` per-entry JSON projection.
 - `DEC-033` — `brag coverage`: sixth DEC-014 consumer. Provenance-share metric — per-month agent-vs-human split + share, an agent-share sparkline (DEC-031, markdown-only), and a self-reference density measure — over the shared DEC-028/DEC-032 calendar window. The classifier is single-sourced: a pure `aggregate.IsAgentAuthored` Go predicate kept in agreement with storage's `provenanceExistsClause` SQL clause by a cross-package drift-guard test (`brag list --author` stays SQL, unregressed).
 - `DEC-029` — `brag story --audience`: deterministic threads (initiative = the `project` axis, time-ordered, impact beats marked via `WithImpact`; an opt-in `--theme` cross-project cross-cut) + a throughline SKELETON that bragfile assembles and the caller's LLM weaves into an arc — the pure-pipe posture (no model/network in the binary) preserved. Audiences are DATA-DRIVEN shaping profiles (bundled `embed.FS` defaults + user override, override-wins, a flat `key: value` schema parsed by a hand-rolled stdlib parser — no new YAML dep), not a Go enum. The bundle EXTENDS DEC-014's envelope with an arc-aware body (`audience`/`threads`/`throughline`/`framing_directive`; a 7-key beat projection); framing directives ship as bundled per-audience assets, printable via `--print-directive`. Ships the gradient endpoints `me`/`exec` (`manager`/`skip` deferred to SPEC-050 as config-only).
+- `DEC-043` — `brag memory`: eighth DEC-014 consumer, the ranking half. Reciprocal-rank fusion (`k=60`, unit weights, both locked and golden-pinned) over three ORDINAL lists — recency (re-derived, `created_at DESC, id DESC`), relevance (`Store.Search`'s bm25 order, passed in as an ordered id list), and project membership (a soft boost, never a filter — `entries.project` is a soft string match, DEC-017). Fuses positions, not scores, so there is no invented normalization and the ranking degenerates to plain recency for free when no query is given. Reads no clock at all (the recency signal is a rank, not an age) — a stronger determinism property than an injected `now`. One bounded read per list (`PoolLimit=200`); the cap gives a head guarantee (anything in the top 26 of any single list cannot be displaced by what the cap excluded) but is knowingly lossy in the tail.
+- `DEC-044` — `brag memory`: eighth DEC-014 consumer, the budget half. A positive-only `--budget` token count (default 2000; `0`/negative is a `UserError`, unlike `--limit`'s `0=unlimited`), a documented `ceil(bytes/4)` estimate, greedy skip-and-continue enforcement (a long entry at rank 1 cannot starve the slice behind it), and the locked one-line entry rendering (`- <id> <date> [<project>/<type>] <title> — <impact>`) that IS the unit of cost — `internal/memory` owns both the line and the estimate, so they cannot disagree. The budget is always measured against the markdown rendering in both formats, so `--format json` returns the same entries in the same order. The estimate is scoped away from DEC-027's caller-reported `tokens:` provenance tag by a mechanical guard test: it sizes a retrieval, it is never written to storage, and it never enters the reserved tag namespace.

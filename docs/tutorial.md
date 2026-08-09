@@ -665,6 +665,38 @@ narrows the by-project rows to one (Total still spans everything). The sparkline
 is markdown-only — `--format json` carries raw per-bucket counts, and
 `--no-spark` (or a `NO_COLOR` env var) drops the glyphs for raw counts too.
 
+### Load your history as working memory: `brag memory`
+
+`brag spark` is a glance; `brag memory` is what you (or an agent) load
+*before* acting — a ranked, token-budgeted slice of your own history, cheap
+enough to auto-load at the start of every session. No LLM, no network,
+deterministic.
+
+```bash
+brag memory                                   # the session opener: recent history, 2000 tokens
+brag memory --project bragfile                # boost one project without hiding the rest
+brag memory --query "auth rate limit"         # what do I already know about this?
+brag memory --query auth --project orbit      # both signals at once
+brag memory --budget 500                      # a tighter slice
+```
+
+Ranking blends three signals by reciprocal-rank fusion: how recent an entry
+is, how well it matches `--query`, and whether it belongs to `--project`.
+With neither flag it degenerates to plain recency, so a bare `brag memory`
+is the zero-config default. `--project` is a **soft boost, not a filter** —
+it raises that project's entries without hiding anyone else's; reach for
+`brag list --project` when you want a hard filter instead.
+
+The slice is bounded by an estimated token budget (`--budget`, default
+2000), not a row count — entries are packed greedily in rank order, and one
+that does not fit is skipped so a later, cheaper entry can still make it in.
+Each entry renders as one line (`- <id> <date> [<project>/<type>] <title> —
+<impact>`), and the `## Budget` section at the end reports what was
+included, what was skipped, and the token estimate, so your next `--budget`
+is a calibration rather than a guess. The estimate is a documented
+character-count heuristic — not a tokenizer, never stored, never stamped on
+an entry.
+
 ### Tag taxonomy
 
 See every tag you've used, with usage counts:

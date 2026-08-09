@@ -1140,6 +1140,55 @@ else
     fail "T14" "README.md missing an agent/MCP '## ' section heading"
 fi
 
+# ===== Group U — brag memory docs (SPEC-073) =====
+
+# U1 — api-contract.md has the brag memory section heading
+assert_contains_literal "U1" "docs/api-contract.md" "### \`brag memory"
+
+# U2 — api-contract.md claims the eighth DEC-014 consumer ordinal
+assert_contains_literal "U2" "docs/api-contract.md" "**eighth** DEC-014 consumer"
+
+# U3 — api-contract.md names both DEC-043 and DEC-044
+if [ ! -f docs/api-contract.md ]; then
+    fail "U3" "docs/api-contract.md does not exist"
+else
+    u3_missing=""
+    for tok in "DEC-043" "DEC-044"; do
+        if ! grep -F -q -- "$tok" docs/api-contract.md; then
+            u3_missing="$u3_missing $tok"
+        fi
+    done
+    if [ -z "$u3_missing" ]; then
+        ok "U3"
+    else
+        fail "U3" "docs/api-contract.md missing:$u3_missing"
+    fi
+fi
+
+# U4 — README.md fenced blocks mention brag memory
+if [ ! -f README.md ]; then
+    fail "U4" "README.md does not exist"
+else
+    fenced=$(awk '/^```/{f=!f; next} f' README.md)
+    if printf '%s\n' "$fenced" | grep -F -q -- "brag memory"; then
+        ok "U4"
+    else
+        fail "U4" "README.md fenced blocks missing 'brag memory'"
+    fi
+fi
+
+# U5 — tutorial.md mentions brag memory
+assert_contains_literal "U5" "docs/tutorial.md" "brag memory"
+
+# U6 — AGENTS.md carries the glossary entry
+assert_contains_literal "U6" "AGENTS.md" "- **memory** —"
+
+# U7 — api-contract.md states the DEC-044 honesty scoping user-visibly
+assert_contains_literal "U7" "docs/api-contract.md" "never stamped on an entry"
+
+# U8 — architecture.md's package table names internal/memory
+assert_contains_literal "U8" "docs/architecture.md" "internal/memory"
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
