@@ -607,6 +607,41 @@ questions:
       tables) is a real constraint on title/impact but argues for SOME cap, not
       for these values.
 
+      WHICH FIELDS ARE ACTUALLY TOO NARROW — measured, so the eventual spec
+      does not widen everything reflexively:
+
+        field         cap       median   max     verdict
+        impact        256          227   1290    30% over cap — the sharpest
+        title         200           73   1444    9% over cap
+        tags           64           --     89    3% over, and the WRONG SHAPE
+        project        64            9     22    fine, 3x headroom
+        type           64            7     10    fine, 6x headroom
+        description  100000        570   2071    fine, 48x headroom
+
+      The contrast is the finding. `description` is over-provisioned 48x while
+      `impact` is exceeded by 30% of entries. That is not a scale problem to be
+      fixed by scaling everything up — each cap was chosen independently with
+      no model of what the field is FOR. description is a free-text body nobody
+      writes 100k of; impact is the one-line outcome every digest reads, and it
+      got a quarter of a kilobyte. Only title/impact/tags need moving.
+
+      A SECOND, DUPLICATED PROJECT-NAME CAP. `internal/cli/project.go:162`
+      hard-codes `if len(name) > 64` with the message "project name exceeds
+      64-character limit", rather than referencing `capture.MaxProject`. The
+      comment directly above it reasons explicitly about keeping the two in
+      agreement (DEC-036's soft-match invariant: an ensured name must be able
+      to soft-match a normally-added entry, both counting bytes) — which is
+      exactly the case where they should be ONE constant, not two a comment
+      asks a reader to keep aligned. Same class as the buildFTS5Query /
+      buildMatch duplication that DEC-024 recorded and SPEC-074 LD8 finally
+      extracted.
+
+      Not biting today: project names max out at 22 bytes and both values
+      happen to be 64. But if MaxProject ever moves, this copy silently will
+      not. STAGE-018's backlog already carries "`brag project new` name cap" —
+      that item is this, and it is now a one-line fix (reference the constant)
+      that must travel WITH any change to the caps.
+
       ORDERING RISK — READ BEFORE ACTIONING THE EDIT PATH. `capture.Validate`
       is currently called from `cli/add.go` (x2), `cli/add_json.go`, and
       mcpserver's `brag_add` — NOT from the edit / `Store.Update` path.
