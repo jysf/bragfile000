@@ -150,24 +150,31 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       DEC-027's caller-reported token-count tag by a mechanical guard, greedy
       skip-and-continue enforcement, and the one-line entry rendering that *is*
       the unit of cost). Complexity M.
-- [ ] SPEC-074 (not yet written) — the MCP push surface: resources
+- [ ] SPEC-074 (build) — the MCP push surface: resources
       (`brag://memory/recent`, `brag://memory/project/{name}`, `brag://projects`)
-      plus the `brag_memory` tool. Emits **DEC-045** (resource set, URI scheme,
-      MIME/rendering, and per-resource size policy). Complexity M.
-      **Gate:** PR #124 bumped the go-sdk `1.6.1 → 1.7.0` (merged 2026-08-08),
-      which invalidated the resources-API pre-flight recorded below. The re-run
-      is done, not pending: see PR #131 (open), which edits this section's own
-      **Design Notes** with the three deltas the bump introduced (the
-      `Cacheable`/wire-shape addition, `CacheScope` clobbered to `public`, and
-      `CodeResourceNotFound` moving `-32002 → -32602`). Merge #131 before
-      locking DEC-045.
+      plus the `brag_memory` tool — the server's **FIFTH** tool. **DEC-045
+      emitted** (nine locked sub-decisions: the resource set, the custom
+      `brag://` scheme, `text/markdown` on all three, `Resource.Size` left
+      unpopulated, the `ttlMs: 0` / server-clobbered-`cacheScope` stance, the
+      project template as a SOFT boost with its three corrections, the resource
+      budget pinned to `memory.DefaultBudget`, the degenerate-ranking note, and
+      `brag_memory`'s parameter set). **Absorbs two extractions:**
+      `internal/ftsquery` (DEC-024's revisit trigger (c) — third consumer of the
+      DEC-010 transform) and `memory.Gather` (the three-read pool composition
+      both surfaces must share). Complexity M — a *wide* M; the pre-authorized
+      split is the two extractions as their own PR, which re-sequences the stage
+      rather than descoping it. Branch `feat/spec-074-mcp-resources`.
+      **Gate: CLEARED.** PR #124 bumped the go-sdk `1.6.1 → 1.7.0`, invalidating
+      the resources-API pre-flight; PR #131 (merged 2026-08-08, commit
+      `f325013`) re-ran it and recorded the three deltas in the Design Notes
+      below. `go.mod` has not moved since, so DEC-045 was locked against
+      v1.7.0 as required.
 
-**Count:** 2 shipped / 0 active / 1 pending (SPEC-074 — not yet written)
+**Count:** 2 shipped / 1 active (SPEC-074, build) / 0 pending
 
-> **The stage is NOT complete.** `just archive-spec` reports "all specs shipped"
-> when the last *written* spec ships; SPEC-073 and SPEC-074 are framed in this
-> backlog but not yet scaffolded, so the script cannot see them. Do not run the
-> Stage Ship prompt until all three have shipped.
+> **The stage is NOT complete until SPEC-074 ships.** All three specs are now
+> scaffolded, so `just archive-spec` can see them — but do not run the Stage
+> Ship prompt until SPEC-074's own archive step reports the backlog complete.
 
 ## Design Notes
 
@@ -279,6 +286,31 @@ change, and DEC-045 must start from them, not from the v1.6.1 shape:**
   restorable only via `MCPGODEBUG=customresnotfounderrcode=1`. Any SPEC-074
   error-path test for an unregistered URI must assert `-32602` /
   `jsonrpc.CodeInvalidParams` and must not reference the deprecated constant.
+
+> **Settled at SPEC-074 design (2026-08-08), and one fork these notes did not
+> name.** All four forks above resolved as leaned — both a fixed set and a
+> template, the custom `brag://` scheme, `text/markdown` on all three, and
+> `Resource.Size` **not** populated (it is `omitempty`, the content is generated
+> per read, and computing it truthfully costs a full slice per
+> `resources/list`). Two additions:
+>
+> - **Cache semantics**, a fork created by the v1.7.0 delta below and absent
+>   from the original notes: `ttlMs: 0` is set deliberately (the corpus changes
+>   on every capture, so a cached slice is stale context presented as current),
+>   and the server-clobbered `cacheScope: "public"` is documented as a stance
+>   rather than worked around — vacuous over stdio, a hard blocker on any
+>   networked transport, and now wired into DEC-024's revisit trigger (b).
+> - **The fork nobody had named: a "project" resource that is not a scope.**
+>   `brag://memory/project/{name}` reads as an address but denotes DEC-043
+>   sub-decision 4's *soft boost*, so it returns entries from other projects.
+>   Resolved as **keep the boost**, with three corrections on the consumption
+>   path (`Title`/`Description` naming the operation, the `Description` carrying
+>   the CLI flag help's exact phrase `a soft boost, not a filter`, and the
+>   body's own `Filters:` line). A **hard filter was rejected** on three
+>   independent grounds — it would diverge from the CLI, diverge from
+>   `brag_memory`'s own `project` param on the same server, and (DEC-017) drop
+>   history silently on the one surface whose caller is least equipped to notice.
+>   A **rename** is the pre-authorized first move if the misread proves real.
 
 **Determinism.** Everything in `internal/memory` is a pure function of
 `(entries, options, now)`. `now` is injected, never read inside the package
