@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jysf/bragfile000/internal/export"
+	"github.com/jysf/bragfile000/internal/ftsquery"
 	"github.com/jysf/bragfile000/internal/storage"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -240,7 +241,7 @@ func TestServer_SearchParity(t *testing.T) {
 	cs, s := newTestServer(t, "claude-code")
 	seedViaStore(t, s, "cut p99 latency", "shipped auth refactor")
 	got := callJSON(t, cs, "brag_search", map[string]any{"query": "latency"})
-	m, _ := buildMatch("latency")
+	m, _ := ftsquery.Build("latency")
 	rows, _ := s.Search(m, 0)
 	want, _ := export.ToJSON(rows)
 	if got != string(want) {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/jysf/bragfile000/internal/capture"
 	"github.com/jysf/bragfile000/internal/export"
+	"github.com/jysf/bragfile000/internal/ftsquery"
 	"github.com/jysf/bragfile000/internal/storage"
 	"github.com/jysf/bragfile000/internal/timewindow"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -278,7 +279,7 @@ func handleSearch(s *storage.Store) func(context.Context, *mcp.CallToolRequest, 
 		if in.Limit < 0 {
 			return nil, nil, fmt.Errorf("brag_search: limit must not be negative, got %d (omit limit for unlimited)", in.Limit)
 		}
-		match, err := buildMatch(in.Query)
+		match, err := ftsquery.Build(in.Query)
 		if err != nil {
 			return nil, nil, fmt.Errorf("brag_search: %w", err)
 		}

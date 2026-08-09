@@ -2,10 +2,10 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jysf/bragfile000/internal/config"
+	"github.com/jysf/bragfile000/internal/ftsquery"
 	"github.com/jysf/bragfile000/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -36,31 +36,12 @@ Examples:
 	return cmd
 }
 
-// buildFTS5Query converts a user-typed search argument into an FTS5
-// MATCH-compatible string per DEC-010: tokenize on whitespace,
-// phrase-quote each token, join with spaces (FTS5's implicit AND).
-// Empty, whitespace-only, or quote-containing input is a user error.
-func buildFTS5Query(raw string) (string, error) {
-	if strings.ContainsRune(raw, '"') {
-		return "", fmt.Errorf("search query must not contain quotes")
-	}
-	tokens := strings.Fields(raw)
-	if len(tokens) == 0 {
-		return "", fmt.Errorf("search query must not be empty")
-	}
-	parts := make([]string, len(tokens))
-	for i, tok := range tokens {
-		parts[i] = `"` + tok + `"`
-	}
-	return strings.Join(parts, " "), nil
-}
-
 func runSearch(cmd *cobra.Command, args []string) error {
 	if len(args) != 1 {
 		return UserErrorf("search requires exactly one query argument")
 	}
 
-	fts5, err := buildFTS5Query(args[0])
+	fts5, err := ftsquery.Build(args[0])
 	if err != nil {
 		return UserErrorf("%v", err)
 	}

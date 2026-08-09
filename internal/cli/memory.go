@@ -6,6 +6,7 @@ import (
 
 	"github.com/jysf/bragfile000/internal/config"
 	"github.com/jysf/bragfile000/internal/export"
+	"github.com/jysf/bragfile000/internal/ftsquery"
 	"github.com/jysf/bragfile000/internal/memory"
 	"github.com/jysf/bragfile000/internal/storage"
 	"github.com/spf13/cobra"
@@ -94,7 +95,7 @@ func runMemory(cmd *cobra.Command, _ []string) error {
 	}
 	var matchedIDs []int64
 	if query != "" {
-		fts5, qerr := buildFTS5Query(query)
+		fts5, qerr := ftsquery.Build(query)
 		if qerr != nil {
 			return UserErrorf("%v", qerr)
 		}
