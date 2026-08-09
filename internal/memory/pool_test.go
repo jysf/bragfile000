@@ -129,6 +129,24 @@ func TestGather_AllReadsCappedAtPoolLimit(t *testing.T) {
 	}
 }
 
+// A project with no entries is NOT an error — it is an empty boost list. The
+// alternative (erroring on an unknown name) would make Gather reject a project
+// the user simply has not logged against yet, and would turn DEC-043's soft
+// boost into a validation gate by the back door.
+func TestGather_UnknownProjectIsNotAnError(t *testing.T) {
+	src := &fakeSource{listRet: [][]storage.Entry{entries(3, 2), {}}}
+	pool, err := Gather(src, GatherOptions{Project: "nope"})
+	if err != nil {
+		t.Fatalf("Gather with unknown project: %v", err)
+	}
+	if len(pool.Entries) != 2 {
+		t.Errorf("Entries = %d, want 2 (the recency read alone)", len(pool.Entries))
+	}
+	if len(src.listCalls) != 2 {
+		t.Errorf("list reads = %d, want 2 (the project read still runs)", len(src.listCalls))
+	}
+}
+
 // A malformed query is classified as *ErrQuery so callers can surface it as a
 // USER error. Without the distinct type both surfaces would have to
 // string-match, or would report a caller mistake as an internal failure.
