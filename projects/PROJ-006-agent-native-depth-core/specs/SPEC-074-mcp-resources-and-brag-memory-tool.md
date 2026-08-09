@@ -1009,7 +1009,7 @@ confirm the named test reddens, revert.
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** `feat/spec-074-mcp-resources`
-- **PR (if applicable):** (opened at hand-off; see PR description)
+- **PR (if applicable):** [#138](https://github.com/jysf/bragfile000/pull/138)
 - **All acceptance criteria met?** Yes — all bullets under `## Acceptance
   Criteria` verified: exact resource/template sets, MIME/Description/no-`size`
   on all three, real-client round-trips (§12(b)), byte-identical resource
