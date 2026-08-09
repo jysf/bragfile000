@@ -104,8 +104,13 @@ echo ""
 # --- Git span ---
 if command -v git >/dev/null 2>&1 && [ -d "${REPO_ROOT}/.git" ]; then
     echo "## Git span"
-    first=$(git -C "$REPO_ROOT" log --reverse --format='%ad' --date=short 2>/dev/null | head -1)
-    last=$(git  -C "$REPO_ROOT" log          --format='%ad' --date=short 2>/dev/null | head -1)
+    # `git log … | head -1` closes the pipe on the first line, so git dies of
+    # SIGPIPE and `set -o pipefail` promotes 141 to the script's exit status —
+    # a correct report that reports failure. Let git do the limiting instead:
+    # log is newest-first, so `tail -1` is the first commit (and reads to EOF),
+    # and `-1` is the last commit with no pipe at all.
+    first=$(git -C "$REPO_ROOT" log --format='%ad' --date=short 2>/dev/null | tail -1)
+    last=$(git -C "$REPO_ROOT" log -1 --format='%ad' --date=short 2>/dev/null)
     count=$(git -C "$REPO_ROOT" rev-list --count HEAD 2>/dev/null)
     echo "- first commit: ${first:-?}   last commit: ${last:-?}   (${count:-?} commits)"
     echo "  (note: project dates in briefs predate the git history if the repo was re-inited)"

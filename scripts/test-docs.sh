@@ -356,11 +356,21 @@ if [ "$FAIL_COUNT" -eq "$e1_pre_count" ]; then
 fi
 
 # E2 — docs/development.md only referenced by this spec's outputs
+# NOTE on the exclude list (see AGENTS.md §9): BSD grep matches --exclude-dir
+# against BASENAMES, so `--exclude-dir=docs/reports` is a silent no-op — it is
+# retained only as intent. The correctness boundary is the `case` whitelist
+# below. `.claude` IS a valid basename exclude and is load-bearing: background
+# agent sessions create git worktrees under .claude/worktrees/<name>/, which is
+# a full second copy of the repo. Without this, E2 scans that copy and fails on
+# the worktree's own CONTRIBUTING.md — a FAIL that depends on whether an agent
+# happens to be running, which is the worst kind of flake to hand a verify
+# session. .claude/ is gitignored, so nothing in it is repo content.
 hits=$(grep -rn -F 'docs/development.md' . \
     --include='*.md' \
     --exclude-dir=projects \
     --exclude-dir=node_modules \
     --exclude-dir=.git \
+    --exclude-dir=.claude \
     --exclude-dir=framework-feedback \
     --exclude-dir=docs/reports 2>/dev/null || true)
 unexpected=""
