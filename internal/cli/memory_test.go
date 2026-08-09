@@ -473,7 +473,8 @@ func TestMemoryCmd_UnknownFormatIsUserError(t *testing.T) {
 }
 
 // TestMemoryCmd_EmptyQueryIsUserError: --query "   " errors via
-// buildFTS5Query (DEC-010), stdout empty.
+// ftsquery.Build (DEC-010) — surfaced as a UserError because memory.Gather
+// classifies a malformed query as *memory.ErrQuery — stdout empty.
 func TestMemoryCmd_EmptyQueryIsUserError(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	root, outBuf, _ := newMemoryTestRoot(t)
