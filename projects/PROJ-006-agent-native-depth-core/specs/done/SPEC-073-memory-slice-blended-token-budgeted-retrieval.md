@@ -7,7 +7,7 @@
 task:
   id: SPEC-073
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -1274,13 +1274,58 @@ follow-up), `just test-hook` green.
 *Appended during the **ship** cycle.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — **Treat a prose claim about what a test pins as an assertion, and mutate it
+   before writing it.** The sentence describing `TestMemoryCmd_EndToEndMarkdownGolden`'s
+   coverage was wrong **four times** — original, first correction, second
+   correction, and a stale clause carried into the third — and each error was
+   caught by a fresh reviewer, never by the person writing it. The code was
+   rigorously tested throughout; only the *description of the coverage* went
+   unchecked, and a corrected sentence reads as verified, which is exactly why
+   each surviving clause slipped through. The mechanical fix is cheap: before
+   claiming a test pins X, break X and confirm it reddens.
+
+   Second: **lead fail-first from the consuming boundary.** The declared build
+   deviation (validating ranking arithmetic inside `internal/memory` before
+   writing the CLI/export tests) is precisely where the unpinned FTS5→`Matched`
+   seam hid — a CLI test written against a stub would have forced the question
+   "what does this golden actually discriminate?" at the cheapest moment.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Two candidates, one of which clears the bar:
+   - **AGENTS.md §12 — "a prose claim about what a test pins is aspirational
+     until each clause is mutation-checked."** This is the same shape as §9's
+     existing rule (a locked decision with no failing test is aspirational),
+     extended from decisions to coverage claims. Evidence is **paired-opposing
+     on one mechanical surface**, which per the codification meta-rule clears at
+     N=2: SPEC-072's build reflection flagged the weak fail-first as a
+     process nit with no cost attached (negative case, no consequence observed);
+     SPEC-073 paid the cost — an unpinned bm25 seam that CI, five byte-exact
+     goldens, and two mechanical guards all passed, plus four rounds of
+     correction on the sentence describing it.
+   - **`one-spec-per-pr` has no mechanical check.** An unrelated commit
+     (`docs/launch/taglines.md`) rode this branch through *three* verify passes
+     because each review was scoped to a commit range that straddled it. Every
+     diff reviewed was correct; none showed the whole branch. Cheap habit:
+     `git log main..HEAD` before the first verify, not just the delta. N=1 —
+     record and watch.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — SPEC-074 is already framed in STAGE-019's backlog and is the stage's last
+   spec; it must start from PR #131's three SDK-1.7.0 deltas, not the original
+   1.6.1 pre-flight. Two smaller items are recorded rather than specced: the
+   fixture is now transcribed in **four** packages guarded only by comments
+   (verify judged a shared fixture package disproportionate — revisit if it
+   drifts), and DEC-043's `k=60`/equal-weights question is filed in
+   `guidance/questions.yaml` with its trigger and first move (lower `k` to
+   10–20, which sharpens the top *and* weakens the project boost together).
 
 4. **What can a user do now that they couldn't before?**
-   — <answer>
+   — Before, reading your own history meant picking a single axis — `brag list`
+   for recency or `brag search` for relevance — and getting back an unbounded
+   row count; now `brag memory` returns **one blended slice** (project +
+   recency + match, fused by rank so the two incomparable orderings need no
+   invented normalization) trimmed to a **token budget rather than a row
+   count** — 2000 tokens by default, ≈110 entries, about **10% of the ~20k-token
+   session-opening ritual it replaces** — which is what makes it cheap enough
+   for an agent to auto-load before it works instead of querying only if it
+   thinks to.
