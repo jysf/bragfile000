@@ -138,7 +138,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       **DEC-042 emitted** (parser home + the MCP time vocabulary + the `until`
       asymmetry; folds in STAGE-018's negative-`limit` parity item).
       Complexity M.
-- [ ] SPEC-073 (verify) — the memory slice: `internal/memory` deterministic
+- [x] SPEC-073 (shipped on 2026-08-08) — the memory slice: `internal/memory` deterministic
       blended ranking + token-budget trim, surfaced as `brag memory` (markdown +
       JSON, DEC-014 envelope) with byte-exact goldens. The **EIGHTH** DEC-014
       consumer. **DEC-043 emitted** (reciprocal-rank fusion over three ORDINAL
@@ -162,8 +162,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `CodeResourceNotFound` moving `-32002 → -32602`). Merge #131 before
       locking DEC-045.
 
-**Count:** 1 shipped / 1 active (SPEC-073, in verify) / 1 pending (SPEC-074 — not
-yet written)
+**Count:** 2 shipped / 0 active / 1 pending (SPEC-074 — not yet written)
 
 > **The stage is NOT complete.** `just archive-spec` reports "all specs shipped"
 > when the last *written* spec ships; SPEC-073 and SPEC-074 are framed in this
