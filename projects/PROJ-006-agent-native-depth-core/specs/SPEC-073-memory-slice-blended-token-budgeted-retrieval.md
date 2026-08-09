@@ -344,8 +344,15 @@ fixture's `created_at`.
 - `"TestMemoryCmd_EndToEndMarkdownGolden"` — seeds the fixture, runs
   `memory --query auth --project orbit` with `nowFunc` stubbed to
   `2026-08-08T12:00:00Z`, and asserts stdout equals **Golden 1** plus one trailing
-  newline. Pins **the fusion and the rendering** against the golden over a real
-  store.
+  newline. Pins **the fused ordering and the rendering** against the golden over a
+  real store — the *ordering*, not the fusion's **constants**: the markdown body
+  renders no scores, so `k` can move 60 → 5 / 61 / 600 without reddening this
+  golden (only `k=1` does, and only by shifting the order). Verified at `k=600`:
+  this golden stays green while **exactly four** tests redden —
+  `TestSlice_ScoresMatchTheLockedConstants`,
+  `TestSlice_AbsentFromAListContributesZero`,
+  `TestToMemoryJSON_BlendedGolden`, and
+  `TestMemoryCmd_JSONScoresReflectFTS5MatchOrder`. Those four pin the constants.
   **Correction (punch-list item 1, verify):** this test does **not** prove the
   declared `Matched` order is real. **Second correction (re-verify):** nor does
   it pin the **three-read pool composition**, as the first correction still
@@ -358,9 +365,11 @@ fixture's `created_at`.
   test pins, mutate *each* clause — the surviving clauses inherit no credibility
   from the one you fixed.) On this fixture the final ordering is
   insensitive to `Matched`'s internal order — reversing `matchedIDs` in
-  `runMemory` right after the FTS5 read leaves `go test ./...` entirely green,
-  this golden included, because only the per-item `score` moves, not the
-  ordering (Notes → §12(b) pre-flight → B: the *assumed* and *real* bm25 orders
+  `runMemory` right after the FTS5 read **left `go test ./...` entirely green as
+  the suite then stood** (it now reddens
+  `"TestMemoryCmd_JSONScoresReflectFTS5MatchOrder"`, added below for exactly
+  that reason), and it leaves *this golden* green either way, because only the
+  per-item `score` moves, not the ordering (Notes → §12(b) pre-flight → B: the *assumed* and *real* bm25 orders
   likewise produced the same final ordering and differed only in scores). The
   order-pinning is actually done by two tests added at verify:
   `internal/storage`'s `"TestSearch_SPEC073FixtureOrdersAuthQuery"` (pins

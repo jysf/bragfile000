@@ -153,22 +153,29 @@ Entries: 8
 - Skipped: 0
 `
 
-// TestMemoryCmd_EndToEndMarkdownGolden pins the fusion and the rendering
-// against Golden 1 over a real store.
-//
-// Two things it does NOT pin, both established by mutation (punch-list item 1,
-// and its re-verify):
+// TestMemoryCmd_EndToEndMarkdownGolden pins the fused ORDERING and the
+// rendering against Golden 1 over a real store. Three things it does NOT pin,
+// each established by mutation:
 //
 //   - The POOL COMPOSITION. On this fixture the recency read alone already
 //     yields all 8 entries, so dropping both the match-read and project-read
 //     appends in runMemory leaves this golden green; only
 //     TestMemoryCmd_ThreeReadsComposeThePool goes red. That test is what pins
 //     the three reads.
-//   - The declared Matched ORDER. The final ordering here is insensitive to
-//     the internal order of Options.Matched — reversing matchedIDs leaves the
-//     whole suite green. See TestSearch_SPEC073FixtureOrdersAuthQuery in
-//     internal/storage and TestMemoryCmd_JSONScoresReflectFTS5MatchOrder below
-//     for the two tests that actually pin it.
+//   - The fusion CONSTANTS. The markdown body renders no scores, so k can move
+//     60 -> 5 / 61 / 600 without reddening this golden (only k=1 does, and only
+//     by shifting the order). Verified at k=600: this golden stays green while
+//     exactly four tests redden — TestSlice_ScoresMatchTheLockedConstants,
+//     TestSlice_AbsentFromAListContributesZero, TestToMemoryJSON_BlendedGolden,
+//     and TestMemoryCmd_JSONScoresReflectFTS5MatchOrder. Those four are what
+//     pin the constants.
+//   - The declared Matched ORDER. THIS golden is insensitive to the internal
+//     order of Options.Matched — reversing matchedIDs does not change the final
+//     ordering, only the per-item scores, which the markdown body omits. It is
+//     NOT true that reversing matchedIDs leaves the whole suite green: since
+//     the punch-list iteration it reddens TestMemoryCmd_JSONScoresReflectFTS5MatchOrder
+//     below, which together with TestSearch_SPEC073FixtureOrdersAuthQuery in
+//     internal/storage is what actually pins that order.
 func TestMemoryCmd_EndToEndMarkdownGolden(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	seedMemoryFixture(t, dbPath)
