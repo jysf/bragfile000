@@ -47,6 +47,16 @@ type memoryFixtureRow struct {
 	createdAt string
 }
 
+// SOURCE OF TRUTH: SPEC-073 Notes → "The fixture". FOUR packages transcribe
+// these 8 rows — internal/memory, internal/export, internal/cli (here), and
+// internal/storage. If you edit a title/date here, update the others,
+// especially internal/storage's TestSearch_SPEC073FixtureOrdersAuthQuery.
+//
+// The asymmetry that matters: an edit here reddens the CLI goldens loudly, so
+// nothing breaks silently in this package. What goes QUIET is the storage
+// test's bm25 guard — it would keep passing against a corpus the CLI no longer
+// queries, which is exactly the "the guard stopped guarding" failure that
+// punch-list item 1 existed to fix.
 func memoryFixtureRows() []memoryFixtureRow {
 	return []memoryFixtureRow{
 		{storage.Entry{Title: "Auth is mostly caching", Type: "learned"}, "2026-01-09T21:45:00Z"},
@@ -143,13 +153,22 @@ Entries: 8
 - Skipped: 0
 `
 
-// TestMemoryCmd_EndToEndMarkdownGolden pins the end-to-end markdown body —
-// the three-read pool composition, the fusion, and the rendering — against
-// Golden 1 over a real store. It does NOT prove the declared Matched order
-// is real: the final ordering here is insensitive to the internal order of
-// Options.Matched (see TestSearch_SPEC073FixtureOrdersAuthQuery in
-// internal/storage and TestMemoryCmd_JSONScoresReflectFTS5MatchOrder below
-// for the two tests that actually pin it — SPEC-073 punch-list item 1).
+// TestMemoryCmd_EndToEndMarkdownGolden pins the fusion and the rendering
+// against Golden 1 over a real store.
+//
+// Two things it does NOT pin, both established by mutation (punch-list item 1,
+// and its re-verify):
+//
+//   - The POOL COMPOSITION. On this fixture the recency read alone already
+//     yields all 8 entries, so dropping both the match-read and project-read
+//     appends in runMemory leaves this golden green; only
+//     TestMemoryCmd_ThreeReadsComposeThePool goes red. That test is what pins
+//     the three reads.
+//   - The declared Matched ORDER. The final ordering here is insensitive to
+//     the internal order of Options.Matched — reversing matchedIDs leaves the
+//     whole suite green. See TestSearch_SPEC073FixtureOrdersAuthQuery in
+//     internal/storage and TestMemoryCmd_JSONScoresReflectFTS5MatchOrder below
+//     for the two tests that actually pin it.
 func TestMemoryCmd_EndToEndMarkdownGolden(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	seedMemoryFixture(t, dbPath)

@@ -9,6 +9,12 @@ import (
 	"github.com/jysf/bragfile000/internal/storage"
 )
 
+// SOURCE OF TRUTH: SPEC-073 Notes → "The fixture". FOUR packages transcribe
+// these 8 rows — internal/memory, internal/export (here), internal/cli, and
+// internal/storage. An edit here must be mirrored to all of them, especially
+// internal/storage's TestSearch_SPEC073FixtureOrdersAuthQuery: that one would
+// keep passing against its own divergent copy while silently no longer pinning
+// the bm25 order the CLI actually queries.
 func memoryFixtureEntries() []storage.Entry {
 	mustTime := func(s string) time.Time {
 		t, err := time.Parse(time.RFC3339, s)

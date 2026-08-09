@@ -344,10 +344,19 @@ fixture's `created_at`.
 - `"TestMemoryCmd_EndToEndMarkdownGolden"` — seeds the fixture, runs
   `memory --query auth --project orbit` with `nowFunc` stubbed to
   `2026-08-08T12:00:00Z`, and asserts stdout equals **Golden 1** plus one trailing
-  newline. Pins the end-to-end markdown body — the three-read pool composition,
-  the fusion, and the rendering — against the golden over a real store.
+  newline. Pins **the fusion and the rendering** against the golden over a real
+  store.
   **Correction (punch-list item 1, verify):** this test does **not** prove the
-  declared `Matched` order is real. On this fixture the final ordering is
+  declared `Matched` order is real. **Second correction (re-verify):** nor does
+  it pin the **three-read pool composition**, as the first correction still
+  claimed. On this fixture the recency read alone already yields all 8 entries,
+  so dropping both the match-read and project-read `pool` appends in `runMemory`
+  leaves this golden green — only `"TestMemoryCmd_ThreeReadsComposeThePool"`
+  goes red, and that is the test which pins the three reads. Verified by
+  mutation. (Worth noting as a pattern: the sentence written to correct an
+  over-attribution carried a second one. When rewriting a claim about what a
+  test pins, mutate *each* clause — the surviving clauses inherit no credibility
+  from the one you fixed.) On this fixture the final ordering is
   insensitive to `Matched`'s internal order — reversing `matchedIDs` in
   `runMemory` right after the FTS5 read leaves `go test ./...` entirely green,
   this golden included, because only the per-item `score` moves, not the

@@ -26,6 +26,13 @@ func mustTime(s string) time.Time {
 // ranking branch is exercised: both-fields-present, no-project, no-type,
 // no-project-and-no-type, impact-present, impact-absent, in-both-lists,
 // in-match-only, in-project-only.
+//
+// FOUR packages transcribe these 8 rows — internal/memory (here),
+// internal/export, internal/cli, and internal/storage. An edit here must be
+// mirrored to all of them, especially internal/storage's
+// TestSearch_SPEC073FixtureOrdersAuthQuery: that one would keep passing against
+// its own divergent copy while silently no longer pinning the bm25 order the
+// CLI actually queries.
 func fixtureEntries() []storage.Entry {
 	return []storage.Entry{
 		{ID: 8, CreatedAt: mustTime("2026-08-07T09:15:00Z"), Project: "bragfile", Type: "shipped", Title: "MCP list filter parity", Impact: "agents can ask for a bounded window in one call"},

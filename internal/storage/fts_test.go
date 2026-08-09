@@ -613,7 +613,12 @@ func TestSearch_SPEC073FixtureOrdersAuthQuery(t *testing.T) {
 		entry     Entry
 		createdAt string
 	}
-	// Same 8 rows, same order, as SPEC-073 Notes -> "The fixture".
+	// Same 8 rows, same order, as SPEC-073 Notes -> "The fixture" — the source
+	// of truth. This is the FOURTH transcription (internal/memory,
+	// internal/export, internal/cli are the others). If the fixture changes and
+	// this copy is not updated, this test keeps passing against a corpus the CLI
+	// no longer queries — the guard goes quiet rather than red, which is the
+	// failure mode it was added to prevent.
 	rows := []row{
 		{Entry{Title: "Auth is mostly caching", Type: "learned"}, "2026-01-09T21:45:00Z"},
 		{Entry{Title: "Auth token rotation", Project: "orbit", Type: "shipped", Impact: "removed the last shared secret"}, "2026-03-14T10:10:00Z"},
