@@ -549,56 +549,70 @@ questions:
       (Above §14's 0.7 hard threshold; filed proactively per DEC-031's
       precedent of recording the softest sub-choice.)
 
-  - id: tags-cap-measures-the-joined-string
-    question: "Should MaxTags stop capping the comma-joined tags STRING (64 bytes total) and instead cap each tag plus the tag COUNT — and must that land before the edit path starts enforcing capture.Validate?"
+  - id: capture-caps-were-inherited-not-derived
+    question: "The capture.Validate field caps (title 200, tags 64, impact 256) were inherited from the add --json schema and never derived from real use — which of them are load-bearing, which are arbitrary, and what shape should they take?"
     priority: medium
     status: open
     raised_by: claude-opus-5
     raised_at: 2026-08-09
     assigned_to: null
     notes: |
-      Raised 2026-08-09 from a user report ("Tags have a 64-char limit").
-      Recorded as an open question rather than a spec: STAGE-019 is mid-flight
-      and the placement decision is deliberately deferred. NOT yet assigned to
-      a stage.
+      Raised 2026-08-09 from a user report ("Tags have a 64-char limit"), then
+      widened when the same pattern turned out to hold for `impact` and
+      `title`. Recorded as an open question, NOT a spec: STAGE-019 is
+      mid-flight and the placement decision is deliberately deferred. NOT yet
+      assigned to a stage.
 
-      WHAT THE CAP IS. `capture.MaxTags = 64` is a BYTE cap on the entire
-      comma-joined tags string, applied to raw caller input BEFORE provenance
-      stamping (so agent:/model:/session:/cost:/tokens: do not consume it).
-      It is not 64 bytes per tag — it is 64 bytes for ALL of a user's tags
-      together, which is roughly six or seven ordinary words.
+      THE NUMBERS ARE UNDOCUMENTED. `capture.MaxTitle=200`, `MaxTags=64`,
+      `MaxProject=64`, `MaxType=64`, `MaxImpact=256`, `MaxDescription=100000`.
+      DEC-012 (`brag add --json`) introduced them and records no rationale for
+      any value. SPEC-064 then correctly unified per-path validation — flag and
+      editor mode had been skipping the caps that --json and MCP enforced — and
+      in doing so generalised those numbers to every ingress path. The side
+      effect nobody measured: a large slice of the EXISTING corpus became
+      unwritable.
 
-      IT ALREADY BINDS — measured against the real corpus (347 entries, 260
-      with tags), with reserved provenance tags stripped so only user-supplied
-      tags are counted:
+      MEASURED AGAINST THE REAL CORPUS (347 entries), reserved provenance tags
+      stripped so only user-supplied text counts:
 
-        >= 55 bytes ......  31 entries
-        >= 60 bytes ......  16 entries
-        >  64 (OVER CAP) ..  9 entries   <- already unwritable today
-        longest .......... 89 bytes (id=44)
-          "rust,cli,spec-driven,rspeed,reqwest,async-trait,public-api,
-           measurement-core,latency-probe"
+        field    cap     median   already over cap        max
+        impact   256     227      81 of 274  (30%)       1290
+        title    200      73      33 of 348   (9%)       1444
+        tags      64      --       9 of 260   (3%)         89
 
-      Nothing there is abusive; it is nine descriptive tags. Those 9 entries
-      exist because flag/editor mode did not enforce the caps until SPEC-064
-      unified validation. SPEC-064 was a correct fix, but it generalised a
-      number inherited from `add --json` (DEC-012) that was never checked
-      against actual tagging behaviour.
+      `impact`'s median is 227 of 256 — 89% of the ceiling. That is not a cap
+      catching outliers; it is a cap sitting in the middle of ordinary usage,
+      and 30% of existing impacts already exceed it.
 
-      WHY RAISING THE NUMBER IS THE WEAKER FIX. DEC-015 normalised tags into a
-      `tags` table (`name TEXT NOT NULL UNIQUE`, no length constraint), so a
-      cap on the JOINED string is a leftover from DEC-004's comma-joined era.
-      It penalises using many tags (a legitimate choice) rather than one absurd
-      tag (the actual abuse). The shape the normalised model implies is a
-      per-tag cap plus a tag-count cap. That is a validation-contract change
-      across all four ingress paths, so it wants a DEC, not a constant bump.
+      THE PRIORITY IS INVERTED. `description` gets 100,000 bytes. `impact` —
+      the field `brag impact`, `wrapped`, `story` and `memory` all actually
+      read, and the one a brag's Reflection-Q4 is transcribed into — gets 256.
 
-      ORDERING RISK — THIS IS THE LOAD-BEARING PART. `capture.Validate` is
-      currently called from `cli/add.go` (x2), `cli/add_json.go`, and
+      TAGS IS A DIFFERENT SHAPE OF WRONG. MaxTags caps the whole comma-joined
+      STRING, not each tag, so it penalises using many tags (a legitimate
+      choice) rather than one absurd tag (the actual abuse). DEC-015 normalised
+      tags into a `tags` table (`name TEXT NOT NULL UNIQUE`, no length
+      constraint), so a joined-string cap is a leftover from DEC-004's
+      comma-joined era. The shape the normalised model implies is a per-tag cap
+      plus a tag-COUNT cap.
+
+      WHY THIS IS NOT JUST A CONSTANT BUMP — the impact cap is now
+      LOAD-BEARING. DEC-044 cites these caps twice (lines ~136 and ~443) for
+      the memory slice's budget model: *"the capture.Validate field caps bound
+      a single line at 626 bytes / 157 tokens worst case"*, which is the
+      argument that one long entry cannot starve a slice. Raising MaxImpact
+      moves that worst case, so the budget math and DEC-044's starvation
+      argument have to be revisited in the same change. Title and tags are not
+      similarly coupled. Single-line rendering (`brag list` TSV, markdown
+      tables) is a real constraint on title/impact but argues for SOME cap, not
+      for these values.
+
+      ORDERING RISK — READ BEFORE ACTIONING THE EDIT PATH. `capture.Validate`
+      is currently called from `cli/add.go` (x2), `cli/add_json.go`, and
       mcpserver's `brag_add` — NOT from the edit / `Store.Update` path.
       STAGE-018's backlog already carries "run the edit/`Store.Update` path
       through `internal/capture.Validate`" as a pending item. If that lands
-      FIRST, the 9 over-cap entries become uneditable: changing a title would
-      require deleting tags. Whichever spec actions the edit-path item must
-      resolve this question in the same change, or explicitly grandfather
-      existing rows.
+      FIRST, every over-cap entry above becomes uneditable — changing a title
+      would require truncating impact or deleting tags, on 30% of the corpus.
+      Whichever spec actions the edit-path item must resolve this question in
+      the same change, or explicitly grandfather existing rows.

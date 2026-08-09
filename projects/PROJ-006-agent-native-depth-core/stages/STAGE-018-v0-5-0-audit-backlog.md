@@ -59,12 +59,12 @@ The v0.5.0 audit LOW/NIT backlog (inherited verbatim from the project brief):
 - `brag project new` name cap; run the edit / `Store.Update` path through
   `internal/capture.Validate`.
   > ⚠ **COUPLED — read before actioning.** Wiring the edit path to
-  > `capture.Validate` would make **9 existing entries uneditable**: their
-  > user-supplied tags already exceed `MaxTags` (64 bytes on the whole
-  > comma-joined string), because flag/editor mode did not enforce the caps
-  > until SPEC-064 unified validation. Changing one of those entries' titles
-  > would then require deleting tags. Resolve
-  > `tags-cap-measures-the-joined-string` in `guidance/questions.yaml` in the
+  > `capture.Validate` would make a large slice of the corpus
+  > **uneditable**: measured today, **81 of 274 impacts (30%)**, 33 titles and
+  > 9 tag-strings already exceed their caps, because flag/editor mode did not
+  > enforce them until SPEC-064 unified validation. Changing one of those
+  > entries' titles would then require truncating impact or deleting tags. Resolve
+  > `capture-caps-were-inherited-not-derived` in `guidance/questions.yaml` in the
   > same change, or explicitly grandfather existing rows. Do not action this
   > item alone.
 - `brag spark` same-second exclusive-edge.
