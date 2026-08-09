@@ -163,15 +163,39 @@ composition (`memory.Gather`) and one shared query transform
 
 ## Outputs
 
+> **⚠ LD8 and LD9 ALREADY LANDED — do not build them again.** Both extractions
+> shipped ahead of this spec as standalone refactors (PR **#135**, plus **#136**
+> completing two missed items), for the reason recorded in the stage: bundled,
+> a reviewer would have to judge *"did this refactor preserve behaviour?"* and
+> *"is this new surface correct?"* in one diff. Every entry below marked
+> **✅ LANDED** is already on `main` — verify it rather than write it. The
+> remaining entries are this spec's actual work.
+>
+> What landed: `internal/ftsquery` (`Build`), `internal/memory/pool.go`
+> (`Source`, `GatherOptions`, `Pool`, `Gather`, `ErrQuery`), both original
+> helpers deleted, all call sites retargeted, and `internal/cli/memory.go`
+> reduced to a single `memory.Gather` call. Mutation-checked at two layers:
+> reversing the bm25 order inside `Gather` reddens both the new
+> `TestGather_QueryAddsMatchedInSearchOrder` and SPEC-073's
+> `TestMemoryCmd_JSONScoresReflectFTS5MatchOrder`; dropping the project read
+> reddens both `TestGather_ProjectAddsScopedRead` and
+> `TestMemoryCmd_ThreeReadsComposeThePool`.
+>
+> **One deviation from LD9 as specified:** `Gather` returns a distinct
+> `*memory.ErrQuery` for a malformed query, rather than a bare error the caller
+> string-matches. LD9 required the caller to surface it as a USER error on both
+> surfaces; a typed error is how that becomes checkable (`errors.As`) instead of
+> conventional. `internal/cli/memory.go` already does this.
+
 - **Files created:**
-  - `internal/ftsquery/ftsquery.go` — the extracted DEC-010 transform. Exports
+  - `internal/ftsquery/ftsquery.go` — **✅ LANDED.** the extracted DEC-010 transform. Exports
     `Build(raw string) (string, error)`. Stdlib only (`fmt`, `strings`); imports
     nothing internal.
-  - `internal/ftsquery/ftsquery_test.go` — the union of the two deleted test
+  - `internal/ftsquery/ftsquery_test.go` — **✅ LANDED.** the union of the two deleted test
     sets (see planned deletions).
-  - `internal/memory/pool.go` — the extracted three-read pool composition.
+  - `internal/memory/pool.go` — **✅ LANDED.** the extracted three-read pool composition.
     Exports `Source`, `GatherOptions`, `Pool`, `Gather`.
-  - `internal/memory/pool_test.go` — read-count/wiring tests against a fake
+  - `internal/memory/pool_test.go` — **✅ LANDED.** read-count/wiring tests against a fake
     `Source`, plus the "unknown project is not an error" case.
   - `internal/mcpserver/resources.go` — `addResources(srv, s)`, the three
     handlers, the URI constants, and the `{name}` extraction.
@@ -197,13 +221,13 @@ composition (`memory.Gather`) and one shared query transform
   - `internal/mcpserver/transport_test.go` — "drive all four tools" → five, and
     the stdout-purity round-trip drives `brag_memory` **and** a `resources/read`
     (the new transport path that could leak bytes).
-  - `internal/cli/search.go` — `buildFTS5Query` **deleted**; `runSearch` calls
+  - `internal/cli/search.go` — **✅ LANDED.** `buildFTS5Query` **deleted**; `runSearch` calls
     `ftsquery.Build`.
-  - `internal/cli/search_test.go` — the six `buildFTS5Query` unit tests
+  - `internal/cli/search_test.go` — **✅ LANDED.** the six `buildFTS5Query` unit tests
     (lines ~16–72) **deleted** (moved to `internal/ftsquery`).
-  - `internal/cli/memory.go` — the inline three-read composition replaced by one
+  - `internal/cli/memory.go` — **✅ LANDED.** the inline three-read composition replaced by one
     `memory.Gather` call; the `buildFTS5Query` call goes with it.
-  - `internal/cli/memory_test.go` — line ~476's comment names `buildFTS5Query`;
+  - `internal/cli/memory_test.go` — **✅ LANDED.** line ~476's comment names `buildFTS5Query`;
     retarget to `ftsquery.Build`. **The test itself is unchanged** (it asserts
     CLI behavior, not the helper's name).
   - `internal/cli/mcp.go` — the `Long` (line ~26) naming the four tools.
