@@ -1,6 +1,8 @@
 // Package mcpserver builds the local stdio MCP server (`brag mcp serve`)
-// exposing brag_add/brag_list/brag_search/brag_stats as thin typed tools
-// over *storage.Store. See DEC-024 and SPEC-040.
+// exposing brag_add/brag_list/brag_memory/brag_search/brag_stats as thin
+// typed tools over *storage.Store, plus the brag:// push surface (three
+// resources serving a ranked, token-budgeted memory slice with no tool
+// call). See DEC-024, SPEC-040, DEC-045, and SPEC-074.
 package mcpserver
 
 import (

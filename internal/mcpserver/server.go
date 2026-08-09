@@ -26,8 +26,11 @@ import (
 // which is the exact skew DEC-039 exists to prevent.
 var nowFunc = time.Now
 
-// New builds the MCP server advertising exactly four typed tools —
-// brag_add, brag_list, brag_search, brag_stats — as thin wrappers over s.
+// New builds the MCP server advertising exactly five typed tools —
+// brag_add, brag_list, brag_search, brag_stats, brag_memory — as thin
+// wrappers over s, plus the SPEC-074 push surface: three brag:// resources
+// (a ranked recent-memory slice, a project-boosted template, and a projects
+// lookup) an MCP client can auto-load with no tool call. See DEC-045.
 func New(s *storage.Store) *mcp.Server {
 	srv := mcp.NewServer(&mcp.Implementation{Name: "brag", Version: "mcp"}, nil)
 
@@ -50,6 +53,13 @@ func New(s *storage.Store) *mcp.Server {
 		Name:        "brag_stats",
 		Description: "Lifetime stats over the entire corpus (same shape as `brag stats --format json`).",
 	}, handleStats(s))
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "brag_memory",
+		Description: "Ranked, token-budgeted slice of your history — the corpus as working memory (same shape as `brag memory`).",
+	}, handleMemory(s))
+
+	addResources(srv, s)
 
 	return srv
 }
