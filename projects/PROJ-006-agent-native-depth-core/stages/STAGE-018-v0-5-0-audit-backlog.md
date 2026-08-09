@@ -58,6 +58,15 @@ The v0.5.0 audit LOW/NIT backlog (inherited verbatim from the project brief):
 - `search -foo` → clear cobra-flag error (not an FTS query).
 - `brag project new` name cap; run the edit / `Store.Update` path through
   `internal/capture.Validate`.
+  > ⚠ **COUPLED — read before actioning.** Wiring the edit path to
+  > `capture.Validate` would make **9 existing entries uneditable**: their
+  > user-supplied tags already exceed `MaxTags` (64 bytes on the whole
+  > comma-joined string), because flag/editor mode did not enforce the caps
+  > until SPEC-064 unified validation. Changing one of those entries' titles
+  > would then require deleting tags. Resolve
+  > `tags-cap-measures-the-joined-string` in `guidance/questions.yaml` in the
+  > same change, or explicitly grandfather existing rows. Do not action this
+  > item alone.
 - `brag spark` same-second exclusive-edge.
 - backup-filename same-second collision.
 - empty-`type` sentinel handling.
