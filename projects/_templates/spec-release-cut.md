@@ -107,10 +107,21 @@ Gotchas, style preferences, reuse opportunities.
 
 - [ ] Dual-tag-on-same-commit: RC tag + release deleted before the final tag
       is cut at the same commit (§4 Pattern 1).
-- [ ] macOS Gatekeeper: `xattr -dr com.apple.quarantine <bin>` note present in
-      README §Install.
-- [ ] Homebrew 6.0+: `brew trust --cask <tap>/<cask>` documented in README and
-      run once at the cut.
+- [ ] macOS clean-host install: `brew install jysf/tap/bragfile` on a host that
+      has never installed it runs with **no** Gatekeeper "Apple could not
+      verify…" prompt and **no** `xattr` step. Formulae are not
+      Gatekeeper-quarantined (DEC-040), which is what buys this — so the check
+      is that the property still holds, not that a workaround is documented.
+      *(Superseded the pre-v0.5.2 items that required an `xattr -dr
+      com.apple.quarantine` note and a `brew trust --cask` step in the README.
+      SPEC-071 deliberately DELETED both when it migrated cask → formula, but
+      left this checklist requiring them present — so from v0.5.2 until v0.6.0
+      these two items could not be honestly ticked at all. Corrected at the
+      v0.6.0 cut.)*
+- [ ] Distribution mechanism unchanged since the last cut — or, if the
+      `brews:`/`nfpms:`/`archives:`/`signs:` blocks, the tap, or the install
+      path moved, the distribution-decision checklist
+      (`docs/distribution-decisions.md`) has been run per AGENTS.md §4.
 - [ ] Dev/prod DB isolation: the RC smoke test runs against a THROWAWAY DB,
       never ~/.bragfile; the SPEC-036 auto-backup path is observed to fire.
 - [ ] Clean upgrade: `brew upgrade` from the prior minor verified;
