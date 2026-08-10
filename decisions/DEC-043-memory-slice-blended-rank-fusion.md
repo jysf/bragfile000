@@ -119,8 +119,57 @@ sub-decisions are locked:
    one, and the cap is lossy in the tail. The guarantee that does hold is a head
    guarantee: `1/(60 + r) > 3/261` for all `r ≤ 26`, so **any entry in the top 26
    of any single list cannot be displaced by anything the cap excluded.** Below
-   that, ordering may be perturbed — and at the default budget (≈110 entries) the
-   tail of a typical slice is inside that zone.
+   that, ordering may be perturbed.
+
+   > **Corrected by SPEC-075/DEC-046 (2026-08-10).** This paragraph used to end
+   > "and at the default budget (≈110 entries) the tail of a typical slice is
+   > inside that zone" — importing DEC-044's yield figure unverified. The true
+   > yield at the default budget is **25** (`Included: 25`), not ≈110.
+   >
+   > **Corrected again, same punch-list pass (2026-08-10): the first repair's
+   > own conclusion was a category error.** It said the yield of 25 "sits
+   > entirely inside the top-26 head guarantee above ... a default-budget
+   > slice never reaches the perturbation zone at all" — comparing a COUNT of
+   > included entries (25) to a RANK threshold (top 26 in a single list). Those
+   > are not the same axis: a two-list entry at recency rank 40 + match rank 40
+   > scores `1/(60+40) + 1/(60+40) = 0.02000`, beating a single-list entry at
+   > recency rank 1 (`1/(60+1) ≈ 0.01639`) despite sitting outside every
+   > list's top 26. Having 25 included entries says nothing, by itself, about
+   > whether each one is within the top-26 head guarantee.
+   >
+   > The argument that does hold is a SCORE comparison, for the corpus as
+   > measured today: the default-budget slice's included set is exactly
+   > recency ranks 1–25 — verified by comparing the slice ids against the 25
+   > most recent ids, not inferred from the count — so its weakest member
+   > scores exactly `1/(60+25) = 1/85 ≈ 0.011765`, above the worst-case
+   > pool-cap-excluded score of `3/261 ≈ 0.011494` derived above. On this
+   > corpus, at this budget, no pool-cap-excluded entry could have displaced
+   > anything the default budget actually included.
+   >
+   > **Third correction, at re-verify (2026-08-10).** The paragraph above
+   > justified "nothing else displaces in" with *"only 9 tokens remain after
+   > rank 25"*. Re-measured, the headroom is **4** tokens, not 9 (`Estimated:
+   > 1996` of a 2000-token budget; the 25 line estimates sum to 1996 exactly).
+   > The conclusion is unaffected and in fact stronger — and it no longer rests
+   > on the precise figure: the smallest rendered line in the entire 200-entry
+   > candidate pool costs **21** tokens, so 4 tokens of headroom cannot admit
+   > *any* further entry, not merely the ones ranked next. Stating the bound
+   > against the pool minimum rather than a bare subtraction is what makes it
+   > survive the corpus growing, which is the property the first two versions
+   > of this paragraph both lacked.
+   >
+   > That is a fact about the corpus as measured, not a "never." DEC-044
+   > sub-decision 3's skip-and-continue means the included set is a rank
+   > prefix only when nothing large enough to skip appears early in the
+   > order — not guaranteed in general — and this spec just widened the
+   > worst-case rendered line from 157 to 363 tokens, which makes a
+   > long-head/short-tail fill (a large entry skipped, a smaller lower-ranked
+   > one taking its slot) *more* reachable than before, not less. When that
+   > happens the included set stops being a clean rank prefix and its weakest
+   > member's score is no longer bounded by `1/85`. The tail-imprecision
+   > tradeoff described below is not confined to a wider `--budget`/`--limit`
+   > — it can in principle reach the default budget too, just not on the
+   > corpus measured here.
 
    This is accepted, not hidden: the head is what a memory slice is read for, the
    perturbation is confined to entries that are marginal on *all three* axes at
@@ -343,10 +392,14 @@ Per §14 (< 0.8) a question is logged in `guidance/questions.yaml`.
   filter parity and the `internal/timewindow` precedent for a shared pure package),
   SPEC-074 (pending — the MCP resources + `brag_memory` tool, which consumes
   `memory.Slice` and must honor the same `Matched` ordering contract),
-  SPEC-011 (the FTS5 index whose bm25 order is fused here).
+  SPEC-011 (the FTS5 index whose bm25 order is fused here), SPEC-075 (in verify —
+  corrected the default-budget yield this decision's pool-cap paragraph cited;
+  see DEC-046).
 - Related decisions: **DEC-044** (the token budget and the per-entry line shape —
   emitted with this one; the two are only separable on paper, since the line shape
-  *is* the cost that the ranking is trimmed against), DEC-014 (the envelope the
+  *is* the cost that the ranking is trimmed against), **DEC-046** (corrected the
+  ≈110-entry yield figure this decision's pool-cap paragraph imported from
+  DEC-044 unverified; true yield is 25), DEC-014 (the envelope the
   slice renders into), DEC-010 (`brag search` query transform — `--query` reuses
   `buildFTS5Query` verbatim), DEC-011 (the JSON entry shape `memory`'s per-item
   projection deliberately narrows), DEC-017 (`entries.project` is a soft string

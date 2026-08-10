@@ -22,12 +22,12 @@ func TestAdd_FlagFieldCapsAreUserError(t *testing.T) {
 		name string
 		args []string
 	}{
-		{"title over 200", []string{"--title", strings.Repeat("x", 201)}},
+		{"title over 256", []string{"--title", strings.Repeat("x", 257)}},
 		{"description over 100000", []string{"--title", "ok", "--description", strings.Repeat("d", 100001)}},
-		{"tags over 64", []string{"--title", "ok", "--tags", strings.Repeat("t", 65)}},
+		{"a single tag over 64 bytes", []string{"--title", "ok", "--tags", strings.Repeat("t", 65)}},
 		{"project over 64", []string{"--title", "ok", "--project", strings.Repeat("p", 65)}},
 		{"type over 64", []string{"--title", "ok", "--type", strings.Repeat("y", 65)}},
-		{"impact over 256", []string{"--title", "ok", "--impact", strings.Repeat("i", 257)}},
+		{"impact over 1024", []string{"--title", "ok", "--impact", strings.Repeat("i", 1025)}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -60,7 +60,7 @@ func TestAdd_FlagTitleAtCapAccepted(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	root.SetOut(&outBuf)
 	root.SetErr(&errBuf)
-	root.SetArgs([]string{"--db", dbPath, "add", "--title", strings.Repeat("x", 200)})
+	root.SetArgs([]string{"--db", dbPath, "add", "--title", strings.Repeat("x", 256)})
 
 	if err := root.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -73,7 +73,7 @@ func TestAdd_FlagTitleAtCapAccepted(t *testing.T) {
 // (A) Editor mode must enforce the same caps as flag mode.
 func TestAdd_EditorOverCapFieldIsUserError(t *testing.T) {
 	installAddEditFunc(t, func(path string) error {
-		body := "Title: ok\nImpact: " + strings.Repeat("i", 257) + "\n\n"
+		body := "Title: ok\nImpact: " + strings.Repeat("i", 1025) + "\n\n"
 		return os.WriteFile(path, []byte(body), 0o600)
 	})
 	root, dbPath := newRootWithAdd(t)

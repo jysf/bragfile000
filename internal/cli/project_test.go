@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jysf/bragfile000/internal/capture"
 	"github.com/jysf/bragfile000/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -34,6 +35,25 @@ func runProjectCmd(t *testing.T, dbPath string, args ...string) (stdout, stderr 
 	root.SetArgs(full)
 	runErr = root.Execute()
 	return outBuf.String(), errBuf.String(), runErr
+}
+
+// TestProjectEnsure_NameCapMatchesCaptureConstant ▲ LD6: the name cap
+// references capture.MaxProject rather than a literal, so it cannot drift
+// from the constant that governs the capture ingress paths. Fails if
+// cli/project.go keeps its own literal AND capture.MaxProject ever moves.
+func TestProjectEnsure_NameCapMatchesCaptureConstant(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+
+	okName := strings.Repeat("n", capture.MaxProject)
+	if _, _, err := runProjectCmd(t, dbPath, "ensure", okName); err != nil {
+		t.Fatalf("name at capture.MaxProject (%d) bytes should be accepted, got %v", capture.MaxProject, err)
+	}
+
+	tooLong := strings.Repeat("n", capture.MaxProject+1)
+	_, _, err := runProjectCmd(t, dbPath, "ensure", tooLong)
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("name one byte over capture.MaxProject should be rejected, got %v", err)
+	}
 }
 
 func TestProjectCmd_BarePrintsHelp(t *testing.T) {

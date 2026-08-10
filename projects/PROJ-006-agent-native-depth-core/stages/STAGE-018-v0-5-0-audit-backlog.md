@@ -123,6 +123,11 @@ in `guidance/questions.yaml` for the full measurement and reasoning):
   (DEC-036's soft-match invariant). One-line fix, but it must travel WITH any
   change to the caps — see the question below. Also: run the edit /
   `Store.Update` path through `internal/capture.Validate`.
+  > ✅ **RESOLVED by SPEC-075 / DEC-046 (design, 2026-08-09).** Both items are
+  > carried by SPEC-075 and are safe there because the caps and the
+  > changed-field grandfathering rule land first in the same spec. Do not
+  > action either one separately. Original warning retained below for the
+  > record.
   > ⚠ **COUPLED — read before actioning.** Wiring the edit path to
   > `capture.Validate` would make a large slice of the corpus
   > **uneditable**: measured today, **74 of 285 impacts (26%)**, 33 titles and
@@ -153,17 +158,31 @@ Ordered list of specs composing this stage. IDs assigned at creation.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-075 (design) — **the caps spec, and the v0.6.0 gate.** Re-shape
-      `MaxImpact`/`MaxTitle` and turn `MaxTags` from a joined-string cap into a
-      per-tag + tag-count cap; emit the DEC; re-derive DEC-044's worst-case-line
-      math; decide grandfathering. Carries the two items blocked on that
-      decision — the edit-path wiring and `cli/project.go:162`'s duplicated
-      constant — in the same spec, because they are only safe *after* it.
+- [ ] SPEC-075 (verify) — **the caps spec, and the v0.6.0 gate.** Design complete
+      2026-08-09, build complete 2026-08-10; emits **DEC-046**. Locked: `MaxImpact` 256→**1024**,
+      `MaxTitle` 200→**256**, `MaxTags` deleted in favour of
+      **`MaxTagLen = 64` + `MaxTagCount = 32`**; `project`/`type`/`description`
+      untouched. Grandfathering = **validate on write-of-changed-field** (no
+      migration, no column, converges); residual over-cap = 3 impacts, 29
+      titles, 0 tag violations. Carries the two items blocked on that decision —
+      the edit-path wiring (`capture.ValidateChanged` from `cli/edit.go`) and
+      `cli/project.go:162`'s duplicated constant — in the same spec, because
+      they are only safe *after* it.
+      > **DEC-044 re-derived, not left stale:** worst-case memory line
+      > 626 B / 157 tok → **1450 B / 363 tok**; anti-starvation argument holds
+      > (18.2% of the default budget, and skip-and-continue still applies);
+      > `memory.DefaultBudget` **stays 2000**. Design also found three
+      > *pre-existing* errors in DEC-044, corrected by DEC-046: the 626 B bound
+      > is already false of the live corpus (measured max line **1483 B /
+      > 371 tok**, so the new bound is *tighter* than today's reality); the
+      > "~18 tokens/entry" figure is the **8-entry test fixture's** mean
+      > (measured corpus mean ≈ **92**); and "2000 buys ≈110 entries" is wrong
+      > by ~4.4× (measured `Included: 25`, `Skipped: 175`).
 - [ ] (not yet written) — the remaining audit nits, batched by touched package
       per the Design Notes (an "MCP/CLI parity" cluster, a "filesystem-write
       robustness" cluster). Split at framing.
 
-**Count:** 0 shipped / 1 active (SPEC-075, in design) / 1 pending
+**Count:** 0 shipped / 1 active (SPEC-075, in verify) / 1 pending
 
 ## Design Notes
 

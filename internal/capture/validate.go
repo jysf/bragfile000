@@ -1,10 +1,11 @@
 // Package capture holds the input-validation rules shared by every brag
-// capture ingress path (flag mode, editor mode, `add --json`, and the MCP
-// brag_add tool). It has no SQL and no cobra dependency so both the cli and
-// mcpserver layers can call it, ending the per-path validation drift that
-// previously let flag/editor mode skip the caps that --json and MCP enforced
-// (SPEC-064). Each boundary wraps the returned error in its own type
-// (cli.ErrUser for a user-facing exit code; a tool error for MCP).
+// capture ingress path (flag mode, editor mode, `add --json`, MCP brag_add,
+// and — since DEC-046 — `brag edit`). It has no SQL and no cobra dependency
+// so both the cli and mcpserver layers can call it, ending the per-path
+// validation drift that previously let flag/editor mode skip the caps that
+// --json and MCP enforced (SPEC-064). Each boundary wraps the returned error
+// in its own type (cli.ErrUser for a user-facing exit code; a tool error for
+// MCP).
 package capture
 
 import (
@@ -14,15 +15,24 @@ import (
 )
 
 // Field byte caps. These are byte counts (len), matching the SPEC-061 byte
-// decision, and are identical to the caps `add --json` and MCP brag_add have
-// always enforced — the point of this package is that all paths share them.
+// decision. Each is derived from what its field is FOR, measured against the
+// live corpus — not inherited from DEC-012's add --json schema, which is
+// where the original values came from with no rationale recorded. See
+// DEC-046 for the full derivation.
+//
+// MaxTags (a cap on the comma-joined string) is deliberately gone: DEC-015
+// normalised tags into a table with no length constraint, so a joined-string
+// cap penalised using many tags (legitimate) instead of one absurd tag (the
+// actual abuse). MaxTagLen + MaxTagCount replace it with a shape that
+// catches the real problem.
 const (
-	MaxTitle       = 200
+	MaxTitle       = 256
 	MaxDescription = 100000
-	MaxTags        = 64
+	MaxTagLen      = 64
+	MaxTagCount    = 32
 	MaxProject     = 64
 	MaxType        = 64
-	MaxImpact      = 256
+	MaxImpact      = 1024
 )
 
 // Fields is the raw, user-supplied entry text to validate at a capture
@@ -38,51 +48,208 @@ type Fields struct {
 	Impact      string
 }
 
-// Validate enforces three rules across the fields, returning the first
-// violation as a descriptive (unwrapped-sentinel) error the caller re-wraps:
-//
-//   - Byte caps (A): each field must not exceed its MaxX cap.
-//   - Control chars (B): single-line fields (title, tags, project, type,
-//     impact) must contain no C0 control byte (0x00–0x1F, which includes
-//     NUL, tab, newline, and carriage return) — one would break line-oriented
-//     `brag list`/TSV output or be silently truncated by SQLite. description
-//     is multi-line, so it permits tabs and newlines but still rejects an
-//     embedded NUL (0x00), which SQLite would truncate.
-//   - Reserved numeric tags (C): any cost:/tokens: token in the freeform tags
-//     field is validated with the same rules as the dedicated cost/tokens
-//     params, so a caller cannot smuggle garbage past them. agent:/model:/
-//     session: tokens are left untouched (opaque, and the CLI's documented
-//     provenance path).
+// Validate enforces the caps, control-char, and reserved-tag rules across
+// every field, returning the first violation as a descriptive (unwrapped-
+// sentinel) error the caller re-wraps.
 func Validate(f Fields) error {
-	singleLine := []struct {
-		name string
-		val  string
-		max  int
-	}{
-		{"title", f.Title, MaxTitle},
-		{"tags", f.Tags, MaxTags},
-		{"project", f.Project, MaxProject},
-		{"type", f.Type, MaxType},
-		{"impact", f.Impact, MaxImpact},
+	if err := validateSingleLine("title", f.Title, MaxTitle); err != nil {
+		return err
 	}
-	for _, c := range singleLine {
-		if hasC0Control(c.val) {
-			return fmt.Errorf("%q must not contain control characters", c.name)
-		}
-		if len(c.val) > c.max {
-			return fmt.Errorf("%q exceeds %d-character limit", c.name, c.max)
-		}
+	if err := validateTags(f.Tags); err != nil {
+		return err
 	}
+	if err := validateSingleLine("project", f.Project, MaxProject); err != nil {
+		return err
+	}
+	if err := validateSingleLine("type", f.Type, MaxType); err != nil {
+		return err
+	}
+	if err := validateSingleLine("impact", f.Impact, MaxImpact); err != nil {
+		return err
+	}
+	return validateDescription(f.Description)
+}
 
-	// description is multi-line: tabs/newlines are allowed, NUL is not.
-	if strings.IndexByte(f.Description, 0x00) >= 0 {
+// ValidateChanged enforces the same rules as Validate, but validates each
+// field only when its value in new differs from old (DEC-046 LD4:
+// grandfathering by validate-on-write-of-changed-field). A field the caller
+// did not touch is never checked, even when its stored value is over a cap
+// that predates this decision — which is what makes it safe to wire onto the
+// edit path without making the already-over-cap corpus uneditable. The rule
+// is "the changed value must meet today's cap", not "must not get worse
+// than before": a field replaced with a different, still-over-cap value is
+// rejected exactly like any other ingress.
+//
+// Tags is the one field where old/new is not the caller's raw input: on the
+// edit path it is the STORED, post-stamp string (Store.Get), so it may
+// already contain up to 5 reserved provenance tags appended after Validate
+// ran on the add path. MaxTagLen/MaxTagCount are meant to bound only the
+// user-supplied population — exactly as they do pre-stamp on add — so
+// validateTagsChanged strips reserved-namespace tags before counting/length-
+// checking. Without this, editing a single ordinary tag would re-count every
+// stamped tag against the cap too, which DEC-046's own scope limit says
+// neither cap is meant to bound.
+func ValidateChanged(old, new Fields) error {
+	if new.Title != old.Title {
+		if err := validateSingleLine("title", new.Title, MaxTitle); err != nil {
+			return err
+		}
+	}
+	if new.Tags != old.Tags {
+		if err := validateTagsChanged(new.Tags); err != nil {
+			return err
+		}
+	}
+	if new.Project != old.Project {
+		if err := validateSingleLine("project", new.Project, MaxProject); err != nil {
+			return err
+		}
+	}
+	if new.Type != old.Type {
+		if err := validateSingleLine("type", new.Type, MaxType); err != nil {
+			return err
+		}
+	}
+	if new.Impact != old.Impact {
+		if err := validateSingleLine("impact", new.Impact, MaxImpact); err != nil {
+			return err
+		}
+	}
+	if new.Description != old.Description {
+		if err := validateDescription(new.Description); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateSingleLine checks a single-line field (title, project, type,
+// impact — tags has its own per-tag rule, see validateTags) against C0
+// control characters and its byte cap.
+func validateSingleLine(name, val string, max int) error {
+	if hasC0Control(val) {
+		return fmt.Errorf("%q must not contain control characters", name)
+	}
+	if len(val) > max {
+		return fmt.Errorf("%q exceeds %d-character limit", name, max)
+	}
+	return nil
+}
+
+// validateDescription checks the multi-line description field: tabs and
+// newlines are allowed, an embedded NUL is not (SQLite would truncate it),
+// and it must not exceed MaxDescription.
+func validateDescription(val string) error {
+	if strings.IndexByte(val, 0x00) >= 0 {
 		return fmt.Errorf("%q must not contain a NUL byte", "description")
 	}
-	if len(f.Description) > MaxDescription {
+	if len(val) > MaxDescription {
 		return fmt.Errorf("%q exceeds %d-character limit", "description", MaxDescription)
 	}
+	return nil
+}
 
-	return validateReservedTags(f.Tags)
+// validateTags enforces DEC-046's per-tag shape: each individual tag must
+// not exceed MaxTagLen bytes (the cap that catches the actual abuse — one
+// absurd tag), the entry must not carry more than MaxTagCount tags (applied
+// PRE-STAMP, before the up-to-5 reserved provenance tags are appended, so
+// legitimate provenance can never push an entry over), and any cost:/
+// tokens: token is validated with the dedicated-param normalizers
+// (DEC-027). A too-long tag's error names the offending TAG, not the
+// joined string — that distinction is the whole point of the per-tag model.
+func validateTags(tags string) error {
+	toks := splitTags(tags)
+	if len(toks) > MaxTagCount {
+		return fmt.Errorf("tags: more than %d tags allowed (got %d)", MaxTagCount, len(toks))
+	}
+	for _, tok := range toks {
+		if hasC0Control(tok) {
+			return fmt.Errorf("%q must not contain control characters", "tags")
+		}
+		if len(tok) > MaxTagLen {
+			return fmt.Errorf("tag %q exceeds %d-character limit", tok, MaxTagLen)
+		}
+	}
+	return validateReservedTags(toks)
+}
+
+// validateTagsChanged applies DEC-046's per-tag rule on the edit path, where
+// tags is the STORED, post-stamp string rather than raw caller input. It is
+// identical to validateTags except that MaxTagLen, MaxTagCount, and the
+// control-character check (hasC0Control) are all applied to the
+// user-supplied tags only — reserved-namespace tags (agent:/model:/session:/
+// cost:/tokens:) are excluded from all three, matching the pre-stamp
+// population Validate checks on the add path. A hand-typed C0 byte in a
+// reserved-prefixed value is already reachable today through the
+// agent:/model:/session: params, which Validate never inspects, so this is
+// not a new gap — see DEC-046's residual-asymmetry paragraph. cost:/tokens:
+// shape is still checked via validateReservedTags against the full token
+// list, since that check is about value correctness, not the caps.
+func validateTagsChanged(tags string) error {
+	toks := splitTags(tags)
+	user := toks[:0:0]
+	for _, tok := range toks {
+		if !isReservedTag(tok) {
+			user = append(user, tok)
+		}
+	}
+	if len(user) > MaxTagCount {
+		return fmt.Errorf("tags: more than %d tags allowed (got %d)", MaxTagCount, len(user))
+	}
+	for _, tok := range user {
+		if hasC0Control(tok) {
+			return fmt.Errorf("%q must not contain control characters", "tags")
+		}
+		if len(tok) > MaxTagLen {
+			return fmt.Errorf("tag %q exceeds %d-character limit", tok, MaxTagLen)
+		}
+	}
+	return validateReservedTags(toks)
+}
+
+// ReservedTagPrefixes are the five reserved provenance-tag prefixes
+// (agent:/model:/session:/cost:/tokens:, DEC-024/DEC-027) that
+// mcpserver.stampProvenance appends after Validate runs and that
+// isReservedTag/validateTagsChanged strip before applying the caps on the
+// edit path. This is the SINGLE source both sides read: stampProvenance
+// iterates it directly (and panics if a prefix has no stamping case, so a
+// newly-registered prefix cannot silently go unstamped-but-uncounted or
+// stamped-but-unstripped), and isReservedTag range-checks against it, so a
+// prefix added here is picked up by stripping with no further edit. A
+// package var rather than a const so a test can substitute it, mirroring
+// the injectable-package-var convention used for host state (AGENTS.md §9)
+// — see mcpserver's TestStampProvenance_UnhandledReservedPrefixIsCaught,
+// the punch-list mutation-check for this coupling.
+var ReservedTagPrefixes = []string{"agent:", "model:", "session:", "cost:", "tokens:"}
+
+// isReservedTag reports whether tok carries one of ReservedTagPrefixes. It
+// cannot distinguish a stamped tag from a user who typed the same-looking
+// prefix by hand — DEC-046 already documents that the two are
+// indistinguishable once joined into one string, and the ordinary path
+// (Validate, pre-stamp) still caps a hand-typed one normally.
+func isReservedTag(tok string) bool {
+	for _, prefix := range ReservedTagPrefixes {
+		if strings.HasPrefix(tok, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// splitTags splits a comma-joined tag string (DEC-004) into trimmed,
+// non-empty tokens. An empty or whitespace-only field yields no tokens, so
+// it never counts as a tag toward MaxTagCount.
+func splitTags(tags string) []string {
+	raw := strings.Split(tags, ",")
+	toks := make([]string, 0, len(raw))
+	for _, r := range raw {
+		t := strings.TrimSpace(r)
+		if t == "" {
+			continue
+		}
+		toks = append(toks, t)
+	}
+	return toks
 }
 
 // hasC0Control reports whether s contains any C0 control byte (0x00–0x1F).
@@ -97,13 +264,13 @@ func hasC0Control(s string) bool {
 	return false
 }
 
-// validateReservedTags splits the freeform tags on ',' (DEC-004) and, for any
-// token in the reserved cost:/tokens: namespaces, validates the value with the
-// dedicated-param normalizers. Invalid values are rejected; agent:/model:/
-// session: tokens are intentionally not checked here.
-func validateReservedTags(tags string) error {
-	for _, raw := range strings.Split(tags, ",") {
-		tok := strings.TrimSpace(raw)
+// validateReservedTags checks, for each already-split-and-trimmed tag token,
+// whether it falls in the reserved cost:/tokens: namespaces, and if so
+// validates the value with the dedicated-param normalizers. Invalid values
+// are rejected; agent:/model:/session: tokens are intentionally not checked
+// here.
+func validateReservedTags(toks []string) error {
+	for _, tok := range toks {
 		if v, ok := strings.CutPrefix(tok, "cost:"); ok {
 			if _, err := NormalizeCost(v); err != nil {
 				return fmt.Errorf("invalid reserved tag %q: %w", tok, err)

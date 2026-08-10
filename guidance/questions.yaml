@@ -552,9 +552,20 @@ questions:
   - id: capture-caps-were-inherited-not-derived
     question: "The capture.Validate field caps (title 200, tags 64, impact 256) were inherited from the add --json schema and never derived from real use — which of them are load-bearing, which are arbitrary, and what shape should they take?"
     priority: medium
-    status: open
+    status: resolved
     raised_by: claude-opus-5
     raised_at: 2026-08-09
+    resolved_at: 2026-08-10
+    resolved_by: SPEC-075 / DEC-046
+    resolution: |
+      MaxTitle 200→256, MaxImpact 256→1024, MaxTags (joined-string cap)
+      deleted and replaced by MaxTagLen=64 (per tag) + MaxTagCount=32 (per
+      entry); project/type/description deliberately unchanged. Existing
+      over-cap rows are grandfathered by validate-on-write-of-changed-field
+      (capture.ValidateChanged), which is what makes it safe to wire
+      capture.Validate onto the edit path — the fifth and last previously
+      unvalidated ingress. See DEC-046 for the full derivation and the
+      DEC-044 re-derivation it carries.
     assigned_to: null
     notes: |
       Raised 2026-08-09 from a user report ("Tags have a 64-char limit"), then
@@ -607,13 +618,15 @@ questions:
       WHY THIS IS NOT JUST A CONSTANT BUMP — the impact cap is now
       LOAD-BEARING. DEC-044 cites these caps twice (lines ~136 and ~443) for
       the memory slice's budget model: *"the capture.Validate field caps bound
-      a single line at 626 bytes / 157 tokens worst case"*, which is the
-      argument that one long entry cannot starve a slice. Raising MaxImpact
-      moves that worst case, so the budget math and DEC-044's starvation
-      argument have to be revisited in the same change. Title and tags are not
-      similarly coupled. Single-line rendering (`brag list` TSV, markdown
-      tables) is a real constraint on title/impact but argues for SOME cap, not
-      for these values.
+      a single line at 626 bytes / 157 tokens worst case"* [as it read at the
+      time this question was raised — SPEC-075/DEC-046 has since re-derived
+      this to 1450 bytes / 363 tokens; do not treat 626/157 as current], which
+      is the argument that one long entry cannot starve a slice. Raising
+      MaxImpact moves that worst case, so the budget math and DEC-044's
+      starvation argument have to be revisited in the same change. Title and
+      tags are not similarly coupled. Single-line rendering (`brag list` TSV,
+      markdown tables) is a real constraint on title/impact but argues for
+      SOME cap, not for these values.
 
       WHICH FIELDS ARE ACTUALLY TOO NARROW — measured, so the eventual spec
       does not widen everything reflexively:

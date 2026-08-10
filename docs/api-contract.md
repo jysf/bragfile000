@@ -1232,9 +1232,10 @@ Runs a local, **stdio-only** Model Context Protocol (MCP) server (no network
 transport, no separate binary/install) exposing five typed tools over the
 same `~/.bragfile/db.sqlite` the CLI uses:
 
-- **`brag_add`** — `title` (required, non-empty, ≤200 chars), optional
-  `description` (≤100000), `tags` (≤64, comma-joined per DEC-004),
-  `project` (≤64), `type` (≤64), `impact` (≤256), plus `agent`/`model`
+- **`brag_add`** — `title` (required, non-empty, ≤256 chars), optional
+  `description` (≤100000), `tags` (comma-joined per DEC-004; each tag
+  ≤64 chars, ≤32 tags total per DEC-046), `project` (≤64), `type` (≤64),
+  `impact` (≤1024), plus `agent`/`model`
   and the optional `session`/`cost`/`tokens` seed provenance params
   (DEC-027). Inserts via `Store.Add` and returns the created entry
   as a single [DEC-011](../decisions/DEC-011-json-output-shape.md) object.

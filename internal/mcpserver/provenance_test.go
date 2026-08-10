@@ -1,6 +1,10 @@
 package mcpserver
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/jysf/bragfile000/internal/capture"
+)
 
 // TestReservedTag_Normalization ▲ locks the literal: lowercase, whitespace→'-',
 // commas stripped; empty-after-normalization yields "".
@@ -67,3 +71,38 @@ func TestStampProvenance_SeedTags(t *testing.T) {
 // NOTE: TestNormalizeCost / TestNormalizeTokens moved to
 // internal/capture/validate_test.go when the normalizers moved to the shared
 // capture package (SPEC-064).
+
+// TestStampProvenance_UnhandledReservedPrefixIsCaught ▲ DEC-046 punch-list
+// item 2 mutation-check. Before this fix, stampProvenance built its five
+// reserved tags from its own independent literals ("agent"/"model"/
+// "session"/"cost:"/"tokens:"), unrelated to capture.ReservedTagPrefixes —
+// the list isReservedTag/validateTagsChanged strip against on the edit
+// path. The two lists agreed only by coincidence: adding a sixth reserved
+// prefix (e.g. a future signed-provenance tag) to one side had no effect on
+// the other, so a newly-stamped prefix could silently escape stripping
+// (counting against MaxTagCount/MaxTagLen forever, or a newly-registered
+// stripped prefix could just never get stamped).
+//
+// This test proves the coupling by mutating the single source: appending a
+// prefix to capture.ReservedTagPrefixes that has no stamping logic must be
+// impossible to miss. Before stampProvenance consulted
+// capture.ReservedTagPrefixes at all, this mutation had zero effect on it —
+// no panic, and the deferred recover() saw nothing, so the test failed with
+// "did not notice". After stampProvenance's loop is driven by
+// capture.ReservedTagPrefixes with a case per known prefix, an unhandled
+// entry panics immediately, and the test passes.
+func TestStampProvenance_UnhandledReservedPrefixIsCaught(t *testing.T) {
+	orig := capture.ReservedTagPrefixes
+	capture.ReservedTagPrefixes = append(append([]string{}, orig...), "signature:")
+	t.Cleanup(func() { capture.ReservedTagPrefixes = orig })
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("stampProvenance did not notice the new reserved prefix \"signature:\" in " +
+				"capture.ReservedTagPrefixes — a future stamped field could silently escape " +
+				"ValidateChanged's stripping (or a newly-registered stripped prefix could never " +
+				"get stamped)")
+		}
+	}()
+	stampProvenance("perf", "claude-code", "claude-opus-5", "sess-abc", "0.42", "18000")
+}

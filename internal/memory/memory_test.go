@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jysf/bragfile000/internal/capture"
 	"github.com/jysf/bragfile000/internal/storage"
 )
 
@@ -291,6 +292,38 @@ func TestEstimateTokens_CeilOverBytes(t *testing.T) {
 		if got := EstimateTokens(c.in); got != c.want {
 			t.Errorf("EstimateTokens(%q) = %d, want %d", c.in, got, c.want)
 		}
+	}
+}
+
+// TestRenderLine_WorstCaseLineMatchesDEC046 pins DEC-046's re-derivation of
+// the memory line's worst-case size: an entry at every capture.Max* cap
+// renders to exactly 1450 bytes / 363 estimated tokens. Computed from the
+// constants (not a literal id/project/type/title/impact), so any future cap
+// change that does not move this number together with DEC-046 turns this
+// test red.
+func TestRenderLine_WorstCaseLineMatchesDEC046(t *testing.T) {
+	e := storage.Entry{
+		ID:        math.MaxInt64,
+		Project:   strings.Repeat("p", capture.MaxProject),
+		Type:      strings.Repeat("y", capture.MaxType),
+		Title:     strings.Repeat("x", capture.MaxTitle),
+		Impact:    strings.Repeat("i", capture.MaxImpact),
+		CreatedAt: mustTime("2026-01-01T00:00:00Z"),
+	}
+	line := RenderLine(e)
+	if len(line) != 1450 {
+		t.Errorf("worst-case line length = %d, want 1450", len(line))
+	}
+	if got := EstimateTokens(line); got != 363 {
+		t.Errorf("EstimateTokens(worst-case line) = %d, want 363", got)
+	}
+}
+
+// TestDefaultBudget_Is2000 ▲ LD5's "the number stays" clause. Fails if the
+// default budget is changed as a side effect of the cap change.
+func TestDefaultBudget_Is2000(t *testing.T) {
+	if DefaultBudget != 2000 {
+		t.Errorf("DefaultBudget = %d, want 2000", DefaultBudget)
 	}
 }
 

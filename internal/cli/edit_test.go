@@ -293,6 +293,70 @@ func TestEditCmd_NonPositiveArgIsUserError(t *testing.T) {
 	}
 }
 
+// TestEditCmd_GrandfatheredOverCapImpactSurvivesTitleEdit ▲ LD4 + LD7: an
+// entry seeded (bypassing ingress validation) with an over-cap impact can
+// have its title edited without touching impact, and the stored impact
+// survives byte-for-byte. This is the test that fails if the edit-path
+// wiring is ever reordered ahead of the changed-field rule (LD7 before
+// LD4) — it would reject this edit outright.
+func TestEditCmd_GrandfatheredOverCapImpactSurvivesTitleEdit(t *testing.T) {
+	overCapImpact := strings.Repeat("i", 1290)
+	editFn := func(path string) error {
+		body := "Title: NEW TITLE\nImpact: " + overCapImpact + "\n\n"
+		return os.WriteFile(path, []byte(body), 0o600)
+	}
+	root, dbPath := newRootWithEdit(t, editFn)
+	inserted := seedEditEntry(t, dbPath, storage.Entry{Title: "orig", Impact: overCapImpact})
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "edit", "1"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got := getEntry(t, dbPath, inserted.ID)
+	if got.Title != "NEW TITLE" {
+		t.Errorf("Title = %q, want %q", got.Title, "NEW TITLE")
+	}
+	if got.Impact != overCapImpact {
+		t.Errorf("Impact must survive byte-for-byte; got len %d want len %d", len(got.Impact), len(overCapImpact))
+	}
+}
+
+// TestEditCmd_ChangedImpactOverCapIsUserErrorNoWrite ▲ LD7: editing impact
+// to a value over MaxImpact is a user error, and the row is left unchanged
+// (no partial write).
+func TestEditCmd_ChangedImpactOverCapIsUserErrorNoWrite(t *testing.T) {
+	editFn := func(path string) error {
+		body := "Title: orig\nImpact: " + strings.Repeat("i", 1025) + "\n\n"
+		return os.WriteFile(path, []byte(body), 0o600)
+	}
+	root, dbPath := newRootWithEdit(t, editFn)
+	inserted := seedEditEntry(t, dbPath, storage.Entry{Title: "orig", Impact: "short impact"})
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "edit", "1"})
+
+	err := root.Execute()
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected ErrUser, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "impact") {
+		t.Errorf("expected error to mention impact, got %v", err)
+	}
+	if outBuf.Len() != 0 {
+		t.Errorf("expected stdout empty, got %q", outBuf.String())
+	}
+	got := getEntry(t, dbPath, inserted.ID)
+	if got.Impact != "short impact" {
+		t.Errorf("Impact should be unchanged after rejected edit, got %q", got.Impact)
+	}
+}
+
 func TestEditCmd_HelpShape(t *testing.T) {
 	root, _ := newRootWithEdit(t, nil)
 	var outBuf, errBuf bytes.Buffer
