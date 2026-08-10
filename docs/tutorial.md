@@ -1031,11 +1031,14 @@ brag mcp serve
 ```
 
 This runs a local [Model Context Protocol](https://modelcontextprotocol.io)
-server over stdio (no network) that exposes four tools —
-`brag_add`, `brag_list`, `brag_search`, `brag_stats` — as thin wrappers over
-your existing database. An MCP-client agent can capture and recall brags
-without spawning a shell. The protocol stream owns stdout; nothing
-human-facing is ever written there.
+server over stdio (no network) that exposes five tools —
+`brag_add`, `brag_list`, `brag_memory`, `brag_search`, `brag_stats` — as thin
+wrappers over your existing database. An MCP-client agent can capture and
+recall brags without spawning a shell. The server also advertises three
+`brag://` resources (a ranked `brag memory` slice, a project-boosted
+variant, and the registered-project list) a client can auto-load with no
+tool call at all. The protocol stream owns stdout; nothing human-facing is
+ever written there.
 
 ### `brag mcp install` — register the server with a client
 

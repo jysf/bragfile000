@@ -23,7 +23,8 @@ func NewMCPCmd() *cobra.Command {
 		Long: `Model Context Protocol (MCP) server commands.
 
 See 'brag mcp serve --help' for the local stdio server that exposes
-brag_add / brag_list / brag_search / brag_stats as typed tools.
+brag_add / brag_list / brag_memory / brag_search / brag_stats as typed
+tools, plus a brag:// resource push surface.
 
 See 'brag mcp install --help' to register that server in a client's config
 (claude-code, claude-desktop, or cursor) idempotently.`,
@@ -38,8 +39,9 @@ func newMCPServeCmd() *cobra.Command {
 		Use:   "serve",
 		Short: "Run a local stdio MCP server",
 		Long: `Run a local stdio Model Context Protocol (MCP) server exposing brag_add,
-brag_list, brag_search, and brag_stats as typed tools over the same
-~/.bragfile/db.sqlite your shell commands use.
+brag_list, brag_memory, brag_search, and brag_stats as typed tools over the
+same ~/.bragfile/db.sqlite your shell commands use, plus a brag:// resource
+push surface (a ranked memory slice a client can auto-load with no tool call).
 
 This is a local, stdio-only server: no network transport, no separate
 install. Process stdout carries only MCP protocol frames — nothing

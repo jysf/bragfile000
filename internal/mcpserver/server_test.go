@@ -81,14 +81,16 @@ func setNowFunc(t *testing.T, fn func() time.Time) func() {
 	return func() { nowFunc = old }
 }
 
-// TestServer_ToolsListed ▲ exactly the four tool names, nothing else.
+// TestServer_ToolsListed ▲ exactly the FIVE tool names, nothing else. See
+// resources_test.go for the resource set (SPEC-074's push surface is
+// resources, not a sixth tool).
 //
-// This is also the additive-case guard for SPEC-072: adding filter properties
-// to brag_list must not change the tool SET. A spec that adds a tool (e.g.
-// SPEC-074's brag_memory) bumps this list here, and must also update
+// This is also the additive-case guard for SPEC-072/SPEC-074: adding filter
+// properties or a new tool must not change the tool SET silently. A future
+// spec that adds a tool bumps this list here, and must also update
 // docs/for-ai-agents.md §3, docs/tutorial.md, docs/architecture.md,
 // BRAG.md, plugin/README.md and scripts/test-docs.sh group T3 — all of which
-// name the four tools.
+// name the tools.
 func TestServer_ToolsListed(t *testing.T) {
 	cs, _ := newTestServer(t, "claude-code")
 	lt, err := cs.ListTools(context.Background(), nil)
@@ -100,7 +102,7 @@ func TestServer_ToolsListed(t *testing.T) {
 		names = append(names, x.Name)
 	}
 	sort.Strings(names)
-	want := []string{"brag_add", "brag_list", "brag_search", "brag_stats"}
+	want := []string{"brag_add", "brag_list", "brag_memory", "brag_search", "brag_stats"}
 	if !reflect.DeepEqual(names, want) {
 		t.Errorf("tools = %v, want %v", names, want)
 	}

@@ -174,3 +174,40 @@ func TestToProjectStatusesJSON_StateNoteNotTruncated(t *testing.T) {
 		t.Errorf("expected full 80-char note in JSON output (no truncation), got %q", string(out))
 	}
 }
+
+// TestToProjectsMarkdown_Golden ▲ SPEC-074 LD10 — byte-exact against GOLDEN 3.
+// Three ProjectStatus rows in ProjectStatuses() order (updated_at DESC, id
+// DESC). Full-body equality, so a stray field (a location, a state_note)
+// is a diff.
+func TestToProjectsMarkdown_Golden(t *testing.T) {
+	rows := []storage.ProjectStatus{
+		{Name: "bragfile", Status: "active", BragCount: 137},
+		{Name: "orbit", Status: "paused", BragCount: 42},
+		{Name: "atlas", Status: "active", BragCount: 0},
+	}
+	got, err := ToProjectsMarkdown(rows)
+	if err != nil {
+		t.Fatalf("ToProjectsMarkdown: %v", err)
+	}
+	want := "# Bragfile Projects\n\n" +
+		"Registered projects, most-recently-updated first. Use these names verbatim.\n\n" +
+		"- bragfile — active, 137 brags\n" +
+		"- orbit — paused, 42 brags\n" +
+		"- atlas — active, 0 brags"
+	if string(got) != want {
+		t.Errorf("ToProjectsMarkdown mismatch:\n got=%q\nwant=%q", got, want)
+	}
+}
+
+// TestToProjectsMarkdown_Empty ▲ SPEC-074 LD10 — byte-exact against GOLDEN 4.
+func TestToProjectsMarkdown_Empty(t *testing.T) {
+	got, err := ToProjectsMarkdown(nil)
+	if err != nil {
+		t.Fatalf("ToProjectsMarkdown(nil): %v", err)
+	}
+	want := "# Bragfile Projects\n\n" +
+		"No projects registered yet. Register one with `brag project ensure <name>`."
+	if string(got) != want {
+		t.Errorf("ToProjectsMarkdown(nil) mismatch:\n got=%q\nwant=%q", got, want)
+	}
+}

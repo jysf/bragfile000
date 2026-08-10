@@ -1020,12 +1020,12 @@ assert_file_exists "T1" "$AGENT_DOC"
 # T2 — page is a full playbook, not a stub
 assert_line_count_band "T2" "$AGENT_DOC" 120 500
 
-# T3 — names all four MCP tools
+# T3 — names all five MCP tools
 if [ ! -f "$AGENT_DOC" ]; then
     fail "T3" "$AGENT_DOC does not exist"
 else
     t3_missing=""
-    for tool in brag_add brag_list brag_search brag_stats; do
+    for tool in brag_add brag_list brag_memory brag_search brag_stats; do
         if ! grep -F -q -- "$tool" "$AGENT_DOC"; then
             t3_missing="$t3_missing $tool"
         fi
@@ -1188,6 +1188,35 @@ assert_contains_literal "U7" "docs/api-contract.md" "never stamped on an entry"
 
 # U8 — architecture.md's package table names internal/memory
 assert_contains_literal "U8" "docs/architecture.md" "internal/memory"
+
+# ===== Group V — MCP resources docs (SPEC-074 / DEC-045) =====
+
+# V1 — for-ai-agents.md names all three resource URIs
+if [ ! -f "$AGENT_DOC" ]; then
+    fail "V1" "$AGENT_DOC does not exist"
+else
+    v1_missing=""
+    for uri in "brag://memory/recent" "brag://memory/project/{name}" "brag://projects"; do
+        if ! grep -F -q -- "$uri" "$AGENT_DOC"; then
+            v1_missing="$v1_missing $uri"
+        fi
+    done
+    if [ -z "$v1_missing" ]; then
+        ok "V1"
+    else
+        fail "V1" "$AGENT_DOC missing resource URIs:$v1_missing"
+    fi
+fi
+
+# V2 — api-contract.md documents the recent-memory resource
+assert_contains_literal "V2" "docs/api-contract.md" "brag://memory/recent"
+
+# V3 — for-ai-agents.md states the soft-boost correction (the doc-level guard
+# on LD4: the docs cannot describe the project resource as a scope)
+assert_contains_literal "V3" "$AGENT_DOC" "a soft boost, not a filter"
+
+# V4 — architecture.md names the internal/ftsquery extraction
+assert_contains_literal "V4" "docs/architecture.md" "internal/ftsquery"
 
 # ===== finalise =====
 

@@ -1,6 +1,7 @@
 package export
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -98,4 +99,28 @@ func ToProjectJSON(p storage.Project) ([]byte, error) {
 		return nil, fmt.Errorf("marshal project json: %w", err)
 	}
 	return b, nil
+}
+
+// ToProjectsMarkdown renders statuses as the `brag://projects` resource body
+// (SPEC-074 LD10): every non-archived project, most-recently-updated first,
+// with its status and brag count. Locations and state_note are deliberately
+// excluded (DEC-045 sub-decision 3) — this is a name-selection lookup for the
+// `brag://memory/project/{name}` template, not a dashboard. Returns bytes
+// with the trailing "\n" stripped (matches every other renderer).
+func ToProjectsMarkdown(statuses []storage.ProjectStatus) ([]byte, error) {
+	var buf bytes.Buffer
+	fmt.Fprintln(&buf, "# Bragfile Projects")
+	fmt.Fprintln(&buf)
+
+	if len(statuses) == 0 {
+		fmt.Fprint(&buf, "No projects registered yet. Register one with `brag project ensure <name>`.")
+		return trimTrailingNewline(buf.Bytes()), nil
+	}
+
+	fmt.Fprintln(&buf, "Registered projects, most-recently-updated first. Use these names verbatim.")
+	fmt.Fprintln(&buf)
+	for _, st := range statuses {
+		fmt.Fprintf(&buf, "- %s — %s, %d brags\n", st.Name, st.Status, st.BragCount)
+	}
+	return trimTrailingNewline(buf.Bytes()), nil
 }

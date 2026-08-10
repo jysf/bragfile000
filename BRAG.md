@@ -211,8 +211,10 @@ nudge, and a typed MCP write surface — ship as one Claude Code plugin:
     claude plugin marketplace add jysf/bragfile000
     claude plugin install brag@bragfile
 
-This wires the `brag_add` / `brag_list` / `brag_search` / `brag_stats` MCP
-tools, the `/brag:brag` slash-command, and a quiet capture-nudge Stop hook.
+This wires the `brag_add` / `brag_list` / `brag_memory` / `brag_search` /
+`brag_stats` MCP tools (plus the `brag://` memory resources an agent can
+auto-load with no tool call), the `/brag:brag` slash-command, and a quiet
+capture-nudge Stop hook.
 The loose files above remain for manual/standalone setup.
 
 ## Provenance: reserved `agent:` / `model:` tags

@@ -4,7 +4,9 @@ Bundles three ways to capture accomplishments without leaving a Claude Code
 session:
 
 - **MCP server** (`brag mcp serve`) — `brag_add` / `brag_list` /
-  `brag_search` / `brag_stats` as typed tools over your `~/.bragfile/db.sqlite`.
+  `brag_memory` / `brag_search` / `brag_stats` as typed tools, plus three
+  `brag://` resources an agent can auto-load with no tool call, all
+  over your `~/.bragfile/db.sqlite`.
 - **`/brag:brag` slash-command** — draft a brag from the current session for
   your approval.
 - **Capture-nudge hook** — after a commit lands in a session, quietly nudges
