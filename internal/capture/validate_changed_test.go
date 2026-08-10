@@ -1,6 +1,7 @@
 package capture
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -35,5 +36,48 @@ func TestValidateChanged_ChangedFieldMustMeetCapNotMerelyImprove(t *testing.T) {
 	newf := Fields{Title: strings.Repeat("t", MaxTitle+1)}
 	if err := ValidateChanged(old, newf); err == nil {
 		t.Fatalf("a changed title still over cap should be rejected, even though shorter than before")
+	}
+}
+
+// TestValidateChanged_StampedTagsDoNotCountAgainstMaxTagCount ▲ DEC-046
+// punch-list item 3. On the edit path, old.Tags/new.Tags are the STORED,
+// post-stamp string (ValidateChanged sees what capture.Validate on the add
+// path never does: MaxTagCount is meant to apply pre-stamp — DEC-046's own
+// "neither cap bounds stamped provenance" scope limit). Without stripping,
+// 30 user tags + 5 stamped reserved tags = 35 stored tags, and editing a
+// single user tag makes new.Tags != old.Tags, re-counting all 35 against a
+// cap of 32 — even though the user only ever supplied 30. This must pass.
+func TestValidateChanged_StampedTagsDoNotCountAgainstMaxTagCount(t *testing.T) {
+	userTags := make([]string, MaxTagCount-2) // 30 user tags
+	for i := range userTags {
+		userTags[i] = fmt.Sprintf("t%d", i)
+	}
+	reserved := "agent:claude-code,model:claude-opus-5,session:sess-abc,cost:0.42,tokens:18000"
+	old := Fields{Title: "ok", Tags: strings.Join(userTags, ",") + "," + reserved}
+
+	edited := append([]string(nil), userTags...)
+	edited[len(edited)-1] = edited[len(edited)-1] + "b" // change exactly one user tag
+	newf := Fields{Title: "ok", Tags: strings.Join(edited, ",") + "," + reserved}
+
+	if old.Tags == newf.Tags {
+		t.Fatalf("test fixture bug: old and new Tags must differ to exercise the Tags branch")
+	}
+	if err := ValidateChanged(old, newf); err != nil {
+		t.Errorf("30 user tags + 5 stamped should not trip MaxTagCount=%d, got %v", MaxTagCount, err)
+	}
+}
+
+// TestValidateChanged_StampedTagsDoNotCountAgainstMaxTagLen ▲ DEC-046
+// punch-list item 3. A long stamped model: id (arbitrary length — DEC-046
+// line 190-192: no length check on it anywhere) must not make an unrelated
+// tag edit fail MaxTagLen, and must not require deleting the provenance tag
+// itself to converge.
+func TestValidateChanged_StampedTagsDoNotCountAgainstMaxTagLen(t *testing.T) {
+	longModel := "model:" + strings.Repeat("m", MaxTagLen+10)
+	old := Fields{Title: "ok", Tags: "work," + longModel}
+	newf := Fields{Title: "ok", Tags: "work,extra," + longModel}
+
+	if err := ValidateChanged(old, newf); err != nil {
+		t.Errorf("editing a user tag should not re-trip MaxTagLen on a stamped model: tag, got %v", err)
 	}
 }

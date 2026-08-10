@@ -187,23 +187,48 @@ leaving it would silently invalidate a shipped decision one release old.
   48×. Widening them would be the reflexive move this decision exists to reject.
 
 **Scope limit, stated so nobody later assumes otherwise: neither `MaxTagLen` nor
-`MaxTagCount` bounds STAMPED provenance.** `Validate` runs on caller-supplied
-text, and `agent:` / `model:` / `session:` / `cost:` / `tokens:` are appended
-*after* it (`cost`/`tokens` get numeric normalisation; the other three are opaque
-passthrough with no length check anywhere in the tree). So the same-looking token
-is capped or not depending on which door it came through: `model:x` typed into
-the freeform `tags` field is validated as an ordinary tag, while `model:x`
-supplied via the dedicated param is not. A 500-byte model id is storable today
-and remains so after this decision.
+`MaxTagCount` bounds STAMPED provenance, on add or on edit.** `agent:` / `model:`
+/ `session:` / `cost:` / `tokens:` are appended *after* `Validate` runs (`cost`/
+`tokens` get numeric normalisation; the other three are opaque passthrough with
+no length check anywhere in the tree). On **add**, that scope limit holds by
+construction: `Validate` only ever sees caller-supplied text, pre-stamp. On
+**edit**, it does not hold by construction — `old.Tags`/`new.Tags` are the
+*stored*, post-stamp string (`Store.Get`), so `ValidateChanged` sees exactly what
+`Validate` never does. Left as originally shipped, this made the scope limit
+false on the one path where it mattered most: editing a single ordinary tag
+re-counted and re-length-checked every stamped tag too, so a long stamped
+`model:` value could make a row's tags uneditable except by deleting its own
+provenance — the exact failure LD4 exists to prevent, reached through `Tags`
+instead of through a stale cap.
 
-That asymmetry predates this decision and is deliberately left in place — it is
-**not** a caps problem. Bounding what a caller asserts about itself is the
-signed/attestable-provenance pillar's job (PROJ-006 #2, which also subsumes the
-reserved-tag forgery gap: `agent:`/`model:`/`session:` smuggled through freeform
-`tags` are validated for *shape* but never for *truth*). Sizing `MaxTagLen` to
-accommodate long model identifiers would therefore be sizing it against a
-population it does not govern — the 64 here is derived from the 21-byte observed
-maximum of tags this cap actually sees.
+**Punch-list fix (2026-08-10): `ValidateChanged` strips reserved-namespace tags
+before counting/length-checking `Tags`** (`validateTagsChanged`, `capture/
+validate.go`), so the pre-stamp population the caps were derived against is what
+they see on both paths, not just on add. This is the correct fix, not a
+narrowing of this DEC to match an accident: it makes the scope-limit sentence
+above true as written, rather than true only for the path where it happened to
+fall out of validation order. `cost:`/`tokens:` value shape (DEC-027) is still
+checked against the full token list on both paths — that check is about
+correctness, not the caps, and stripping does not touch it.
+
+The one asymmetry that remains, and is accepted: a hand-typed `model:x` (or any
+reserved-prefixed string) inside the freeform `tags` field is capped as an
+ordinary tag on add — `Validate` cannot tell it apart from real provenance — but
+is exempt from the caps on edit once it is part of the stored string, for the
+same reason in reverse: `ValidateChanged` cannot tell it apart either. Both
+directions are the same limitation — an opaque comma-joined string carries no
+marker of a token's origin — read from opposite ends of the ingress/edit split.
+A 500-byte model id is storable today and remains so after this decision.
+
+That underlying asymmetry (dedicated param vs. freeform field) predates this
+decision and is deliberately left in place — it is **not** a caps problem.
+Bounding what a caller asserts about itself is the signed/attestable-provenance
+pillar's job (PROJ-006 #2, which also subsumes the reserved-tag forgery gap:
+`agent:`/`model:`/`session:` smuggled through freeform `tags` are validated for
+*shape* but never for *truth*). Sizing `MaxTagLen` to accommodate long model
+identifiers would therefore be sizing it against a population it does not
+govern — the 64 here is derived from the 21-byte observed maximum of tags this
+cap actually sees.
 
 ## Consequences
 
@@ -220,6 +245,11 @@ maximum of tags this cap actually sees.
   whose own comment asked a reader to keep two numbers in agreement (DEC-036's
   soft-match invariant, DEC-017).
 - **Positive:** no schema change, no migration, no backfill.
+- **Positive (punch-list fix, 2026-08-10):** `ValidateChanged` strips
+  reserved-namespace tags before applying `MaxTagLen`/`MaxTagCount` to `Tags`,
+  so a long or numerous stamped provenance tag can never make an unrelated tag
+  edit fail, and never forces deleting provenance to converge — the scope
+  limit above now holds on edit, not only on add.
 - **Negative (accepted):** 3 impacts and 29 titles remain over cap. Editing the
   offending field forces a fix. For the 29 titles — pasted brag bodies — that is
   the correct outcome; for the 3 impacts it is a real, if rare, friction.
@@ -358,7 +388,8 @@ reader re-deriving from a false number.
 
 ## References
 
-- Related specs: **SPEC-075** (emits and implements this DEC), SPEC-064 (shipped —
+- Related specs: **SPEC-075** (emits and implements this DEC; in verify, PR #144
+  open), SPEC-064 (shipped —
   unified per-path validation; created the situation), SPEC-073 (shipped — the
   memory slice and DEC-044), SPEC-074 (shipped — the MCP push surface inheriting
   the line shape), SPEC-046 (shipped — DEC-027's reserved tags that

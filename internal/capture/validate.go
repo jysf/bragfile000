@@ -79,6 +79,16 @@ func Validate(f Fields) error {
 // is "the changed value must meet today's cap", not "must not get worse
 // than before": a field replaced with a different, still-over-cap value is
 // rejected exactly like any other ingress.
+//
+// Tags is the one field where old/new is not the caller's raw input: on the
+// edit path it is the STORED, post-stamp string (Store.Get), so it may
+// already contain up to 5 reserved provenance tags appended after Validate
+// ran on the add path. MaxTagLen/MaxTagCount are meant to bound only the
+// user-supplied population — exactly as they do pre-stamp on add — so
+// validateTagsChanged strips reserved-namespace tags before counting/length-
+// checking. Without this, editing a single ordinary tag would re-count every
+// stamped tag against the cap too, which DEC-046's own scope limit says
+// neither cap is meant to bound.
 func ValidateChanged(old, new Fields) error {
 	if new.Title != old.Title {
 		if err := validateSingleLine("title", new.Title, MaxTitle); err != nil {
@@ -86,7 +96,7 @@ func ValidateChanged(old, new Fields) error {
 		}
 	}
 	if new.Tags != old.Tags {
-		if err := validateTags(new.Tags); err != nil {
+		if err := validateTagsChanged(new.Tags); err != nil {
 			return err
 		}
 	}
@@ -161,6 +171,51 @@ func validateTags(tags string) error {
 		}
 	}
 	return validateReservedTags(toks)
+}
+
+// validateTagsChanged applies DEC-046's per-tag rule on the edit path, where
+// tags is the STORED, post-stamp string rather than raw caller input. It is
+// identical to validateTags except that MaxTagLen and MaxTagCount are
+// checked against the user-supplied tags only — reserved-namespace tags
+// (agent:/model:/session:/cost:/tokens:) are excluded from both, matching
+// the pre-stamp population Validate checks on the add path. cost:/tokens:
+// shape is still checked via validateReservedTags against the full token
+// list, since that check is about value correctness, not the caps.
+func validateTagsChanged(tags string) error {
+	toks := splitTags(tags)
+	user := toks[:0:0]
+	for _, tok := range toks {
+		if !isReservedTag(tok) {
+			user = append(user, tok)
+		}
+	}
+	if len(user) > MaxTagCount {
+		return fmt.Errorf("tags: more than %d tags allowed (got %d)", MaxTagCount, len(user))
+	}
+	for _, tok := range user {
+		if hasC0Control(tok) {
+			return fmt.Errorf("%q must not contain control characters", "tags")
+		}
+		if len(tok) > MaxTagLen {
+			return fmt.Errorf("tag %q exceeds %d-character limit", tok, MaxTagLen)
+		}
+	}
+	return validateReservedTags(toks)
+}
+
+// isReservedTag reports whether tok carries one of the five reserved
+// provenance prefixes stamping can append (agent:/model:/session:/cost:/
+// tokens:). It cannot distinguish a stamped tag from a user who typed the
+// same-looking prefix by hand — DEC-046 already documents that the two are
+// indistinguishable once joined into one string, and the ordinary path
+// (Validate, pre-stamp) still caps a hand-typed one normally.
+func isReservedTag(tok string) bool {
+	for _, prefix := range [...]string{"agent:", "model:", "session:", "cost:", "tokens:"} {
+		if strings.HasPrefix(tok, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 // splitTags splits a comma-joined tag string (DEC-004) into trimmed,
