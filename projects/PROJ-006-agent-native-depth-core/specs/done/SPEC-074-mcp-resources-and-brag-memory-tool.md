@@ -7,7 +7,7 @@
 task:
   id: SPEC-074
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -1095,13 +1095,54 @@ confirm the named test reddens, revert.
 *Appended during the **ship** cycle.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — **Grep the feature name, not a phrasing of the claim.** This spec changed a
+   count (four tools → five, zero resources → three) and the doc sweep leaked
+   **six times**, each a different way a regex under-reports: output truncation
+   (`head -12`), sites naming the tools without the word "four", a line-wrap
+   splitting the phrase across source lines, phrase variance (`four tool
+   schemas`), singular/plural (`a … memory resource`), and markdown emphasis
+   (`three MCP **resources**` — which defeated a grep run *while verifying the
+   fix for the previous variant*). Every one was a formatting or wording
+   difference the grep author did not anticipate. AGENTS.md §9 already
+   prescribes the cure for a status change — `grep -rn "<feature-name>" docs/
+   README.md` — and this spec used the narrower count-phrase grep instead. Not a
+   missing rule; a codified rule not applied.
+
+   Second: **split earlier.** The extractions (LD8/LD9) came out to their own
+   PRs (#135/#136) only after review flagged the spec as a wide M. Shipping them
+   ahead was clearly right — they had a bar the resource surface does not
+   ("zero behaviour change, all existing tests pass unchanged") — and that was
+   knowable at design.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — **AGENTS.md §9 / §12 candidate: default to the feature-name grep for any
+   status change, and treat a count-phrase grep as insufficient on its own.**
+   Six same-outcome instances in one spec, plus SPEC-073's four-times-wrong
+   coverage sentence — the evidence is unusually strong because each instance
+   has a *distinct mechanism* and a single root cause.
+
+   **A design principle also emerged and is worth recording:** verify argued
+   against unifying `BRAG.md`/`copy-pack.md` to "three", on the grounds that
+   this stage's recurring failure is *too many independently-maintained count
+   sites* and pushing an exact count into a marketing blurb adds sites to keep
+   in sync while adding nothing a reader can act on. **Fewer count-bearing
+   sites, not more.** That is the durable form of the lesson.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — Not a spec, but three things are already recorded and should not be lost:
+   STAGE-018's reframe around the capture-validation caps (PR #139) and the
+   measurement behind it (`capture-caps-were-inherited-not-derived`, PR #137);
+   DEC-045's own revisit triggers, chiefly the `cacheScope: "public"` clobber
+   that becomes a hard blocker on any networked transport (now a clause on
+   DEC-024's trigger (b)); and **v0.6.0 is uncut** with SPEC-073/074 missing
+   from the CHANGELOG's `Unreleased` section.
 
 4. **What can a user do now that they couldn't before?**
-   — <answer>
+   — Before, every read of the corpus was **pull**: an agent got history only if
+   it decided to call a tool, so the developer's own past was invisible to the
+   agent that had just been told to change their code. Now an MCP client
+   **auto-loads** a ranked, token-budgeted slice with no tool call and no
+   configuration — three `brag://` resources serving byte-identical `brag
+   memory` markdown, plus `brag_memory` as the parameterized pull counterpart.
+   That is the whole point of STAGE-019 arriving: the corpus stopped being a
+   write-only log and became something consulted *before* work starts.
