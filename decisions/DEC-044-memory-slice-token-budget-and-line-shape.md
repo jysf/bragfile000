@@ -81,6 +81,15 @@ default's defense, and this decision does not change it.
 > defense was always displacement, not yield — but a slice of 25 best-ranked
 > entries, not ≈110, is the number a future reader should reason from. See
 > DEC-046 for the full re-derivation.
+>
+> **How far the ≈110 figure travelled.** SPEC-075's own audit-grep swept the
+> byte/token pair (`626\|157 tok`) but not the yield number, so the sweep found
+> and fixed this line without catching where the figure had already been
+> copied onward: `DEC-043:122` cited it inline in the rank-fusion pool-cap
+> paragraph, and `DEC-045:270` cited it inline in the resource-budget
+> derivation. Both are corrected as part of this punch-list pass — DEC-043's
+> correction also inverts its conclusion, since the true yield of 25 sits
+> *inside* that decision's top-26 head guarantee rather than past it.
 
 That is the target: cheap enough that auto-loading it every session is never a
 decision, large enough that it is worth reading. A number chosen from "what
@@ -452,8 +461,9 @@ each individually revisitable without touching anything else.
   second rendering), SPEC-046 (shipped — implemented DEC-027's reserved token-count
   tag, the thing this estimate is scoped away from), SPEC-064 (shipped —
   `internal/capture.Validate`, whose field caps bound a single line), SPEC-075
-  (shipped — re-derived that bound to 1450 bytes / 363 tokens and corrected this
-  DEC's yield claim; was 626 bytes / 157 tokens / ≈110 entries — see DEC-046).
+  (in verify, PR #144 open — re-derived that bound to 1450 bytes / 363 tokens
+  and corrected this DEC's yield claim; was 626 bytes / 157 tokens / ≈110
+  entries — see DEC-046).
 - Related decisions: **DEC-027** (reserved cost/session/token-count tags — the
   honesty clause above scopes this estimate away from it; DEC-027's "never
   fabricate" rule governs caller-reported provenance and is untouched),

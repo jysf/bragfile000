@@ -119,8 +119,16 @@ sub-decisions are locked:
    one, and the cap is lossy in the tail. The guarantee that does hold is a head
    guarantee: `1/(60 + r) > 3/261` for all `r ≤ 26`, so **any entry in the top 26
    of any single list cannot be displaced by anything the cap excluded.** Below
-   that, ordering may be perturbed — and at the default budget (≈110 entries) the
-   tail of a typical slice is inside that zone.
+   that, ordering may be perturbed.
+
+   > **Corrected by SPEC-075/DEC-046 (2026-08-10).** This paragraph used to end
+   > "and at the default budget (≈110 entries) the tail of a typical slice is
+   > inside that zone" — importing DEC-044's yield figure unverified. The true
+   > yield at the default budget is **25** (`Included: 25`), which sits entirely
+   > *inside* the top-26 head guarantee above, not below it: **a default-budget
+   > slice never reaches the perturbation zone at all.** The tail-imprecision
+   > tradeoff described below remains real, but only for a slice larger than the
+   > default — a wider `--budget`/`--limit` that pulls the tail past rank 26.
 
    This is accepted, not hidden: the head is what a memory slice is read for, the
    perturbation is confined to entries that are marginal on *all three* axes at
@@ -343,10 +351,14 @@ Per §14 (< 0.8) a question is logged in `guidance/questions.yaml`.
   filter parity and the `internal/timewindow` precedent for a shared pure package),
   SPEC-074 (pending — the MCP resources + `brag_memory` tool, which consumes
   `memory.Slice` and must honor the same `Matched` ordering contract),
-  SPEC-011 (the FTS5 index whose bm25 order is fused here).
+  SPEC-011 (the FTS5 index whose bm25 order is fused here), SPEC-075 (in verify —
+  corrected the default-budget yield this decision's pool-cap paragraph cited;
+  see DEC-046).
 - Related decisions: **DEC-044** (the token budget and the per-entry line shape —
   emitted with this one; the two are only separable on paper, since the line shape
-  *is* the cost that the ranking is trimmed against), DEC-014 (the envelope the
+  *is* the cost that the ranking is trimmed against), **DEC-046** (corrected the
+  ≈110-entry yield figure this decision's pool-cap paragraph imported from
+  DEC-044 unverified; true yield is 25), DEC-014 (the envelope the
   slice renders into), DEC-010 (`brag search` query transform — `--query` reuses
   `buildFTS5Query` verbatim), DEC-011 (the JSON entry shape `memory`'s per-item
   projection deliberately narrows), DEC-017 (`entries.project` is a soft string

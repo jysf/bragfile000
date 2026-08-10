@@ -267,11 +267,20 @@ cost story for the surface.
 It is `memory.DefaultBudget` — **the same exported constant the CLI defaults to**,
 not a second number that happens to equal it. DEC-044 derived 2000 from the
 auto-load cost story *specifically* (the ~20k-token session-opening ritual this
-stage replaces; 2000 is ~10% of it, ≈110 entries). That derivation was always
-about this surface; the CLI inherited it. Minting a resource-specific default
-would give one claim two numbers and would break the dogfooding property SPEC-073
+stage replaces; 2000 is ~10% of it). That derivation was always about this
+surface; the CLI inherited it. Minting a resource-specific default would give
+one claim two numbers and would break the dogfooding property SPEC-073
 established — that `brag memory` is a faithful, byte-exact preview of what the
 resource serves.
+
+> **Corrected by SPEC-075/DEC-046 (2026-08-10).** This paragraph originally
+> continued the parenthetical with ", ≈110 entries" — DEC-044's yield claim,
+> imported here unverified. That figure was wrong: the measured yield at the
+> default budget is **25** best-ranked entries (`Included: 25`), not ≈110. The
+> defense above (2000 is ~10% of the ~20k-token ritual) is unaffected — it was
+> always a displacement argument, not a yield one — so `DefaultBudget` and this
+> section's conclusion both hold; only the entry-count aside was false. See
+> DEC-046 for the full re-derivation.
 
 **Accepted cost, named:** a client that attaches all three resources pays
 ≈2000 + ≈2000 + a small projects list before the agent does anything. Attachment
@@ -507,14 +516,18 @@ fork). Three whole-surface alternatives were considered and rejected:
   `memory.Slice` + `export.ToMemory*` body this serves), SPEC-072 (shipped — MCP
   filter parity + the `internal/timewindow` extraction precedent), SPEC-040
   (shipped — the MCP server this extends), SPEC-041 (shipped — the plugin
-  packaging whose "validated ≠ registered" lesson shapes the §12(b) bar)
+  packaging whose "validated ≠ registered" lesson shapes the §12(b) bar),
+  SPEC-075 (in verify — corrected the ≈110-entry yield aside in sub-decision 7;
+  see DEC-046)
 - Related decisions: DEC-024 (the MCP server contract — SDK, stdio purity,
   CLI byte-parity, the four-tool line this DEC amends, and revisit triggers (b)
   and (c) which this DEC fires and extends), DEC-043 (the ranking; sub-decision 4's
   soft boost is the source of this DEC's sub-decision 6, and sub-decision 3's
   degenerate path is its sub-decision 9), DEC-044 (the budget + the line shape;
   `DefaultBudget` is this DEC's pinned resource budget, and its "the resource *is*
-  the markdown" consequence is realized here), DEC-014 (the envelope the memory
+  the markdown" consequence is realized here), **DEC-046** (corrected the
+  ≈110-entry yield figure sub-decision 7 imported from DEC-044 unverified; true
+  yield is 25), DEC-014 (the envelope the memory
   bodies render), DEC-017 (`entries.project` is a soft string match — the reason a
   hard filter drops history), DEC-042 (the MCP time vocabulary this tool
   deliberately does not extend; also the `internal/timewindow` extraction
