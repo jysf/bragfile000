@@ -401,7 +401,7 @@ assertion supports.
   - `"a changed field must meet the new cap, not merely improve"` — `old.Title` = 300×"t", `new.Title` = 257×"t" → error. Fails if the rule is "must not get worse" rather than "must meet the cap". *(LD4)*
 - **`internal/cli/edit_test.go`**
   - `"editing the title of an entry with a grandfathered over-cap impact succeeds and preserves impact byte-for-byte"` — seed via `Store.Add` with a 1290-byte impact (bypassing ingress validation), run `edit` with a buffer changing only `title`, assert exit 0 and `Get(id).Impact` byte-equal to the seed. Fails if edit validates unchanged fields — i.e. this is the test that fails if LD7 lands without LD4. *(LD4 + LD7)*
-  - `"editing impact to 1025 bytes is a user error and writes nothing"` — assert `UserError`, stderr carries the message, stdout empty, and `Get(id)` is unchanged. Fails if edit does not validate at all. *(LD7)*
+  - `"editing impact to 1025 bytes is a user error and writes nothing"` — assert `errors.Is(err, ErrUser)`, the error mentions `impact`, stdout empty, and `Get(id)` is unchanged. **Does not and cannot assert stderr**: `root.go` sets `SilenceErrors: true`, so `root.Execute()` never writes the error to `cmd.ErrOrStderr()` in-process — only `cmd/brag/main.go` prints the returned error to `os.Stderr`, outside what this test exercises. The stderr-carries-the-message constraint holds in production; it is a property of `main.go`, not of this test. Fails if edit does not validate at all. *(LD7)*
 - **`internal/cli/project_test.go`**
   - `"ensure accepts a name of exactly capture.MaxProject bytes and rejects one byte more"` — the test **references `capture.MaxProject`** rather than a literal, so it cannot drift from the constant. Fails if `project.go` keeps its own literal *and* `MaxProject` ever moves; the reference is what makes LD6 enforced rather than tidied. *(LD6)*
 - **`internal/memory/`** (package test)
@@ -494,6 +494,124 @@ Process-focused: how did the build go? What friction did the spec create?
 
 3. **If you did this task again, what would you do differently?**
    — Add a third audit-grep angle before implementing, not after: grep test files for the *raw numeric cap values themselves* (`200`, `201`, `256`, `257`, `64`, `65`) in addition to the spec's identifier grep and message-substring grep. That third angle would have caught `add_hardening_test.go` before the cap change landed rather than via a fail-first surprise immediately after.
+
+## Punch-List Iteration
+
+*Verify returned five items (two substantive: 1, 3; three prose: 2, 4, 5). Fixed
+in place, same PR (#144). No cap value changed; LD1–LD7 stand.*
+
+- **Item 1 — the ≈110-entries figure had propagated into two shipped DECs.**
+  DEC-044's own correction blockquote swept the byte/token pair
+  (`626\|157 tok`) but never the yield number, so it never caught where the
+  number had already been copied onward. Found by re-running the grep against
+  the yield figure itself (`≈110`, `110 entries`) across `decisions/`:
+  - `DEC-043:122` — the rank-fusion pool-cap paragraph cited "at the default
+    budget (≈110 entries) the tail of a typical slice is inside that
+    [perturbation] zone." **This was not a number swap — the correction
+    inverts the conclusion.** The true default-budget yield is 25, which sits
+    *inside* DEC-043's own top-26 head guarantee two sentences earlier, so a
+    default-budget slice never reaches the perturbation zone at all. Fixed
+    with a correction blockquote (matching DEC-044's own style) that restates
+    the consequence rather than only the number, and notes the tail-imprecision
+    tradeoff still applies to a wider explicit `--budget`/`--limit`.
+  - `DEC-045:270` — sub-decision 7's resource-budget derivation cited "2000 is
+    ~10% of it, ≈110 entries" as part of the displacement argument. Fixed with
+    a correction blockquote: the displacement defense (2000 is ~10% of the
+    ~20k-token ritual) was never about yield and is unaffected; only the
+    entry-count aside was false.
+  - DEC-044's own correction blockquote gained a second paragraph ("How far
+    the ≈110 figure travelled") naming both downstream citations and the
+    grep-blindness reason they survived the original sweep, so the record
+    shows the figure's full travel rather than just its origin and its two
+    silent copies.
+  - Both DEC-043 and DEC-045 gained a `DEC-046` cross-reference in their own
+    References sections so a future reader following either chain lands on
+    the re-derivation.
+
+- **Item 3 — the tag caps DID bound stamped provenance on the edit path.
+  Closed by option (a): strip reserved-namespace tags before counting.**
+  Two failing tests were written first in
+  `internal/capture/validate_changed_test.go`, run red, confirmed failing for
+  the exact reason verify described, then made to pass:
+  - `TestValidateChanged_StampedTagsDoNotCountAgainstMaxTagCount` — 30 user
+    tags + 5 stamped reserved tags (35 stored), editing one user tag.
+    **Red:** `tags: more than 32 tags allowed (got 35)`. **Green** after the
+    fix.
+  - `TestValidateChanged_StampedTagsDoNotCountAgainstMaxTagLen` — a stamped
+    `model:` tag 10 bytes over `MaxTagLen`, editing an unrelated user tag.
+    **Red:** `tag "model:mmm…" exceeds 64-character limit`. **Green** after
+    the fix.
+  - Fix: `capture.validateTagsChanged` (new, called from `ValidateChanged`
+    only) strips tokens matching the five reserved prefixes
+    (`agent:`/`model:`/`session:`/`cost:`/`tokens:`) before applying
+    `MaxTagCount`/`MaxTagLen`, mirroring the pre-stamp population `Validate`
+    already sees on add. `cost:`/`tokens:` shape validation
+    (`validateReservedTags`) still runs against the full token list — that
+    check is about value correctness, not the caps, and stripping doesn't
+    touch it. Chose (a) over (b) per the spec's own lean: it makes DEC-046's
+    "neither cap bounds stamped provenance" sentence true as written on both
+    ingress paths, rather than narrowing the sentence to admit an asymmetry
+    that was really just an accident of validation order. DEC-046's
+    scope-limit paragraph and Consequences section are rewritten to explain
+    *why* stripping is correct, not just that it happens, and to name the one
+    accepted residual asymmetry (a hand-typed `model:x` in freeform `tags` is
+    capped on add but exempt on edit — the opaque comma-joined string cannot
+    tell the two apart in either direction).
+  - All 1036 repo tests pass after the fix; `gofmt -l .` and `go vet ./...`
+    stay clean.
+
+- **Item 2 — `questions.yaml:621` still stated 626 B / 157 tok as current fact.
+  Grep ran, hit, mis-reconciled — a different failure than a grep that
+  missed.** SPEC-075's own audit-grep table lists `questions.yaml:602` as a
+  hit for the `626\|157 tok` grep and reconciles it "all enumerated in
+  Outputs" — but the Outputs entry it points at
+  (`guidance/questions.yaml` → `status: resolved`) only covers the
+  status/resolution block, never the prose notes above it, where the same
+  stale figure appears inside a quoted DEC-044 sentence. The grep surfaced the
+  line; the reconciliation step didn't read past the block it was checking
+  for. Fixed by annotating the quote in place (bracketed correction pointing
+  at the 1450/363 re-derivation) rather than rewriting the historical notes
+  — the notes describe what was true when the question was raised, and the
+  annotation is what stops a reader treating a quoted historical claim as
+  current.
+
+- **Item 4 — the Failing Tests entry overclaimed what the edit-rejection test
+  asserts.** The spec said "stderr carries the message"; the shipped test
+  (`TestEditCmd_ChangedImpactOverCapIsUserErrorNoWrite`) asserts
+  `errors.Is(err, ErrUser)`, the error mentions `impact`, `outBuf` is empty,
+  and the DB is unchanged — it makes no assertion on `errBuf` at all, and
+  could not: `root.go` sets `SilenceErrors: true`, so `root.Execute()` never
+  writes to `cmd.ErrOrStderr()` in-process; only `cmd/brag/main.go` prints the
+  returned error to `os.Stderr`, outside what the test exercises. The
+  production constraint holds; the test just doesn't pin it. Corrected the
+  Failing Tests entry to describe what the test actually asserts.
+
+- **Item 5 — SPEC-075 was cited as "shipped" while still in verify.**
+  `DEC-044:454` literally said "SPEC-075 (shipped — …)"; corrected to
+  "in verify, PR #144 open". `DEC-046:361`'s References line didn't use the
+  word "shipped" for SPEC-075, but carried no status at all while every
+  sibling entry in the same list did — made explicit ("in verify, PR #144
+  open") for the same reason: consistency with how every other related spec
+  in that list states its status.
+
+- **Audit-grep re-run, this time including the yield number and other bare
+  figures a claim rests on (the sixth grep-blindness mode, per the spec's own
+  Note-for-the-Implementer prediction).** Re-ran all five original greps
+  (identifiers, message substrings, docs, `626\|157 tok`, ingress paths) —
+  no new misses; all hits reconcile to already-known/already-fixed sites.
+  Added `grep -rn "≈110\|110 entries" decisions/ guidance/ projects/ docs/
+  internal/`, which is what surfaced the DEC-043/DEC-045 propagation above.
+  One further hit, correctly left untouched:
+  `projects/…/specs/done/SPEC-073-…md:1328` (an archived, shipped spec's Ship
+  Reflection, "≈110 entries, about 10% of the ~20k-token ritual"). Same
+  category as `docs/reports/security/2026-04-26-…`, which the spec's own
+  audit-grep table already carved out as a dated historical record: a done
+  spec's reflection is a record of what was believed true at ship time, not
+  living documentation, and SPEC-075's Outputs never enumerated it as a file
+  to update. Left as-is; recorded here rather than silently skipped.
+
+- **Gates:** `go build`, `go test ./...` (1036 tests), `gofmt -l .` (empty),
+  `go vet ./...`, `just test-docs`, `just test-hook` — all six green.
 
 ---
 
