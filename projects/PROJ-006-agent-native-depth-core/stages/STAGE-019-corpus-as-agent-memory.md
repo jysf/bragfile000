@@ -170,7 +170,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       below. `go.mod` has not moved since, so DEC-045 was locked against
       v1.7.0 as required.
 
-**Count:** 2 shipped / 1 active (SPEC-074, build) / 0 pending
+**Count:** 2 shipped / 1 active (SPEC-074, in verify) / 0 pending
 
 > **The stage is NOT complete until SPEC-074 ships.** All three specs are now
 > scaffolded, so `just archive-spec` can see them — but do not run the Stage

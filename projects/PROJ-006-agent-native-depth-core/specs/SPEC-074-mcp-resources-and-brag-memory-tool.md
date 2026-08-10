@@ -499,7 +499,7 @@ least one test here that fails without it.
 
   (Expected values transcribed from the two deleted suites, not retyped from
   the algorithm — §12(a) expected-value-literals.)
-- `"TestPackageImportsNothingInternal"` — walks the package's non-test `.go`
+- `"TestPackageIsStdlibOnly"` — walks the package's non-test `.go`
   files and asserts none contains `github.com/jysf/bragfile000/internal/`.
   **Pins LD8's "pure leaf package"**: if `ftsquery` ever imports back into a
   command package the cycle it was created to break returns.
@@ -935,7 +935,7 @@ No projects registered yet. Register one with `brag project ensure <name>`.
 | LD5 (`DefaultBudget`) | `TestResourceRecent_UsesDefaultBudget`, `TestMemoryTool_BudgetOmittedUsesDefault` |
 | LD6 (tool params) | `TestMemoryTool_BudgetZeroIsAnError`, `TestMemoryTool_DefaultFormatIsMarkdown`, `TestMemoryTool_SchemaHasNoTimeWindowParams`, `TestMemoryTool_UnknownFormatIsAnError` |
 | LD7 (percent-decode) | `TestResourceProject_PercentDecodesTheName` |
-| LD8 (`ftsquery`) | `TestBuild_Table`, `TestPackageImportsNothingInternal` |
+| LD8 (`ftsquery`) | `TestBuild_Table`, `TestPackageIsStdlibOnly` |
 | LD9 (`Gather`) | the five `TestGather_*` tests |
 | LD10 (`ToProjectsMarkdown`) | `TestToProjectsMarkdown_Golden`, `TestToProjectsMarkdown_Empty`, `TestResourceProjects_OmitsLocations`, `TestResourceProjects_ExcludesArchived` |
 
@@ -1041,6 +1041,15 @@ confirm the named test reddens, revert.
     Updated both — leaving one four-tool string beside a five-tool string in
     the same file would have been a self-contradiction the grep's line-break
     blind spot would otherwise have shipped silently.
+  - **LD8 has the same mismatch, disclosed at verify** (it was missed in the
+    first pass of this list, which named only LD9's). `internal/ftsquery`'s
+    guard shipped as **`TestPackageIsStdlibOnly`**, not the
+    `TestPackageImportsNothingInternal` this spec's `## Failing Tests` and
+    traceability table named — same assertion, same cause as LD9's below (the
+    extraction landed ahead of this spec being finalized). The two spec
+    references are retargeted to the shipped name rather than the test being
+    renamed on `main`, so the traceability table points at something that
+    exists.
   - LD9's already-landed `internal/memory/pool_test.go` (PR #135/#136) uses
     test names (`TestGather_ProjectAddsScopedRead`,
     `TestGather_QueryAddsMatchedInSearchOrder`,

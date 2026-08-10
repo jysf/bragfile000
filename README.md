@@ -171,8 +171,9 @@ brag mcp install                 # claude-code, project scope (writes ./.mcp.jso
 ```
 
 Then reconnect your client (MCP servers connect at startup). The full agent
-playbook — the four tool schemas, the `project`-not-auto-filled gotcha,
-provenance stamping, and the `--db` override — is in
+playbook — the five tool schemas, the three auto-loadable `brag://` resources,
+the `project`-not-auto-filled gotcha, provenance stamping, and the `--db`
+override — is in
 [`docs/for-ai-agents.md`](docs/for-ai-agents.md).
 
 ## Where to go next
@@ -182,7 +183,8 @@ provenance stamping, and the `--db` override — is in
 - [`BRAG.md`](BRAG.md) — guide for AI coding agents that want to
   propose brag entries from work sessions.
 - [`docs/for-ai-agents.md`](docs/for-ai-agents.md) — the MCP playbook for AI
-  agents: register the server, the four tool schemas, and the gotchas.
+  agents: register the server, the five tool schemas, the `brag://` resources,
+  and the gotchas.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — how this repo is built
   and how to contribute.
 - [`docs/api-contract.md`](docs/api-contract.md) — full CLI
