@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`brag memory` — the corpus as working memory** (SPEC-073 / DEC-043, DEC-044).
+  A ranked, token-budgeted slice of your own history, cheap enough for an agent
+  to load at the start of every session. Reading your history used to mean
+  picking a single axis — `brag list` for recency or `brag search` for relevance
+  — and getting back an unbounded row count. `brag memory` blends three signals
+  (recency, `--query` match, `--project` membership) by **reciprocal-rank
+  fusion**, so two incomparable orderings need no invented score normalization,
+  and trims the result to a **token budget rather than a row count** (`--budget`,
+  2000 by default) because a row count does not predict what a slice costs to
+  read. Entries pack greedily in rank order; one that does not fit is skipped and
+  the fill continues, so a single long entry cannot starve the rest. `--project`
+  is a soft boost, not a filter. Rule-based and deterministic: no LLM, no
+  network. Markdown (default) or `--format json` under the DEC-014 envelope.
+
+- **MCP push surface: `brag://` resources + the `brag_memory` tool** (SPEC-074 /
+  DEC-045). Every read of the corpus used to be **pull** — an agent saw your
+  history only if it decided to call a tool. Three resources now let an MCP
+  client **auto-load** the slice with no tool call and no configuration:
+  `brag://memory/recent`, `brag://memory/project/{name}`, and `brag://projects`
+  (every registered non-archived project, so an agent uses real names verbatim
+  instead of inventing one). The memory resources serve byte-identical output to
+  the corresponding `brag memory` invocation. `brag_memory` is the parameterized
+  pull counterpart for when an agent wants a specific budget, query, or project.
+
 - **MCP `brag_list` time-window and provenance filters** (SPEC-072 / DEC-042).
   The tool now accepts `since`, `until`, `day`, and `author` alongside
   `tag`/`project`/`type`/`limit`, so a connected agent can ask for "the last
@@ -20,7 +44,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `cli↔mcpserver` import cycle that deferred `--since` at SPEC-040. `until` is
   an exclusive upper bound and is MCP-only by design; the CLI keeps `--day`.
 
+### Changed
+
+- **Capture field caps are derived from the corpus instead of inherited**
+  (SPEC-075 / DEC-046). The caps `capture.Validate` enforces on every ingress
+  path had no recorded rationale — DEC-012 introduced them for the `brag add
+  --json` schema, and SPEC-064 then correctly generalised them to every path,
+  with an unmeasured side effect: **74 of 285 entries with an `impact` (26%)
+  were over cap**, so a large slice of your own history had become unwritable.
+  Measured against a 359-entry snapshot and re-shaped per field:
+  - `impact` **256 → 1024** — it was at 1.12× its own median (p50 228 against a
+    256 cap), the only field without the headroom `project` and `type` had.
+  - `title` **200 → 256** — deliberately *not* widened to fit its tail, which is
+    a single malformed-capture episode rather than ordinary use.
+  - the joined-string tags cap is replaced by **`MaxTagLen` 64 + `MaxTagCount`
+    32**. The old cap was inverted from the abuse it should catch: every
+    over-cap tag string held 7–9 individually short tags (longest 17 bytes),
+    so it penalised using many legitimate tags rather than one absurd one.
+
+  `project`, `type` and `description` are unchanged. No schema change, no
+  migration.
+
 ### Fixed
+
+- **`brag edit` now validates what it writes** (SPEC-075 / DEC-046). The edit
+  path silently enforced no caps at all. It now runs `capture.ValidateChanged`,
+  which validates a field **only when its value changed** — so the caps reach
+  the edit path without making the already-over-cap corpus uneditable, and
+  without a migration. Provenance tags stamped by the MCP server
+  (`agent:`/`model:`/`session:`/`cost:`/`tokens:`) are excluded from the tag
+  caps on this path, since they are not user-supplied text.
 
 - **A negative `limit` is now a tool error on MCP `brag_list` / `brag_search`**
   instead of silently meaning "unlimited" (v0.5.0 pre-release audit item;

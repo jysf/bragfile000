@@ -158,7 +158,7 @@ Ordered list of specs composing this stage. IDs assigned at creation.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-075 (verify) — **the caps spec, and the v0.6.0 gate.** Design complete
+- [x] SPEC-075 (shipped on 2026-08-10) — **the caps spec, and the v0.6.0 gate.** Design complete
       2026-08-09, build complete 2026-08-10; emits **DEC-046**. Locked: `MaxImpact` 256→**1024**,
       `MaxTitle` 200→**256**, `MaxTags` deleted in favour of
       **`MaxTagLen = 64` + `MaxTagCount = 32`**; `project`/`type`/`description`
@@ -182,7 +182,9 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       per the Design Notes (an "MCP/CLI parity" cluster, a "filesystem-write
       robustness" cluster). Split at framing.
 
-**Count:** 0 shipped / 1 active (SPEC-075, in verify) / 1 pending
+**Count:** 1 shipped (SPEC-075) / 0 active / 1 pending (the audit nits, unwritten —
+these trail into v0.6.1 per this stage's own scope note above, so SPEC-075
+shipping is the **v0.6.0 gate clearing**, not this stage closing).
 
 ## Design Notes
 
