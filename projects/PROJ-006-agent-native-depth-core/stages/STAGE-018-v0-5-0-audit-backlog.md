@@ -45,8 +45,8 @@ always were, now with a reason to schedule them.
 
 Three coupled pieces, all touching `internal/capture`:
 
-1. **Re-shape the caps.** `MaxImpact = 256` is exceeded by **81 of 274 entries
-   (30%)**, with a **median of 227** — a cap sitting in the middle of ordinary
+1. **Re-shape the caps.** `MaxImpact = 256` is exceeded by **74 of 285 entries
+   (26%)**, with a **median of 227** — a cap sitting in the middle of ordinary
    usage, not catching outliers. `MaxTitle = 200` is exceeded by 33 of 348.
    `MaxTags = 64` caps the *comma-joined string* rather than each tag, which
    penalises using many tags (legitimate) instead of one absurd tag (the actual
@@ -71,7 +71,7 @@ the tags cap in real use and the investigation found the pattern was general,
 measured against the live corpus (347 entries): the caps were never derived.
 DEC-012 introduced them for the `add --json` schema and records **no rationale
 for any value**; SPEC-064 then correctly unified per-path validation and
-generalised those numbers to every path — which retroactively made ~30% of the
+generalised those numbers to every path — which retroactively made ~26% of the
 existing corpus unwritable. Nobody measured that at the time.
 
 It is PROJ-006's business rather than PROJ-007's: the coupling is to items
@@ -83,7 +83,7 @@ slice reads. Deferring across a project boundary would strand that coupling.
 - Every cap has a **recorded rationale** tied to what the field is for. No
   surviving number that nobody can defend.
 - **No entry in the existing corpus is unwritable.** The measured over-cap
-  populations (81 impacts, 33 titles, 9 tag-strings) either fit the new caps or
+  populations (74 impacts, 33 titles, 7 tag-strings) either fit the new caps or
   are explicitly grandfathered — stated, not discovered.
 - `capture.Validate` runs on **every** ingress path, edit included, and that is
   true *after* the caps are fixed, never before.
@@ -125,8 +125,8 @@ in `guidance/questions.yaml` for the full measurement and reasoning):
   `Store.Update` path through `internal/capture.Validate`.
   > ⚠ **COUPLED — read before actioning.** Wiring the edit path to
   > `capture.Validate` would make a large slice of the corpus
-  > **uneditable**: measured today, **81 of 274 impacts (30%)**, 33 titles and
-  > 9 tag-strings already exceed their caps, because flag/editor mode did not
+  > **uneditable**: measured today, **74 of 285 impacts (26%)**, 33 titles and
+  > 7 tag-strings already exceed their caps, because flag/editor mode did not
   > enforce them until SPEC-064 unified validation. Changing one of those
   > entries' titles would then require truncating impact or deleting tags. Resolve
   > `capture-caps-were-inherited-not-derived` in `guidance/questions.yaml` in the
@@ -173,7 +173,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
   edits the same code, rather than a standalone visit. (SPEC-072 did exactly
   this with the negative-`limit` item — already ticked above.)
 - **Ordering is load-bearing, not a preference.** The caps decision must land
-  before the edit-path wiring. Reversed, the wiring makes 30% of the corpus
+  before the edit-path wiring. Reversed, the wiring makes 26% of the corpus
   uneditable; there is no ordering in which that is acceptable.
 - The caps spec is the one that needs a **DEC**; the nits do not. Do not let the
   nits' cheapness set the review altitude for the caps change.
