@@ -483,9 +483,9 @@ func TestAddCmd_JSON_FieldLengthLimits(t *testing.T) {
 		substring string
 	}{
 		{
-			name:      "title over 200",
-			stdin:     `{"title":"` + strings.Repeat("x", 201) + `"}`,
-			substring: `"title" exceeds 200-character limit`,
+			name:      "title over 256",
+			stdin:     `{"title":"` + strings.Repeat("x", 257) + `"}`,
+			substring: `"title" exceeds 256-character limit`,
 		},
 		{
 			name:      "description over 100000",
@@ -493,9 +493,14 @@ func TestAddCmd_JSON_FieldLengthLimits(t *testing.T) {
 			substring: `"description" exceeds 100000-character limit`,
 		},
 		{
-			name:      "tags over 64",
+			name:      "a single tag over 64 bytes",
 			stdin:     `{"title":"ok","tags":"` + strings.Repeat("t", 65) + `"}`,
-			substring: `"tags" exceeds 64-character limit`,
+			substring: strings.Repeat("t", 65),
+		},
+		{
+			name:      "more than 32 tags",
+			stdin:     `{"title":"ok","tags":"` + strings.TrimSuffix(strings.Repeat("t,", 33), ",") + `"}`,
+			substring: "32",
 		},
 		{
 			name:      "project over 64",
@@ -508,9 +513,9 @@ func TestAddCmd_JSON_FieldLengthLimits(t *testing.T) {
 			substring: `"type" exceeds 64-character limit`,
 		},
 		{
-			name:      "impact over 256",
-			stdin:     `{"title":"ok","impact":"` + strings.Repeat("i", 257) + `"}`,
-			substring: `"impact" exceeds 256-character limit`,
+			name:      "impact over 1024",
+			stdin:     `{"title":"ok","impact":"` + strings.Repeat("i", 1025) + `"}`,
+			substring: `"impact" exceeds 1024-character limit`,
 		},
 	}
 	for _, tc := range cases {
