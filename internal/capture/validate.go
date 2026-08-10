@@ -175,10 +175,14 @@ func validateTags(tags string) error {
 
 // validateTagsChanged applies DEC-046's per-tag rule on the edit path, where
 // tags is the STORED, post-stamp string rather than raw caller input. It is
-// identical to validateTags except that MaxTagLen and MaxTagCount are
-// checked against the user-supplied tags only — reserved-namespace tags
-// (agent:/model:/session:/cost:/tokens:) are excluded from both, matching
-// the pre-stamp population Validate checks on the add path. cost:/tokens:
+// identical to validateTags except that MaxTagLen, MaxTagCount, and the
+// control-character check (hasC0Control) are all applied to the
+// user-supplied tags only — reserved-namespace tags (agent:/model:/session:/
+// cost:/tokens:) are excluded from all three, matching the pre-stamp
+// population Validate checks on the add path. A hand-typed C0 byte in a
+// reserved-prefixed value is already reachable today through the
+// agent:/model:/session: params, which Validate never inspects, so this is
+// not a new gap — see DEC-046's residual-asymmetry paragraph. cost:/tokens:
 // shape is still checked via validateReservedTags against the full token
 // list, since that check is about value correctness, not the caps.
 func validateTagsChanged(tags string) error {
@@ -203,14 +207,28 @@ func validateTagsChanged(tags string) error {
 	return validateReservedTags(toks)
 }
 
-// isReservedTag reports whether tok carries one of the five reserved
-// provenance prefixes stamping can append (agent:/model:/session:/cost:/
-// tokens:). It cannot distinguish a stamped tag from a user who typed the
-// same-looking prefix by hand — DEC-046 already documents that the two are
+// ReservedTagPrefixes are the five reserved provenance-tag prefixes
+// (agent:/model:/session:/cost:/tokens:, DEC-024/DEC-027) that
+// mcpserver.stampProvenance appends after Validate runs and that
+// isReservedTag/validateTagsChanged strip before applying the caps on the
+// edit path. This is the SINGLE source both sides read: stampProvenance
+// iterates it directly (and panics if a prefix has no stamping case, so a
+// newly-registered prefix cannot silently go unstamped-but-uncounted or
+// stamped-but-unstripped), and isReservedTag range-checks against it, so a
+// prefix added here is picked up by stripping with no further edit. A
+// package var rather than a const so a test can substitute it, mirroring
+// the injectable-package-var convention used for host state (AGENTS.md §9)
+// — see mcpserver's TestStampProvenance_UnhandledReservedPrefixIsCaught,
+// the punch-list mutation-check for this coupling.
+var ReservedTagPrefixes = []string{"agent:", "model:", "session:", "cost:", "tokens:"}
+
+// isReservedTag reports whether tok carries one of ReservedTagPrefixes. It
+// cannot distinguish a stamped tag from a user who typed the same-looking
+// prefix by hand — DEC-046 already documents that the two are
 // indistinguishable once joined into one string, and the ordinary path
 // (Validate, pre-stamp) still caps a hand-typed one normally.
 func isReservedTag(tok string) bool {
-	for _, prefix := range [...]string{"agent:", "model:", "session:", "cost:", "tokens:"} {
+	for _, prefix := range ReservedTagPrefixes {
 		if strings.HasPrefix(tok, prefix) {
 			return true
 		}

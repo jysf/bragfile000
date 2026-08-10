@@ -6,7 +6,10 @@
 package mcpserver
 
 import (
+	"fmt"
 	"strings"
+
+	"github.com/jysf/bragfile000/internal/capture"
 )
 
 // reservedTag normalizes value into a reserved-namespace tag
@@ -31,6 +34,14 @@ func reservedTag(prefix, value string) string {
 // capture.NormalizeTokens) appended verbatim so a validated number is never re-mangled.
 // The result is a comma-joined string Store.Add canonicalizes like any other
 // tags input.
+//
+// The prefix set stamped is driven by capture.ReservedTagPrefixes — the
+// SAME list isReservedTag/validateTagsChanged strip against on the edit
+// path (DEC-046 punch-list item 2) — rather than an independently
+// maintained set of literals. A prefix in that list with no case below
+// panics loudly instead of silently stamping nothing (or, before this fix,
+// letting a genuinely new stamped prefix escape stripping because the two
+// lists were free to drift apart).
 func stampProvenance(tags, agent, model, session, cost, tokens string) string {
 	toks := []string{}
 	for _, t := range strings.Split(tags, ",") {
@@ -38,20 +49,29 @@ func stampProvenance(tags, agent, model, session, cost, tokens string) string {
 			toks = append(toks, t)
 		}
 	}
-	if a := reservedTag("agent", agent); a != "" {
-		toks = append(toks, a)
-	}
-	if m := reservedTag("model", model); m != "" {
-		toks = append(toks, m)
-	}
-	if sv := reservedTag("session", session); sv != "" {
-		toks = append(toks, sv)
-	}
-	if cost != "" { // already validated + normalized by normalizeCost
-		toks = append(toks, "cost:"+cost)
-	}
-	if tokens != "" { // already validated + normalized by normalizeTokens
-		toks = append(toks, "tokens:"+tokens)
+	for _, prefix := range capture.ReservedTagPrefixes {
+		var tok string
+		switch prefix {
+		case "agent:":
+			tok = reservedTag("agent", agent)
+		case "model:":
+			tok = reservedTag("model", model)
+		case "session:":
+			tok = reservedTag("session", session)
+		case "cost:":
+			if cost != "" { // already validated + normalized by NormalizeCost
+				tok = "cost:" + cost
+			}
+		case "tokens:":
+			if tokens != "" { // already validated + normalized by NormalizeTokens
+				tok = "tokens:" + tokens
+			}
+		default:
+			panic(fmt.Sprintf("stampProvenance: reserved prefix %q has no stamping case — add one above", prefix))
+		}
+		if tok != "" {
+			toks = append(toks, tok)
+		}
 	}
 	return strings.Join(toks, ",")
 }

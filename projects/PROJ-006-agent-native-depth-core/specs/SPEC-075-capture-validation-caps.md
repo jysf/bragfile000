@@ -7,7 +7,7 @@
 task:
   id: SPEC-075
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: build
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -611,6 +611,127 @@ in place, same PR (#144). No cap value changed; LD1–LD7 stand.*
   to update. Left as-is; recorded here rather than silently skipped.
 
 - **Gates:** `go build`, `go test ./...` (1036 tests), `gofmt -l .` (empty),
+  `go vet ./...`, `just test-docs`, `just test-hook` — all six green.
+
+### Second Punch-List Round (2026-08-10)
+
+*Verify returned three more items against the round-one fixes above (one
+substantive: 2; two prose: 1, 3). Fixed in place, same PR (#144). No cap
+value changed, no LD changed; LD1–LD7 still stand.*
+
+- **Item 2 (code) — `isReservedTag` was a second, unpinned enumeration of
+  the five reserved prefixes; stamping built its own independently, with no
+  shared definition and no agreement test.** Failing test written first, in
+  `internal/mcpserver/provenance_test.go`:
+  `TestStampProvenance_UnhandledReservedPrefixIsCaught` mutates
+  `capture.ReservedTagPrefixes` (the newly-exported single source, see
+  below) by appending a fake sixth prefix `"signature:"`, then expects
+  `stampProvenance` to panic. **Red** (confirmed before touching
+  `provenance.go`): `stampProvenance` didn't consult
+  `capture.ReservedTagPrefixes` at all yet, so the mutation had zero effect
+  on it — `t.Fatal("stampProvenance did not notice the new reserved prefix
+  \"signature:\" ...")`. **Green** after the fix below.
+  - Fix, single-sourced rather than an agreement test (per the punch-list's
+    own lean — a shared constant makes the drift impossible, not just
+    caught after the fact): `internal/capture/validate.go` now exports
+    `ReservedTagPrefixes = []string{"agent:", "model:", "session:", "cost:",
+    "tokens:"}`; `isReservedTag` ranges over it instead of its own literal
+    array. This half is behavior-preserving by construction — the capture
+    suite stayed green before any `mcpserver` change. `internal/mcpserver/
+    provenance.go`'s `stampProvenance` now builds its tags by ranging over
+    `capture.ReservedTagPrefixes`, with a `switch` case per known prefix and
+    a `default: panic(...)` for any prefix with no case. A sixth reserved
+    prefix can no longer be added to the shared list without stamping
+    either handling it (a case is added) or panicking immediately on the
+    very next `brag_add`/`brag edit` call (a case isn't) — closing the exact
+    scenario verify described: a future signed-provenance prefix stamped
+    while unknown to `validateTagsChanged`'s stripping.
+  - A second test closes the loop from the other direction:
+    `TestValidateChanged_NewlyRegisteredReservedPrefixIsStrippedAutomatically`
+    (`internal/capture/validate_changed_test.go`) registers a prefix in
+    `capture.ReservedTagPrefixes` with **no** `validate.go` edit at all, and
+    confirms `validateTagsChanged` strips it immediately — proving the fix
+    is a true single source in both directions, not a one-way patch.
+  - Mutation-check, as instructed: the fake `"signature:"` prefix lives only
+    inside the test body (`t.Cleanup` restores the original slice
+    afterward) — the red→green pair above *is* the mutation-check, not a
+    separate manual step.
+  - All 1038 repo tests pass after the fix (1036 baseline + the two new
+    tests above); `gofmt -l .` and `go vet ./...` stay clean.
+
+- **Item 1 — DEC-043's round-one correction was itself a logic error: a
+  COUNT of included entries compared against a RANK threshold, not a
+  score.** Verified the counterexample verify supplied: an entry at recency
+  rank 40 *and* match rank 40 scores `1/(60+40) + 1/(60+40) = 0.02000`,
+  beating a single-list rank-1 entry (`1/(60+1) ≈ 0.01639`) despite sitting
+  outside every list's top 26 — so "25 entries included" does not, by
+  itself, imply "everything included is within the top-26 head guarantee,"
+  and the round-one conclusion ("a default-budget slice never reaches the
+  perturbation zone at all") did not follow from its own premise.
+  - Rewrote `decisions/DEC-043-…` (the pool-cap paragraph's correction
+    blockquote, the item verify's ID 1 targeted) to make the SCORE argument
+    instead: the default-budget slice's included set measures as exactly
+    recency ranks 1–25 today, so its weakest member scores exactly
+    `1/(60+25) = 1/85 ≈ 0.011765`, above the worst-case pool-cap-excluded
+    score of `3/261 ≈ 0.011494` already derived earlier in the same
+    paragraph — a real, verified bound, but scoped to the corpus and budget
+    as measured, not a structural "never." Named why it isn't structural:
+    DEC-044 sub-decision 3's skip-and-continue means the included set is a
+    rank prefix only when nothing large enough to skip appears early in the
+    order, and this spec just widened the worst-case rendered line from 157
+    to 363 tokens — making a long-head/short-tail fill (a departure from the
+    clean rank-prefix case) *more* reachable than before, not less.
+  - `decisions/DEC-044-…`'s "How far the ≈110 figure travelled" paragraph
+    repeated the same "sits inside the top-26 head guarantee" framing when
+    summarizing DEC-043's round-one correction. Reworded to describe the
+    inversion without restating the flawed arithmetic, pointing at DEC-043
+    as the one place the score-based version lives — a third copy of the
+    same number is a third place it can drift on its own.
+  - Checked `decisions/DEC-045-…` for the same pattern: it does not have
+    it — its correction was always a pure number swap (≈110 → 25) with no
+    rank/count claim attached, so it needed no change.
+  - This item is prose, but a logical claim rather than a wording
+    preference, per the spec's own instruction: checked the arithmetic
+    (`1/85 > 3/261`, both recomputed above) rather than rewording around it.
+
+- **Item 3 — the edit-path exemption from the caps also exempts the
+  control-character check, and neither `validate.go`'s comment nor
+  DEC-046's residual-asymmetry paragraph said so.** `validateTagsChanged`
+  moves `hasC0Control` inside the same user-only loop as `MaxTagLen`/
+  `MaxTagCount` (`validate.go:199–206`), so a reserved-prefixed token
+  escapes the control-character check on edit exactly as it escapes the
+  caps — a third exempted check, previously unstated in both places.
+  - `internal/capture/validate.go`'s `validateTagsChanged` doc comment
+    (`:176–187`) now names all three (`MaxTagLen`, `MaxTagCount`,
+    `hasC0Control`) instead of just the two caps, and states this is not a
+    new gap: a hand-typed C0 byte in a reserved-prefixed `agent`/`model`/
+    `session` param is already reachable today through those dedicated
+    params, which `Validate` never inspects.
+  - `decisions/DEC-046-…`'s residual-asymmetry paragraph is reworded to say
+    a hand-typed `model:x` in freeform `tags` is capped *and*
+    control-character-checked on add but exempt from **both** on edit, and
+    states explicitly that the strip opens no new gap — it extends an
+    exemption that already existed at the dedicated-param door to the
+    freeform-`tags` door, rather than introducing one.
+  - Behavior is unchanged, per the spec's own instruction that this item is
+    prose-only: checking a stamped tag's control characters on edit would
+    re-create the uneditable-row failure LD4 exists to prevent, the same
+    reason the caps are already exempt. If that judgment turns out wrong,
+    it is a DEC-046 amendment, not a silent fix — and it is not one here.
+
+- **Audit-grep re-run, second round.** Re-ran all six original greps
+  (identifiers, message substrings, docs, `626\|157 tok`, ingress paths,
+  and the round-one `≈110\|110 entries` addition) — no new misses; every
+  hit reconciles to an already-known or already-fixed site (including
+  `projects/…/STAGE-018-…md:179`, a design-notes quote of the *old*,
+  already-wrong "≈110" figure being reported as wrong — historical, left
+  as-is, same category as the round-one carve-outs). Added a seventh grep
+  specific to item 2 — `grep -rn '"agent:", "model:", "session:", "cost:",
+  "tokens:"' --include="*.go" internal/` — which now returns exactly one
+  hit, `capture/validate.go`'s `ReservedTagPrefixes`, confirming the literal
+  no longer exists independently in `mcpserver/provenance.go`.
+
+- **Gates:** `go build`, `go test ./...` (1038 tests), `gofmt -l .` (empty),
   `go vet ./...`, `just test-docs`, `just test-hook` — all six green.
 
 ---

@@ -124,11 +124,40 @@ sub-decisions are locked:
    > **Corrected by SPEC-075/DEC-046 (2026-08-10).** This paragraph used to end
    > "and at the default budget (≈110 entries) the tail of a typical slice is
    > inside that zone" — importing DEC-044's yield figure unverified. The true
-   > yield at the default budget is **25** (`Included: 25`), which sits entirely
-   > *inside* the top-26 head guarantee above, not below it: **a default-budget
-   > slice never reaches the perturbation zone at all.** The tail-imprecision
-   > tradeoff described below remains real, but only for a slice larger than the
-   > default — a wider `--budget`/`--limit` that pulls the tail past rank 26.
+   > yield at the default budget is **25** (`Included: 25`), not ≈110.
+   >
+   > **Corrected again, same punch-list pass (2026-08-10): the first repair's
+   > own conclusion was a category error.** It said the yield of 25 "sits
+   > entirely inside the top-26 head guarantee above ... a default-budget
+   > slice never reaches the perturbation zone at all" — comparing a COUNT of
+   > included entries (25) to a RANK threshold (top 26 in a single list). Those
+   > are not the same axis: a two-list entry at recency rank 40 + match rank 40
+   > scores `1/(60+40) + 1/(60+40) = 0.02000`, beating a single-list entry at
+   > recency rank 1 (`1/(60+1) ≈ 0.01639`) despite sitting outside every
+   > list's top 26. Having 25 included entries says nothing, by itself, about
+   > whether each one is within the top-26 head guarantee.
+   >
+   > The argument that does hold is a SCORE comparison, for the corpus as
+   > measured today: the default-budget slice's included set is exactly
+   > recency ranks 1–25 (only 9 tokens remain after rank 25, so nothing else
+   > displaces in), so its weakest member scores exactly `1/(60+25) = 1/85 ≈
+   > 0.011765` — above the worst-case pool-cap-excluded score of `3/261 ≈
+   > 0.011494` derived above. On this corpus, at this budget, no pool-cap-
+   > excluded entry could have displaced anything the default budget actually
+   > included.
+   >
+   > That is a fact about the corpus as measured, not a "never." DEC-044
+   > sub-decision 3's skip-and-continue means the included set is a rank
+   > prefix only when nothing large enough to skip appears early in the
+   > order — not guaranteed in general — and this spec just widened the
+   > worst-case rendered line from 157 to 363 tokens, which makes a
+   > long-head/short-tail fill (a large entry skipped, a smaller lower-ranked
+   > one taking its slot) *more* reachable than before, not less. When that
+   > happens the included set stops being a clean rank prefix and its weakest
+   > member's score is no longer bounded by `1/85`. The tail-imprecision
+   > tradeoff described below is not confined to a wider `--budget`/`--limit`
+   > — it can in principle reach the default budget too, just not on the
+   > corpus measured here.
 
    This is accepted, not hidden: the head is what a memory slice is read for, the
    perturbation is confined to entries that are marginal on *all three* axes at

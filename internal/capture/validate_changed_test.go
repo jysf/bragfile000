@@ -81,3 +81,33 @@ func TestValidateChanged_StampedTagsDoNotCountAgainstMaxTagLen(t *testing.T) {
 		t.Errorf("editing a user tag should not re-trip MaxTagLen on a stamped model: tag, got %v", err)
 	}
 }
+
+// TestValidateChanged_NewlyRegisteredReservedPrefixIsStrippedAutomatically
+// ▲ DEC-046 punch-list item 2, the closed-loop half. isReservedTag ranges
+// over the exported ReservedTagPrefixes rather than its own literal list, so
+// registering a sixth reserved prefix there is enough on its own — no
+// validate.go edit required — for validateTagsChanged to start stripping it.
+// (The other half — that stamping cannot emit an unregistered prefix without
+// a loud panic — is pinned in mcpserver's
+// TestStampProvenance_UnhandledReservedPrefixIsCaught, which is where the
+// mutation lives on the stamping side.)
+func TestValidateChanged_NewlyRegisteredReservedPrefixIsStrippedAutomatically(t *testing.T) {
+	orig := ReservedTagPrefixes
+	ReservedTagPrefixes = append(append([]string{}, orig...), "signature:")
+	t.Cleanup(func() { ReservedTagPrefixes = orig })
+
+	userTags := make([]string, MaxTagCount-1) // MaxTagCount-1 user tags
+	for i := range userTags {
+		userTags[i] = fmt.Sprintf("t%d", i)
+	}
+	stamped := "agent:claude-code,signature:deadbeef"
+	old := Fields{Title: "ok", Tags: strings.Join(userTags, ",") + "," + stamped}
+
+	edited := append([]string(nil), userTags...)
+	edited[len(edited)-1] += "b" // change exactly one user tag
+	newf := Fields{Title: "ok", Tags: strings.Join(edited, ",") + "," + stamped}
+
+	if err := ValidateChanged(old, newf); err != nil {
+		t.Errorf("a newly-registered reserved prefix should be stripped with no validate.go edit, got %v", err)
+	}
+}

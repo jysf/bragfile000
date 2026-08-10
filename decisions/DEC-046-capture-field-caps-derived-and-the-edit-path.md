@@ -212,13 +212,22 @@ checked against the full token list on both paths — that check is about
 correctness, not the caps, and stripping does not touch it.
 
 The one asymmetry that remains, and is accepted: a hand-typed `model:x` (or any
-reserved-prefixed string) inside the freeform `tags` field is capped as an
-ordinary tag on add — `Validate` cannot tell it apart from real provenance — but
-is exempt from the caps on edit once it is part of the stored string, for the
-same reason in reverse: `ValidateChanged` cannot tell it apart either. Both
-directions are the same limitation — an opaque comma-joined string carries no
-marker of a token's origin — read from opposite ends of the ingress/edit split.
-A 500-byte model id is storable today and remains so after this decision.
+reserved-prefixed string) inside the freeform `tags` field is capped — and
+control-character-checked — as an ordinary tag on add — `Validate` cannot
+tell it apart from real provenance — but is exempt from **both** the caps
+and the control-character check on edit once it is part of the stored
+string, for the same reason in reverse: `ValidateChanged` cannot tell it
+apart either (`validateTagsChanged` moves `hasC0Control`, like `MaxTagLen`/
+`MaxTagCount`, inside the user-only loop). Both directions are the same
+limitation — an opaque comma-joined string carries no marker of a token's
+origin — read from opposite ends of the ingress/edit split. This is not a
+new gap opened by the strip: a caller can already push a C0 byte through the
+`agent`/`model`/`session` params on the add path today, since `Validate`
+never inspects those params either — the strip only extends an
+already-accepted exemption from the freeform-`tags` door to match the
+dedicated-param door, rather than introducing one. A 500-byte model id, or
+one containing a raw control byte, is storable today and remains so after
+this decision.
 
 That underlying asymmetry (dedicated param vs. freeform field) predates this
 decision and is deliberately left in place — it is **not** a caps problem.

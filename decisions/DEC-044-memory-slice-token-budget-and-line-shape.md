@@ -88,8 +88,13 @@ default's defense, and this decision does not change it.
 > copied onward: `DEC-043:122` cited it inline in the rank-fusion pool-cap
 > paragraph, and `DEC-045:270` cited it inline in the resource-budget
 > derivation. Both are corrected as part of this punch-list pass — DEC-043's
-> correction also inverts its conclusion, since the true yield of 25 sits
-> *inside* that decision's top-26 head guarantee rather than past it.
+> correction also inverts its conclusion: the true yield of 25 does not fall
+> past its top-26 head guarantee the way the ≈110 figure implied. **That
+> first repair of DEC-043 was itself wrong on a second axis** (a count of
+> included entries is not a rank threshold, and "sits inside the top-26 head
+> guarantee" doesn't follow from "25 entries included") — DEC-043 carries the
+> corrected, score-based version; this line is not restated here to avoid a
+> third place the same arithmetic can drift.
 
 That is the target: cheap enough that auto-loading it every session is never a
 decision, large enough that it is worth reading. A number chosen from "what
