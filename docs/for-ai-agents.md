@@ -69,12 +69,12 @@ the same `~/.bragfile/db.sqlite` the CLI uses (see §7 to change that).
 
 | param         | type    | required | notes |
 |---------------|---------|----------|-------|
-| `title`       | string  | **required** | non-empty; ≤200 characters |
+| `title`       | string  | **required** | non-empty; ≤256 characters |
 | `description` | string  | optional | ≤100000 characters |
-| `tags`        | string  | optional | comma-joined string (DEC-004), NOT an array; ≤64 characters |
+| `tags`        | string  | optional | comma-joined string (DEC-004), NOT an array; each tag ≤64 characters, ≤32 tags total |
 | `project`     | string  | optional | ≤64 characters — **read §5** |
 | `type`        | string  | optional | ≤64 characters, e.g. `shipped`, `fixed`, `learned` |
-| `impact`      | string  | optional | ≤256 characters — **read §8** |
+| `impact`      | string  | optional | ≤1024 characters — **read §8** |
 | `agent`       | string  | optional | provenance; stamped `agent:<name>` (see §6) |
 | `model`       | string  | optional | provenance; stamped `model:<id>` |
 | `session`     | string  | optional | provenance; stamped `session:<id>` |

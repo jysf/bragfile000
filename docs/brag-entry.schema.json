@@ -10,8 +10,8 @@
     "title": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 200,
-      "description": "Required, non-empty after whitespace trim. Short, action-verb headline. Per DEC-012 choice 2."
+      "maxLength": 256,
+      "description": "Required, non-empty after whitespace trim. Short, action-verb headline. Per DEC-012 choice 2; the 256-byte cap is derived in DEC-046."
     },
     "description": {
       "type": "string",
@@ -20,8 +20,7 @@
     },
     "tags": {
       "type": "string",
-      "maxLength": 64,
-      "description": "Optional comma-joined string of tags (e.g. \"auth,perf,backend\"). Per DEC-004, tags are stored as a single TEXT column inside the binary; per DEC-012 choice 3, the input contract mirrors this shape. Array form (e.g. [\"auth\",\"perf\"]) is rejected at the type check below. To migrate to array-shaped tags, DEC-004 + DEC-011 + DEC-012 + this schema migrate in lockstep."
+      "description": "Optional comma-joined string of tags (e.g. \"auth,perf,backend\"). Per DEC-004, tags are stored as a single TEXT column inside the binary; per DEC-012 choice 3, the input contract mirrors this shape. Per DEC-046, each individual tag must be 64 bytes or fewer and at most 32 tags are accepted — a joined-string maxLength cannot express that shape, so the binary is the authoritative validator (as this schema already states). Array form (e.g. [\"auth\",\"perf\"]) is rejected at the type check below. To migrate to array-shaped tags, DEC-004 + DEC-011 + DEC-012 + this schema migrate in lockstep."
     },
     "project": {
       "type": "string",
@@ -35,8 +34,8 @@
     },
     "impact": {
       "type": "string",
-      "maxLength": 256,
-      "description": "Optional concrete-outcome statement: a metric, an unlock, a named result. The most load-bearing field for review writeups. Per DEC-012 choice 3."
+      "maxLength": 1024,
+      "description": "Optional concrete-outcome statement: a metric, an unlock, a named result. The most load-bearing field for review writeups. Per DEC-012 choice 3; the 1024-byte cap is derived in DEC-046."
     },
     "id": {
       "type": "integer",

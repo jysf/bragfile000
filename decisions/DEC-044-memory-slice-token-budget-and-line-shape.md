@@ -69,12 +69,22 @@ exists to remove. An unbounded dump is spelled `brag list`.
 | **the session-opening ritual, total** | **80,654** | **≈20,163** |
 
 The ritual STAGE-019 exists to replace costs ~20k tokens. A 2000-token slice is
-**~10% of that**, and ~1% of a 200k context window. At the line shape locked in (5)
-a real corpus averages ~18 tokens per entry, so 2000 buys **≈110 entries** — on the
-order of a quarter's capture for a daily logger. That is the target: cheap enough
-that auto-loading it every session is never a decision, large enough that it is
-worth reading. A number chosen from "what fits" rather than "what it displaces"
-would have no defense at all.
+**~10% of that**, and ~1% of a 200k context window. That displacement is the
+default's defense, and this decision does not change it.
+
+> **Corrected by SPEC-075/DEC-046 (2026-08-10).** The yield claim that used to
+> follow — "a real corpus averages ~18 tokens per entry, so 2000 buys ≈110
+> entries" — was wrong: ~18 was the 8-entry test fixture's mean, never measured
+> against a real corpus. The measured corpus mean is **~92 tokens/entry**, and
+> `brag memory` at the default budget yields **`Included: 25`** (`Skipped: 175`,
+> `Estimated: 1991`), not ≈110. `DefaultBudget` still holds at 2000 — the
+> defense was always displacement, not yield — but a slice of 25 best-ranked
+> entries, not ≈110, is the number a future reader should reason from. See
+> DEC-046 for the full re-derivation.
+
+That is the target: cheap enough that auto-loading it every session is never a
+decision, large enough that it is worth reading. A number chosen from "what
+fits" rather than "what it displaces" would have no defense at all.
 
 ### 2. Estimation — a documented chars-per-token heuristic: `ceil(len(bytes) / 4)`
 
@@ -133,10 +143,11 @@ costs `8→27, 7→14, 6→15, 5→10, 4→27, 3→15, 2→22, 1→13`):
 
 Skip-and-continue packs better and, more importantly, removes a failure mode:
 without it, one long entry landing at rank 1 truncates the entire slice behind it.
-The `capture.Validate` field caps bound a single line at **626 bytes / 157 tokens**
-worst case, so catastrophic starvation is impossible — but a 27-token entry ahead of
-a queue of 10-token entries is ordinary, and stopping there wastes a third of the
-budget on nothing.
+The `capture.Validate` field caps bound a single line at **1450 bytes / 363 tokens**
+worst case (re-derived by SPEC-075/DEC-046, 2026-08-10 — was 626 bytes / 157
+tokens under the pre-DEC-046 caps), so catastrophic starvation is impossible —
+but a 27-token entry ahead of a queue of 10-token entries is ordinary, and
+stopping there wastes a third of the budget on nothing.
 
 **Accepted consequence, stated plainly:** a *lower*-ranked short entry can be
 included while a *higher*-ranked long one is skipped. In the table above, rank 4
@@ -259,10 +270,10 @@ by a test rather than by a paragraph.
 - **Option A: express the bound as rows (`--limit N`), as `list`/`search` do.**
   - Why rejected: it is the status quo the stage set out to replace. Rows do not
     predict cost — the fixture's cheapest entry is 10 tokens and its most expensive
-    is 27, a 2.7× spread, and the caps allow 157. A caller who wants "about this
-    much context" cannot express it, and a caller auto-loading every session has no
-    way to bound the damage. Kept available in spirit: `brag list --limit N` still
-    exists for anyone who genuinely wants rows.
+    is 27, a 2.7× spread, and the caps allow 363 (re-derived by DEC-046; was 157).
+    A caller who wants "about this much context" cannot express it, and a caller
+    auto-loading every session has no way to bound the damage. Kept available in
+    spirit: `brag list --limit N` still exists for anyone who genuinely wants rows.
 
 - **Option B: ship or vendor a real BPE tokenizer.**
   - Why rejected: a tokenizer is model-specific (a count exact for one model is
@@ -436,11 +447,13 @@ each individually revisitable without touching anything else.
 
 ## References
 
-- Related specs: SPEC-073 (emits and implements this DEC), SPEC-074 (pending — the
-  MCP resources inherit this budget and this line shape; DEC-045 must not invent a
+- Related specs: SPEC-073 (emits and implements this DEC), SPEC-074 (shipped — the
+  MCP resources inherit this budget and this line shape; DEC-045 does not invent a
   second rendering), SPEC-046 (shipped — implemented DEC-027's reserved token-count
   tag, the thing this estimate is scoped away from), SPEC-064 (shipped —
-  `internal/capture.Validate`, whose field caps bound a single line at 626 bytes).
+  `internal/capture.Validate`, whose field caps bound a single line), SPEC-075
+  (shipped — re-derived that bound to 1450 bytes / 363 tokens and corrected this
+  DEC's yield claim; was 626 bytes / 157 tokens / ≈110 entries — see DEC-046).
 - Related decisions: **DEC-027** (reserved cost/session/token-count tags — the
   honesty clause above scopes this estimate away from it; DEC-027's "never
   fabricate" rule governs caller-reported provenance and is untouched),
