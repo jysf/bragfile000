@@ -180,3 +180,4 @@ from the process-focused build reflection above.*
    real, greppable result, not a blank. Pairs with the Cut record above (the
    confirmed publish); this is the line a brag's `impact` field is transcribed
    from.
+   — <answer>

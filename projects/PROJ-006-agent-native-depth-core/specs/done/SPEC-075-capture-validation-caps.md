@@ -7,7 +7,7 @@
 task:
   id: SPEC-075
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -806,13 +806,42 @@ firing on the round that wrote them.
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Size a mutation probe on the axis where failure is unambiguous, and make
+   the probe fail *before* trusting the claim it supports. This spec produced
+   two mutation checks for the same coupling; one had teeth and one did not,
+   and the difference was a single off-by-one — `MaxTagCount-1` user tags plus
+   two stamped tags put an unstripped prefix on *exactly* the cap, so the test
+   passed with the coupling severed. Both were written in the same sitting,
+   both were described in prose as pinning the behaviour, and the one that was
+   checked was the one that was already fine. The lesson is not "mutation-check
+   more" — this stage already knew that — it is that **"mutation-verified" is a
+   claim about a probe, and inherits the probe's blind spots.** Run the mutation
+   first and watch it fail; a check that has never been seen red is a hypothesis.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Yes, and it was fixed here: `projects/_templates/spec.md` and
+   `spec-release-cut.md` both ended question 4 with instruction prose and **no
+   `— <answer>` placeholder**. `scripts/archive-spec.sh`'s guard greps for
+   `^   — <answer>`, so it was structurally incapable of catching an unanswered
+   question 4 — the one question whose answer is transcribed into a brag's
+   `impact`. Every shipped spec happened to answer it anyway, which is exactly
+   how a blind guard stays invisible. Both templates now carry the placeholder.
+   Separately, this spec's own file had leaked tool-call markup (`</content>`,
+   `</invoke>`) committed at its end via #144; removed here, and a repo-wide
+   grep confirms it is not present anywhere else.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No new spec, but two open items are now sharper and belong to the
+   already-planned pillars. (a) DEC-046's residual asymmetry — a C0 control byte
+   is reachable through the `agent`/`model`/`session` params on the add path
+   because `Validate(f Fields)` never sees them — is a **signed-provenance**
+   concern, not a caps one, and should be resolved when that pillar is framed
+   rather than patched piecemeal. (b) DEC-043's `k=60` remains unexamined and is
+   already on the open-questions list. The one thing worth writing down now is
+   narrower than a spec: any corpus statistic quoted in a decision doc should be
+   stated against a distribution property (a pool minimum, a percentile) rather
+   than a subtraction against a live total, because the corpus grows underneath
+   the claim — three of this stage's documented errors are that shape.
 
 4. **What can a user do now that they couldn't before?** — one sentence,
    before → after; quote the confirming number if one exists, name the outcome
@@ -821,5 +850,14 @@ from the process-focused build reflection above.*
    is transcribed from, and both halves are already written above (## Context is
    the before, ## Goal is the after): confirm the prediction, don't reconstruct
    it from memory.
-</content>
-</invoke>
+   — Before, **74 of 285** entries with an `impact` (26%) were over a 256-byte
+   cap nobody had derived, so the corpus contained a large slice of its own
+   history that capture would refuse to write — and `brag edit` silently
+   enforced nothing at all. Now `impact` is capped at 1024 and `title` at 256,
+   both derived from measured distributions rather than inherited from DEC-012;
+   the joined-string tags cap is re-shaped into `MaxTagLen` 64 + `MaxTagCount`
+   32, which catches the actual abuse (one absurd tag) instead of penalising the
+   legitimate one (many short tags — all 7 over-cap strings held 7–9 tags whose
+   longest was 17 bytes); and `brag edit` validates on write-of-changed-field,
+   so the caps reach the edit path **without** making the already-over-cap
+   corpus uneditable.
