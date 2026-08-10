@@ -1218,6 +1218,47 @@ assert_contains_literal "V3" "$AGENT_DOC" "a soft boost, not a filter"
 # V4 — architecture.md names the internal/ftsquery extraction
 assert_contains_literal "V4" "docs/architecture.md" "internal/ftsquery"
 
+# ===== release-cut hygiene (SPEC-076 / F3) =====
+#
+# Both of these would have FAILED at the v0.5.2 cut, which is the point: the
+# release pre-flight carried "plugin version pin matches the tag" and
+# "compare-links repointed" as items a human ticked by hand, and both were
+# missed. These are the mechanical form of those two items.
+
+# W1 — the plugin version pin equals the LATEST dated CHANGELOG section.
+# Deliberately not "the pin has *a* dated section": at the v0.5.2 cut the pin
+# sat on 0.5.1, which had a perfectly good dated section, so the weaker form
+# would have passed and caught nothing. The defect is the pin falling BEHIND
+# the newest release, so the newest release is what it must be compared to.
+w1_pin=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+    plugin/.claude-plugin/plugin.json | head -1)
+w1_latest=$(sed -n 's/^## \[\([0-9][^]]*\)\] - .*/\1/p' CHANGELOG.md | head -1)
+if [ -z "$w1_pin" ]; then
+    fail "W1" "could not read version pin from plugin/.claude-plugin/plugin.json"
+elif [ -z "$w1_latest" ]; then
+    fail "W1" "CHANGELOG.md has no dated '## [x.y.z] - ' section to compare the pin against"
+elif [ "$w1_pin" = "$w1_latest" ]; then
+    ok "W1"
+else
+    fail "W1" "plugin.json pins ${w1_pin} but the latest released CHANGELOG section is ${w1_latest}"
+fi
+
+# W2 — every dated CHANGELOG version heading has a matching compare-link.
+# Catches a released section whose link was never added (v0.5.2 had none).
+w2_missing=""
+while IFS= read -r w2_ver; do
+    if ! grep -q "^\[${w2_ver}\]: " CHANGELOG.md; then
+        w2_missing="$w2_missing $w2_ver"
+    fi
+done <<EOF
+$(sed -n 's/^## \[\([0-9][^]]*\)\] - .*/\1/p' CHANGELOG.md)
+EOF
+if [ -z "$w2_missing" ]; then
+    ok "W2"
+else
+    fail "W2" "CHANGELOG.md version heading(s) with no compare-link:$w2_missing"
+fi
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

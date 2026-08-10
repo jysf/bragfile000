@@ -118,6 +118,11 @@ Gotchas, style preferences, reuse opportunities.
       left this checklist requiring them present — so from v0.5.2 until v0.6.0
       these two items could not be honestly ticked at all. Corrected at the
       v0.6.0 cut.)*
+- [ ] **Package manager's current install/trust policy re-checked** — not our
+      config, *theirs*. AGENTS.md §4 requires this line explicitly: the
+      Homebrew 6.0 third-party-tap trust gate appeared between the v0.1.0 and
+      v0.2.0 cuts **with no change on our side**, so "we changed nothing" is
+      not evidence the install path still works.
 - [ ] Distribution mechanism unchanged since the last cut — or, if the
       `brews:`/`nfpms:`/`archives:`/`signs:` blocks, the tap, or the install
       path moved, the distribution-decision checklist
