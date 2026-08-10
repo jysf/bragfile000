@@ -150,7 +150,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       DEC-027's caller-reported token-count tag by a mechanical guard, greedy
       skip-and-continue enforcement, and the one-line entry rendering that *is*
       the unit of cost). Complexity M.
-- [ ] SPEC-074 (verify) — the MCP push surface: resources
+- [x] SPEC-074 (shipped on 2026-08-09) — the MCP push surface: resources
       (`brag://memory/recent`, `brag://memory/project/{name}`, `brag://projects`)
       plus the `brag_memory` tool — the server's **FIFTH** tool. **DEC-045
       emitted** (nine locked sub-decisions: the resource set, the custom
@@ -170,7 +170,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       below. `go.mod` has not moved since, so DEC-045 was locked against
       v1.7.0 as required.
 
-**Count:** 2 shipped / 1 active (SPEC-074, in verify) / 0 pending
+**Count:** 3 shipped / 0 active / 0 pending — **backlog complete**
 
 > **The stage is NOT complete until SPEC-074 ships.** All three specs are now
 > scaffolded, so `just archive-spec` can see them — but do not run the Stage

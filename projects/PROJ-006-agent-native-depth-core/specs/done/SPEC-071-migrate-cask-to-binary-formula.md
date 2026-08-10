@@ -7,7 +7,7 @@
 task:
   id: SPEC-071
   type: story
-  cycle: design
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S
