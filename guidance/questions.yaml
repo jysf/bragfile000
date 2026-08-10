@@ -576,13 +576,21 @@ questions:
       stripped so only user-supplied text counts:
 
         field    cap     median   already over cap        max
-        impact   256     227      81 of 274  (30%)       1290
+        impact   256     227      74 of 285  (26%)       1290
         title    200      73      33 of 348   (9%)       1444
         tags      64      --       9 of 260   (3%)         89
 
       `impact`'s median is 227 of 256 — 89% of the ceiling. That is not a cap
       catching outliers; it is a cap sitting in the middle of ordinary usage,
-      and 30% of existing impacts already exceed it.
+      and 26% of existing impacts already exceed it.
+
+      MEASUREMENT NOTE (corrected 2026-08-09). An earlier revision of this
+      question said "81 of 274 (30%)". That count used `>= 256`, which is wrong:
+      the cap ADMITS exactly 256, so the seven entries sitting precisely at the
+      boundary are legal. Re-measured with `> 256` on a corpus that has since
+      grown: 74 of 285 (26%). Same conclusion, and the median (227) is
+      unaffected — but the figure is corrected here rather than left as an
+      "alternative reading", because one of the two was simply an off-by-one.
 
       THE PRIORITY IS INVERTED. `description` gets 100,000 bytes. `impact` —
       the field `brag impact`, `wrapped`, `story` and `memory` all actually
@@ -611,7 +619,7 @@ questions:
       does not widen everything reflexively:
 
         field         cap       median   max     verdict
-        impact        256          227   1290    30% over cap — the sharpest
+        impact        256          227   1290    26% over cap — the sharpest
         title         200           73   1444    9% over cap
         tags           64           --     89    3% over, and the WRONG SHAPE
         project        64            9     22    fine, 3x headroom
@@ -619,7 +627,7 @@ questions:
         description  100000        570   2071    fine, 48x headroom
 
       The contrast is the finding. `description` is over-provisioned 48x while
-      `impact` is exceeded by 30% of entries. That is not a scale problem to be
+      `impact` is exceeded by 26% of entries. That is not a scale problem to be
       fixed by scaling everything up — each cap was chosen independently with
       no model of what the field is FOR. description is a free-text body nobody
       writes 100k of; impact is the one-line outcome every digest reads, and it
@@ -648,6 +656,6 @@ questions:
       STAGE-018's backlog already carries "run the edit/`Store.Update` path
       through `internal/capture.Validate`" as a pending item. If that lands
       FIRST, every over-cap entry above becomes uneditable — changing a title
-      would require truncating impact or deleting tags, on 30% of the corpus.
+      would require truncating impact or deleting tags, on 26% of the corpus.
       Whichever spec actions the edit-path item must resolve this question in
       the same change, or explicitly grandfather existing rows.
