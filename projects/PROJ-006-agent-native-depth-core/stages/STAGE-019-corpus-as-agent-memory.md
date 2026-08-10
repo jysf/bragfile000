@@ -170,11 +170,27 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       below. `go.mod` has not moved since, so DEC-045 was locked against
       v1.7.0 as required.
 
-**Count:** 3 shipped / 0 active / 0 pending — **backlog complete**
+- [ ] SPEC-076 (design) — **the v0.6.0 release cut: this stage's closing
+      action.** Ships this stage's whole surface plus STAGE-018's SPEC-075
+      gate. Design-time pre-flight found four defects — three in the pre-flight
+      machinery itself, and one live user-facing regression (the cask→formula
+      upgrade cliff, silent since v0.5.2). See the spec's *Design-time
+      pre-flight findings*.
+
+**Count:** 3 shipped / 1 active (SPEC-076, the release cut) / 0 pending —
+**feature backlog complete**
 
 > **The stage is NOT complete until SPEC-074 ships.** All three specs are now
 > scaffolded, so `just archive-spec` can see them — but do not run the Stage
 > Ship prompt until SPEC-074's own archive step reports the backlog complete.
+>
+> ✅ **SPEC-074 shipped 2026-08-09; the feature backlog is complete.** The stage
+> still does not close here: a stage ships as a unit, and this one's unit is the
+> **v0.6.0 publish**. `status` stays `active` until SPEC-076's tag is pushed and
+> the clean-host install is verified — then the Stage Ship prompt runs and
+> `shipped_at` is set. Closing it at "backlog complete" would mark shipped a
+> stage whose surface no user can install yet, which is precisely the gap
+> SPEC-076's F4 finding is about.
 
 ## Design Notes
 

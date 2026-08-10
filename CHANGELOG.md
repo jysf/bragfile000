@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-10
+
+The **agent-native depth** release: your corpus becomes something an agent reads
+*before* it works, instead of a write-only log.
+
+> ### ⚠️ Upgrading from 0.5.1 or earlier — one-time manual step
+>
+> v0.5.2 moved distribution from a Homebrew **cask** to a **formula** on a new
+> tap (DEC-040). `brew upgrade` does **not** cross that boundary: if you
+> installed before v0.5.2 you are still on the old cask, `brew outdated` says
+> nothing, and you will not receive this release. Check with `brag --version`,
+> and if it prints `0.5.1` or lower:
+>
+> ```bash
+> brew uninstall --cask bragfile
+> brew untap jysf/bragfile
+> brew install jysf/tap/bragfile
+> ```
+>
+> Your database is untouched by this — it lives in `~/.bragfile`, not in the
+> Cellar or Caskroom. Verify with `brag --version` (expect `0.6.0`) and
+> `brag list`.
+
 ### Added
 
 - **`brag memory` — the corpus as working memory** (SPEC-073 / DEC-043, DEC-044).
@@ -502,7 +525,9 @@ Each decision file under `/decisions/` carries the full rationale.
   payload keys; markdown convention reuses DEC-013's provenance
   + summary-block style.
 
-[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/jysf/bragfile000/compare/v0.5.2...v0.6.0
+[0.5.2]: https://github.com/jysf/bragfile000/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/jysf/bragfile000/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/jysf/bragfile000/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/jysf/bragfile000/compare/v0.3.1...v0.4.0

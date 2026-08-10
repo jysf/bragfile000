@@ -34,6 +34,29 @@ brag --version
 > the signing friction a cask would require; the `crustyimg` formula on the same
 > tap installs the same clean way.)
 
+### Upgrading from 0.5.1 or earlier
+
+The formula above replaced a Homebrew **cask** on a different tap in v0.5.2.
+`brew upgrade` does not cross that boundary, and Homebrew gives you no signal
+that it hasn't: `brew outdated` stays silent while you sit on the old version.
+
+Check what you actually have:
+
+```bash
+brag --version
+```
+
+If it prints `0.5.1` or lower, migrate once:
+
+```bash
+brew uninstall --cask bragfile
+brew untap jysf/bragfile
+brew install jysf/tap/bragfile
+```
+
+Your data is not affected — the database lives in `~/.bragfile`, not in the
+Cellar or Caskroom. Confirm with `brag --version` and `brag list`.
+
 From source (works today):
 
 ```bash
