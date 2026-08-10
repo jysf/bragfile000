@@ -5,8 +5,8 @@
 
 stage:
   id: STAGE-018
-  status: proposed                  # proposed | active | shipped | cancelled | on_hold
-  priority: low
+  status: active                    # proposed | active | shipped | cancelled | on_hold
+  priority: high
   target_complete: null
 
 project:
@@ -21,6 +21,16 @@ shipped_at: null
 # STAGE-018: capture-validation caps + the v0.5.0 audit backlog
 
 ## What This Stage Is
+
+**Activated 2026-08-09**, and it now gates the v0.6.0 release. STAGE-019
+shipped the memory slice, whose per-entry line is
+`- <id> <date> [proj/type] <title> — <impact>` — so DEC-044 derived its entire
+budget model, including the "one long entry cannot starve a slice" argument,
+from the *current* caps (626 bytes / 157 tokens worst case). Cutting v0.6.0
+first would ship that model knowing the caps are wrong, then change how many
+entries fit a 2000-token budget one release later. The release waits for
+**SPEC-075 only** — not for the remaining audit nits, which can trail into
+v0.6.1.
 
 **Reframed 2026-08-09.** This began as a parking lot for the v0.5.0 audit's
 LOW/NIT items. It now has an anchor that is not a nit: **the capture-validation
@@ -143,15 +153,17 @@ Ordered list of specs composing this stage. IDs assigned at creation.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] (not yet written) — **the caps spec.** Re-shape the caps + the DEC +
-      DEC-044 re-derivation + the grandfathering call. Then, in the SAME spec or
-      one immediately after it, the edit-path wiring and the `cli/project.go`
-      duplicate — they are the two items blocked on the caps decision.
+- [ ] SPEC-075 (design) — **the caps spec, and the v0.6.0 gate.** Re-shape
+      `MaxImpact`/`MaxTitle` and turn `MaxTags` from a joined-string cap into a
+      per-tag + tag-count cap; emit the DEC; re-derive DEC-044's worst-case-line
+      math; decide grandfathering. Carries the two items blocked on that
+      decision — the edit-path wiring and `cli/project.go:162`'s duplicated
+      constant — in the same spec, because they are only safe *after* it.
 - [ ] (not yet written) — the remaining audit nits, batched by touched package
       per the Design Notes (an "MCP/CLI parity" cluster, a "filesystem-write
       robustness" cluster). Split at framing.
 
-**Count:** 0 shipped / 0 active / 2 pending (unframed — stage is `proposed`)
+**Count:** 0 shipped / 1 active (SPEC-075, in design) / 1 pending
 
 ## Design Notes
 
