@@ -7,7 +7,7 @@
 task:
   id: SPEC-075
   type: story                      # epic | story | task | bug | chore
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
