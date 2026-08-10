@@ -548,3 +548,106 @@ questions:
       change is a visible golden diff, not a silent behavior change.
       (Above §14's 0.7 hard threshold; filed proactively per DEC-031's
       precedent of recording the softest sub-choice.)
+
+  - id: capture-caps-were-inherited-not-derived
+    question: "The capture.Validate field caps (title 200, tags 64, impact 256) were inherited from the add --json schema and never derived from real use — which of them are load-bearing, which are arbitrary, and what shape should they take?"
+    priority: medium
+    status: open
+    raised_by: claude-opus-5
+    raised_at: 2026-08-09
+    assigned_to: null
+    notes: |
+      Raised 2026-08-09 from a user report ("Tags have a 64-char limit"), then
+      widened when the same pattern turned out to hold for `impact` and
+      `title`. Recorded as an open question, NOT a spec: STAGE-019 is
+      mid-flight and the placement decision is deliberately deferred. NOT yet
+      assigned to a stage.
+
+      THE NUMBERS ARE UNDOCUMENTED. `capture.MaxTitle=200`, `MaxTags=64`,
+      `MaxProject=64`, `MaxType=64`, `MaxImpact=256`, `MaxDescription=100000`.
+      DEC-012 (`brag add --json`) introduced them and records no rationale for
+      any value. SPEC-064 then correctly unified per-path validation — flag and
+      editor mode had been skipping the caps that --json and MCP enforced — and
+      in doing so generalised those numbers to every ingress path. The side
+      effect nobody measured: a large slice of the EXISTING corpus became
+      unwritable.
+
+      MEASURED AGAINST THE REAL CORPUS (347 entries), reserved provenance tags
+      stripped so only user-supplied text counts:
+
+        field    cap     median   already over cap        max
+        impact   256     227      81 of 274  (30%)       1290
+        title    200      73      33 of 348   (9%)       1444
+        tags      64      --       9 of 260   (3%)         89
+
+      `impact`'s median is 227 of 256 — 89% of the ceiling. That is not a cap
+      catching outliers; it is a cap sitting in the middle of ordinary usage,
+      and 30% of existing impacts already exceed it.
+
+      THE PRIORITY IS INVERTED. `description` gets 100,000 bytes. `impact` —
+      the field `brag impact`, `wrapped`, `story` and `memory` all actually
+      read, and the one a brag's Reflection-Q4 is transcribed into — gets 256.
+
+      TAGS IS A DIFFERENT SHAPE OF WRONG. MaxTags caps the whole comma-joined
+      STRING, not each tag, so it penalises using many tags (a legitimate
+      choice) rather than one absurd tag (the actual abuse). DEC-015 normalised
+      tags into a `tags` table (`name TEXT NOT NULL UNIQUE`, no length
+      constraint), so a joined-string cap is a leftover from DEC-004's
+      comma-joined era. The shape the normalised model implies is a per-tag cap
+      plus a tag-COUNT cap.
+
+      WHY THIS IS NOT JUST A CONSTANT BUMP — the impact cap is now
+      LOAD-BEARING. DEC-044 cites these caps twice (lines ~136 and ~443) for
+      the memory slice's budget model: *"the capture.Validate field caps bound
+      a single line at 626 bytes / 157 tokens worst case"*, which is the
+      argument that one long entry cannot starve a slice. Raising MaxImpact
+      moves that worst case, so the budget math and DEC-044's starvation
+      argument have to be revisited in the same change. Title and tags are not
+      similarly coupled. Single-line rendering (`brag list` TSV, markdown
+      tables) is a real constraint on title/impact but argues for SOME cap, not
+      for these values.
+
+      WHICH FIELDS ARE ACTUALLY TOO NARROW — measured, so the eventual spec
+      does not widen everything reflexively:
+
+        field         cap       median   max     verdict
+        impact        256          227   1290    30% over cap — the sharpest
+        title         200           73   1444    9% over cap
+        tags           64           --     89    3% over, and the WRONG SHAPE
+        project        64            9     22    fine, 3x headroom
+        type           64            7     10    fine, 6x headroom
+        description  100000        570   2071    fine, 48x headroom
+
+      The contrast is the finding. `description` is over-provisioned 48x while
+      `impact` is exceeded by 30% of entries. That is not a scale problem to be
+      fixed by scaling everything up — each cap was chosen independently with
+      no model of what the field is FOR. description is a free-text body nobody
+      writes 100k of; impact is the one-line outcome every digest reads, and it
+      got a quarter of a kilobyte. Only title/impact/tags need moving.
+
+      A SECOND, DUPLICATED PROJECT-NAME CAP. `internal/cli/project.go:162`
+      hard-codes `if len(name) > 64` with the message "project name exceeds
+      64-character limit", rather than referencing `capture.MaxProject`. The
+      comment directly above it reasons explicitly about keeping the two in
+      agreement (DEC-036's soft-match invariant: an ensured name must be able
+      to soft-match a normally-added entry, both counting bytes) — which is
+      exactly the case where they should be ONE constant, not two a comment
+      asks a reader to keep aligned. Same class as the buildFTS5Query /
+      buildMatch duplication that DEC-024 recorded and SPEC-074 LD8 finally
+      extracted.
+
+      Not biting today: project names max out at 22 bytes and both values
+      happen to be 64. But if MaxProject ever moves, this copy silently will
+      not. STAGE-018's backlog already carries "`brag project new` name cap" —
+      that item is this, and it is now a one-line fix (reference the constant)
+      that must travel WITH any change to the caps.
+
+      ORDERING RISK — READ BEFORE ACTIONING THE EDIT PATH. `capture.Validate`
+      is currently called from `cli/add.go` (x2), `cli/add_json.go`, and
+      mcpserver's `brag_add` — NOT from the edit / `Store.Update` path.
+      STAGE-018's backlog already carries "run the edit/`Store.Update` path
+      through `internal/capture.Validate`" as a pending item. If that lands
+      FIRST, every over-cap entry above becomes uneditable — changing a title
+      would require truncating impact or deleting tags, on 30% of the corpus.
+      Whichever spec actions the edit-path item must resolve this question in
+      the same change, or explicitly grandfather existing rows.

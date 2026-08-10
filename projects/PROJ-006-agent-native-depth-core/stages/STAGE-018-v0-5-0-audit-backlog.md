@@ -56,8 +56,21 @@ The v0.5.0 audit LOW/NIT backlog (inherited verbatim from the project brief):
   unlimited. This is the "fold into the stage touching the same code" rule in
   Design Notes doing its job.
 - `search -foo` → clear cobra-flag error (not an FTS query).
-- `brag project new` name cap; run the edit / `Store.Update` path through
-  `internal/capture.Validate`.
+- `brag project new` name cap — **identified**: `internal/cli/project.go:162`
+  hard-codes `if len(name) > 64` instead of referencing `capture.MaxProject`,
+  while the comment above it reasons about keeping the two in agreement
+  (DEC-036's soft-match invariant). One-line fix, but it must travel WITH any
+  change to the caps — see the question below. Also: run the edit /
+  `Store.Update` path through `internal/capture.Validate`.
+  > ⚠ **COUPLED — read before actioning.** Wiring the edit path to
+  > `capture.Validate` would make a large slice of the corpus
+  > **uneditable**: measured today, **81 of 274 impacts (30%)**, 33 titles and
+  > 9 tag-strings already exceed their caps, because flag/editor mode did not
+  > enforce them until SPEC-064 unified validation. Changing one of those
+  > entries' titles would then require truncating impact or deleting tags. Resolve
+  > `capture-caps-were-inherited-not-derived` in `guidance/questions.yaml` in the
+  > same change, or explicitly grandfather existing rows. Do not action this
+  > item alone.
 - `brag spark` same-second exclusive-edge.
 - backup-filename same-second collision.
 - empty-`type` sentinel handling.
