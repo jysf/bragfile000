@@ -181,6 +181,22 @@ not be able to push a legitimate entry over the count cap — 32 against a
 9-tag observed maximum leaves that impossible in practice, and the ordering
 makes it impossible by construction.
 
+**Neither cap bounds stamped provenance — say so, do not let a reader infer
+otherwise.** Because `Validate` runs pre-stamp, `MaxTagLen` never applies to a
+`model:`/`agent:`/`session:` value supplied through its dedicated param; there is
+no length check on those anywhere (only `cost`/`tokens` get numeric
+normalisation). The same-looking token is capped or not depending on which door
+it came through: `model:x` in the freeform `tags` field is validated as an
+ordinary tag; `model:x` via the param is not. A 500-byte model id is storable
+today and still will be after this spec.
+
+This is deliberate and out of scope here — bounding what a caller asserts about
+itself belongs to signed provenance (PROJ-006 #2). It matters for the build
+because it settles a question that will come up: **`MaxTagLen = 64` does not
+need to accommodate long model identifiers**, since it never sees them. 64 is
+derived from the 21-byte observed maximum of the tags this cap actually governs.
+Do not widen it on provenance grounds.
+
 `project` / `type` / `description` are **not** touched. Their headroom was
 measured and is ample; widening them would be the reflexive uniform multiplier
 this spec exists to avoid.

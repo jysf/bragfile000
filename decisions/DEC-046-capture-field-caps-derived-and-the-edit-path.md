@@ -186,6 +186,25 @@ leaving it would silently invalidate a shipped decision one release old.
 - **`project` / `type` / `description` unchanged.** Measured headroom 3×, 6× and
   48×. Widening them would be the reflexive move this decision exists to reject.
 
+**Scope limit, stated so nobody later assumes otherwise: neither `MaxTagLen` nor
+`MaxTagCount` bounds STAMPED provenance.** `Validate` runs on caller-supplied
+text, and `agent:` / `model:` / `session:` / `cost:` / `tokens:` are appended
+*after* it (`cost`/`tokens` get numeric normalisation; the other three are opaque
+passthrough with no length check anywhere in the tree). So the same-looking token
+is capped or not depending on which door it came through: `model:x` typed into
+the freeform `tags` field is validated as an ordinary tag, while `model:x`
+supplied via the dedicated param is not. A 500-byte model id is storable today
+and remains so after this decision.
+
+That asymmetry predates this decision and is deliberately left in place — it is
+**not** a caps problem. Bounding what a caller asserts about itself is the
+signed/attestable-provenance pillar's job (PROJ-006 #2, which also subsumes the
+reserved-tag forgery gap: `agent:`/`model:`/`session:` smuggled through freeform
+`tags` are validated for *shape* but never for *truth*). Sizing `MaxTagLen` to
+accommodate long model identifiers would therefore be sizing it against a
+population it does not govern — the 64 here is derived from the 21-byte observed
+maximum of tags this cap actually sees.
+
 ## Consequences
 
 - **Positive:** a user can write the field every digest reads without compressing
