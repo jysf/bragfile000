@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/jysf/bragfile000/internal/capture"
 	"github.com/jysf/bragfile000/internal/config"
 	"github.com/jysf/bragfile000/internal/editor"
 	"github.com/jysf/bragfile000/internal/storage"
@@ -93,6 +94,31 @@ func runEdit(cmd *cobra.Command, args []string) error {
 	parsed, err := editor.Parse(edited)
 	if err != nil {
 		return UserErrorf("invalid buffer: %v", err)
+	}
+
+	// LD7: validate only fields the user actually changed, so the ~30% of
+	// the corpus grandfathered over today's caps (LD4) stays editable in
+	// every field except the one being touched. Must run strictly after
+	// LD1–LD4 land — see DEC-046.
+	if err := capture.ValidateChanged(
+		capture.Fields{
+			Title:       current.Title,
+			Description: current.Description,
+			Tags:        current.Tags,
+			Project:     current.Project,
+			Type:        current.Type,
+			Impact:      current.Impact,
+		},
+		capture.Fields{
+			Title:       parsed.Title,
+			Description: parsed.Description,
+			Tags:        parsed.Tags,
+			Project:     parsed.Project,
+			Type:        parsed.Type,
+			Impact:      parsed.Impact,
+		},
+	); err != nil {
+		return UserErrorf("%v", err)
 	}
 
 	if _, err := s.Update(id, storage.Entry{
