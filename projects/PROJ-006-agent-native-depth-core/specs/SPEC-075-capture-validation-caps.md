@@ -472,7 +472,7 @@ assertion supports.
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** `feat/spec-075-capture-caps`
-- **PR (if applicable):** opened at ship of this cycle — see PR description for URL
+- **PR (if applicable):** https://github.com/jysf/bragfile000/pull/144
 - **All acceptance criteria met?** yes
 - **New decisions emitted:**
   - `DEC-046` — capture field caps, derived; the tags re-shape; the edit path (emitted at design; this cycle implemented it and corrected DEC-044 per LD5)
