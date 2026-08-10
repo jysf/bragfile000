@@ -91,21 +91,21 @@ func TestValidateChanged_StampedTagsDoNotCountAgainstMaxTagLen(t *testing.T) {
 // a loud panic — is pinned in mcpserver's
 // TestStampProvenance_UnhandledReservedPrefixIsCaught, which is where the
 // mutation lives on the stamping side.)
+// The probe is sized on the LENGTH axis, like the MaxTagLen sibling above,
+// rather than the count axis. That is what gives this test teeth: an earlier
+// draft used MaxTagCount-1 user tags plus two stamped tags, so an unstripped
+// "signature:" landed on exactly MaxTagCount and still passed — the test went
+// green with isReservedTag's coupling to ReservedTagPrefixes severed, pinning
+// nothing. An over-cap signature value cannot be absorbed by an off-by-one:
+// if the new prefix is not stripped, MaxTagLen trips on it.
 func TestValidateChanged_NewlyRegisteredReservedPrefixIsStrippedAutomatically(t *testing.T) {
 	orig := ReservedTagPrefixes
 	ReservedTagPrefixes = append(append([]string{}, orig...), "signature:")
 	t.Cleanup(func() { ReservedTagPrefixes = orig })
 
-	userTags := make([]string, MaxTagCount-1) // MaxTagCount-1 user tags
-	for i := range userTags {
-		userTags[i] = fmt.Sprintf("t%d", i)
-	}
-	stamped := "agent:claude-code,signature:deadbeef"
-	old := Fields{Title: "ok", Tags: strings.Join(userTags, ",") + "," + stamped}
-
-	edited := append([]string(nil), userTags...)
-	edited[len(edited)-1] += "b" // change exactly one user tag
-	newf := Fields{Title: "ok", Tags: strings.Join(edited, ",") + "," + stamped}
+	stamped := "agent:claude-code,signature:" + strings.Repeat("d", MaxTagLen+10)
+	old := Fields{Title: "ok", Tags: "work," + stamped}
+	newf := Fields{Title: "ok", Tags: "work,extra," + stamped}
 
 	if err := ValidateChanged(old, newf); err != nil {
 		t.Errorf("a newly-registered reserved prefix should be stripped with no validate.go edit, got %v", err)

@@ -734,6 +734,70 @@ value changed, no LD changed; LD1–LD7 still stand.*
 - **Gates:** `go build`, `go test ./...` (1038 tests), `gofmt -l .` (empty),
   `go vet ./...`, `just test-docs`, `just test-hook` — all six green.
 
+### Re-Verify of the Second Round (2026-08-10)
+
+Independent re-verify of the punch-list #2 delta (`c5bf954`, `3a54a6e`,
+`f57f386`). Both round-two fixes are structurally correct — but two of the
+claims *made about* them were not, and both are the stage's own process rules
+firing on the round that wrote them.
+
+- **Item 2's stripping-half test pinned nothing** (fixed here).
+  `TestValidateChanged_NewlyRegisteredReservedPrefixIsStrippedAutomatically`
+  was sized on the count axis with `MaxTagCount-1` user tags plus two stamped
+  tags, so an unstripped `signature:` landed on **exactly** `MaxTagCount` (32)
+  and passed the cap. Mutation-checked by severing `isReservedTag`'s coupling
+  to `ReservedTagPrefixes` and re-running: **the test stayed green**, so its
+  comment's claim — "registering a sixth reserved prefix there is enough on
+  its own" — was aspirational. Re-sized onto the length axis (an over-cap
+  `signature:` value), matching the `MaxTagLen` sibling's proven idiom; the
+  same mutation now fails with `tag "signature:ddd…" exceeds 64-character
+  limit`. The *stamping*-half mutation-check
+  (`TestStampProvenance_UnhandledReservedPrefixIsCaught`) was re-run the same
+  way and **does** have teeth — neutering the `default:` panic fails it with
+  the intended diagnostic. So item 2's closed loop was only half-closed, and
+  the half that was pinned is the half the handoff had already verified.
+
+- **DEC-043's headroom figure was wrong** (fixed here). The corrected
+  score-based paragraph justified "nothing else displaces in" with *"only 9
+  tokens remain after rank 25"*. Re-measured against the live corpus: the
+  headroom is **4** tokens (`Estimated: 1996` of 2000; the 25 per-line
+  estimates sum to 1996 exactly, reproduced independently). Not staleness — a
+  new entry did land ~2 minutes after `3a54a6e`, but it displaced one costing
+  an identical 94 tokens, so the figure was 4 at commit time too. The
+  conclusion is unaffected and strengthened, and the bound is now stated
+  against the **21-token smallest line in the whole 200-entry pool** rather
+  than a bare subtraction, so it survives corpus growth — the property both
+  earlier versions of the paragraph lacked.
+
+- **What did hold.** The rank-vs-score category error is correctly diagnosed
+  and its replacement argument is sound: the arithmetic checks
+  (`1/100 + 1/100 = 0.02 > 1/61 ≈ 0.01639`; `1/85 ≈ 0.011765 > 3/261 ≈
+  0.011494`), `3/261` traces to its derivation at DEC-043:116, and `157 → 363`
+  and `Included: 25` are consistent across DEC-044/046 and this spec. The
+  load-bearing structural premise — that the included set is a clean rank
+  prefix — was verified *directly* (slice ids compared against the 25 most
+  recent ids), not inferred from the count, which is the error the round-two
+  fix was itself correcting. DEC-046's "not a new gap" claim holds:
+  `Validate(f Fields)` takes no agent/model/session params, so a C0 byte is
+  already reachable there today. `aggregate.IsAgentAuthored`'s separate
+  `agent:`/`model:` literals are **not** a third drift site — it is an
+  authorship subset pinned to a SQL clause by its own cross-check test, and
+  must not follow `ReservedTagPrefixes`. No `t.Parallel()` in either package,
+  so the mutable package var carries no race hazard.
+
+- **Process rules this round earned.** (1) Rule 1 now applies to *mutation
+  checks themselves*: "mutation-verified" is only as good as the axis the
+  probe is sized on — a guard that trips on count can be absorbed by an
+  off-by-one, so size the probe where the failure is unambiguous. (2) A
+  corpus statistic embedded in a decision doc is a measurement of a **live,
+  growing** corpus that the tool itself writes to; state such bounds against
+  a distribution property (pool minimum) rather than a subtraction, or they
+  rot silently. This is process rule 3's fixture-vs-corpus error with the
+  time axis added.
+
+- **Gates, re-run after the fixes:** `go build`, `go test ./...`, `gofmt -l .`
+  (empty), `go vet ./...`, `just test-docs`, `just test-hook` — all six green.
+
 ---
 
 ## Reflection (Ship)

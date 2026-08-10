@@ -139,12 +139,24 @@ sub-decisions are locked:
    >
    > The argument that does hold is a SCORE comparison, for the corpus as
    > measured today: the default-budget slice's included set is exactly
-   > recency ranks 1–25 (only 9 tokens remain after rank 25, so nothing else
-   > displaces in), so its weakest member scores exactly `1/(60+25) = 1/85 ≈
-   > 0.011765` — above the worst-case pool-cap-excluded score of `3/261 ≈
-   > 0.011494` derived above. On this corpus, at this budget, no pool-cap-
-   > excluded entry could have displaced anything the default budget actually
-   > included.
+   > recency ranks 1–25 — verified by comparing the slice ids against the 25
+   > most recent ids, not inferred from the count — so its weakest member
+   > scores exactly `1/(60+25) = 1/85 ≈ 0.011765`, above the worst-case
+   > pool-cap-excluded score of `3/261 ≈ 0.011494` derived above. On this
+   > corpus, at this budget, no pool-cap-excluded entry could have displaced
+   > anything the default budget actually included.
+   >
+   > **Third correction, at re-verify (2026-08-10).** The paragraph above
+   > justified "nothing else displaces in" with *"only 9 tokens remain after
+   > rank 25"*. Re-measured, the headroom is **4** tokens, not 9 (`Estimated:
+   > 1996` of a 2000-token budget; the 25 line estimates sum to 1996 exactly).
+   > The conclusion is unaffected and in fact stronger — and it no longer rests
+   > on the precise figure: the smallest rendered line in the entire 200-entry
+   > candidate pool costs **21** tokens, so 4 tokens of headroom cannot admit
+   > *any* further entry, not merely the ones ranked next. Stating the bound
+   > against the pool minimum rather than a bare subtraction is what makes it
+   > survive the corpus growing, which is the property the first two versions
+   > of this paragraph both lacked.
    >
    > That is a fact about the corpus as measured, not a "never." DEC-044
    > sub-decision 3's skip-and-continue means the included set is a rank
