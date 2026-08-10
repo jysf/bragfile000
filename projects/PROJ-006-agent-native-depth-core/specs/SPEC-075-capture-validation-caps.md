@@ -7,7 +7,7 @@
 task:
   id: SPEC-075
   type: story                      # epic | story | task | bug | chore
-  cycle: build
+  cycle: verify
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -366,20 +366,20 @@ negative, so build does not re-sweep them.
 
 ## Acceptance Criteria
 
-- [ ] `MaxTitle == 256`, `MaxImpact == 1024`; `MaxProject`/`MaxType`/`MaxDescription` unchanged.
-- [ ] `MaxTags` no longer exists; `MaxTagLen == 64` and `MaxTagCount == 32` do.
-- [ ] A 9-tag comma-joined string longer than 64 bytes **validates successfully** (the reported regression).
-- [ ] A single tag longer than 64 bytes is rejected, and the error names the offending tag.
-- [ ] More than 32 tags is rejected with a count-shaped error.
-- [ ] `capture.ValidateChanged` passes an unchanged over-cap field and rejects a changed one.
-- [ ] `brag edit` on an entry with a grandfathered over-cap `impact` succeeds when only `title` changes, and the stored `impact` is byte-identical afterwards.
-- [ ] `brag edit` rejects a changed field that violates a cap, with no database write.
-- [ ] `cli/project.go` contains no numeric literal for the project cap; a `MaxProject`-length name is accepted and `+1` rejected.
-- [ ] The worst-case memory line is exactly 1450 bytes / 363 estimated tokens.
-- [ ] `memory.DefaultBudget` is unchanged at 2000.
-- [ ] DEC-044's two 626/157 citations and its ~18-tokens/≈110-entries claim are corrected.
-- [ ] Every doc site enumerated in Outputs is updated; the dated security report is not.
-- [ ] Full gate set green: `go test ./...`, `gofmt -l .` empty, `go vet ./...`, `scripts/test-docs.sh`.
+- [x] `MaxTitle == 256`, `MaxImpact == 1024`; `MaxProject`/`MaxType`/`MaxDescription` unchanged.
+- [x] `MaxTags` no longer exists; `MaxTagLen == 64` and `MaxTagCount == 32` do.
+- [x] A 9-tag comma-joined string longer than 64 bytes **validates successfully** (the reported regression).
+- [x] A single tag longer than 64 bytes is rejected, and the error names the offending tag.
+- [x] More than 32 tags is rejected with a count-shaped error.
+- [x] `capture.ValidateChanged` passes an unchanged over-cap field and rejects a changed one.
+- [x] `brag edit` on an entry with a grandfathered over-cap `impact` succeeds when only `title` changes, and the stored `impact` is byte-identical afterwards.
+- [x] `brag edit` rejects a changed field that violates a cap, with no database write.
+- [x] `cli/project.go` contains no numeric literal for the project cap; a `MaxProject`-length name is accepted and `+1` rejected.
+- [x] The worst-case memory line is exactly 1450 bytes / 363 estimated tokens.
+- [x] `memory.DefaultBudget` is unchanged at 2000.
+- [x] DEC-044's two 626/157 citations and its ~18-tokens/≈110-entries claim are corrected.
+- [x] Every doc site enumerated in Outputs is updated; the dated security report is not.
+- [x] Full gate set green: `go test ./...`, `gofmt -l .` empty, `go vet ./...`, `scripts/test-docs.sh`.
 
 ## Failing Tests
 
@@ -472,27 +472,28 @@ assertion supports.
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** `feat/spec-075-capture-caps`
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **PR (if applicable):** opened at ship of this cycle — see PR description for URL
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
-  - `DEC-046` — capture field caps, derived; the tags re-shape; the edit path
+  - `DEC-046` — capture field caps, derived; the tags re-shape; the edit path (emitted at design; this cycle implemented it and corrected DEC-044 per LD5)
 - **Deviations from spec:**
-  - [list]
+  - **A third premise-audit miss, found only at fail-first, not by either audit-grep.** `internal/cli/add_hardening_test.go` (SPEC-064-era) hardcodes the pre-DEC-046 cap boundaries as bare numeric input lengths (`strings.Repeat("x", 201)`, `strings.Repeat("i", 257)`, a `200`-byte "at cap" boundary test) with no cap-identifier and no error-message-substring assertion — so neither of the spec's two audit greps (`MaxTitle\|...` identifier grep; `"exceeds 200\|..."` message-substring grep) could find it. It surfaced as 4 unexpectedly-failing tests immediately after implementing LD1/LD2. Fixed in the same shape as the two files the spec did enumerate: `title over 200`→`title over 256` (201→257 bytes), `impact over 256`→`impact over 1024` (257→1025 bytes), the at-cap boundary moved 200→256, and the case names updated to match. Recorded here per §9's audit-grep cross-check rule rather than treated as silent scope creep.
+  - **Live-corpus re-measurement drift, reconciled per the build rules.** The corpus is still 359 entries, but `MIN(id)=1, MAX(id)=369` proves genuine churn since design's snapshot (10 rows deleted, 10 added, net count unchanged) — the "359" match is coincidental, not a frozen fixture. Re-running the spec's `## Measurement` queries: **all over-cap counts reproduced exactly** (impact 74/285, title 33/359 — all from `zany-animal-slots` ids 157–228 — tags 7/260), **all max values reproduced exactly** (impact 1290, title 1444, tags 89), the tags mean reproduced exactly (27.2 ≈ 27), and the worst-case *rendered memory line* reproduced exactly (1483 B / 371 tok, entry 172 — DEC-044/LD5 finding (i)). Percentiles (p50/p90/p95/p99) drifted by single-digit-byte amounts on `title`/`impact`, attributable to the churn, not a methodology difference — none of it is load-bearing for any locked decision (each was chosen on distribution *shape*, per the spec's own framing). One figure moved beyond rounding: the design's "longest single non-reserved tag is 21 bytes" now measures as **20 bytes** (`spec-driven-template`) — noted, not acted on; `MaxTagLen=64` keeps 3×+ headroom either way. Re-ran `brag memory` against the live corpus (built from source — the installed Homebrew binary is v0.5.1, which predates the `memory` command) and confirmed DEC-044/LD5's re-derived yield still holds today: `Included: 25, Skipped: 175, Estimated: 1991`.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None beyond STAGE-018's existing backlog (the remaining ~9 v0.5.0 audit nits, explicitly out of scope here).
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing in the spec itself was unclear — LD1–LD7 were unambiguous and the failing tests were largely transcribable. The one real friction was outside the spec's control: its own audit-grep methodology (identifier grep + error-message-substring grep) has a blind spot for tests that assert *only* "an error occurred" against a bare numeric literal, with no cap name and no message substring to grep for (`add_hardening_test.go`). That gap was only visible once tests actually ran red after implementation.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No — DEC-046 and the spec's own Outputs/audit-grep table covered every load-bearing decision. The `add_hardening_test.go` miss is a gap in *grep coverage*, not a missing constraint or decision.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Add a third audit-grep angle before implementing, not after: grep test files for the *raw numeric cap values themselves* (`200`, `201`, `256`, `257`, `64`, `65`) in addition to the spec's identifier grep and message-substring grep. That third angle would have caught `add_hardening_test.go` before the cap change landed rather than via a fail-first surprise immediately after.
 
 ---
 
