@@ -138,7 +138,9 @@ to `brag stats --format json` for the same corpus.
 | `budget`  | integer | optional | token budget for the entry lines; omitted uses the default (2000); `0` or negative is a **tool error** |
 | `format`  | string  | optional | `markdown` (default) or `json` |
 
-Byte-identical to `brag memory` at the same options, in both formats. No
+Byte-identical to `brag memory` at the same options, in both formats, minus the
+single trailing newline that command appends when printing (`cli == payload +
+"\n"`, verified for markdown and JSON alike). No
 `since`/`until`/`day` — the ranking already prefers recent entries, and hard
 windows are `brag_list`'s job. This is the **pull** counterpart to §4's
 resources: call it when you want a different budget or a targeted query

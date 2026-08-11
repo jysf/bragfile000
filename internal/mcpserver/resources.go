@@ -29,7 +29,7 @@ func addResources(srv *mcp.Server, s *storage.Store) {
 	srv.AddResource(&mcp.Resource{
 		Name:        "memory-recent",
 		Title:       "Recent memory slice",
-		Description: "A ranked, token-budgeted slice of the developer's own work history — the corpus read back as working memory. Blended by recency (reciprocal-rank fusion, DEC-043) and trimmed to an estimated 2000-token budget. Load this before you start work: it is what the developer already knows, so you do not re-derive it. Markdown; the same bytes as `brag memory`.",
+		Description: "A ranked, token-budgeted slice of the developer's own work history — the corpus read back as working memory. Blended by recency (reciprocal-rank fusion, DEC-043) and trimmed to an estimated 2000-token budget. Load this before you start work: it is what the developer already knows, so you do not re-derive it. Markdown; the same bytes as `brag memory`, minus the trailing newline that command appends when printing.",
 		MIMEType:    "text/markdown",
 		URI:         uriMemoryRecent,
 	}, handleMemoryRecentResource(s))
@@ -37,7 +37,7 @@ func addResources(srv *mcp.Server, s *storage.Store) {
 	srv.AddResourceTemplate(&mcp.ResourceTemplate{
 		Name:        "memory-project",
 		Title:       "Memory slice, boosted toward a project",
-		Description: "The same memory slice, with entries in {name} ranked higher. {name} is a soft boost, not a filter: entries from other projects still appear, ranked lower, because a decision made elsewhere is often the one that matters here. Use `brag://projects` to get real project names. Markdown; the same bytes as `brag memory --project <name>`.",
+		Description: "The same memory slice, with entries in {name} ranked higher. {name} is a soft boost, not a filter: entries from other projects still appear, ranked lower, because a decision made elsewhere is often the one that matters here. Use `brag://projects` to get real project names. Markdown; the same bytes as `brag memory --project <name>`, minus the trailing newline that command appends when printing.",
 		MIMEType:    "text/markdown",
 		URITemplate: tmplMemoryProject,
 	}, handleMemoryProjectResource(s))

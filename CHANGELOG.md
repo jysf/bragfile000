@@ -53,7 +53,8 @@ The **agent-native depth** release: your corpus becomes something an agent reads
   `brag://memory/recent`, `brag://memory/project/{name}`, and `brag://projects`
   (every registered non-archived project, so an agent uses real names verbatim
   instead of inventing one). The memory resources serve byte-identical output to
-  the corresponding `brag memory` invocation. `brag_memory` is the parameterized
+  the corresponding `brag memory` invocation, minus the single trailing newline
+  that command appends when printing. `brag_memory` is the parameterized
   pull counterpart for when an agent wants a specific budget, query, or project.
 
 - **MCP `brag_list` time-window and provenance filters** (SPEC-072 / DEC-042).
