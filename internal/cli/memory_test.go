@@ -260,6 +260,50 @@ func TestMemoryCmd_BareInvocationIsPlainRecency(t *testing.T) {
 	}
 }
 
+// TestMemoryCmd_StdoutIsThePayloadPlusExactlyOneNewline pins the CLI half of
+// the "byte-identical to `brag memory`" claim that docs/api-contract.md,
+// docs/for-ai-agents.md and both MCP resource Descriptions make about the
+// brag:// resources and the brag_memory tool.
+//
+// The claim was off by one byte and nothing caught it. mcpserver already pins
+// resource == export.ToMemoryMarkdown(...) — the rendered payload — and it is
+// correct. What was missing is the OTHER half: that `brag memory`'s stdout is
+// that same payload plus exactly one trailing newline, added by memory.go's
+// fmt.Fprintln. With both halves pinned, `cli == payload + "\n"` follows, and
+// the documented relationship is mechanical rather than prose.
+//
+// The markdown golden could not catch this: a golden pins bytes, not the
+// RELATIONSHIP between two surfaces, so it stays green whichever way the
+// newline goes. Asserting exactly one newline (not just "ends with one")
+// is deliberate — a payload that itself gained a trailing blank line would
+// still satisfy the weaker form while breaking the claim.
+func TestMemoryCmd_StdoutIsThePayloadPlusExactlyOneNewline(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	seedMemoryFixture(t, dbPath)
+	withNowFunc(t, time.Date(2026, 8, 8, 12, 0, 0, 0, time.UTC))
+
+	for _, format := range []string{"markdown", "json"} {
+		t.Run(format, func(t *testing.T) {
+			out, errStr, err := runMemoryCmd(t, dbPath, "--format", format)
+			if err != nil {
+				t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+			}
+			if !strings.HasSuffix(out, "\n") {
+				t.Fatalf("%s: stdout does not end with a newline", format)
+			}
+			payload := strings.TrimSuffix(out, "\n")
+			if strings.HasSuffix(payload, "\n") {
+				t.Errorf("%s: stdout ends with more than one newline — the MCP "+
+					"payload is stdout minus EXACTLY one, so a second breaks the "+
+					"byte-identity claim in docs/api-contract.md", format)
+			}
+			if payload == "" {
+				t.Errorf("%s: payload is empty", format)
+			}
+		})
+	}
+}
+
 // TestMemoryCmd_JSONAndMarkdownSelectTheSameSlice pins DEC-044 sub-decision
 // 6: the same options select the same ids in the same order across formats;
 // fails if the budget is ever measured against the JSON bytes.

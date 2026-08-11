@@ -1269,8 +1269,11 @@ same `~/.bragfile/db.sqlite` the CLI uses:
   default or `json`). No `since`/`until`/`day` — the ranking already prefers
   recent entries, and hard windows are `brag_list`'s job
   ([DEC-045](../decisions/DEC-045-mcp-push-surface-resources-and-brag-memory.md)).
-  Byte-identical to `brag memory` at the same options, in both formats. See
-  the Resources subsection below for the auto-attachable counterpart.
+  Byte-identical to `brag memory` at the same options, in both formats, minus
+  the single trailing newline that command appends when printing — the CLI
+  prints via `Fprintln`, so `cli == payload + "\n"` for markdown and JSON
+  alike. See the Resources subsection below for the auto-attachable
+  counterpart.
 
 **Provenance.** `brag_add` stamps caller-provided `agent`/`model` as
 reserved-namespace tags — `agent:<name>` / `model:<id>` (lowercase,
@@ -1310,7 +1313,7 @@ three are `text/markdown`:
 
 | URI | kind | body |
 |---|---|---|
-| `brag://memory/recent` | static | the default memory slice — byte-identical to `brag memory` at the 2000-token default budget |
+| `brag://memory/recent` | static | the default memory slice — byte-identical to `brag memory` at the 2000-token default budget, minus that command's trailing newline |
 | `brag://memory/project/{name}` | template | the same slice with `{name}` as a SOFT boost, never a filter — entries from other projects still appear, ranked lower; an unknown `{name}` is not an error, an **empty** `{name}` is |
 | `brag://projects` | static | every registered, non-archived project with its status and brag count (no locations, no `state_note`) — the template's lookup table, so `{name}` is filled with a real name instead of a guess |
 
