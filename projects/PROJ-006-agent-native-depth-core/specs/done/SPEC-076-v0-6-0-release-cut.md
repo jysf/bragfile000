@@ -8,7 +8,7 @@
 task:
   id: SPEC-076
   type: story                      # a release cut is a story-sized closing action
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: ship
   blocked: false                   # SPEC-072/073/074/075 are all on main
   priority: high
   complexity: S
@@ -298,8 +298,122 @@ Add to the template once v0.6.0 ships:
 
 ## Build Completion
 
-*Filled in during the **build** cycle.*
+**Cut: v0.6.0, tagged at `f681835`, published 2026-08-12T06:53:29Z.** Release
+run `31571647818` succeeded; goreleaser produced all four platform tarballs
+(`darwin`/`linux` × `amd64`/`arm64`) plus `checksums.txt`, and pushed the
+formula bump to `jysf/homebrew-tap` (`Formula/bragfile.rb` → `version "0.6.0"`).
+
+### The build-cycle pre-flight items, now tickable
+
+- [x] **Dev/prod DB isolation** — the smoke test ran against a COPY of the live
+      corpus in a scratch directory, never `~/.bragfile`; the original was
+      re-checked afterwards and was byte-for-byte unchanged (entry 172's title
+      still 1434 bytes after the copy had been edited down to 48).
+      *SPEC-036 auto-backup: recorded N/A-with-reason, not ticked.* The item
+      says the backup path is "observed to fire"; it was observed NOT to fire,
+      which is correct — v0.6.0 is migration-free, so there is nothing to back
+      up. `PRAGMA user_version` was `0` before and after. Ticking this would
+      have been the same species of untrue-but-green claim this spec exists to
+      catch.
+- [x] **Clean upgrade** — verified on the real machine. `brew install
+      jysf/tap/bragfile` yields `brag version 0.6.0`, symlinked to
+      `Cellar/bragfile/0.6.0/bin/brag` — **Cellar, not Caskroom**, which is the
+      formula path. One installed version, no cask remnant, `brew outdated`
+      silent. The cask→formula crossing (F4) was performed manually before the
+      cut and left the machine clean.
+- [x] **Behavioral surfaces re-checked on the built artifact** — done against
+      the built binary rather than inferred from source, per §12(b). Drove the
+      binary's own stdio MCP server: `resources/list` returned
+      `brag://memory/recent` and `brag://projects`, `resources/templates/list`
+      returned `brag://memory/project/{name}`, and `tools/list` returned all
+      five tools including `brag_memory`. `just test-hook` exercises the real
+      `plugin/hooks/capture-nudge.sh` (not a mock — `HOOK="$REPO_ROOT/plugin/
+      hooks/capture-nudge.sh"`), H2–H7 green.
+
+### Post-publish verification
+
+`brag memory` runs from the released binary against the live 360-entry corpus
+and returns a 25-entry slice inside the 2000-token budget. The headline surface
+of the release works on real data, from the artifact users actually get.
+
+### One piece of live intel for the next cut
+
+Homebrew 6.0.15 now warns on untrusted third-party taps and states that the
+`HOMEBREW_NO_REQUIRE_TAP_TRUST=1` escape hatch **"will be removed in a later
+release"** (`https://docs.brew.sh/Tap-Trust`). `jysf/tap` was NOT among the taps
+named in the warning, so bragfile is unaffected today. Recording it because this
+is precisely the F2 category — a package-manager policy tightening **with no
+change on our side**, which is how the v0.1.0→v0.2.0 trust gate arrived. The
+next cut's package-manager-policy item should re-check whether `jysf/tap`
+requires an explicit `brew trust` by then.
+
+### Build-phase reflection (3 questions, short answers)
+
+1. **What surprised you?** — That the pre-flight itself was the least
+   trustworthy artifact in the release. Four defects, three of them in the
+   checklist machinery: two items un-tickable since v0.5.2, one mandated item
+   never added, and two items silently missed at the last cut. The checklist is
+   credited with catching every prod escape in PROJ-001..003, and that
+   reputation is exactly what stopped anyone from auditing it.
+
+2. **What was harder than expected?** — Nothing in the mechanics; the cut
+   itself was uneventful. The hard part was resisting the framing that a
+   release cut is a chore. Every real finding came from *running* a checklist
+   item rather than reading it — F4 in particular only appeared because
+   `brew info` was actually executed and its answer disagreed with
+   `brag --version`.
+
+3. **What would you tell the next implementer?** — Two ticks in this spec are
+   N/A-with-reason rather than checkmarks (dual-tag, SPEC-036 auto-backup).
+   Keep doing that. A checklist whose items are all ticked is indistinguishable
+   from one nobody read, and the moment an item cannot be honestly ticked is
+   the moment it is telling you something.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+1. **What would I do differently next time?**
+   — Audit the checklist before trusting it to audit the release. The pre-flight
+   had drifted from the shipped distribution mechanism for two releases and the
+   drift was invisible because the checklist is a *document*, while everything
+   it guards is *behavior*. The fix that generalises: where an item can be made
+   mechanical, make it mechanical — W1/W2 now assert the plugin pin and the
+   compare-links that were hand-ticked wrongly at v0.5.2. What cannot be
+   mechanised (clean-host install, upgrade paths) should be phrased as an
+   observation to *perform*, not a property to *affirm*.
+
+2. **Does any template, constraint, or decision need updating?**
+   — Done in this spec: `spec-release-cut.md`'s Gatekeeper/`brew trust` items
+   replaced with a clean-host-install check, and the package-manager-policy line
+   AGENTS.md §4 mandates finally added. One more earned here and still to add —
+   the "previous packaging **shape**, not just previous version" item under
+   *New pre-flight item this cut earns*. Also worth considering: `just new-spec`
+   only ever scaffolds from `spec.md`, so a release-cut spec must be hand-copied
+   from `spec-release-cut.md`. That friction is a plausible root cause of the
+   template drifting unnoticed for two releases.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — Three, none blocking: (a) the retired-tap `tap_migrations.json` + archive,
+   scoped in `retired-tap-migration-prompt.md` — the correct fix for F4 rather
+   than the documentation workaround shipped here; (b) `go install
+   github.com/jysf/bragfile000/cmd/brag@latest` already works and is
+   undocumented, but reports `brag version dev` because goreleaser's ldflags do
+   not apply — a `runtime/debug.ReadBuildInfo()` fallback plus README coverage
+   is the cheapest reach available; (c) Windows compiles clean on both arches
+   (pure-Go sqlite, `CGO_ENABLED=0`) and the core is portable
+   (`os.UserHomeDir`, `filepath.Join`), but `capture-nudge.sh` is bash, so it is
+   a small spec rather than a flag flip. Each is a distribution decision under
+   §4's tripwire.
+
+4. **What can a user do now that they couldn't before?** — one sentence,
+   before → after; quote the confirming number if one exists, name the outcome
+   if not. Write `none` if this release has no user-visible change — that is a
+   real, greppable result, not a blank. Pairs with the Cut record above (the
+   confirmed publish); this is the line a brag's `impact` field is transcribed
+   from.
+   — Before, the corpus was a write-only log: an agent saw a developer's history
+   only if it thought to query it, and `brew upgrade` silently would not have
+   delivered this release at all to anyone installed before v0.5.2. Now `brew
+   install jysf/tap/bragfile` puts **0.6.0** on the machine, an MCP client
+   auto-loads a ranked 25-entry slice inside a 2000-token budget with no tool
+   call, and the caps that bound it are derived from the corpus instead of
+   inherited — with the upgrade cliff documented rather than silent.

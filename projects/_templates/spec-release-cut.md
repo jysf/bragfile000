@@ -131,6 +131,14 @@ Gotchas, style preferences, reuse opportunities.
       never ~/.bragfile; the SPEC-036 auto-backup path is observed to fire.
 - [ ] Clean upgrade: `brew upgrade` from the prior minor verified;
       `brag --version` prints the new tag; no migration surprise.
+- [ ] **Previous packaging SHAPE, not just previous version.** "Upgrade from the
+      prior minor" silently means formula→formula. When the prior release
+      changed packaging *shape* (cask→formula, tap move, rename), the path that
+      must be verified is the **cross-shape** one — and it exists exactly once,
+      at the cut *after* the migration. Missing it strands every pre-migration
+      user with no signal on either side: the release looks healthy (tap has the
+      new version, CI green) while `brew outdated` stays silent and they never
+      move. Earned at the v0.6.0 cut, where this was found live (SPEC-076 F4).
 - [ ] CHANGELOG: the `[x.y.z]` dated section is moved out of `[Unreleased]`;
       compare-links repointed.
 - [ ] Plugin version pin (v0.3.0+): `plugin/.claude-plugin/plugin.json`
