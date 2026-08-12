@@ -735,3 +735,45 @@ questions:
       its own DEC unless the answer changes the DEC-012 contract, which
       (b) does not and (a) arguably does not either — DEC-012 locks the
       SCHEMA, and the schema is unaffected.
+
+      PRIOR ART — WHAT CLI USERS ACTUALLY EXPECT. Checked against the
+      established tools, because the shape people reach for is evidence
+      about which of (a)/(b)/(c) earns its place:
+
+        curl     -d '{"a":1}'  |  -d @file.json  |  -d @-   (stdin)
+        gh       --input file.json  |  --input -            (stdin)
+        aws      --cli-input-json file://path
+        kubectl  -f file.yaml       |  -f -                 (stdin)
+
+      Two things fall out. FIRST, a BARE POSITIONAL (`brag add {json}`) is
+      not a thing anyone does — the convention is universally a flag
+      carrying either the value or a file reference. A naked positional
+      collides with other positionals and forces shell quoting with no
+      escape hatch. Rule that shape out; it is the one a user is most
+      likely to suggest, and it has no precedent.
+
+      SECOND, and more usefully: curl solves ALL THREE cases with ONE flag
+      via the `@` convention (`@file`, `@-` for stdin, bare string for
+      inline). If any of this is ever built, that is the design worth
+      copying — it avoids cobra's NoOptDefVal entirely, keeps a single
+      flag, and keeps bare `--json` (no value) free to go on meaning stdin.
+
+      This also REWEIGHTS the three shapes. (b) `--json-file` is probably
+      worth more than (a) inline, contrary to how the question was first
+      framed: the actual audience for JSON capture is scripts and agents,
+      which already hold the payload in a file or a variable and for which
+      piping is natural. Inline mainly serves a human doing a one-off —
+      and that human is already well served by flag mode
+      (`brag add -t "..." -i "..."`), which needs no JSON at all. So the
+      strongest version of this is probably "`--json` grows curl-style
+      `@file` support", not "`--json` takes an inline string".
+
+      DISPOSITION (2026-08-12, user): NOT WORTH BUILDING NOW — "I dont
+      think the json is important but we should log for the future."
+      Deliberately kept as an open low-priority question rather than
+      deleted, because the load-bearing finding is not the feature request
+      but the AUDIT RESULT: DEC-012 never weighed transport at all. Anyone
+      who later assumes stdin-only was a considered decision would be
+      wrong, and would re-derive this analysis from scratch. Do not action
+      without a real trigger — a user or agent actually blocked by the
+      pipe, not a tidiness impulse.
