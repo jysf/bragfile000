@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-019
-  status: active                    # proposed | active | shipped | cancelled | on_hold
+  status: shipped                   # proposed | active | shipped | cancelled | on_hold
   priority: high
   target_complete: null
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-08-07
-shipped_at: null
+shipped_at: 2026-08-12
 ---
 
 # STAGE-019: corpus as agent memory
@@ -170,15 +170,14 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       below. `go.mod` has not moved since, so DEC-045 was locked against
       v1.7.0 as required.
 
-- [ ] SPEC-076 (design) — **the v0.6.0 release cut: this stage's closing
-      action.** Ships this stage's whole surface plus STAGE-018's SPEC-075
-      gate. Design-time pre-flight found four defects — three in the pre-flight
-      machinery itself, and one live user-facing regression (the cask→formula
-      upgrade cliff, silent since v0.5.2). See the spec's *Design-time
-      pre-flight findings*.
+- [x] SPEC-076 (shipped on 2026-08-12) — **the v0.6.0 release cut: this stage's
+      closing action.** Shipped this stage's whole surface plus STAGE-018's
+      SPEC-075 gate. Design-time pre-flight found four defects — three in the
+      pre-flight machinery itself, and one live user-facing regression (the
+      cask→formula upgrade cliff, silent since v0.5.2). See the spec's
+      *Design-time pre-flight findings*.
 
-**Count:** 3 shipped / 1 active (SPEC-076, the release cut) / 0 pending —
-**feature backlog complete**
+**Count:** 4 shipped / 0 active / 0 pending — **stage complete**
 
 > **The stage is NOT complete until SPEC-074 ships.** All three specs are now
 > scaffolded, so `just archive-spec` can see them — but do not run the Stage
@@ -191,6 +190,14 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 > `shipped_at` is set. Closing it at "backlog complete" would mark shipped a
 > stage whose surface no user can install yet, which is precisely the gap
 > SPEC-076's F4 finding is about.
+>
+> ✅ **Condition met — v0.6.0 published 2026-08-12T06:53:29Z** (tag `f681835`,
+> release run `31571647818`). Verified on a real machine, not inferred: `brew
+> install jysf/tap/bragfile` → `brag version 0.6.0`, symlinked into
+> `Cellar/bragfile/0.6.0/` (the formula path, not Caskroom), one installed
+> version, no cask remnant, `brew outdated` silent; and `brag memory` returns a
+> 25-entry slice from the released binary against the live 360-entry corpus.
+> Stage closed.
 
 ## Design Notes
 
