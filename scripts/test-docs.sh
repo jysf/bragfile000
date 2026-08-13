@@ -1259,6 +1259,31 @@ else
     fail "W2" "CHANGELOG.md version heading(s) with no compare-link:$w2_missing"
 fi
 
+# W3 — user-facing "current version" claims match the latest release.
+# The README status line and the tutorial's "shipped as of" line are the two
+# places a reader is told what version this is. Both silently rotted through
+# v0.5.2 AND v0.6.0 (they still said v0.5.1) because the release pre-flight
+# checked the CHANGELOG, the plugin pin and the compare-links — but never the
+# prose that users actually read first. Same defect class as W1/W2: a claim
+# duplicating the release version with nothing holding it there.
+w3_latest=$(sed -n 's/^## \[\([0-9][^]]*\)\] - .*/\1/p' CHANGELOG.md | head -1)
+w3_bad=""
+if [ -z "$w3_latest" ]; then
+    fail "W3" "CHANGELOG.md has no dated '## [x.y.z] - ' section to check version claims against"
+else
+    if ! grep -q "^> \*\*Status:\*\* v${w3_latest} shipped" README.md; then
+        w3_bad="$w3_bad README.md(status-line)"
+    fi
+    if ! grep -q "shipped as of v${w3_latest}" docs/tutorial.md; then
+        w3_bad="$w3_bad docs/tutorial.md(shipped-as-of)"
+    fi
+    if [ -z "$w3_bad" ]; then
+        ok "W3"
+    else
+        fail "W3" "latest release is ${w3_latest} but these still claim an older version:$w3_bad"
+    fi
+fi
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

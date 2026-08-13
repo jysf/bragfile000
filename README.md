@@ -7,11 +7,11 @@ for retros, reviews, and resumes. Entries live in an embedded SQLite
 database at `~/.bragfile/db.sqlite` on your machine. No cloud, no
 sync, no account.
 
-> **Status:** v0.5.1 shipped. Capture, retrieve, search, export,
-> weekly/monthly/quarterly digests, tags, and cwd-aware projects are all
-> here — and a local MCP server now lets AI coding agents capture and read
-> entries as typed tool calls. `brew install jysf/tap/bragfile` installs
-> the binary on macOS.
+> **Status:** v0.6.0 shipped. Capture, retrieve, search, export, digests,
+> tags, and cwd-aware projects are all here; a local MCP server lets AI
+> coding agents capture and read entries as typed tool calls; and `brag
+> memory` returns a ranked, token-budgeted slice of your history that an MCP
+> client can auto-load with no tool call. `brew install jysf/tap/bragfile`.
 >
 > Working with an AI agent? `brag mcp install` wires brag into Claude Code,
 > Cursor, or Claude Desktop as five typed tools plus an auto-loadable memory
