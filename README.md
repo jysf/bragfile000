@@ -7,7 +7,7 @@ for retros, reviews, and resumes. Entries live in an embedded SQLite
 database at `~/.bragfile/db.sqlite` on your machine. No cloud, no
 sync, no account.
 
-> **Status:** v0.6.0 shipped. Capture, retrieve, search, export, digests,
+> **Status:** v0.6.1 shipped. Capture, retrieve, search, export, digests,
 > tags, and cwd-aware projects are all here; a local MCP server lets AI
 > coding agents capture and read entries as typed tool calls; and `brag
 > memory` returns a ranked, token-budgeted slice of your history that an MCP
@@ -57,14 +57,14 @@ brew install jysf/tap/bragfile
 Your data is not affected — the database lives in `~/.bragfile`, not in the
 Cellar or Caskroom. Confirm with `brag --version` and `brag list`.
 
-From source (works today):
+With Go, no clone needed:
 
 ```bash
-git clone https://github.com/jysf/bragfile000.git
-cd bragfile000
-just install                 # or: go install ./cmd/brag
+go install github.com/jysf/bragfile000/cmd/brag@latest
 brag --version               # confirm ~/go/bin is on $PATH
 ```
+
+Or from a clone: `git clone …&& cd bragfile000 && just install`.
 
 The Homebrew install pulls a prebuilt binary — no Go required.
 Requires Go 1.26+ if you build from source instead.

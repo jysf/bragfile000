@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-08-13
+
+A correctness-and-edges release. **No schema change, no migration, no new
+dependency.** Seven fixes from the v0.5.0 audit backlog, plus `go install`
+finally reporting its own version.
+
+### Added
+
+- **`go install github.com/jysf/bragfile000/cmd/brag@latest` is a documented,
+  working install path.** It always worked — bragfile is a public Go module
+  with a pure-Go SQLite driver and `CGO_ENABLED=0`, so no toolchain setup is
+  needed — but it was undocumented and reported `brag version dev`, because
+  `go install` does not run goreleaser's ldflags. The version is now recovered
+  from the embedded build info. Deliberately narrow: only a clean `vX.Y.Z` tag
+  is accepted, so a pseudo-version (an untagged build) or `(devel)` still
+  reports `dev` and still trips the DEC-026 guard that stops an unreleased
+  binary migrating your real database.
+
+### Fixed
+
+- **`brag mcp install` writes atomically** (temp file + rename, in the same
+  directory). It rewrites a config file you did not author — a client's
+  `.mcp.json` can list every other MCP server you have registered — and the
+  previous plain write truncated before writing, so an interrupted run could
+  leave it empty.
+- **Every command's db-path error said `open store:` twice.** `storage.Open`
+  already supplies that context and all 31 CLI call sites added it again.
+- **`brag search -foo` (and any malformed flag) now exits 1, not 2.** Exit 2 is
+  reserved for internal faults; a bad flag is user-actionable. The message was
+  already correct — only the exit status was wrong, which mattered to scripts.
+- **`brag export --format markdown` is deterministic for same-second entries.**
+  `created_at` is second-resolution and the sort had no tie-break, so entries
+  captured in the same second were ordered by whatever the database returned.
+  Now ordered by `(created_at, id)` in both grouped and flat modes.
+- **`brag spark` no longer drops an entry captured in the same second it
+  runs** — reachable whenever a capture hook is followed immediately by a
+  spark.
+- **An untyped entry renders as `-` in export's "By type"** instead of a bare,
+  blank-labelled `- : 3` row, matching what `brag memory` and `brag list`
+  already do.
+- **Pre-migration backup filenames carry sub-second precision.** Two migrating
+  opens in the same second produced the same sidecar name; `VACUUM INTO`
+  refuses an existing destination and DEC-021 turns a failed backup into an
+  aborted open, so the second process could not open the database at all.
+
+### Documentation
+
+- The README status line and the tutorial's "shipped as of" line said **v0.5.1
+  through two releases** (v0.5.2 and v0.6.0). Corrected, and now pinned by a
+  test that derives the expected version from the CHANGELOG, so they cannot
+  silently rot again.
+
 ## [0.6.0] - 2026-08-10
 
 The **agent-native depth** release: your corpus becomes something an agent reads
@@ -526,7 +578,8 @@ Each decision file under `/decisions/` carries the full rationale.
   payload keys; markdown convention reuses DEC-013's provenance
   + summary-block style.
 
-[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/jysf/bragfile000/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/jysf/bragfile000/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/jysf/bragfile000/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/jysf/bragfile000/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/jysf/bragfile000/compare/v0.5.0...v0.5.1
