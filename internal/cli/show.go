@@ -50,7 +50,7 @@ func runShow(cmd *cobra.Command, args []string) error {
 
 	s, err := storage.Open(path)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return err // storage.Open already says "open store: …" (STAGE-018 nit)
 	}
 	defer s.Close()
 

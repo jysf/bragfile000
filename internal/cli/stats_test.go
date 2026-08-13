@@ -263,8 +263,13 @@ func TestStatsCmd_UndeclaredFlagsRejectedAsUnknown(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected error for %s, got nil", tc.flag)
 			}
-			if errors.Is(err, ErrUser) {
-				t.Errorf("expected NOT errors.Is(err, ErrUser) for cobra unknown-flag; got %v", err)
+			// Was !errors.Is(...) as a proxy for "cobra produced this, not RunE".
+			// STAGE-018's audit nit made flag-parse errors ErrUser (a malformed
+			// flag is user-actionable → exit 1, not the internal-fault 2), so the
+			// proxy no longer discriminates; the "unknown flag" assertion below
+			// pins cobra provenance directly. See review_test.go for the full note.
+			if !errors.Is(err, ErrUser) {
+				t.Errorf("a malformed flag is a user error and must exit 1; got %v", err)
 			}
 			msg := err.Error()
 			if !strings.Contains(msg, "unknown flag") {

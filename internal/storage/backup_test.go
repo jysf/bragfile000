@@ -44,7 +44,13 @@ func TestBackup_CreatesSnapshotForExistingDBWithPending(t *testing.T) {
 	if len(matches) != 1 {
 		t.Fatalf("want 1 backup file, got %d: %v", len(matches), matches)
 	}
-	want := path + ".pre-0004_add_projects.20260612T093015Z.backup"
+	// Derive the expected name from backupTimeFormat rather than hardcoding it.
+	// The literal that used to live here was a second copy of the format
+	// constant, so widening the timestamp's precision (STAGE-018 audit nit)
+	// broke this assertion for a reason that had nothing to do with what it
+	// pins — which is that the sidecar is named for the highest PENDING
+	// migration at the frozen instant.
+	want := path + ".pre-0004_add_projects." + frozen.Format(backupTimeFormat) + ".backup"
 	if matches[0] != want {
 		t.Errorf("backup name: got %q, want %q", matches[0], want)
 	}

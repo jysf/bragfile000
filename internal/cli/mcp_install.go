@@ -207,7 +207,7 @@ func runMCPInstall(cmd *cobra.Command, _ []string) error {
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		return fmt.Errorf("create config dir: %w", err)
 	}
-	if err := os.WriteFile(target, merged, 0o644); err != nil {
+	if err := writeFileAtomic(target, merged, 0o644); err != nil {
 		return fmt.Errorf("write config: %w", err)
 	}
 	fmt.Fprintf(cmd.ErrOrStderr(), "Registered brag MCP server in %s\n", target)
