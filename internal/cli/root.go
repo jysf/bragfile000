@@ -27,5 +27,17 @@ Run 'brag <command> --help' for command-specific flags and usage.`,
 
 	cmd.PersistentFlags().String("db", "", "path to bragfile db (default ~/.bragfile/db.sqlite)")
 
+	// A malformed flag is a USER error, not an internal fault. Without this,
+	// cobra's flag-parse errors reach main.go unwrapped, fail the
+	// errors.Is(err, ErrUser) check, and exit 2 — the code reserved for
+	// internal faults — so `brag search -foo` reported a bad flag with the
+	// same exit status as a corrupt database. Wrapping here rather than in
+	// each subcommand fixes every command at once, since flag parsing is
+	// cobra's job and the classification is identical everywhere.
+	// (STAGE-018 audit nit.)
+	cmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
+		return UserErrorf("%s", err)
+	})
+
 	return cmd
 }

@@ -102,7 +102,15 @@ func runSpark(cmd *cobra.Command, _ []string) error {
 	// skew / import / multi-machine) can't inflate the header or take a top-8
 	// slot (SPEC-060).
 	start := now.Add(-width * time.Duration(n))
-	filter := storage.ListFilter{Since: start, Until: now}
+	// Until is EXCLUSIVE (`created_at < ?`), and created_at is second-
+	// resolution — so a bare `Until: now` drops an entry captured in the same
+	// second this command runs. That is not a corner case in practice: the
+	// capture-nudge hook adds an entry and a session-end script can spark
+	// immediately after. Push the bound one second past now so the current
+	// second is fully inside the window; the window is rolling and ends now by
+	// definition, so nothing beyond "already captured" can be included.
+	// (STAGE-018 audit nit.)
+	filter := storage.ListFilter{Since: start, Until: now.Add(time.Second)}
 
 	dbFlag := getFlagString(cmd, "db")
 	path, err := config.ResolveDBPath(dbFlag)
@@ -112,7 +120,7 @@ func runSpark(cmd *cobra.Command, _ []string) error {
 
 	s, err := storage.Open(path)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return err // storage.Open already says "open store: …" (STAGE-018 nit)
 	}
 	defer s.Close()
 

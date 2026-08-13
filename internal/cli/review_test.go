@@ -253,8 +253,17 @@ func TestReviewCmd_FilterAndOutFlagsRejectedAsUnknown(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected error for %s, got nil", flag)
 			}
-			if errors.Is(err, ErrUser) {
-				t.Errorf("expected !errors.Is(err, ErrUser) for cobra unknown-flag path; got %v", err)
+			// This used to assert !errors.Is(err, ErrUser) as a PROXY for "cobra
+			// produced this, not our RunE" — RunE errors were ErrUser-wrapped
+			// and cobra's were not. STAGE-018's audit nit made flag-parse errors
+			// ErrUser too (a malformed flag is user-actionable and must exit 1,
+			// not 2, the code reserved for internal faults), so that proxy no
+			// longer discriminates. The decision this test locks is unchanged —
+			// the flags are undeclared and COBRA rejects them — and the
+			// "unknown flag" assertion below pins it directly, since RunE never
+			// emits that phrase.
+			if !errors.Is(err, ErrUser) {
+				t.Errorf("a malformed flag is a user error and must exit 1; got %v", err)
 			}
 			msg := err.Error()
 			if !strings.Contains(msg, "unknown flag") {

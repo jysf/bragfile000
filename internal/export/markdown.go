@@ -151,7 +151,15 @@ func writeSummaryByType(w io.Writer, entries []storage.Entry) {
 	fmt.Fprintln(w, "**By type**")
 	counts := map[string]int{}
 	for _, e := range entries {
-		counts[e.Type]++
+		// An untyped entry rendered as a blank label produced a bare "- : 3"
+		// row. Use the same "-" sentinel the memory slice and `brag list`
+		// already use for an absent field, so the row is readable and the
+		// three renderers agree. (STAGE-018 audit nit.)
+		t := e.Type
+		if t == "" {
+			t = "-"
+		}
+		counts[t]++
 	}
 	for _, kv := range sortedCountsDescByCountAscByKey(counts) {
 		fmt.Fprintf(w, "- %s: %d\n", kv.key, kv.count)
@@ -199,8 +207,16 @@ func writeGroupedSections(w io.Writer, entries []storage.Entry) {
 
 	for _, k := range keys {
 		group := groups[k]
+		// Same total-order requirement as writeFlatSection below: CreatedAt is
+		// second-resolution, so without an ID tie-break a same-second pair keeps
+		// DB order and the rendered document depends on query plan rather than
+		// on data. Grouped mode is the DEFAULT, so this is the site that
+		// actually bites. (STAGE-018 audit nit.)
 		sort.SliceStable(group, func(i, j int) bool {
-			return group[i].CreatedAt.Before(group[j].CreatedAt)
+			if !group[i].CreatedAt.Equal(group[j].CreatedAt) {
+				return group[i].CreatedAt.Before(group[j].CreatedAt)
+			}
+			return group[i].ID < group[j].ID
 		})
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "## %s\n", k)
@@ -217,8 +233,16 @@ func writeGroupedSections(w io.Writer, entries []storage.Entry) {
 func writeFlatSection(w io.Writer, entries []storage.Entry) {
 	sorted := make([]storage.Entry, len(entries))
 	copy(sorted, entries)
+	// Tie-break on ID: CreatedAt is second-resolution, so entries captured in
+	// the same second would otherwise keep whatever order the DB handed back —
+	// making the rendered document depend on query plan rather than on data.
+	// ID is the insertion order, which is the intended chronological reading
+	// for a same-second tie. (STAGE-018 audit nit.)
 	sort.SliceStable(sorted, func(i, j int) bool {
-		return sorted[i].CreatedAt.Before(sorted[j].CreatedAt)
+		if !sorted[i].CreatedAt.Equal(sorted[j].CreatedAt) {
+			return sorted[i].CreatedAt.Before(sorted[j].CreatedAt)
+		}
+		return sorted[i].ID < sorted[j].ID
 	})
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "## Entries (chronological)")

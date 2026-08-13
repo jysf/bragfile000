@@ -80,7 +80,7 @@ func runProjectNew(cmd *cobra.Command, args []string) error {
 	}
 	s, err := storage.Open(dbPath)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return err // storage.Open already says "open store: …" (STAGE-018 nit)
 	}
 	defer s.Close()
 
@@ -176,7 +176,7 @@ func runProjectEnsure(cmd *cobra.Command, args []string) error {
 	}
 	s, err := storage.Open(dbPath)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return err // storage.Open already says "open store: …" (STAGE-018 nit)
 	}
 	defer s.Close()
 
@@ -239,7 +239,7 @@ func runProjectList(cmd *cobra.Command, _ []string) error {
 	}
 	s, err := storage.Open(dbPath)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return err // storage.Open already says "open store: …" (STAGE-018 nit)
 	}
 	defer s.Close()
 
@@ -305,7 +305,7 @@ func runProjectShow(cmd *cobra.Command, args []string) error {
 	}
 	s, err := storage.Open(dbPath)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return err // storage.Open already says "open store: …" (STAGE-018 nit)
 	}
 	defer s.Close()
 
@@ -414,7 +414,7 @@ func runProjectStatus(cmd *cobra.Command, _ []string) error {
 	}
 	s, err := storage.Open(dbPath)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return err // storage.Open already says "open store: …" (STAGE-018 nit)
 	}
 	defer s.Close()
 
@@ -509,7 +509,7 @@ func runProjectEdit(cmd *cobra.Command, args []string) error {
 	}
 	s, err := storage.Open(dbPath)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return err // storage.Open already says "open store: …" (STAGE-018 nit)
 	}
 	defer s.Close()
 
@@ -618,7 +618,7 @@ func runProjectArchive(cmd *cobra.Command, args []string) error {
 	}
 	s, err := storage.Open(dbPath)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return err // storage.Open already says "open store: …" (STAGE-018 nit)
 	}
 	defer s.Close()
 
@@ -679,7 +679,7 @@ func runProjectDelete(cmd *cobra.Command, args []string) error {
 	}
 	s, err := storage.Open(dbPath)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return err // storage.Open already says "open store: …" (STAGE-018 nit)
 	}
 	defer s.Close()
 
@@ -753,7 +753,7 @@ func runProjectHere(cmd *cobra.Command, _ []string) error {
 	}
 	s, err := storage.Open(dbPath)
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return err // storage.Open already says "open store: …" (STAGE-018 nit)
 	}
 	defer s.Close()
 
