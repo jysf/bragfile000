@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-020                     # stable, zero-padded, repo-global (never reused)
-  status: proposed                  # proposed | active | shipped | cancelled | on_hold
+  status: active                    # proposed | active | shipped | cancelled | on_hold
   priority: high                    # critical | high | medium | low
   target_complete: null
 
@@ -126,13 +126,23 @@ them. Update status as specs progress.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] (not yet written) — **the design decision first**: what commit an entry
-      points at, who stamps it, and what "verified" means. Emits a DEC. Nothing
-      should be built before this lands — see Design Notes.
-- [ ] (not yet written) — the stamping path + reserved-prefix promotion.
-- [ ] (not yet written) — the verification surface.
+- [ ] SPEC-078 (design) — **tell agents to record evidence links.** Instruction
+      only: the `brag_add` tool description, `/brag`, the Stop-hook nudge text
+      and the agent docs. No stamping, no schema, no validation. Runs the
+      experiment the zero never tested, and makes adoption measurable against a
+      recorded baseline (0 / 361 at 2026-08-13).
+- [ ] (not yet written) — **only if SPEC-078's number stays near zero**: the
+      stamping path + reserved-prefix promotion, and the decision about WHICH
+      commit that requires. Deliberately gated on evidence rather than
+      scheduled.
+- [ ] (not yet written) — the verification surface (`brag verify`-shaped).
 
-**Count:** 0 shipped / 0 active / 3 pending (unwritten; split/merge at framing)
+**Count:** 0 shipped / 1 active (SPEC-078) / 2 pending
+
+> **Ordering note.** The expensive spec is second on purpose. If instruction
+> moves adoption, most of the stamping work is unnecessary — and stamping
+> carries a hazard instruction does not, because under squash-merge the hashes
+> available at capture time are the ones that will not survive (SPEC-078 LD3).
 
 ## Design Notes
 
