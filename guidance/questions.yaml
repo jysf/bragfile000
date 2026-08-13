@@ -672,3 +672,108 @@ questions:
       would require truncating impact or deleting tags, on 26% of the corpus.
       Whichever spec actions the edit-path item must resolve this question in
       the same change, or explicitly grandfather existing rows.
+
+  - id: json-input-transport-stdin-only
+    question: "Should `brag add --json` accept JSON inline (`--json '{...}'`) or from a file (`--json-file path`), rather than stdin only — and was stdin-only ever actually chosen, or just assumed?"
+    priority: low
+    status: open
+    raised_by: claude-opus-5
+    raised_at: 2026-08-12
+    assigned_to: null
+    notes: |
+      Raised by the user while writing JSON-capture examples: "interesting
+      that I have to pipe the json in and I cant add it to the command
+      directly."
+
+      IT WAS NEVER DECIDED. DEC-012 is titled "Stdin-JSON schema" and its
+      five Alternatives Considered are ALL about the schema — lenient vs
+      strict unknown keys, the tag representation, whether server-owned
+      fields are tolerated, the error shape. Not one weighs the TRANSPORT.
+      Stdin is assumed from the title onward. So this is an unexamined
+      default, not a defended decision, and the question is open on the
+      merits rather than requiring DEC-012 to be overturned.
+
+      THE OBVIOUS OBJECTION DOES NOT SURVIVE CONTACT. The natural argument
+      against an inline form is that argv is world-readable (`ps aux`) and
+      lands in shell history, while piped stdin does neither — a brag entry
+      can carry sensitive work detail. But flag mode ALREADY puts entry
+      content in argv, and it is the primary human interface:
+      `brag add -t "negotiated the exit package with Legal"`. Refusing
+      inline JSON on exposure grounds while shipping that is incoherent. If
+      argv exposure is genuinely a concern it is a concern about flag mode
+      first, and that is a different (larger) question than this one.
+
+      WHAT ACTUALLY REMAINS is shell-quoting ergonomics: JSON is full of
+      double quotes, so an inline form pins you to single quotes, and an
+      apostrophe in the user's own text then gets awkward. That is a real
+      cost — but it is a reason for a USER to prefer the heredoc, not a
+      reason for the tool to refuse the flag. Weigh it as ergonomics, not
+      as a blocker.
+
+      THREE CANDIDATE SHAPES, not one:
+      (a) `--json '{"title":"x"}'` — inline value. Requires cobra's
+          NoOptDefVal so that a BARE `--json` still means "read stdin";
+          fiddly but a standard cobra pattern. Backward compatible.
+      (b) `--json-file <path>` — no quoting pain, no argv exposure,
+          composes with generated files. Probably the most useful of the
+          three for agent/script callers, and the cheapest to implement
+          (no NoOptDefVal, no ambiguity).
+      (c) both, with bare `--json` unchanged.
+
+      CONSTRAINTS ANY ANSWER MUST HOLD. Bare `--json` must keep meaning
+      "read stdin" — `echo '{...}' | brag add --json` is documented in
+      README, BRAG.md, docs/api-contract.md and DEC-012 itself, and the
+      round-trip `brag list --format json | jq -c '.[0]' | brag add --json`
+      is load-bearing (DEC-012 choice 4 exists specifically to make it
+      work). Whatever is added is additive. Also: the schema, validation,
+      strict unknown-key rejection and the stdout contract (bare inserted
+      ID) are transport-independent and must not fork — one decode path,
+      several ways to feed it, or this becomes two code paths to test.
+
+      SIZE: small. Likely a single S-complexity spec, possibly folded into
+      a stage already touching internal/cli/add_json.go. It does not need
+      its own DEC unless the answer changes the DEC-012 contract, which
+      (b) does not and (a) arguably does not either — DEC-012 locks the
+      SCHEMA, and the schema is unaffected.
+
+      PRIOR ART — WHAT CLI USERS ACTUALLY EXPECT. Checked against the
+      established tools, because the shape people reach for is evidence
+      about which of (a)/(b)/(c) earns its place:
+
+        curl     -d '{"a":1}'  |  -d @file.json  |  -d @-   (stdin)
+        gh       --input file.json  |  --input -            (stdin)
+        aws      --cli-input-json file://path
+        kubectl  -f file.yaml       |  -f -                 (stdin)
+
+      Two things fall out. FIRST, a BARE POSITIONAL (`brag add {json}`) is
+      not a thing anyone does — the convention is universally a flag
+      carrying either the value or a file reference. A naked positional
+      collides with other positionals and forces shell quoting with no
+      escape hatch. Rule that shape out; it is the one a user is most
+      likely to suggest, and it has no precedent.
+
+      SECOND, and more usefully: curl solves ALL THREE cases with ONE flag
+      via the `@` convention (`@file`, `@-` for stdin, bare string for
+      inline). If any of this is ever built, that is the design worth
+      copying — it avoids cobra's NoOptDefVal entirely, keeps a single
+      flag, and keeps bare `--json` (no value) free to go on meaning stdin.
+
+      This also REWEIGHTS the three shapes. (b) `--json-file` is probably
+      worth more than (a) inline, contrary to how the question was first
+      framed: the actual audience for JSON capture is scripts and agents,
+      which already hold the payload in a file or a variable and for which
+      piping is natural. Inline mainly serves a human doing a one-off —
+      and that human is already well served by flag mode
+      (`brag add -t "..." -i "..."`), which needs no JSON at all. So the
+      strongest version of this is probably "`--json` grows curl-style
+      `@file` support", not "`--json` takes an inline string".
+
+      DISPOSITION (2026-08-12, user): NOT WORTH BUILDING NOW — "I dont
+      think the json is important but we should log for the future."
+      Deliberately kept as an open low-priority question rather than
+      deleted, because the load-bearing finding is not the feature request
+      but the AUDIT RESULT: DEC-012 never weighed transport at all. Anyone
+      who later assumes stdin-only was a considered decision would be
+      wrong, and would re-derive this analysis from scratch. Do not action
+      without a real trigger — a user or agent actually blocked by the
+      pipe, not a tidiness impulse.
