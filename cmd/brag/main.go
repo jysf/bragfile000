@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/jysf/bragfile000/internal/cli"
 	"github.com/jysf/bragfile000/internal/storage"
@@ -19,6 +20,12 @@ var (
 )
 
 func main() {
+	// Resolve before anything reads it: goreleaser's ldflags win, and a
+	// `go install …@latest` build recovers its module version from the
+	// embedded build info. See resolveVersion — a pseudo-version deliberately
+	// does NOT count, because that would switch off the guard below.
+	version = resolveVersion(version, debug.ReadBuildInfo)
+
 	// Record the build version for the dev/prod-migration guard (DEC-026):
 	// an unreleased build refuses to migrate the real ~/.bragfile.
 	storage.SetBuildVersion(version)

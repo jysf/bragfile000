@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-018
-  status: active                    # proposed | active | shipped | cancelled | on_hold
+  status: shipped                   # proposed | active | shipped | cancelled | on_hold
   priority: high
   target_complete: null
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-07-12
-shipped_at: null
+shipped_at: 2026-08-13
 ---
 
 # STAGE-018: capture-validation caps + the v0.5.0 audit backlog
@@ -204,13 +204,34 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       > "~18 tokens/entry" figure is the **8-entry test fixture's** mean
       > (measured corpus mean ≈ **92**); and "2000 buys ≈110 entries" is wrong
       > by ~4.4× (measured `Included: 25`, `Skipped: 175`).
-- [ ] (not yet written) — the remaining audit nits, batched by touched package
-      per the Design Notes (an "MCP/CLI parity" cluster, a "filesystem-write
-      robustness" cluster). Split at framing.
+- [x] (shipped on 2026-08-13, no spec) — the remaining audit nits. Landed as a
+      single reviewed batch (PR #151) rather than the two clustered specs the
+      Design Notes anticipated: the survey found only **seven** items were
+      mechanical, they touched four packages with no shared design question
+      between them, and a spec per cluster would have cost more review than the
+      diff. Each fix carries a regression test. **Two items were deliberately
+      NOT fixed** and are carried below rather than silently dropped.
 
-**Count:** 1 shipped (SPEC-075) / 0 active / 1 pending (the audit nits, unwritten —
-these trail into v0.6.1 per this stage's own scope note above, so SPEC-075
-shipping is the **v0.6.0 gate clearing**, not this stage closing).
+**Count:** 2 shipped (SPEC-075 + the audit-nit batch) / 0 active / 0 pending —
+**backlog complete.**
+
+### The two items deliberately carried forward, not dropped
+
+Both were verified real. Neither is a patch, and that is why they are not here:
+
+- **`MergeTags` position dup** (`storage/store.go`) — the graft copies
+  `s.position` verbatim, so after a merge an object's tag positions can gap or
+  collide. What the positions *should* become is the subject of the open
+  `tag-ordering-projection` question in `guidance/questions.yaml`. Fixing it
+  blind would be inventing that answer in a nit batch. Same coupling shape as
+  the caps/edit-path pair this stage already navigated once.
+- **`$EDITOR`-with-spaces** (`editor/launch.go:76`) — `strings.Fields` is
+  simultaneously what makes `EDITOR="code -w"` work and what breaks
+  `EDITOR="/Applications/My Editor/bin/edit"`. The two cannot both work without
+  a chosen quoting rule (shell-style parsing? try the whole string as a path
+  first?). That is a decision to record, not a line to change.
+
+Whoever picks these up should read them as two small specs, not as leftovers.
 
 ## Design Notes
 
@@ -245,10 +266,47 @@ shipping is the **v0.6.0 gate clearing**, not this stage closing).
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped.*
+- **Did we deliver the outcome in "What This Stage Is"?** **Yes.**
+  `capture.Validate` is now a rule you can defend: every cap derived from what
+  its field is for (SPEC-075/DEC-046), enforced on *every* ingress path
+  including edit, and expressed once — `cli/project.go`'s hard-coded `64` is
+  gone. The measured harm is repaired: 74 of 285 over-cap impacts became 3, and
+  the edit path validates on write-of-changed-field so no existing row became
+  uneditable. Seven of the nine audit nits shipped with regression tests; the
+  other two are carried above as specs-in-waiting, with reasons.
 
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
+- **How many specs did it actually take?** **One spec plus one unspec'd batch**,
+  against a plan of "one anchor spec + 2-ish nit clusters". The anchor
+  (SPEC-075) was correctly sized and needed a DEC. The clusters were not: the
+  survey found only seven mechanical items across four packages with no shared
+  design question, so one reviewed batch beat two ceremonial specs. **The
+  Design Notes' "batch by touched package" rule was right in spirit and wrong
+  in arithmetic** — it assumed the nine items were nine fixes. Two were
+  decisions and two needed verification before anyone could size them.
+
+- **What changed between starting and shipping?** The stage started as a
+  parking lot and became the v0.6.0 gate — then, at survey, the nit list itself
+  turned out to be partly wrong, which is the actual story.
+
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
+  - **A backlog list is a hypothesis, not an inventory.** Surveying the nine
+    against shipped code before framing changed the plan materially: one item
+    (`search -foo`) was already half-fixed and its real defect was a different
+    thing entirely (exit code 2 vs 1); two were decisions, not patches; two
+    could not be sized without reading the code. "~9 nits" is a list length.
+    Cost of the survey: under an hour. Cost of skipping it: two specs framed
+    around the wrong work.
+  - **A test can pin the right behaviour through the wrong mechanism.** Two
+    tests asserted `!errors.Is(err, ErrUser)` as a *proxy* for "cobra produced
+    this, not our RunE". The decision they locked was untouched by the fix, but
+    the proxy broke — so the correct move was replacing the proxy, not
+    overturning the decision. Read what a failing assertion is *for* before
+    changing either side.
+  - **When a fix and a DEC disagree, the DEC is usually right.** The first
+    backup-collision fix probed for a free filename; it broke
+    `TestBackup_FailureAbortsOpenAndLeavesDBUnmigrated`, and the failure was
+    correct — dodging works around a state DEC-021 exists to stop on. Widening
+    the timestamp fixed the same nit while preserving the decision.
+  - *(Already actioned during v0.6.0/v0.6.1: release pre-flight now carries
+    W1/W2/W3 for the plugin pin, compare-links and doc version claims, plus
+    items for cross-shape upgrades and package-manager policy.)*

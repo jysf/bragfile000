@@ -379,13 +379,62 @@ one is, it is a DEC, not a build-time discovery.
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped. Run Prompt 1c (Stage Ship) in
-FIRST_SESSION_PROMPTS.md to draft this.*
+*Drafted 2026-08-13, after the v0.6.0 publish. Late: `status` moved to shipped
+when the release verified, and this section was left on its placeholders for a
+day — see the last lesson below.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
+- **Did we deliver the outcome in "What This Stage Is"?** **Yes**, against every
+  success criterion. An MCP client auto-loads history with **no tool call**
+  (`brag://memory/recent`, `brag://memory/project/{name}`, `brag://projects`,
+  verified by driving the released binary's own stdio server). The slice is
+  genuinely blended, not one-axis, and bounded by an estimated **token budget**
+  rather than a row count — measured on the live corpus, a 2000-token default
+  yields 25 entries with 4 tokens of headroom. `brag_list` accepts
+  `since`/`until`/`day`/`author`. The `cli↔mcpserver` import cycle that deferred
+  `--since` at SPEC-040 was resolved **structurally** (`internal/timewindow`),
+  not worked around per caller. No new dependency, no CGO, no migration.
+
+- **How many specs did it actually take?** **Four, against a plan of three.**
+  SPEC-072/073/074 as scoped, plus SPEC-076 (the v0.6.0 release cut) added as
+  the stage's closing action. The addition was correct: a stage ships as a unit,
+  and this stage's unit is a surface a user can install — closing at "backlog
+  complete" would have marked shipped a stage nobody could install yet.
+
+- **What changed between starting and shipping?** The stage's own work landed
+  close to plan, but shipping it turned out to be gated on **another stage** —
+  STAGE-018's caps spec had to land first, because DEC-044 had derived this
+  stage's entire budget model from caps that were never derived.
+
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
+  - **A derived model inherits its inputs' credibility.** DEC-044's budget math
+    was sound arithmetic over numbers nobody had checked, so it was wrong
+    downstream of a cap nobody could defend. When a decision derives from
+    another decision's constants, the derivation is only as good as the audit of
+    those constants — and the honest move was re-deriving it in the same change,
+    not patching the number.
+  - **Fixture statistics are not corpus statistics.** Three separate DEC-044
+    errors traced to the 8-entry test fixture's mean (~18 tokens/entry) being
+    used as the corpus's (measured: ~92). A fixture is built to exercise
+    branches; it is a sample of the *code paths*, never of the data.
+  - *(Actioned during v0.6.0/v0.6.1: the release pre-flight now carries W1/W2/W3
+    plus cross-shape-upgrade and package-manager-policy items.)*
+  - **`archive-spec` guards spec reflections; nothing guards STAGE reflections.**
+    This section sat on its placeholders after `status: shipped` was set,
+    because the only mechanical `<answer>` check lives in `scripts/archive-spec.sh`
+    and stages are never archived. Worth a `test-docs` assertion: a stage with
+    `status: shipped` must not contain reflection placeholders.
+
 - **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <one-line items>
+  **Yes — two, and they are the same lesson at different altitudes.**
+  - From SPEC-073: **treat a prose claim about what a test pins as an assertion,
+    and mutate it before writing it.** One coverage sentence was wrong *four*
+    times, always caught by a fresh reviewer and never by its writer. This
+    recurred immediately afterwards — SPEC-075's punch-list #2 shipped a
+    mutation-check that pinned nothing, and the v0.6.1 schema work found a first
+    draft that would have passed against the very defect it targeted. It is the
+    single most reproducible failure mode this stage produced.
+  - From SPEC-074: **grep the feature name, not a phrasing of the claim.** The
+    doc sweep leaked six times, each a different way a regex under-reports
+    (truncation, name-only sites, line-wrap, phrase variance, singular/plural,
+    markdown emphasis). SPEC-075 added a seventh (a bare number with no phrase)
+    and an eighth (a grep that ran, hit, and was mis-reconciled).

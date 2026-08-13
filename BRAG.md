@@ -249,6 +249,40 @@ message — no trust in the brag's own metadata required. That makes it a cheape
 stronger evidence link than signing self-reported tags, and it pairs a career
 claim with the artifact that backs it for retros and promo packets.
 
+### Which ref to use — read this before reaching for a hash
+
+**Prefer `pr:<number>` when the work went through a pull request.** It is the
+most durable ref available, and under a squash-merge workflow it is often the
+*only* one that survives:
+
+- **A squash-merge destroys the commits you were looking at.** Merging PR #151
+  replaced branch commit `4d6d24c` with a brand-new `29b6e88` on `main`.
+  `4d6d24c` is no longer reachable from any branch, the branch ref was deleted,
+  and it does not exist in a fresh clone at all — so `commit:4d6d24c` is an
+  evidence link that verifies for nobody.
+- **The proving commit usually does not exist yet when you capture.** If you
+  brag at session end, before the PR merges, `HEAD` is a branch commit that is
+  about to be rewritten. That is the single most likely way to record a hash
+  that looks like evidence and is not.
+- A PR number is known as soon as the PR is opened, is stable through squash,
+  rebase and branch deletion, and carries the review discussion with it.
+
+So, in order of preference:
+
+1. **`pr:151`** — the work went through a PR. Use this.
+2. **`commit:29b6e88`** — no PR, or you specifically mean one commit. Use the
+   hash **on `main`**, not the branch hash you had mid-session.
+3. **Several `commit:` tags** — genuinely independent commits with no PR tying
+   them together. Tags are normalized (DEC-015), so multiple cost nothing;
+   `MaxTagCount` is 32 and a hash is far under `MaxTagLen` 64.
+
+**Never record a range** (`commit:abc..def`). It is not a git object, so nothing
+can verify it — `git cat-file -t` fails on it — and it breaks `brag list --tag`,
+which matches a tag exactly.
+
+**When in doubt, record nothing.** A hash that does not resolve is worse than an
+absent one, because it reads as evidence and silently is not.
+
 Conventions for now (this is a documented pattern, not yet a validated field):
 
 - Use the **abbreviated hash** the repo shows (≥7 chars), e.g. `commit:22d9f3a`.

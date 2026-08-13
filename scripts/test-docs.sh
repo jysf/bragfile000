@@ -1284,6 +1284,26 @@ else
     fi
 fi
 
+# W4 — a stage marked `status: shipped` has no reflection placeholders left.
+# scripts/archive-spec.sh refuses to archive a SPEC whose reflection still has
+# `<answer>` placeholders, and that guard has held since STAGE-004. Stages have
+# no equivalent, because stages are never archived — so STAGE-019 was set to
+# `status: shipped` with its entire Stage-Level Reflection still on template
+# placeholders, and nothing noticed. Same defect class, different artifact.
+w4_bad=""
+for w4_f in projects/*/stages/STAGE-*.md; do
+    [ -f "$w4_f" ] || continue
+    grep -q '^  status: shipped' "$w4_f" || continue
+    if grep -qE '<yes/no \+ notes>|<number vs\. plan>|<one sentence>|<one-line updates>|<one-line items>|^   — <answer>' "$w4_f"; then
+        w4_bad="$w4_bad $(basename "$w4_f")"
+    fi
+done
+if [ -z "$w4_bad" ]; then
+    ok "W4"
+else
+    fail "W4" "shipped stage(s) still carrying reflection placeholders:$w4_bad"
+fi
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

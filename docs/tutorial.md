@@ -986,7 +986,7 @@ see §3 above.
 
 ## 9. Power-user escape hatch
 
-Everything in this tutorial is shipped as of v0.6.0. For corner cases
+Everything in this tutorial is shipped as of v0.6.1. For corner cases
 `brag list` doesn't surface, `sqlite3 ~/.bragfile/db.sqlite` is your
 escape hatch.
 
