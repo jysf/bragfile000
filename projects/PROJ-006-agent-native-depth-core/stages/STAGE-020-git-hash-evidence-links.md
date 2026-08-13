@@ -52,15 +52,30 @@ this work:
 > measured 2026-08-13 — the count grows, the zero is the point).
 
 So the question this stage exists to answer is **not** "how do we support
-evidence links" — they are supported. It is **"why is the free thing not being
-used, and what makes it automatic?"** A month of non-adoption by the tool's own
-author is strong evidence that hand-typing a hash at capture time is friction
-nobody will pay, however cheap it looks written down.
+evidence links" — they are supported.
 
-That has a precedent inside this very repo: `agent:` and `model:` are also just
-tags on the normalized model, and they have **70 and 56 uses** respectively —
-because `brag_add` stamps them, and nobody types them. The gap between 70 and
-zero is not about the tag; it is about who writes it.
+**Corrected at framing review (2026-08-13).** An earlier draft of this section
+diagnosed the zero as "hand-typing a hash is friction nobody will pay." That was
+wrong, and the correction matters because it changes what should be built.
+Checked instead of assumed:
+
+- the MCP `brag_add` tool description — which an agent reads on **every call** —
+  mentions `commit:` **nowhere**;
+- the `/brag` slash command mentions it nowhere;
+- the capture-nudge Stop hook mentions it nowhere *in its prompt* — but
+  `capture-nudge.sh:34` already runs `git rev-parse HEAD` as its "did anything
+  ship" signal, **and then discards the hash**.
+
+So the instruction lives only in BRAG.md, a document an agent reads if it
+happens to, and never at the moment of capture. The experiment "does telling
+agents work?" has **never been run**, and the answer was already sitting in the
+hook's own variable. The zero measures a missing instruction, not a rejected
+one.
+
+That inverts the build order. The first move is to **deliver the instruction
+where capture happens** — tool description, slash command, nudge text — and read
+the adoption number. Stamping machinery is the fallback if that fails, not the
+opening move, and it may not be needed at all.
 
 ## Success Criteria
 
