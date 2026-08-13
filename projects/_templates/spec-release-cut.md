@@ -141,6 +141,16 @@ Gotchas, style preferences, reuse opportunities.
       move. Earned at the v0.6.0 cut, where this was found live (SPEC-076 F4).
 - [ ] CHANGELOG: the `[x.y.z]` dated section is moved out of `[Unreleased]`;
       compare-links repointed.
+- [ ] **Docs state the version being shipped, and describe what it added.**
+      `just test-docs` W3 mechanically pins the two "what version is this"
+      claims (README's `**Status:**` line, the tutorial's "shipped as of"),
+      so this item is about the half a grep cannot check: does the status
+      blurb still describe the product? Both lines said **v0.5.1 through two
+      releases** — v0.5.2 AND v0.6.0 — because the pre-flight checked the
+      CHANGELOG, the plugin pin and the compare-links, but never the prose a
+      reader meets first. Run `just test-docs` for the version numbers; read
+      the README's opening paragraph for whether the release's headline
+      feature is mentioned at all.
 - [ ] Plugin version pin (v0.3.0+): `plugin/.claude-plugin/plugin.json`
       `version` matches the tag.
 - [ ] Behavioral surfaces re-checked on the built artifact (per the §12(b)
