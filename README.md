@@ -103,12 +103,44 @@ For longer narrative entries, `brag add` with no flags opens
 brag add        # → editor opens; fill in the fields, save, quit
 ```
 
-For programmatic capture from a script or AI agent, pipe JSON to
-`brag add --json` (see [`BRAG.md`](BRAG.md)):
+For programmatic capture from a script or AI agent, pipe a single JSON object
+to `brag add --json`. Only `title` is required, and stdout is just the new
+entry's ID, so it composes:
 
 ```bash
-echo '{"title":"…","project":"…"}' | brag add --json
+echo '{"title":"shipped the auth refactor"}' | brag add --json
 ```
+
+All fields, with a heredoc so you do not fight shell quoting:
+
+```bash
+cat <<'EOF' | brag add --json
+{
+  "title": "Cut p99 latency on the auth path",
+  "description": "Replaced the per-request JWKS fetch with a 5-minute in-process cache.",
+  "project": "platform",
+  "type": "ship",
+  "tags": "auth,perf,backend",
+  "impact": "p99 1.8s -> 240ms; unblocked the mobile v3 release"
+}
+EOF
+```
+
+Note `tags` is a **comma-joined string**, not an array (`["auth","perf"]` is
+rejected, naming [DEC-004](decisions/DEC-004-tags-comma-joined-for-mvp.md)).
+Unknown keys are rejected with the offending key named, so a typo like
+`"titl"` fails loudly instead of silently dropping the field.
+
+`brag list --format json` emits the same shape and `id`/`created_at`/
+`updated_at` are ignored on input, so entries round-trip between databases
+with no transform:
+
+```bash
+brag list --format json | jq -c '.[0]' | brag add --json --db /path/to/other.sqlite
+```
+
+Full contract in [`BRAG.md`](BRAG.md); the schema is checked in at
+[`docs/brag-entry.schema.json`](docs/brag-entry.schema.json).
 
 ## Read entries back
 

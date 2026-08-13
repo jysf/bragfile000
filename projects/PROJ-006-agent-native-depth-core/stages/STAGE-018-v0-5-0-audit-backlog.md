@@ -145,6 +145,32 @@ in `guidance/questions.yaml` for the full measurement and reasoning):
 - double-wrapped db-path error.
 - `$EDITOR`-with-spaces handling.
 
+#### Survey against v0.6.0 code (2026-08-12) — read before framing
+
+Checked against shipped code rather than trusting the list. Several items are
+sharper — or differently shaped — than their one-liners suggest, and **two are
+not mechanical fixes at all**. Two remain unverified and are marked as such.
+
+| item | status | what the code actually shows |
+|---|---|---|
+| `mcp_install` atomic write | **real** | `mcp_install.go:210` is a bare `os.WriteFile(target, merged, 0o644)` — no temp+rename, so an interrupted write truncates the user's MCP client config. |
+| double-wrapped db-path error | **real** | `brag --db /nonexistent/x.sqlite list` → `brag: open store: open store: mkdir …`. The prefix is applied twice. |
+| backup-filename collision | **real** | `backupTimeFormat = "20060102T150405Z"` (`storage/backup.go:16`) is second-resolution; two backups in the same second collide on filename. |
+| export-md id-tiebreak | **real** | `export/markdown.go:220` sorts `SliceStable` on `CreatedAt` alone. Equal timestamps fall back to input (DB) order, so output is not deterministic by id. |
+| `search -foo` | **partly done — REFRAME** | The message is already clear: `unknown shorthand flag: 'f' in -foo`. What is wrong is the **exit code — 2 (internal), not 1 (user error)**. A bad flag is user-actionable; `main.go` reserves 2 for internal faults. The remaining fix is exit-code classification, not the message. (`brag search -- -foo` correctly treats it as a query.) |
+| `MergeTags` position dup | **real but COUPLED** | `store.go` step 1 grafts `SELECT ?, s.taggable_type, s.taggable_id, s.position` — it copies src's `position` verbatim, so after a merge an object's tag positions can gap or collide. **Do not fix blind:** what the positions should become depends on the open question `tag-ordering-projection` in `guidance/questions.yaml`. Same coupling shape as the caps/edit-path pair — resolve the question in the same change or explicitly defer. |
+| `$EDITOR` with spaces | **real but a DECISION, not a fix** | `editor/launch.go:76` is `strings.Fields(v)`. That is what makes `EDITOR="code -w"` work, and it is exactly what breaks `EDITOR="/Applications/My Editor/bin/edit"`. The two cannot both work without a quoting rule, so this needs a chosen behaviour (shell-style quoting? try the whole string as a path first?), not a patch. |
+| `brag spark` same-second edge | **UNVERIFIED** | No obvious boundary comparison found in `internal/spark`; needs a targeted read of the window logic before framing. |
+| empty-`type` sentinel | **UNVERIFIED** | `cli/list.go:140` gives *project* a `"-"` sentinel; whether *type* is handled the same way (and where it is not) was not confirmed. |
+
+**Framing consequences.** Five items are genuinely mechanical (`mcp_install`,
+double-wrap, backup collision, id-tiebreak, `search` exit code) and cluster
+cleanly into one small spec — they share nothing but their size, and none needs
+a DEC. The other two verified items should NOT ride along: `MergeTags` waits on
+`tag-ordering-projection`, and `$EDITOR` needs a decision recorded. Two items
+still need a look before anyone commits to a count — "~9 nits" is a list length,
+not a scope estimate.
+
 ### Explicitly out of scope
 - The deeper agent-native pillars (memory / signed provenance / capture
   completeness / benchmark) — separate PROJ-006 stages.
