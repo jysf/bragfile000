@@ -9,7 +9,7 @@
 task:
   id: SPEC-077
   type: story                      # a release cut is a story-sized closing action
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: ship
   blocked: false                   # everything it ships is already on main
   priority: high
   complexity: S                    # S | M | L  (L means split it)
@@ -186,52 +186,84 @@ added two, and v0.6.1 added a third (W3). Evidence gathered before ticking.
 
 ## Build Completion
 
-*Filled in at the end of the **build** cycle, before advancing to verify.*
+**Cut: v0.6.1, tagged at `9a6328a`, published 2026-08-13T23:30:53Z.** Release run
+`31753993895` succeeded; all four platform tarballs plus `checksums.txt`, and
+`jysf/homebrew-tap`'s formula bumped to `version "0.6.1"`.
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
-- **Cut record (one line):** the user-facing outcome now live, plus the clean-
-  upgrade check that confirms the publish landed — the one line a review or brag
-  would quote. E.g. *"v0.4.0→v0.5.0 `brew upgrade` clean; MCP-install now
-  first-class; prod DB opened, 189 entries intact."* If the release is pure infra
-  with no user-facing change, say so — a real, greppable outcome, not a blank.
-  Filled once the tag is published.
-- **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
-- **Deviations from spec:**
-  - [list]
-- **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+### The build-cycle pre-flight items, now tickable
+
+- [x] **Clean upgrade — the finding this cut existed to produce.** `brew upgrade
+      bragfile` moved `0.6.0 -> 0.6.1` cleanly on a real machine. This was the
+      **first ordinary formula→formula upgrade since the cask migration** — the
+      path SPEC-076's F4 identified but could not exercise, because that machine
+      had to cross the cask boundary by hand first. It works, which closes the
+      upgrade-cliff story: the one-time manual migration was the only manual
+      step, and normal upgrades work from here.
+- [x] **Dev/prod DB isolation** — `brag list` and `brag memory` run against the
+      real corpus from the released binary with no migration: the backup
+      directory still holds exactly one sidecar, the v0.2.x one, so no new
+      backup fired. *SPEC-036 auto-backup: N/A-with-reason as predicted at
+      design* — v0.6.1 adds no migration, so the path correctly did not fire.
+      Recorded, not ticked.
+- [x] **Behavioral surfaces on the built artifact** — `brag --version` prints
+      `0.6.1` from the Homebrew binary; `brag memory` returns a 25-entry slice
+      against the live corpus.
+
+### The acceptance criterion that could only be checked after publish
+
+`go install github.com/jysf/bragfile000/cmd/brag@latest` now prints
+**`brag version 0.6.1`**. It printed `dev` for every prior release. The module
+proxy served `v0.6.1` and `resolveVersion` recovered it from the embedded build
+info — the whole point of the change, verified end-to-end through the real
+proxy rather than a unit test.
+
+### Deviations
+
+None. The distribution mechanism was unchanged, no RC was cut, and the
+pre-flight's design-time answers all held at build.
 
 ### Build-phase reflection (3 questions, short answers)
 
-Process-focused: how did the build go? What friction did the spec create?
+1. **What surprised you?** How boring it was. The v0.6.0 cut produced four
+   defects, three of them in the checklist itself; this one produced none —
+   because those four were fixed. W1/W2/W3 were green before the cut instead of
+   being discovered during it, and the one item that could have moved
+   (package-manager policy) was re-run rather than inherited, which is the only
+   reason we noticed Homebrew had gone 6.0.15 → 6.0.17 underneath us.
 
-1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+2. **What was harder than expected?** Nothing in the cut. The genuinely awkward
+   part was the *bookkeeping around* it: this spec sat in `design` while the
+   release was already live, which is the same shape as STAGE-019 being marked
+   `shipped` with an empty reflection. W4 catches that for stages; nothing
+   catches it for a shipped-but-unarchived release spec.
 
-2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
-
-3. **If you did this task again, what would you do differently?**
-   — <answer>
-
----
+3. **What would you tell the next implementer?** The pre-flight is now worth
+   trusting, but only because it was audited. Two items are N/A-with-reason
+   rather than ticked, and that should stay normal — a checklist with every box
+   ticked is indistinguishable from one nobody read.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle. Outcome-focused reflection, distinct
-from the process-focused build reflection above.*
-
 1. **What would I do differently next time?**
-   — <answer>
+   — Close the release spec in the same motion as the tag. v0.6.1 was live and
+   verified while SPEC-077 still read `cycle: design`, and it took a direct
+   question to surface it. The pattern is now visible twice in three days
+   (STAGE-019's empty reflection, this spec's stale cycle), and both times the
+   artifact was *correct* while its record lagged. Worth a mechanical check:
+   a `[x.y.z]` dated CHANGELOG section whose release-cut spec is not archived
+   is a detectable state.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — No template change. This cut is the evidence that v0.6.0's template repairs
+   worked: the two rewritten items were tickable, the two added items were
+   answerable, and W3 (added at v0.6.1) fired for real during preparation rather
+   than after publish. The pre-flight has now caught something at three
+   consecutive cuts, which is the bar for keeping it.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — No new spec. Two carried items remain unchanged and correctly out of scope:
+   the retired-tap `tap_migrations.json` + archive (runbook committed), and the
+   two audit nits needing decisions (`MergeTags`, `$EDITOR`-with-spaces).
 
 4. **What can a user do now that they couldn't before?** — one sentence,
    before → after; quote the confirming number if one exists, name the outcome
@@ -239,4 +271,12 @@ from the process-focused build reflection above.*
    real, greppable result, not a blank. Pairs with the Cut record above (the
    confirmed publish); this is the line a brag's `impact` field is transcribed
    from.
-   — <answer>
+   — Before, `go install github.com/jysf/bragfile000/cmd/brag@latest` worked but
+   reported `brag version dev`, so a Go-installed user could not tell which
+   build they had; `brag mcp install` could truncate a client config it did not
+   author; a malformed flag exited **2**, the code reserved for internal faults;
+   and `brag export --format markdown` ordered same-second entries by whatever
+   the database returned. Now that path prints **`0.6.1`**, config writes are
+   atomic, a bad flag exits **1**, and export is deterministic — with `brew
+   upgrade` verified working formula→formula for the first time since the cask
+   migration.

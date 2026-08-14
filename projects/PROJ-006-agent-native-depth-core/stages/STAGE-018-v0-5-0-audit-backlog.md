@@ -212,8 +212,14 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       diff. Each fix carries a regression test. **Two items were deliberately
       NOT fixed** and are carried below rather than silently dropped.
 
-**Count:** 2 shipped (SPEC-075 + the audit-nit batch) / 0 active / 0 pending —
-**backlog complete.**
+- [x] SPEC-077 (shipped on 2026-08-13) — the **v0.6.1 release cut** that
+      delivered this stage's work to users. Filed under STAGE-018 because that
+      is what it ships; the stage was already closed on 2026-08-13 when its
+      backlog completed, since unlike STAGE-019 its unit is the audit backlog
+      rather than a release.
+
+**Count:** 3 shipped (SPEC-075, the audit-nit batch, SPEC-077) / 0 active /
+0 pending — **backlog complete.**
 
 ### The two items deliberately carried forward, not dropped
 
