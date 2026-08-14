@@ -7,7 +7,7 @@
 task:
   id: SPEC-078
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: S                    # S | M | L  (L means split it)
@@ -55,7 +55,7 @@ a much cheaper spec:
 
 | surface an agent reads at capture time | mentions evidence links? |
 |---|---|
-| MCP `brag_add` tool `Description` (read on **every** call) | **no** — it is one sentence: *"Capture a new brag entry. Requires a non-empty title."* |
+| MCP `brag_add` tool `Description` (served once via `tools/list`, then present in context for **every** call) | **no** — it is one sentence: *"Capture a new brag entry. Requires a non-empty title."* |
 | `/brag` slash command (`plugin/commands/brag.md`) | **no** |
 | capture-nudge Stop hook prompt (`plugin/hooks/capture-nudge.sh`) | **no** |
 | BRAG.md | yes — a document an agent reads *if it happens to* |
@@ -143,25 +143,31 @@ be stated against that baseline. Verification re-measures rather than assuming.
 
 - **Files modified:** `internal/mcpserver/server.go` (`brag_add` description),
   `plugin/commands/brag.md`, `plugin/hooks/capture-nudge.sh` (nudge text only),
-  `docs/for-ai-agents.md`, and `scripts/test-docs.sh` for the assertions below.
+  `docs/for-ai-agents.md`, `scripts/test-docs.sh` (W5/W6) and
+  `scripts/test-capture-nudge.sh` (H8/H9a/H9b).
+- **Files modified, untracked:** `.claude/skills/brag-capture/SKILL.md` — the
+  FIFTH capture-time surface, found at verify. `.claude/` is gitignored, so this
+  cannot ship as a tracked file; it is local-only and must be applied wherever
+  the measurement will be taken, or LD4's number is uninterpretable.
 - **Files created:** none.
 - **New exports:** none.
 - **Database changes:** none.
 
 ## Acceptance Criteria
 
-- [ ] `brag_add`'s MCP `Description` names the evidence-link convention and the
-      `pr:`-first preference, in the one string an agent reads on every call.
-- [ ] `/brag` and the Stop-hook nudge text both mention it.
-- [ ] `docs/for-ai-agents.md` carries the ref-preference order, matching BRAG.md
+- [x] `brag_add`'s MCP `Description` names the evidence-link convention and the
+      `pr:`-first preference — the one string present in the agent's context for
+      every call.
+- [x] `/brag` and the Stop-hook nudge text both mention it.
+- [x] `docs/for-ai-agents.md` carries the ref-preference order, matching BRAG.md
       rather than paraphrasing it.
-- [ ] **The hook proposes no hash** (LD3) — verified by reading its emitted
+- [x] **The hook proposes no hash** (LD3) — verified by reading its emitted
       text, not just its source.
-- [ ] Nothing about existing entries changes; the hand-typed convention keeps
+- [x] Nothing about existing entries changes; the hand-typed convention keeps
       working identically.
-- [ ] The adoption baseline (0 evidence tags at 2026-08-13) is recorded in this spec's
+- [x] The adoption baseline (0 evidence tags at 2026-08-13) is recorded in this spec's
       Build Completion, with the measuring command, so verification re-runs it.
-- [ ] Full gate set green.
+- [x] Full gate set green.
 
 ## Failing Tests
 
@@ -256,14 +262,37 @@ behaves differently.
 
 ### Deviations from the design
 
-None. LD1 held — nothing was stamped, no schema moved, no validation added.
+**One, and it was not recorded until verify caught it.** The Notes set an
+explicit budget for the `brag_add` description: *"it must stay a description,
+not become a manual. One added clause naming `pr:` and pointing at BRAG.md is
+the whole job."* The build shipped **three added sentences, 421 chars / 71
+words** — about 6× the budget, and 4× the longest sibling description
+(`brag_memory`, 106 chars). It also carried repo-specific squash mechanics to
+every MCP client on earth.
+
+Trimmed at verify to **235 chars / 39 words**: the preference order and the
+BRAG.md pointer, with the mechanics left to BRAG.md where they are already
+conditioned correctly. Still ~2× `brag_memory`, which is defensible for the one
+tool that writes, but no longer a manual.
+
+The related free improvement was taken as the trade: the `tags` **field**
+description now carries a pointer (*"evidence links go here — see the tool
+description"*), which is cheaper than description length and closer to the
+point of use.
+
+LD1 itself held — nothing stamped, no schema moved, no validation added.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What surprised you?** How much of the work was already written. BRAG.md had
-   the full rationale; the job was moving it to where it is read. The `brag_add`
-   description went from 9 words to a sentence — that is the entire
-   highest-leverage change in this spec.
+   the full rationale; the job was moving it to where it is read.
+
+   *(Corrected at verify: this answer originally said the `brag_add` description
+   "went from 9 words to a sentence". It went from 9 words to **71 words across
+   5 sentences** — understating its own change by roughly 6×, in the one
+   sentence describing the spec's highest-leverage edit. Exactly the defect class
+   this stage keeps producing, and exactly why it was over the Notes' budget
+   without anyone noticing. Now 39 words after the verify trim.)*
 
 2. **What was harder than expected?** Proving H9 could fail. Two attempts, and
    the first failure mode was invisible: a mutation that silently did nothing.
@@ -275,4 +304,48 @@ None. LD1 held — nothing was stamped, no schema moved, no validation added.
 
 ## Reflection (Ship)
 
-*Appended during the **ship** cycle.*
+1. **What would I do differently next time?**
+   — Write acceptance criteria that an assertion can actually hold. AC #3 said
+   the agent docs must carry the ref-preference order *"matching BRAG.md rather
+   than paraphrasing it"* — and nothing tested the second half, so the build
+   paraphrased on all four surfaces in four different wordings. That is how the
+   unconditional squash claim reached the two files that ship to other people's
+   repos. **An AC phrased as "matching X rather than paraphrasing it" needs an
+   assertion that compares the two texts, or it is decoration.** W6 also passed
+   on the wrong evidence: its first `pr:` hit is an incidental `--tag pr:151`
+   filtering example, not the preference list, so it would pass on a doc saying
+   *"never use `pr:`"*.
+
+2. **Does any template, constraint, or decision need updating?**
+   — No template change, but one lesson generalises beyond this spec and belongs
+   in the stage record: **a test can be green, have teeth, and still pin the
+   wrong proposition.** H9 asserted "the emitted text contains no hex-ish token",
+   which is not LD3's property. It had teeth (an injected hash failed it) and was
+   still false in production, because a real session id is a UUID whose segments
+   are hex — it stayed green only because the fixture used `session-1`. The
+   mutation check proved the regex catches an *injected* hash; nobody checked
+   what it already caught in the text that was there. Fixed by asserting the
+   precise property (`$HEAD`/`$BASELINE` absent) with the generic sweep demoted
+   to a backstop, and by making the fixture UUID-shaped so the case cannot hide.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — No new spec. But the gate on this stage's second spec needs a **date**, not
+   a condition: "only if adoption stays near zero" with no re-measure window is a
+   gate nobody pulls. Recorded in STAGE-020's backlog as **2026-09-14** (~1 month,
+   ~90 new entries at the observed ~22/week).
+
+4. **What can a user do now that they couldn't before?** — one sentence,
+   before → after; quote the confirming number if one exists, name the outcome
+   if not. Write `none` if this spec has no user-visible outcome — that is a
+   real, greppable result, not a blank. This is the line a brag's `impact` field
+   is transcribed from, and both halves are already written above (## Context is
+   the before, ## Goal is the after): confirm the prediction, don't reconstruct
+   it from memory.
+   — Before, an agent capturing a brag was never told that evidence links exist:
+   the convention worked but appeared at **none** of the five surfaces an agent
+   reads at capture time, and **0 of 363** entries carried one. Now the
+   `brag_add` tool description, `/brag`, the session-end nudge, the agent docs
+   and the capture checklist all say to record `pr:<n>` (or a default-branch
+   `commit:`) — so a claim can be checked by anyone with the repo, and whether
+   instruction alone is enough becomes a measurement due 2026-09-14 rather than
+   an assumption.

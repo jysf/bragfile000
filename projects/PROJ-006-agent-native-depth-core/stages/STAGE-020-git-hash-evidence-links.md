@@ -126,18 +126,31 @@ them. Update status as specs progress.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-078 (verify) — **tell agents to record evidence links.** Instruction
+- [x] SPEC-078 (shipped on 2026-08-14) — **tell agents to record evidence links.** Instruction
       only: the `brag_add` tool description, `/brag`, the Stop-hook nudge text
       and the agent docs. No stamping, no schema, no validation. Runs the
       experiment the zero never tested, and makes adoption measurable against a
       recorded baseline (0 / 361 at 2026-08-13).
-- [ ] (not yet written) — **only if SPEC-078's number stays near zero**: the
+- [ ] (not yet written) — **gated on a measurement due 2026-09-14**, not on a
+      feeling: re-run `brag tags | grep -cE '^(commit|pr|issue):'` then (~1 month
+      and ~90 new entries at the observed ~22/week). Write this spec only if the
+      number is still at or near zero. A gate with no date is a gate nobody
+      pulls. If adoption moved, drop it and say so. The
       stamping path + reserved-prefix promotion, and the decision about WHICH
       commit that requires. Deliberately gated on evidence rather than
       scheduled.
 - [ ] (not yet written) — the verification surface (`brag verify`-shaped).
 
-**Count:** 0 shipped / 1 active (SPEC-078) / 2 pending
+**Count:** 1 shipped (SPEC-078) / 0 active / 2 pending
+
+> **The stage stays `active`.** SPEC-078 meets one of the six Success Criteria
+> substantively (adoption is measurable) and two vacuously by having changed
+> nothing; the three about stamping and verification are deferred by LD1. The
+> criteria are deliberately NOT rewritten around the instruction-first approach —
+> that would retro-fit the goalposts to the spec that just shipped and erase the
+> framing correction that explains why the expensive spec is second. They stay
+> the standard this stage is still trying to meet, and the 2026-09-14
+> measurement decides whether specs 2 and 3 get written or dropped.
 
 > **Ordering note.** The expensive spec is second on purpose. If instruction
 > moves adoption, most of the stamping work is unnecessary — and stamping

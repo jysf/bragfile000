@@ -86,7 +86,7 @@ run_hook() {
 
 # ===== H1 — first Stop of a session: baseline recorded, silent =====
 
-SID1="session-1"
+SID1="d838146a-116c-4021-9099-892972ca5c5a"  # UUID-shaped: a short id hid the H9 bug
 out=$(run_hook "$SID1" "$REPO")
 if [ -z "$out" ]; then
     ok "H1"
@@ -118,6 +118,11 @@ else
     fail "H3" "expected valid hookSpecificOutput nudge, got: $out"
 fi
 
+# The two hashes the hook actually holds at nudge time: BASELINE (stored on the
+# first Stop) and HEAD (read fresh). H9a asserts neither reaches the output.
+HEAD_SHA=$(git -C "$REPO" rev-parse HEAD)
+BASE_SHA=$(sed -n 's/^baseline=//p' "$BRAG_STATE_DIR"/*"$SID1"* 2>/dev/null | head -1 || true)
+
 # ===== H8 — the nudge tells the agent to record an evidence link =====
 #
 # SPEC-078 LD1: the instruction has to reach the moment of capture. Before this,
@@ -138,15 +143,37 @@ fi
 # when its hashes are least likely to survive. Emitting one would manufacture
 # unverifiable evidence automatically, at scale.
 #
-# NOTE: this assertion is weak on its own — it passed trivially while the nudge
-# said nothing at all. It is only meaningful because it was verified to FAIL
-# against a hash-injected variant of the hook before being trusted.
+# TWO ASSERTIONS, and the order matters.
+#
+# H9a is the PRECISE property: the two hashes the hook actually holds must not
+# appear. H9b is a generic backstop for any other hash-shaped token.
+#
+# The first version of this test had only the generic sweep, and it was WRONG
+# in a way that passed: it asserted "no hex-ish token", which is not the LD3
+# property, and the hook violates it on every real invocation — the nudge
+# interpolates the session id, and a real Claude Code session id is a UUID whose
+# segments are hex. It stayed green only because the fixture used the toy id
+# "session-1". Verified against a real UUID, the old assertion found
+# "d838146a" and "892972ca5c5a" and would have failed a correctly-behaving
+# hook. So: the fixture is now UUID-shaped so the case cannot hide again, and
+# the session id is scrubbed before the backstop runs.
 
-hashes=$(printf '%s' "$ctx" | grep -oE '\b[0-9a-f]{7,40}\b' || true)
-if [ -z "$hashes" ]; then
-    ok "H9"
+if printf '%s' "$ctx" | grep -qF "$HEAD_SHA"; then
+    fail "H9a" "nudge leaked HEAD ($HEAD_SHA) — LD3 forbids proposing a hash the hook holds"
+elif [ -n "$BASE_SHA" ] && printf '%s' "$ctx" | grep -qF "$BASE_SHA"; then
+    fail "H9a" "nudge leaked BASELINE ($BASE_SHA) — LD3 forbids proposing a hash the hook holds"
 else
-    fail "H9" "nudge must not propose a commit hash (LD3); found: $hashes"
+    ok "H9a"
+fi
+
+# Backstop: any OTHER hash-shaped token, with the session id removed first
+# (it is legitimately present and legitimately hex-segmented).
+scrubbed=$(printf '%s' "$ctx" | sed "s/$SID1//g")
+hashes=$(printf '%s' "$scrubbed" | grep -oE '\b[0-9a-f]{7,40}\b' || true)
+if [ -z "$hashes" ]; then
+    ok "H9b"
+else
+    fail "H9b" "nudge contains an unexpected hash-shaped token (LD3): $hashes"
 fi
 
 # ===== H4 — another Stop after the nudge: silent (once per session) =====
