@@ -991,6 +991,61 @@ emission, not pinned). Substrate ready: polymorphic tags + first-class projects
 
 ---
 
+## `brag project goto` + `brag shell-init` — jump to a project's directory
+
+**Source:** SPEC-070, drafted 2026-07-16 as an ergonomics candidate. Deferred
+2026-08-13 by the author — "just nice to have". The spec file was deleted in the
+same change; everything load-bearing is preserved below.
+
+**Why deferred:** `priority: low`, and it never belonged to a stage — its
+front-matter carried the literal placeholder `stage: STAGE-XXX` for four weeks,
+so it was dangling in PROJ-006 by accident rather than by plan. It is navigation
+ergonomics; PROJ-006 is agent-native depth. Nothing depends on it and nothing it
+would touch is changing.
+
+**Trigger to revisit:** you find yourself `cd`-ing to project directories by
+hand often enough to be annoyed — the same itch `zoxide`/`autojump` scratch. If
+that never happens, this is correctly dead.
+
+### The design, so it need not be re-derived
+
+`brag project here` already does cwd → project (`ProjectForPath`, SPEC-031).
+This is the forward move: **name → directory, then cd there.** The synergy is
+real rather than keystroke-saving: `brag add` auto-fills `--project` from cwd
+inside a registered location (SPEC-032), so jumping into a project's directory
+is also jumping into the place where capture auto-tags itself.
+
+**The one real constraint, and why this is a spec rather than a one-liner:** a
+subprocess cannot change its parent shell's cwd. `brag project goto foo` runs as
+a child, changes its own cwd, exits, and the shell stays put. The established
+fix (zoxide, autojump, `z` all do this) is two parts:
+
+1. a command that **emits the resolved path** to stdout and nothing else, and
+2. a tiny shell function (`bragcd`) running `cd "$(brag project goto …)"`,
+   shipped via `brag shell-init <zsh|bash|fish>` — the same family as
+   `brag completion` (SPEC-024), whose script-generation shape it should mirror.
+
+Making `goto` literally `cd` would silently no-op and confuse everyone. The
+value is the resolver plus the wrapper, not the trap.
+
+**Shape:** read-only over existing schema. No migration, no new dependency.
+Reads `GetProjectByName` (hydrates `Locations`) with a `GetProject` id fallback;
+`runProjectHere` is the nearest analog for the store-open + resolve shape.
+
+**The open decision it was going to emit — DEC-041, "multi-location primary
+policy".** A project can have many locations (`project_locations`, one-to-many,
+DEC-017/019/020), so `goto` must pick one. The draft assumed
+**first-registered = primary**, which is a real choice, not an obvious one, and
+it is the reason this needed a DEC at all.
+
+> ⚠️ **`DEC-041` is reserved and unwritten.** The decisions directory therefore
+> has a genuine gap between `DEC-040` and `DEC-042`. That gap is this item. Do
+> not reuse the number for anything else; if this is ever built, it takes
+> `DEC-041`, and if it is deleted outright, say so here so the gap stops being
+> a mystery.
+
+---
+
 ## Removed / delivered — keep the list honest
 
 *When an item is pulled into a stage and ships, list it here with
