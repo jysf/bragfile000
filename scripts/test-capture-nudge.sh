@@ -118,6 +118,37 @@ else
     fail "H3" "expected valid hookSpecificOutput nudge, got: $out"
 fi
 
+# ===== H8 — the nudge tells the agent to record an evidence link =====
+#
+# SPEC-078 LD1: the instruction has to reach the moment of capture. Before this,
+# `commit:` appeared only in BRAG.md — never in the tool description, /brag, or
+# here — and adoption was zero across the whole corpus.
+
+if printf '%s' "$ctx" | grep -q 'pr:'; then
+    ok "H8"
+else
+    fail "H8" "nudge should tell the agent to record an evidence link (pr:/commit:); got: $ctx"
+fi
+
+# ===== H9 — the nudge proposes NO commit hash (SPEC-078 LD3) =====
+#
+# The hook knows BASELINE and HEAD, so it knows every commit from the session —
+# and must not suggest them. Under squash-merge those are branch commits about
+# to be rewritten and orphaned, so the moment the hook knows most is exactly
+# when its hashes are least likely to survive. Emitting one would manufacture
+# unverifiable evidence automatically, at scale.
+#
+# NOTE: this assertion is weak on its own — it passed trivially while the nudge
+# said nothing at all. It is only meaningful because it was verified to FAIL
+# against a hash-injected variant of the hook before being trusted.
+
+hashes=$(printf '%s' "$ctx" | grep -oE '\b[0-9a-f]{7,40}\b' || true)
+if [ -z "$hashes" ]; then
+    ok "H9"
+else
+    fail "H9" "nudge must not propose a commit hash (LD3); found: $hashes"
+fi
+
 # ===== H4 — another Stop after the nudge: silent (once per session) =====
 
 out=$(run_hook "$SID1" "$REPO")

@@ -219,6 +219,38 @@ author-provenance, so an entry carrying only those still classifies as
 `human`. Query any of them with the normal filters, e.g.
 `brag list --tag model:claude-opus-4-8`. See DEC-024 and DEC-027.
 
+### Evidence links — make the claim checkable
+
+The tags above are **self-reported**: bragfile says an agent wrote this, and a
+reader either trusts the record or doesn't. An evidence link is different — it
+is **self-attesting**, because the proof lives outside the corpus and anyone
+with the repo can check it.
+
+There is no new parameter. An evidence link is an ordinary tag you include in
+`tags`, so it filters and counts like any other (`brag list --tag pr:151`).
+
+**Record them in this order of preference:**
+
+1. **`pr:<number>`** — the work went through a pull request. Prefer this.
+2. **`commit:<hash>`** — the hash **on the default branch**, when there is no
+   PR or you specifically mean one commit.
+3. **Several `commit:` tags** — genuinely independent commits with no PR tying
+   them together.
+
+**Do not record the branch hash you have while working.** Under a squash-merge
+workflow the branch commit is replaced by a new one on the default branch and
+then orphaned by branch deletion — so it resolves for nobody, including in a
+fresh clone. At capture time the proving commit frequently does not exist yet,
+which is exactly why `pr:` is preferred: a PR number is known as soon as the PR
+is opened and survives squash, rebase and branch deletion.
+
+**Never record a range** (`commit:abc..def`) — it is not a git object, so
+nothing can verify it, and it breaks `--tag`, which matches exactly.
+
+**When in doubt, record nothing.** A hash that does not resolve is worse than an
+absent one, because it reads as evidence and silently is not. Full rationale in
+[`BRAG.md`](../BRAG.md).
+
 ## 7. Choosing the database
 
 The server reads and writes the same database the CLI resolves, in this order

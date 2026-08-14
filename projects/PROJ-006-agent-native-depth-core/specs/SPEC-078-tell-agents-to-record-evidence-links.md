@@ -7,7 +7,7 @@
 task:
   id: SPEC-078
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: high
   complexity: S                    # S | M | L  (L means split it)
@@ -206,8 +206,68 @@ because that knowledge is a trap, not an asset, under squash-merge.
 
 ## Build Completion
 
-*Filled in during the **build** cycle. Must record the adoption baseline and the
-exact command used to measure it (LD4).*
+**Four surfaces changed, no code behaviour touched.**
+
+| surface | change |
+|---|---|
+| `internal/mcpserver/server.go` | `brag_add`'s `Description` — the string an agent reads on **every** call — now names the evidence-link convention and the `pr:`-first order |
+| `plugin/commands/brag.md` | `/brag` carries the same guidance, next to the existing `agent:`/`model:` instruction |
+| `plugin/hooks/capture-nudge.sh` | nudge text only; the firing logic is untouched |
+| `docs/for-ai-agents.md` | new §6 subsection with the full preference order and the squash rationale |
+
+### Adoption baseline (LD4)
+
+Measured at build, with the command verification must re-run:
+
+```bash
+brag tags | grep -cE '^(commit|pr|issue):'      # → 0
+```
+
+**0 evidence tags**, corpus 363 entries, 2026-08-13. For contrast on the same
+corpus and the same tag mechanism: `agent:claude-code` **70**,
+`model:claude-opus-4-8` **56** — stamped, never typed. That contrast is the
+spec's whole premise, and the number to beat is any value above zero.
+
+### The LD3 test needed its own mutation check, and the first one was wrong
+
+H9 asserts the nudge proposes no commit hash. It passed before any change was
+made — trivially, because the nudge said nothing — so the spec required proving
+it could fail before trusting it.
+
+The **first** mutation was invalid: injecting `$HEAD` into the nudge string
+changed nothing, because that text lives inside a single-quoted `jq` program
+where `$HEAD` is literal. H9 stayed green and briefly looked toothless when in
+fact the mutation had not happened. Re-done the way the hook actually
+interpolates — `--arg head "$HEAD"` plus `\(\$head)`, matching how
+`session:` is already threaded — H9 failed correctly:
+
+```
+FAIL: H9: nudge must not propose a commit hash (LD3); found: ff626df772f3be…
+```
+
+Worth recording because it is a new variant of this stage's recurring lesson: a
+mutation that does not actually mutate produces the same green as a test with no
+teeth, and the two are indistinguishable unless you check that the mutant
+behaves differently.
+
+### Deviations from the design
+
+None. LD1 held — nothing was stamped, no schema moved, no validation added.
+
+### Build-phase reflection (3 questions, short answers)
+
+1. **What surprised you?** How much of the work was already written. BRAG.md had
+   the full rationale; the job was moving it to where it is read. The `brag_add`
+   description went from 9 words to a sentence — that is the entire
+   highest-leverage change in this spec.
+
+2. **What was harder than expected?** Proving H9 could fail. Two attempts, and
+   the first failure mode was invisible: a mutation that silently did nothing.
+
+3. **What would you tell the next implementer?** Do not add stamping until the
+   baseline is re-measured. The whole design rests on the claim that instruction
+   was never delivered — if adoption moves, the expensive spec is unnecessary,
+   and if it does not, that is a *measured* result rather than an assumption.
 
 ## Reflection (Ship)
 

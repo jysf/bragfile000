@@ -1304,6 +1304,27 @@ else
     fail "W4" "shipped stage(s) still carrying reflection placeholders:$w4_bad"
 fi
 
+# W5 — brag_add's MCP tool description tells the agent about evidence links.
+# SPEC-078 LD1/LD2. This is the single highest-leverage string in the project:
+# it is read on EVERY tool call by the agent that authors most of the corpus.
+# It said nothing about evidence links while adoption sat at zero.
+if grep -A 1 'Name:        "brag_add"' internal/mcpserver/server.go | grep -q 'pr:'; then
+    ok "W5"
+else
+    fail "W5" "brag_add's Description must name the evidence-link convention (pr:/commit:)"
+fi
+
+# W6 — the agent-facing docs carry the ref-preference ORDER, not just a mention.
+# pr: must be recommended ahead of commit:, because a squash-merge orphans the
+# branch commit an agent would otherwise record (BRAG.md documents the case).
+w6_pr=$(grep -n 'pr:' docs/for-ai-agents.md | head -1 | cut -d: -f1)
+w6_commit=$(grep -n 'commit:' docs/for-ai-agents.md | head -1 | cut -d: -f1)
+if [ -n "$w6_pr" ] && [ -n "$w6_commit" ] && [ "$w6_pr" -lt "$w6_commit" ]; then
+    ok "W6"
+else
+    fail "W6" "docs/for-ai-agents.md must name pr: BEFORE commit: (pr=${w6_pr:-none} commit=${w6_commit:-none})"
+fi
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

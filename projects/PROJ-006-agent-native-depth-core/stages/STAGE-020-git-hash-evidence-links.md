@@ -126,7 +126,7 @@ them. Update status as specs progress.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-078 (design) — **tell agents to record evidence links.** Instruction
+- [ ] SPEC-078 (verify) — **tell agents to record evidence links.** Instruction
       only: the `brag_add` tool description, `/brag`, the Stop-hook nudge text
       and the agent docs. No stamping, no schema, no validation. Runs the
       experiment the zero never tested, and makes adoption measurable against a

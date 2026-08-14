@@ -36,7 +36,7 @@ func New(s *storage.Store) *mcp.Server {
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "brag_add",
-		Description: "Capture a new brag entry. Requires a non-empty title.",
+		Description: "Capture a new brag entry. Requires a non-empty title. If the work has a proving artifact, add an evidence link as a tag so the claim is checkable: prefer `pr:<number>`, else `commit:<hash on the default branch>` — a squash-merge orphans the branch commit you had while working, so a hash captured mid-session often resolves for nobody. Never a range, and record nothing rather than a hash you cannot confirm. See BRAG.md.",
 	}, handleAdd(s))
 
 	mcp.AddTool(srv, &mcp.Tool{
