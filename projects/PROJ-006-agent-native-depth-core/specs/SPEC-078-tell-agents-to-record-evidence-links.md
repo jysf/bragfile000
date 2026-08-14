@@ -45,7 +45,9 @@ and `brag tags` already counts it. BRAG.md documents it, with a worked example
 and the argument for why it is worth the habit.
 
 **It has never been used. Zero `commit:`, `pr:` or `issue:` tags across the
-whole corpus** (361 entries, measured 2026-08-13).
+whole corpus** (361 entries when this was written, 363 when re-measured at
+build the same day — the corpus grows continuously, which is why the ZERO is
+the figure that matters and the count is only context).
 
 STAGE-020's first framing read that zero as friction — hand-typing a hash is
 work nobody will do. That was wrong, and checking rather than assuming produced
@@ -131,7 +133,9 @@ propose a hash it happens to know.
 
 ### LD4 — Adoption is the deliverable, so the baseline goes in the record.
 
-Zero of 361 at 2026-08-13. The spec is not "done" because the words shipped;
+Zero at 2026-08-13, against a corpus of 361→363 the same day. The count is
+incidental and moves; the zero is the claim. The spec is not "done" because the
+words shipped;
 it is answerable when the share of *new* entries carrying an evidence link can
 be stated against that baseline. Verification re-measures rather than assuming.
 
@@ -155,7 +159,7 @@ be stated against that baseline. Verification re-measures rather than assuming.
       text, not just its source.
 - [ ] Nothing about existing entries changes; the hand-typed convention keeps
       working identically.
-- [ ] The adoption baseline (0 / 361 at 2026-08-13) is recorded in this spec's
+- [ ] The adoption baseline (0 evidence tags at 2026-08-13) is recorded in this spec's
       Build Completion, with the measuring command, so verification re-runs it.
 - [ ] Full gate set green.
 
