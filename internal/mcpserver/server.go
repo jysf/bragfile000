@@ -36,7 +36,7 @@ func New(s *storage.Store) *mcp.Server {
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name:        "brag_add",
-		Description: "Capture a new brag entry. Requires a non-empty title.",
+		Description: "Capture a new brag entry. Requires a non-empty title. If the work has a proving artifact, add an evidence link tag — prefer `pr:<number>`, else `commit:<hash on the default branch>`; never a branch hash you cannot confirm. See BRAG.md.",
 	}, handleAdd(s))
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -71,7 +71,7 @@ func New(s *storage.Store) *mcp.Server {
 type addIn struct {
 	Title       string `json:"title" jsonschema:"the entry title (required, non-empty)"`
 	Description string `json:"description,omitempty"`
-	Tags        string `json:"tags,omitempty" jsonschema:"comma-joined tag list (DEC-004)"`
+	Tags        string `json:"tags,omitempty" jsonschema:"comma-joined tag list (DEC-004); evidence links go here — see the tool description"`
 	Project     string `json:"project,omitempty"`
 	Type        string `json:"type,omitempty"`
 	Impact      string `json:"impact,omitempty"`
