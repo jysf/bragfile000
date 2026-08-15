@@ -1046,6 +1046,44 @@ it is the reason this needed a DEC at all.
 
 ---
 
+## ⏱ DATED: re-measure evidence-link adoption — 2026-09-14 or +50 entries
+
+**Source:** SPEC-078 (shipped 2026-08-14), LD4. Parked here because PROJ-006
+closed and STAGE-020 went `on_hold` — this is the one item with a *date* on it,
+and a dated item inside a closed project is a dated item nobody reads.
+
+**The measurement:**
+
+```bash
+brag tags | grep -cE '^(commit|pr|issue):'
+```
+
+**Baseline: 0**, against a corpus of 363 (2026-08-13). Every entry then predated
+the instruction, so zero was expected and meant nothing yet.
+
+**When:** 2026-09-14 **or** once ~50 entries have landed since 2026-08-14,
+**whichever is later**. The count is the real trigger; the date is the earliest
+it can fire. Measured capture rate is bursty — 20 entries in one week, 75 over
+four — so a date-only gate risks reading the number off a quiet fortnight and
+concluding instruction failed when it was never tested.
+
+**What it decides:**
+
+- **Above zero** → instruction worked. STAGE-020's stamping spec is unnecessary
+  and should be **dropped, saying so explicitly**; the stage then closes as a
+  scope reduction. This also shrinks the signed-provenance pillar, since
+  self-attesting evidence would be covering the need it was meant to serve.
+- **Still ~zero** → instruction alone does not work, and that is the *earned*
+  justification for building automatic stamping — with the hard question
+  (WHICH commit; see STAGE-020's Design Notes and SPEC-078's LD3) still to
+  answer.
+
+**Why it is worth waiting for:** SPEC-078 spent a doc change instead of a
+subsystem specifically to find this out. Building the stamping path without this
+number would discard the only evidence the cheap spec was bought to produce.
+
+---
+
 ## Removed / delivered — keep the list honest
 
 *When an item is pulled into a stage and ships, list it here with

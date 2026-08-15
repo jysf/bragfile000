@@ -4,7 +4,7 @@
 
 project:
   id: PROJ-006
-  status: active
+  status: shipped
   # activity = the type of work currently active within the project. The coarse
   # `status` (active/shipped/archived) is what tooling keys on; `activity` is the
   # human-facing detail. Suggested vocabulary (extend as needed):
@@ -31,7 +31,7 @@ roadmap:
     resume_when: "wanting a report that shows the arc (foundation -> payoff), not a flat win-list"
 
 created_at: 2026-07-10
-shipped_at: null
+shipped_at: 2026-08-14
 ---
 
 # PROJ-006: Agent-Native Depth — Memory, Trust & Completeness
@@ -256,12 +256,58 @@ same-second collision; empty-`type` sentinel; export-md sort id-tiebreak;
 
 ## Project-Level Reflection
 
-*Filled in when status moves to shipped.*
+*Shipped 2026-08-12 as v0.6.0 and 2026-08-13 as v0.6.1.*
 
-- **Did we deliver the outcome in "What This Project Is"?** <yes/no + notes>
-- **How many stages did it actually take?** <number, compare to plan>
-- **What changed between starting and shipping?** <one or two sentences>
+**Closed 2026-08-14 as a SCOPE REDUCTION, not a completion.** Say this plainly,
+because the numbers below do not otherwise read that way.
+
+- **Did we deliver the outcome in "What This Project Is"?** **Partly — one of
+  three, and the third barely started.** The stated identity was making the
+  corpus *trustworthy, complete, and consulted*.
+  - **Consulted — YES, fully.** `brag memory` plus the MCP push surface shipped
+    in v0.6.0. An agent auto-loads a ranked, token-budgeted slice with no tool
+    call. This was the project's #1 pillar and it landed as designed.
+  - **Trustworthy — PARTLY.** Evidence links are now instructed at all five
+    capture surfaces (SPEC-078), but nothing is stamped, nothing is validated,
+    and there is no verification surface. Signed provenance was never started.
+  - **Complete — NO.** No staging inbox, no git-import cold-start miner. The
+    pillar was never framed.
+
+- **How many stages did it actually take?** **Four against a plan of "four
+  candidate deeper pillars plus a parking lot"** — but the mapping is not what
+  the plan predicted. STAGE-017 (ergonomics opener) and STAGE-018 (the audit
+  backlog) were never deep pillars; STAGE-019 delivered pillar #1 entire;
+  STAGE-020 opened pillar #3's cheapest slice and is `on_hold`. So: one deep
+  pillar shipped, one opened, two never framed.
+
+- **What changed between starting and shipping?** The brief predicted the work
+  was "build read-side MCP" and was wrong by a wide margin — the read tools had
+  already shipped in v0.3.0/v0.5.0, so the actual work was a blended ranking
+  algorithm and a push surface. And twice, a pillar's cost collapsed on
+  inspection: STAGE-020's expensive stamping subsystem turned out to be gated on
+  a doc change nobody had tried.
+
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
+  - **A derived decision inherits its inputs' credibility.** DEC-044 derived a
+    whole budget model from caps nobody had ever justified, so the model was
+    wrong downstream of a number no one could defend. Re-derive in the same
+    change; do not patch the number.
+  - **A capability nobody uses is not a win.** `commit:` worked for a month with
+    zero uses. Measuring adoption, not shipping capability, is what turned an
+    expensive stamping stage into a doc change plus a dated measurement.
+  - **Fixture statistics are not corpus statistics**, and **a prose claim about
+    what a test pins is aspirational until mutation-checked** — both promoted
+    from STAGE-019, and both recurred after being written down, which is the
+    strongest argument for mechanising them rather than remembering them.
+  - *(Actioned already: `test-docs` W1–W4 and the release pre-flight repairs
+    replaced four previously-remembered checks with mechanical ones.)*
+
 - **What did we defer to the next project?**
-  - <one-line items>
+  - **Signed / attestable provenance** — never framed. Note its scope may now be
+    smaller: if self-attesting evidence links land, signing has less to do.
+  - **Capture completeness** — the inbox and the git-import miner, never framed.
+  - **Agent/model benchmark** — never framed; was gated on trust being real.
+  - **Narrative / story surface v2** — never framed; still needs a home
+    (PROJ-007 or a new project).
+  - **STAGE-020's remaining two specs** — `on_hold`, gated on a dated
+    measurement now parked in `PROJ-001/backlog.md` so it survives this closure.
