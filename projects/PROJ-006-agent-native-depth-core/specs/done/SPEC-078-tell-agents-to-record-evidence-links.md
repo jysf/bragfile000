@@ -334,6 +334,33 @@ LD1 itself held — nothing stamped, no schema moved, no validation added.
    gate nobody pulls. Recorded in STAGE-020's backlog as **2026-09-14** (~1 month,
    ~90 new entries at the observed ~22/week).
 
+### Post-ship spot-check of the punch-list delta (2026-08-14)
+
+The punch-list fixes were applied and shipped by the same agent that wrote the
+build, without the delta re-verify SPEC-075 established as the pattern. A
+targeted self-check was run afterwards rather than a full fresh-eyes pass, on
+the judgement that this delta was smaller and its riskiest part (H9a/H9b) had
+been mutation-checked in both directions. Findings:
+
+- The trimmed `brag_add` description still carries all four things LD2 requires
+  — `pr:<number>`, `commit:<hash on the default branch>`, "cannot confirm", and
+  the BRAG.md pointer. The trim removed rationale, not content.
+- H9b's session-id scrub is sound: the nudge interpolates the id once, and the
+  `sed` uses `/g` regardless.
+- All five surfaces now condition the squash claim. BRAG.md and
+  `docs/for-ai-agents.md` were already correct, as verify reported.
+
+**The check found nothing wrong with the delta — but it reproduced a documented
+failure mode while running.** Grepping for the literal `Under a squash-merge
+workflow` returned EMPTY for both BRAG.md and `docs/for-ai-agents.md`, which
+briefly read as "these two surfaces are unconditioned after all". They were
+fine: `for-ai-agents.md:240` line-wraps the phrase across `Under a squash-merge`
+/ `workflow`. That is exactly SPEC-074's third leak mode — *a line-wrap
+splitting the phrase across source lines* — recurring in the very check meant to
+confirm the fix for a finding about paraphrase drift. It cost about a minute
+because the next move was to read the passage rather than trust the empty
+result, which is the only reason it did not become a false correction.
+
 4. **What can a user do now that they couldn't before?** — one sentence,
    before → after; quote the confirming number if one exists, name the outcome
    if not. Write `none` if this spec has no user-visible outcome — that is a
