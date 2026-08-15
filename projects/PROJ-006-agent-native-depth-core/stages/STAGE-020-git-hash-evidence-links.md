@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-020                     # stable, zero-padded, repo-global (never reused)
-  status: active                    # proposed | active | shipped | cancelled | on_hold
+  status: on_hold                   # proposed | active | shipped | cancelled | on_hold
   priority: high                    # critical | high | medium | low
   target_complete: null
 
@@ -143,7 +143,24 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
 **Count:** 1 shipped (SPEC-078) / 0 active / 2 pending
 
-> **The stage stays `active`.** SPEC-078 meets one of the six Success Criteria
+> **`on_hold` as of 2026-08-14, when PROJ-006 closed.** Not shipped — it meets
+> one of six Success Criteria substantively — and not cancelled, because the
+> question it exists to answer is live and dated. It is PAUSED, and the pause
+> has a specific end condition (below). The stage survives its parent project's
+> closure deliberately: PROJ-006 was closed as a scope reduction, and this is
+> the scope that was reduced.
+>
+> **Re-measure at 2026-09-14 OR once ~50 new entries have landed, whichever is
+> LATER.** The original gate said "~1 month, ~90 new entries at ~22/week"; that
+> rate was taken from a busy stretch and does not hold. Measured 2026-08-14:
+> 20 entries in the last 1w, 20 in the last 2w, 31 in 3w, 75 in 4w — bursty and
+> project-shaped, not a weekly cadence. A date alone could read the number off a
+> quiet fortnight and wrongly conclude instruction failed, so the COUNT is the
+> real trigger and the date is the earliest it can fire.
+>
+> Original note follows.
+>
+> **The stage was `active`.** SPEC-078 meets one of the six Success Criteria
 > substantively (adoption is measurable) and two vacuously by having changed
 > nothing; the three about stamping and verification are deferred by LD1. The
 > criteria are deliberately NOT rewritten around the instruction-first approach —
