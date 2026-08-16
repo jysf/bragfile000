@@ -509,7 +509,7 @@ Stage Ship prompt.
 ## 13. Session Hygiene (claude-only specific)
 
 Because one agent plays multiple roles, context contamination is a real
-risk. Four habits keep it at bay:
+risk. Five habits keep it at bay:
 
 1. **New session per cycle where possible.** Especially design → build
    and build → verify.
@@ -518,6 +518,17 @@ risk. Four habits keep it at bay:
 3. **Weekly review is non-optional.** Without a second agent pushing
    back, drift compounds silently. Run `just weekly-review`.
 4. **Honest confidence values on decisions.** See Section 14.
+5. **Read the corpus before you start work.** Run
+   `brag memory --project bragfile` at the top of a session. It is prior
+   context — decisions already made, approaches already rejected, problems
+   already solved. Do not re-derive what it tells you. **This is an
+   instruction because it does not happen on its own:** the `brag://`
+   resources exist so an MCP client *can* auto-load the slice with no tool
+   call, but Claude Code surfaces resources for `@`-mention rather than
+   injecting them, so in practice nothing loads the corpus unless a session
+   is told to. Verified 2026-08-15 by inspecting a live session's context.
+   If a client ever does auto-load it, this habit becomes redundant rather
+   than wrong.
 
 ---
 
