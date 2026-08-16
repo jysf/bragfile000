@@ -4,7 +4,7 @@
 
 project:
   id: PROJ-007
-  status: proposed                  # proposed | active | shipped | cancelled
+  status: active
   priority: medium
   target_ship: null
 
@@ -12,15 +12,21 @@ repo:
   id: bragfile
 
 created_at: 2026-08-07
+activated_at: 2026-08-15
 shipped_at: null
 ---
 
 # PROJ-007: Quality, Performance & Portfolio Readiness
 
-> **CANDIDATE — proposed, not opened.** Captured 2026-08-07 while PROJ-006 is the
-> active project. This exists so the idea is on record; it is not committed work.
-> Open it after PROJ-006's depth pillars land (or when portfolio-readiness itself
-> becomes the priority). Treat everything below as scope input, not a plan.
+> **OPENED 2026-08-15**, after PROJ-006 closed as a scope reduction. Captured as
+> a candidate 2026-08-07; the scope below has been narrowed at framing, not
+> adopted wholesale — see **Stage Plan** for what was cut and where it went.
+>
+> **Deliberately kept short.** PROJ-007 is a two-stage quality-and-legibility
+> pass, not a wave. The feature work it might have absorbed lives in
+> **PROJ-008** (the mirror, `brag learn`, story-surface v2); the scale/perf
+> harness and the crustyimg methodology harvest live in **PROJ-009**. The point
+> of the short scope is room for what comes up.
 
 ## What This Project Is
 
@@ -83,11 +89,41 @@ standard signals a reviewer greps for are missing (verified in code 2026-08-07):
 
 ## Stage Plan
 
-*Proposed, not framed. Sequence/split at framing.*
-- [ ] (STAGE-A?) — lint + coverage in CI (golangci-lint config, `-cover`, badge).
-- [ ] (STAGE-B?) — discipline-surfacing docs (engineering-practices section +
-      godoc pass).
-- [ ] (STAGE-C?) — scale/perf + concurrency baseline harness (time-boxed).
+*Framed 2026-08-15. Two stages, docs first — the candidate ordering was
+deliberately inverted.*
+
+- [ ] **STAGE-021 — make the discipline legible** *(active)*. The
+      engineering-practices entry point, a godoc pass, and three legibility
+      repairs (`SECURITY.md`, the `DEC-041` gap, open-questions hygiene). Not
+      writing docs — **building an index to work that already exists**: 45
+      decisions, 75 archived specs, a security review and a cross-project
+      retrospective currently sit behind a 1,186-word README with no entry
+      point to any of them.
+- [ ] **STAGE-022 — quality measured and enforced, known defects closed**
+      *(proposed)*. golangci-lint gating CI, coverage with an honest floor, and
+      the three defects that are recorded as real and deliberately unfixed
+      because each needs a decision rather than a patch (`MergeTags` position
+      dup, `$EDITOR` quoting, the `Entries:` envelope inconsistency).
+
+**Why docs first, against this brief's own ROI ranking.** Lint and coverage are
+table stakes — having them proves the author knows the convention. The
+differentiated asset is the discipline that is invisible from outside:
+mutation-checked tests, mechanical guards that replaced remembered ones,
+decision records that log their own corrections, reflections that name what was
+wrong. There is also a sequencing reason: the practices page forces an honest
+inventory of what the tests actually pin, and that inventory is what a coverage
+number should be presented against. The reverse order invites a percentage with
+no story — the exact failure SPEC-073 hit four times.
+
+**Cut from the candidate scope, and where it went:**
+
+| Cut | Where |
+|---|---|
+| Scale/perf + concurrency baseline harness | **PROJ-009** |
+| The crustyimg methodology harvest | **PROJ-009** — it exists to serve the harness work, so it travels with it. Reading crustyimg's lint/coverage config as *reference* while framing STAGE-022 is not the harvest and needs no project. |
+| Story-surface v2 | **PROJ-008**, with the mirror and `brag learn` |
+| `CODE_OF_CONDUCT.md` | Declined. Boilerplate for a single-maintainer project, and adding it is the cargo-culting this repo's story is that it does not do. |
+| `govulncheck` CI step | Left in `PROJ-001/backlog.md`. Its 2026-04-26 deferral (redundant with Dependabot; marginal noise reduction) was re-weighed under the portfolio lens on 2026-08-15 and **still holds** — visibility does not justify a second scanner when the first one already fires on every advisory. Revisit conditions unchanged. |
 
 ## Dependencies
 
