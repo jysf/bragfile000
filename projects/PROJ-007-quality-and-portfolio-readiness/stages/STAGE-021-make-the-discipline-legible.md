@@ -113,13 +113,17 @@ Ordered list of specs composing this stage. IDs assigned at creation.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] (not yet framed) — **the practices entry point.** README section + the
+- [ ] SPEC-079 (frame) — **the practices entry point.** README section + the
       document it points at; every claim backed by a countable artifact; counts
-      derived or pinned by `test-docs`.
+      derived or pinned rather than typed. Framed 2026-08-16, **GO at complexity
+      M** — the counting rule is a real design problem, not a formality. Framing
+      caught two claims that do not survive contact with the code (there are no
+      "golden files"; the corrections claim has no counting rule) and three
+      already-stale counts in this project's own brief.
 - [ ] (not yet framed) — **the godoc pass**, plus the two legibility repairs
       that need no design (`DEC-041` tombstone, open-questions hygiene).
 
-**Count:** 0 shipped / 0 active / 2 pending
+**Count:** 0 shipped / 1 active / 1 pending
 
 ## Design Notes
 
