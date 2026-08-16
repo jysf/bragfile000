@@ -990,6 +990,41 @@ Everything in this tutorial is shipped as of v0.6.1. For corner cases
 `brag list` doesn't surface, `sqlite3 ~/.bragfile/db.sqlite` is your
 escape hatch.
 
+### Charting the pulse
+
+`--format json` is a seam, not just an output mode. Every digest emits raw
+counts alongside its markdown, so anything can render them — and the `brag`
+binary deliberately stays out of the charting business ([DEC-031](../decisions/DEC-031-sparkline-primitive-normalization-and-placement.md)
+named an external-plotter pipe as the layer *above* in-terminal glyphs).
+
+`scripts/spark-chart.sh` is a worked example of that seam. Pipe `brag spark`
+into it and you get one standalone HTML file — a stacked bar per bucket,
+segments coloured by project, a legend, and the same numbers as a table:
+
+```bash
+brag spark --quarter --format json | scripts/spark-chart.sh > pulse.html
+open pulse.html
+```
+
+The window flags pass straight through, so `--week` gives you daily bars and
+`--project <name>` narrows the rows:
+
+```bash
+brag spark --week --format json    | scripts/spark-chart.sh > week.html
+brag spark --quarter --project bragfile --format json | scripts/spark-chart.sh > one.html
+```
+
+It needs `jq` and nothing else — no network, no build step, no dependency
+added to `brag`. Run `scripts/spark-chart.sh --help` for the full usage.
+
+**If you write your own renderer, mind the top-8 trap.** `brag spark` reports
+only the eight busiest projects in `by_project`, while `total.series` counts
+every entry in the window. Summing the per-project rows therefore *undercounts*
+— on a real corpus that was 319 against a true total of 326. `spark-chart.sh`
+folds the difference into a neutral "Other" segment so bar height always equals
+`total.series`; any other renderer needs to do the same, or it will quietly
+drop entries.
+
 ---
 
 ## 10. Shell completions
