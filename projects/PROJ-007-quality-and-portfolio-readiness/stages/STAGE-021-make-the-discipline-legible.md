@@ -54,7 +54,7 @@ times by a coverage sentence that sounded true and pinned nothing (SPEC-073).
 ## Success Criteria
 
 - A reader arriving at the README can reach the DEC log, the spec archive, the
-  golden-test regime, the security posture and the incident→hardening pattern
+  byte-exact test regime, the security posture and the incident→hardening pattern
   **without knowing the repo's directory layout.**
 - Every claim on the practices page is **backed by a countable artifact** — a
   path, a count, a named test — not an adjective. No "rigorous", no
@@ -113,13 +113,27 @@ Ordered list of specs composing this stage. IDs assigned at creation.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-079 (frame) — **the practices entry point.** README section + the
+- [ ] SPEC-079 (design) — **the practices entry point.** README section + the
       document it points at; every claim backed by a countable artifact; counts
       derived or pinned rather than typed. Framed 2026-08-16, **GO at complexity
       M** — the counting rule is a real design problem, not a formality. Framing
       caught two claims that do not survive contact with the code (there are no
       "golden files"; the corrections claim has no counting rule) and three
       already-stale counts in this project's own brief.
+      **Designed 2026-08-16.** All four forks settled with rejected alternatives
+      (LD1 counting rule = one derived script + one whole-table diff; LD2 split
+      point = the README carries routing and *zero* numbers, because guard
+      coverage is the split; LD3 honest-close = its own named section,
+      second-to-last, foreshadowed from the intro, by citation; LD4 = do NOT
+      create a `## Amendment` convention — cite, and carry a derived count).
+      Plus LD5: `test-docs` A1's band was already at its ceiling (README exactly
+      250), so it is **re-pinned tight to 260**, not widened. Design re-measured
+      every count: framing's **164 doc assertions is wrong and unstable** (it
+      double-counts `S3` and is environment-dependent); the reproducible figure
+      is 163 distinct ids, 171 after this spec. Also stale: "four W-series
+      guards" (there are six) and the brief's "zero deprecated" (DEC-004 is
+      superseded by DEC-015 — which strengthens the story rather than damaging
+      it).
 - [ ] (not yet framed) — **the godoc pass**, plus the two legibility repairs
       that need no design (`DEC-041` tombstone, open-questions hygiene).
 
