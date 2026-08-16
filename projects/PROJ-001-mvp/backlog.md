@@ -1055,11 +1055,28 @@ and a dated item inside a closed project is a dated item nobody reads.
 **The measurement:**
 
 ```bash
-brag tags | grep -cE '^(commit|pr|issue):'
+brag list --format json \
+  | jq '[.[] | select(.tags | test("(^|,)(commit|pr|issue):"))] | length'
 ```
 
-**Baseline: 0**, against a corpus of 363 (2026-08-13). Every entry then predated
-the instruction, so zero was expected and meant nothing yet.
+**Baseline: 0 entries**, against a corpus of 363 (2026-08-13). Every entry then
+predated the instruction, so zero was expected and meant nothing yet.
+
+> ⚠️ **Corrected 2026-08-15 — the original command counted the wrong noun.** It
+> was `brag tags | grep -cE '^(commit|pr|issue):'`, which counts **distinct tag
+> values**, not entries carrying an evidence link. Measured on 2026-08-15 that
+> command read **20** while only **5 entries** carried any evidence tag: one
+> crustyimg entry (#374) contributes 13 tags by itself. A single enthusiastic
+> entry therefore moves the number like a trend, which is precisely the reading
+> this item exists to avoid. Adoption is a property of *entries*, so count
+> entries.
+>
+> **Discount the four instruction-authored entries.** Entries 375–378
+> (2026-08-15) are the first bragfile entries to carry `pr:` tags, and they were
+> written by the same agent lineage that authored SPEC-078's instruction. They
+> are evidence the instruction is followable, not evidence it is adopted.
+> Subtract them before reading the number: the honest question is whether
+> entries *nobody prompted* carry evidence links.
 
 **When:** 2026-09-14 **or** once ~50 entries have landed since 2026-08-14,
 **whichever is later**. The count is the real trigger; the date is the earliest
