@@ -280,6 +280,19 @@ So, in order of preference:
 can verify it — `git cat-file -t` fails on it — and it breaks `brag list --tag`,
 which matches a tag exactly.
 
+**`pr:` numbers are not unique across repos — the tag namespace is global.** A
+PR number only means something relative to *a* repository, but tags are shared by
+the whole corpus, so `pr:155` from one project and `pr:155` from another become
+the same tag. This is not hypothetical: as of 2026-08-15 a `crustyimg` entry
+carries `pr:155` and `pr:156`, and `bragfile` has its own real PRs #155 and #156.
+`brag list --tag pr:155` returns them together. The consequence is narrow but
+worth knowing: **an evidence tag is unambiguous when you read one entry** (the
+entry's `project` tells you the repo) **and ambiguous when you filter the
+corpus.** So use `--tag pr:<n>` together with `--project <name>`, and treat a
+bare cross-corpus tag filter as a starting point rather than an answer. Commit
+hashes do not have this problem — they are effectively unique — which is one more
+reason to prefer `commit:` when no PR exists.
+
 **When in doubt, record nothing.** A hash that does not resolve is worse than an
 absent one, because it reads as evidence and silently is not.
 
