@@ -1,16 +1,24 @@
 #!/usr/bin/env bash
-# scripts/lifetime-report.sh — print the Lifetime Report prompt with the
-# whole-repo history pre-loaded.
+# scripts/lifetime-report.sh — whole-repo lifetime history, two modes.
 #
 # Unlike `weekly-review` (active project, last 7 days) this looks across
 # EVERY project and stage and assembles the raw lifetime data — release
-# timeline, per-project dates, specs-by-stage, decision log — then prints a
-# synthesis prompt. bragfile does the aggregation; an LLM writes the
-# narrative arc (same pipe posture as review/summary/story).
+# timeline, per-project dates, specs-by-stage, decision log.
+#
+# Modes:
+#   data    (default) — print a self-contained, LLM-free data report:
+#                       every fact about the repo's lifetime, ready to read.
+#   prompt            — wrap that same data in a synthesis prompt for an LLM
+#                       to turn into a narrative arc (same pipe posture as
+#                       `just weekly-review`). Use when you want the story,
+#                       not just the numbers.
 #
 # Usage:
-#   just lifetime-report              # print the prompt to stdout
-#   just lifetime-report | pbcopy     # ...and copy it for a Claude session
+#   just lifetime-data                # the data report (no LLM needed)
+#   just lifetime-report              # the synthesis prompt (data + LLM ask)
+#   just lifetime-save                # data report -> docs/reports/lifetime/<stamp>.md
+#   ./scripts/lifetime-report.sh data
+#   ./scripts/lifetime-report.sh prompt | pbcopy
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,12 +26,120 @@ source "${SCRIPT_DIR}/_lib.sh"
 
 require_initialized
 
+MODE="${1:-data}"
+case "$MODE" in
+    data|prompt) ;;
+    *) echo "usage: lifetime-report.sh [data|prompt]" >&2; exit 2 ;;
+esac
+
 REPO_ID=$(get_repo_id)
 VARIANT=$(get_variant)
 ACTIVE_PROJECT=$(get_active_project)
 GENERATED=$(today)
 
-cat <<'EOF'
+# ---------------------------------------------------------------------------
+# emit_data — every deterministic fact about the repo's lifetime.
+# No LLM, no prompting; just the aggregated history. Shared by both modes.
+# ---------------------------------------------------------------------------
+emit_data() {
+    # --- Repo-level context (source files behind the "why") ---
+    echo "## Repo-level files (context for the 'why')"
+    echo "- AGENTS.md"
+    echo "- CHANGELOG.md"
+    for f in projects/*/brief.md; do
+        [ -e "$REPO_ROOT/$f" ] && echo "- $f"
+    done
+    if [ -d "${REPO_ROOT}/docs/roadmap" ]; then
+        find "${REPO_ROOT}/docs/roadmap" -name "*.md" 2>/dev/null | sort \
+            | sed "s|^${REPO_ROOT}/|- |"
+    fi
+    echo ""
+
+    # --- Per-project timeline (created / shipped / status from frontmatter) ---
+    echo "## Projects (created → shipped, from brief frontmatter)"
+    for brief in "${REPO_ROOT}"/projects/*/brief.md; do
+        [ -e "$brief" ] || continue
+        proj_dir=$(basename "$(dirname "$brief")")
+        created=$(grep -m1 -E '^created_at:'  "$brief" | sed 's/created_at:[[:space:]]*//' || true)
+        shipped=$(grep -m1 -E '^shipped_at:'  "$brief" | sed 's/shipped_at:[[:space:]]*//' || true)
+        status=$(grep -m1  -E '^[[:space:]]*status:' "$brief" | sed 's/.*status:[[:space:]]*//' | awk '{print $1}' || true)
+        echo "- ${proj_dir}: created ${created:-?} → shipped ${shipped:-—}  (status: ${status:-?})"
+    done
+    echo ""
+
+    # --- Releases: git tags + CHANGELOG headings ---
+    echo "## Releases (git tags)"
+    if command -v git >/dev/null 2>&1 && [ -d "${REPO_ROOT}/.git" ]; then
+        git -C "$REPO_ROOT" tag --sort=version:refname 2>/dev/null | sed 's|^|- |' || true
+    fi
+    echo ""
+    echo "## Release headings (from CHANGELOG.md)"
+    grep -E '^## ' "${REPO_ROOT}/CHANGELOG.md" 2>/dev/null | sed 's|^## |- |' || true
+    echo ""
+
+    # --- Decisions across all projects ---
+    echo "## Decisions (across all projects)"
+    find "${REPO_ROOT}/decisions" -name "DEC-*.md" 2>/dev/null | sort \
+        | sed "s|^${REPO_ROOT}/decisions/|- |" || true
+    echo ""
+
+    # --- Git span ---
+    if command -v git >/dev/null 2>&1 && [ -d "${REPO_ROOT}/.git" ]; then
+        echo "## Git span"
+        # `git log … | head -1` closes the pipe on the first line, so git dies of
+        # SIGPIPE and `set -o pipefail` promotes 141 to the script's exit status —
+        # a correct report that reports failure. Let git do the limiting instead:
+        # log is newest-first, so `tail -1` is the first commit (and reads to EOF),
+        # and `-1` is the last commit with no pipe at all.
+        local first last count
+        first=$(git -C "$REPO_ROOT" log --format='%ad' --date=short 2>/dev/null | tail -1)
+        last=$(git -C "$REPO_ROOT" log -1 --format='%ad' --date=short 2>/dev/null)
+        count=$(git -C "$REPO_ROOT" rev-list --count HEAD 2>/dev/null)
+        echo "- first commit: ${first:-?}   last commit: ${last:-?}   (${count:-?} commits)"
+        echo "  (note: project dates in briefs predate the git history if the repo was re-inited)"
+        echo ""
+    fi
+
+    # --- The mechanical aggregates the report tables are built from ---
+    echo "## Repo status snapshot"
+    echo '```'
+    "${SCRIPT_DIR}/status.sh"
+    echo '```'
+    echo ""
+
+    echo "## Specs by stage (full history)"
+    echo '```'
+    "${SCRIPT_DIR}/specs-by-stage.sh"
+    echo '```'
+    echo ""
+}
+
+# ---------------------------------------------------------------------------
+# emit_glance — a deterministic at-a-glance count block (data mode only).
+# ---------------------------------------------------------------------------
+emit_glance() {
+    local n_projects n_stages n_decisions n_releases first last count
+    n_projects=$(find "${REPO_ROOT}/projects" -maxdepth 2 -name brief.md 2>/dev/null | wc -l | tr -d ' ')
+    n_stages=$(find "${REPO_ROOT}/projects" -path '*/stages/STAGE-*.md' 2>/dev/null | wc -l | tr -d ' ')
+    n_decisions=$(find "${REPO_ROOT}/decisions" -name 'DEC-*.md' 2>/dev/null | wc -l | tr -d ' ')
+    n_releases=$(grep -cE '^## ' "${REPO_ROOT}/CHANGELOG.md" 2>/dev/null || echo 0)
+    echo "## Lifetime at a glance"
+    if command -v git >/dev/null 2>&1 && [ -d "${REPO_ROOT}/.git" ]; then
+        first=$(git -C "$REPO_ROOT" log --format='%ad' --date=short 2>/dev/null | tail -1)
+        last=$(git -C "$REPO_ROOT" log -1 --format='%ad' --date=short 2>/dev/null)
+        count=$(git -C "$REPO_ROOT" rev-list --count HEAD 2>/dev/null)
+        echo "- Lifespan:   ${first:-?} → ${last:-?}   (${count:-?} commits)"
+    fi
+    echo "- Projects:   ${n_projects}"
+    echo "- Stages:     ${n_stages}"
+    echo "- Decisions:  ${n_decisions}"
+    echo "- Releases:   ${n_releases}  (CHANGELOG.md headings)"
+    echo "  (spec counts + recorded cost: see the specs-by-stage totals below)"
+    echo ""
+}
+
+if [ "$MODE" = "prompt" ]; then
+    cat <<'EOF'
 # ============================================================
 # Lifetime Report — copy everything below this line into Claude
 # ============================================================
@@ -54,84 +170,25 @@ Structure to produce:
 
 Keep it skimmable: tables where the data is tabular, prose only for the arc.
 EOF
-
-echo ""
-echo "Generated: ${GENERATED}"
-echo "Repo: ${REPO_ID}   ·   variant: ${VARIANT}   ·   active project: ${ACTIVE_PROJECT}"
-echo ""
-
-# --- Repo-level context to read ---
-echo "## Repo-level files to read (for the 'why')"
-echo "- AGENTS.md"
-echo "- CHANGELOG.md"
-for f in projects/*/brief.md; do
-    [ -e "$REPO_ROOT/$f" ] && echo "- $f"
-done
-if [ -d "${REPO_ROOT}/docs/roadmap" ]; then
-    find "${REPO_ROOT}/docs/roadmap" -name "*.md" 2>/dev/null | sort \
-        | sed "s|^${REPO_ROOT}/|- |"
-fi
-echo ""
-
-# --- Per-project timeline (created / shipped / status from brief frontmatter) ---
-echo "## Projects (created → shipped, from brief frontmatter)"
-for brief in "${REPO_ROOT}"/projects/*/brief.md; do
-    [ -e "$brief" ] || continue
-    proj_dir=$(basename "$(dirname "$brief")")
-    created=$(grep -m1 -E '^created_at:'  "$brief" | sed 's/created_at:[[:space:]]*//' || true)
-    shipped=$(grep -m1 -E '^shipped_at:'  "$brief" | sed 's/shipped_at:[[:space:]]*//' || true)
-    status=$(grep -m1  -E '^[[:space:]]*status:' "$brief" | sed 's/.*status:[[:space:]]*//' | awk '{print $1}' || true)
-    echo "- ${proj_dir}: created ${created:-?} → shipped ${shipped:-—}  (status: ${status:-?})"
-done
-echo ""
-
-# --- Releases: git tags + CHANGELOG headings ---
-echo "## Releases (git tags)"
-if command -v git >/dev/null 2>&1 && [ -d "${REPO_ROOT}/.git" ]; then
-    git -C "$REPO_ROOT" tag --sort=version:refname 2>/dev/null | sed 's|^|- |' || true
-fi
-echo ""
-echo "## Release headings (from CHANGELOG.md)"
-grep -E '^## ' "${REPO_ROOT}/CHANGELOG.md" 2>/dev/null | sed 's|^## |- |' || true
-echo ""
-
-# --- Decisions across all projects ---
-echo "## Decisions (across all projects)"
-find "${REPO_ROOT}/decisions" -name "DEC-*.md" 2>/dev/null | sort \
-    | sed "s|^${REPO_ROOT}/decisions/|- |" || true
-echo ""
-
-# --- Git span ---
-if command -v git >/dev/null 2>&1 && [ -d "${REPO_ROOT}/.git" ]; then
-    echo "## Git span"
-    # `git log … | head -1` closes the pipe on the first line, so git dies of
-    # SIGPIPE and `set -o pipefail` promotes 141 to the script's exit status —
-    # a correct report that reports failure. Let git do the limiting instead:
-    # log is newest-first, so `tail -1` is the first commit (and reads to EOF),
-    # and `-1` is the last commit with no pipe at all.
-    first=$(git -C "$REPO_ROOT" log --format='%ad' --date=short 2>/dev/null | tail -1)
-    last=$(git -C "$REPO_ROOT" log -1 --format='%ad' --date=short 2>/dev/null)
-    count=$(git -C "$REPO_ROOT" rev-list --count HEAD 2>/dev/null)
-    echo "- first commit: ${first:-?}   last commit: ${last:-?}   (${count:-?} commits)"
-    echo "  (note: project dates in briefs predate the git history if the repo was re-inited)"
     echo ""
-fi
-
-# --- The mechanical aggregates the report tables are built from ---
-echo "## Repo status snapshot"
-echo '```'
-"${SCRIPT_DIR}/status.sh"
-echo '```'
-echo ""
-
-echo "## Specs by stage (full history)"
-echo '```'
-"${SCRIPT_DIR}/specs-by-stage.sh"
-echo '```'
-echo ""
-
-cat <<'EOF'
+    echo "Generated: ${GENERATED}"
+    echo "Repo: ${REPO_ID}   ·   variant: ${VARIANT}   ·   active project: ${ACTIVE_PROJECT}"
+    echo ""
+    emit_data
+    cat <<'EOF'
 # ============================================================
 # End of Lifetime Report prompt
 # ============================================================
 EOF
+else
+    # data mode — a self-contained report, no LLM required.
+    echo "# ${REPO_ID} — Lifetime Data Report"
+    echo "Generated: ${GENERATED}"
+    echo "Repo: ${REPO_ID}   ·   variant: ${VARIANT}   ·   active project: ${ACTIVE_PROJECT}"
+    echo ""
+    emit_glance
+    emit_data
+    echo "---"
+    echo "Data report only — no narrative. For a written lifetime story, run"
+    echo "\`just lifetime-report\` and hand the prompt to an LLM."
+fi
