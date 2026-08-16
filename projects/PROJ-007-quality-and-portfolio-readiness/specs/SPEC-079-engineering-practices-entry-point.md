@@ -533,8 +533,15 @@ Each survives contact with the code and is stated here so it is not re-derived:
    `superseded_by: DEC-015`. This is an *improvement* to the story, not damage —
    a log that records supersession is stronger than one with nothing to record —
    and the page presents it that way.
-4. **STAGE-021 says "8 of 18 [questions] are open"; it is 9 of 18.** Belongs to
-   the second spec.
+4. **STAGE-021 says "8 of 18 [questions] are open"; it is 8 of 17.** Belongs to
+   the second spec. *(Corrected 2026-08-16: the design pass first recorded this
+   as "9 of 18". Both halves were wrong, from a `grep -c 'status: open'` that
+   matched the file's own header comment — `#   - status: open | investigating |
+   answered` — inflating the open count, and a total that counted the same
+   comment. Filtering comment lines gives **8 open of 17**. A demonstration of
+   this spec's thesis at its own expense: the miscount was produced by exactly
+   the hand-run-grep method the inventory block exists to replace, while
+   auditing a file for stale counts.)*
 5. **"Research syntheses — 4" over-describes the directory.** Two of the four
    `docs/research/` files are research *prompts*, not syntheses. The page
    describes them by what they are.

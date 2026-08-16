@@ -88,7 +88,7 @@ times by a coverage sentence that sounded true and pinned nothing (SPEC-073).
    backlog**, which a browsing reader never sees. Land a reservation tombstone
    in `decisions/` that names the holder and links the backlog item, so the gap
    stops reading as a lost decision.
-5. **Open-questions hygiene.** 8 of 18 are open. Three date from **2026-04-19**
+5. **Open-questions hygiene.** 8 of 17 are open. Three date from **2026-04-19**
    and have not moved in four months (`shareable-ids`,
    `editor-template-format`, `summary-grouping-heuristics`) — at least one is
    likely answered-in-practice but never closed. For each open question: mark
