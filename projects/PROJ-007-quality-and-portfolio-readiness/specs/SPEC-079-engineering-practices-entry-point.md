@@ -7,7 +7,7 @@
 task:
   id: SPEC-079
   type: story                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: verify                    # frame | design | build | verify | ship
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -1573,6 +1573,185 @@ SPEC-075's re-verify found two further defects; SPEC-078 skipped one. All three
 items here are edits to prose that the mechanical guards do **not** reach —
 `X3` cannot see them, and `X5` is green through all three — which is precisely
 the class that needs a second pair of eyes rather than a re-run.
+
+---
+
+## Re-verify (punch-list delta)
+
+**Verdict: ✅ APPROVED** (fresh independent session per §6/§13, 2026-08-18,
+`bb0d38f` / PR #168). Scope: `git diff 23200b9..bb0d38f` only. The mechanical
+half blessed by the first verify was not redone.
+
+Gates re-run: `just test` (all packages ok), `just test-docs` (**ALL OK**, 172
+`OK:` lines / **171 distinct ids**, the duplicate confirmed to be `S3`),
+`gofmt -l .` (empty), `go vet ./...` (clean). `scripts/test-docs.sh` is **not in
+the delta**, so no assertion could have been added or weakened — confirmed
+mechanically, not by reading.
+
+### P1 — confirmed, and the first verify's mutation count was wrong
+
+`internal/cli/memory_test.go:156-178` (the comment sits at exactly that range)
+names the **pool composition**, the fusion **constants**, and the declared
+**Matched ORDER**. The page now names those three. Fix is correct.
+
+**Mutation re-run independently** (`memory.DefaultBudget` 2000 → 2048, mutant
+confirmed present in the tree before running, `-count=1` to defeat the test
+cache):
+
+| Test | Package | Reddens |
+|---|---|---|
+| `TestMemoryCmd_EndToEndMarkdownGolden` | `internal/cli` | yes |
+| `TestMemoryCmd_BareInvocationIsPlainRecency` | `internal/cli` | yes |
+| `TestDefaultBudget_Is2000` | `internal/memory` | yes |
+
+**Exactly three — the punch-list build's count is CONFIRMED and the first
+verify's "reddens exactly `TestMemoryCmd_EndToEndMarkdownGolden`" is REFUTED.**
+The `internal/mcpserver` budget tests stay green because they compute their
+expectation *from* `memory.DefaultBudget` rather than pinning the literal. The
+load-bearing half of P1 is unaffected: the golden **does** pin the budget, so
+"the budget" was the wrong third item. Mutation reverted; tree verified clean.
+
+### P2 — the sentence holds under both states of #167
+
+PR #167 (`chore/defer-stage-022-decisions`) is **OPEN, not merged**. Each clause
+evaluated against STAGE-022 on `main` *and* on #167's branch:
+
+| Clause | `main` | post-#167 |
+|---|---|---|
+| closes the lint gate | true — In scope 1 | true — hunk untouched |
+| closes the coverage number | true — In scope 2 | true — hunk untouched |
+| closes the `Entries:` envelope defect | true (one of three) | true (the only one) |
+| *Explicitly out of scope* defers benchmarks to `PROJ-009` | true | **section byte-identical under both** |
+| documentation assertions in CI owned by nothing | true | true |
+| no-network claim stays enforced by review | true | true |
+
+`test-docs` appears **zero** times in STAGE-022 under both refs, **zero** times
+in PROJ-008 and PROJ-009, and **zero** times in `.github/workflows/ci.yml` — so
+"owned by nothing today" is sound from three directions. `network` likewise
+appears zero times in STAGE-022 under both. PROJ-009's brief does genuinely own
+the benchmark harness (`brief.md:72,88`), so the routing claim resolves
+end-to-end rather than just linking somewhere plausible.
+
+**The clause that would flip is genuinely not asserted.** The sentence says
+"one of the known defects", which is existential, not a count; it nowhere states
+how many defects STAGE-022 carries. Confirmed by reading, and #167 does not
+touch PROJ-007's `brief.md`, which the preceding bullet cites.
+
+### P3 — number confirmed; both mutation directions confirmed
+
+Derived independently: **75** archived specs, **69** carrying
+`### Build-phase reflection`, and **75/75** carrying `## Reflection (Ship)`. The
+six without the standard heading are SPEC-045, 046, 048, 049, 050, 071 — as
+recorded. All 69 use one identical heading, `### Build-phase reflection (3
+questions, short answers)`; the row's *Where it lives* column names the grep
+prefix, which reproduces 69 exactly.
+
+**SPEC-046's nuance independently confirmed.** Its `### Honest reflection`
+(line 659, inside `## Build Completion`) is a genuine build-phase reflection —
+it names what the spec left to build-time judgment, the single `isDecimal`
+deviation and why it was test-driven, and why no DEC was owed. The other five
+carry no reflection subsection at all. So five carry none; six lack the standard
+heading. Verify's original "six carry no build-phase reflection at all" was one
+spec too strong.
+
+**Mutation-tested both directions; each mutant confirmed to have actually
+mutated before the run:**
+
+| Direction | Mutation | Effect | Result |
+|---|---|---|---|
+| page-side | block's `69` → `70` | page diverges from script | `X3` red, sole failure, prescribed remedy printed |
+| source-side | renamed one archived spec's heading | derived count `69` → **68** | `X3` red, sole failure |
+
+The source-side case is the one that matters, and it confirms the row pins the
+page to the repository rather than to itself. Both reverted; tree verified clean
+after each, and `test-docs` green again.
+
+### Parity and collateral
+
+Diffed by extracted line range, not read:
+
+- **Literal ① ↔ `docs/engineering-practices.md`** — 275 lines each; the single
+  differing line is the recorded `| Projects |` row (7 vs 9). Nothing else.
+- **Literal ③ ↔ `scripts/inventory.sh`** — 84 lines each, byte-identical.
+- **Page block ↔ `./scripts/inventory.sh`** — byte-identical, md5 equal
+  (`22a96025…`), 18 lines each, **both non-empty**. 18 lines = header +
+  separator + **16 rows**, matching LD1's updated count.
+- `README.md` **260** lines — `A1`'s ceiling exactly, zero headroom, untouched
+  by the delta. Page **275**, inside `X7`'s 150–300.
+- `X5` green; zero forbidden tokens on the page, and zero in the lines the delta
+  *added*.
+- **42 distinct path links all resolve**, including the delta's new `PROJ-009`
+  link, which postdates the first verify's 41-link sweep and was therefore not
+  previously blessed. Both anchor links target an existing heading.
+
+**LD1 survived intact.** Diffed across all three commits: LD1 is identical
+between `cc8f6f6` and `23200b9`, and between `23200b9` and `bb0d38f` differs
+*only* by the intended `fifteen` → `sixteen` update and its explanatory
+parenthetical. The wrong-anchor corruption the build discloses left nothing
+behind — the revert was complete, not half-done.
+
+### On the restraint: correct, with one qualification
+
+Declining to add an `assert_contains` was the right call. For P2 the claim is a
+multi-clause scope statement evaluated against two possible futures — not
+mechanically pinnable at all. P3 was converted into a derived number, which is
+the strongest available shape.
+
+The qualification: build's argument covers only the **one-sided** form (assert
+the phrase on the page), where it is exactly right — that would go green on the
+words. It does not consider the **two-sided** form this repo already uses in
+`W5`/`W6`: assert the token in *both* the page and `internal/cli/memory_test.go`,
+which would pin the page↔comment coupling and redden if the comment were
+reworded. That is a genuine, if narrow, pin that was available. Declining it is
+still defensible so soon after SPEC-078 — an assertion that looks right and pins
+the wrong proposition is worse than none — so this is recorded as a candidate,
+not a defect.
+
+### Non-blocking observations
+
+1. **P3's row label and prose are semantic; the mechanism is syntactic.** Both
+   say "carrying a build-phase reflection"; the grep matches a heading. They
+   diverge on SPEC-046, so a reader concludes "6 lack a build-phase reflection"
+   where the truth is "5 lack one, a 6th uses a different heading". Mitigated
+   on three counts: the provenance column discloses the exact grep, the prose
+   forecloses the worse reading by stating all 75 carry a ship-phase reflection
+   first, and the error runs **conservative** — it understates the repo's
+   discipline rather than overstating it. Not a claim contradicted by its
+   citation, which is the bar the punch list was set at. If tightened later, the
+   zero-typed-number fix is to make the label syntactic
+   ("…using the standard `### Build-phase reflection` heading") in
+   `scripts/inventory.sh` + literal ③, then `just inventory` + paste.
+2. **P2's colon-enumeration becomes non-exhaustive after #167 merges.** "It does
+   not close the rest:" then names three items; post-merge the two deferred
+   defects also belong to "the rest". Every clause stays **true** — the sentence
+   never claims the list is exhaustive — and #167 leaves PROJ-007's `brief.md`
+   defect list unchanged, so the staleness that surfaces is #167's, not this
+   page's.
+3. **`STAGE-021:161-162`** records verify's original "six of 75 carry none",
+   which the punch-list build then corrected in this spec. The stage log was not
+   updated with the SPEC-046 nuance. Outside the page and outside the delta.
+
+### Untouched-claim spot-check
+
+Fourteen claims the punch list did not touch, sampled across the page: no
+`*.golden` files and no `testdata/` directories (0 and 0); all five named tests
+present at their cited paths; `DEC-004` carries `superseded_by: DEC-015`;
+`DEC-041`'s reservation at `PROJ-001-mvp/backlog.md:1041`; AGENTS.md §14 states
+the confidence-below-0.7 rule; `archive-spec.sh` rejects `<answer>` placeholders;
+`E2`'s comment documents the `.claude/worktrees/` doubling trap; `W1`–`W6` all
+present and `W3`'s description matches its source comment verbatim in substance;
+the `W`-series inventory row is genuinely derived
+(`grep -cE '^# W[0-9]+ '` → 6); `DEC-025`'s `## Amendment` heading verbatim;
+`DEC-043`'s third correction dated 2026-08-10; `DEC-044`'s box carries ≈110 → 25
+and names exactly two files the figure spread to (`DEC-043:122`, `DEC-045:270`);
+the PROJ-006 close quoted word-for-word; `SECURITY.md` does say "enforced by
+review rather than assumed". **All fourteen held.** One apparent miss — the
+`SECURITY.md` quotation — was a line-scoped `grep` failing across a hard wrap at
+`SECURITY.md:6-7`, not a page defect; re-checked with newlines normalised.
+
+Cycle advanced to `verify`. Nothing was fixed by this session; the tree is
+byte-identical to `bb0d38f` apart from this section and the front-matter
+`cycle:`.
 
 ---
 
