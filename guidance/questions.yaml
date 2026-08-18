@@ -104,11 +104,47 @@ questions:
   - id: tag-ordering-projection
     question: "Should the reconstructed Entry.Tags projection preserve each entry's original tag order (via the taggings.position column) or is name-ASC sufficient — i.e. can we drop the position column?"
     priority: low
-    status: open
+    status: answered
     raised_by: claude
     raised_at: 2026-06-06
+    answered_at: 2026-08-18
     assigned_to: null
     notes: |
+      ANSWERED 2026-08-18 BY THIS QUESTION'S OWN TRIGGER: keep `position`.
+      No DEC — the question stated a falsifiable condition and observation
+      falsified it, which is a resolution without a formal decision.
+
+      The trigger below reads: drop the column if "no production entry is
+      observed with unsorted tags." Measured against the live corpus,
+      260 of 278 tagged entries are NOT in name-ASC order. The insurance
+      whose value was "not yet observable" in June is now observable on
+      94% of the corpus.
+
+      What changed since June is the reserved-namespace tags (DEC-027):
+      capture appends `agent:` / `model:` / `session:` / `cost:` /
+      `tokens:` AFTER an entry's topic tags, and evidence tags
+      (`commit:` / `pr:`) after those. That grouping is legible today
+      only because insertion order survives. `ORDER BY tags.name` would
+      interleave `agent:claude-code` into the middle of the topic tags on
+      essentially every agent-authored entry, and would silently change
+      the rendered tag string of 260 entries across `show`, `list
+      --format json`, `export`, `memory` and the MCP surfaces.
+
+      Confirmed in code: internal/storage/store.go:157 projects via
+      GROUP_CONCAT(t.name, ',' ORDER BY tg.position) — position-driven,
+      not alphabetical, and it reaches the user.
+
+      REMAINING WORK, DEFERRED SEPARATELY: `MergeTags` copies the source
+      tagging's position verbatim (store.go:557), leaving non-dense
+      positions after a merge. Measured 2026-08-18: gaps are real,
+      collisions could not be constructed, there is no user-visible
+      symptom, and `Update`'s delete-and-reinsert heals density on the
+      next `brag edit`. Filed in projects/PROJ-001-mvp/backlog.md as an
+      invariant tidy, not a defect repair. That item — not this
+      question — is where a DEC would be emitted if it is ever built.
+
+      --- original entry, retained for provenance ---
+
       DEC-015 (SPEC-025) reconstructs Entry.Tags via
       GROUP_CONCAT(tags.name, ',' ORDER BY taggings.position). The
       `position` column was added so a canonical-but-unsorted input
