@@ -145,6 +145,24 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       mechanical remedy (`just inventory`, paste). The counting guard caught a
       stale count before a human read the page — which is the whole thesis of
       this spec, demonstrated at its own expense.
+      **Verified 2026-08-18 — ⚠ PUNCH LIST (3 items), back to build.** The
+      mechanical half is clean: all six literals byte-faithful, `X3` confirmed
+      passing for the right reason (both sides non-empty and byte-identical,
+      and it goes red when the *repo* drifts, not just the page), the id delta
+      exactly `X1`–`X8` in both directions, and all eight Group X assertions
+      plus the re-pinned `A1` mutation-tested with the mutant proven real. The
+      `Projects` deviation was the correct resolution and is honestly recorded.
+      What did not survive is the page's own standard, in three prose claims no
+      guard reaches: it says the `TestMemoryCmd_EndToEndMarkdownGolden` comment
+      lists **the budget** as unpinned when the comment lists the declared
+      Matched order and the golden provably *does* pin the budget
+      (mutation-confirmed); it routes the first three "does not measure" gaps to
+      STAGE-022 when STAGE-022 lists benchmarks under **Explicitly out of
+      scope** and never mentions `test-docs` at all; and it says every archived
+      spec ends with a build-phase reflection when six of 75 carry none. Each is
+      a claim backed by a path that contradicts it — the exact failure the page
+      exists to prevent. Fix in both the page and literal ①, then **re-verify
+      the delta** before ship.
 - [ ] (not yet framed) — **the godoc pass**, plus the two legibility repairs
       that need no design (`DEC-041` tombstone, open-questions hygiene).
 

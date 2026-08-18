@@ -1257,6 +1257,221 @@ Process-focused: how did the build go? What friction did the spec create?
 
 ---
 
+## Verify
+
+**Verdict: ⚠ PUNCH LIST** (fresh independent verify session, 2026-08-18,
+`cdc1033` / PR #168).
+
+Gates re-run independently, all green: `just test` (all packages ok),
+`just test-docs` (**ALL OK**, 172 `OK:` lines / **171 distinct ids**),
+`gofmt -l .` (empty), `go vet ./...` (clean).
+
+### The mechanical diff: six literals, all faithful
+
+Each literal was extracted from this spec by line range and diffed against the
+working tree — not read.
+
+| Literal | Range | Result |
+|---|---|---|
+| ① `docs/engineering-practices.md` | 569–836 (268 lines) | **1 line differs** — the recorded `Projects` deviation. With that row substituted, md5 and byte count match exactly (15658 bytes). |
+| ② `README.md` section | 848–856 | Byte-identical, inserted immediately before `## Where to go next`; README = **260** lines. |
+| ③ `scripts/inventory.sh` | 867–948 | Byte-identical; committed mode **`100755`**. |
+| ④ `justfile` recipe | 960–962 | Byte-identical, appended after `info:` in HELPERS (clear of `F2`'s `test:` read). |
+| ⑤ `test-docs.sh` A1 / E1 / Group X | 979–986, 992, 1005–1090 | Byte-identical (Group X differs only by the blank line before `# ===== finalise =====`). |
+| ⑥ `guidance/questions.yaml` | 1100–1132 | Byte-identical; the one blank separator line is the file's convention (17 of 18 prior entries carry one) and is recorded under Deviations. |
+
+Literals were also diffed between `cc8f6f6` (design) and `cdc1033` (build): the
+build did **not** edit any literal to match what it wrote. Only front-matter
+`cycle:` and `## Build Completion` changed.
+
+### The `Projects` deviation was resolved correctly
+
+`| Projects | 7 |` → `9` is the right call, not a build-time judgement. LD1
+states the precedence in terms ("the script is the source, the page is a cached
+copy"), `X3`'s own failure message prescribes the remedy, and the alternative —
+transcribing `7` — ships a red gate. No assertion was weakened. The cause is
+confirmed from git: `0bcd124` (#165, PROJ-008/PROJ-009 scaffolds) landed
+2026-08-16 12:41, the design PR `cc8f6f6` (#166) at 14:50, off a branch cut
+before it. Honestly recorded in Build Completion, the commit message, the PR
+body, and the STAGE-021 entry. `Projects: 9` itself is settled as correct.
+
+### `X3` passes for the right reason, and has teeth
+
+- Script output vs. the page block extracted with `X3`'s own `awk` range:
+  **byte-identical, 17 lines / 1157 bytes each — both non-empty.** The `[ -z ]`
+  guard is not what is passing it.
+- The empty-block branch was exercised directly (markers kept, contents
+  stripped): fails with `has no content between the inventory:begin/inventory:end
+  markers`. A silently-empty diff cannot masquerade as success.
+- **`X3` pins the page to the repository, not to itself.** Adding a real
+  `decisions/DEC-047-*.md` (45 → 46) — mutating the *source*, not the page —
+  turned `X3` red with the prescribed remedy in the message.
+
+### Assertion-id delta is exactly `X1`–`X8`
+
+Static extraction over `cc8f6f6` vs `cdc1033`: **163 → 171**. `comm` both
+directions: added = `X1 X2 X3 X4 X5 X6 X7 X8`; removed = **none**. The static
+set and the live-run set are identical (171 each); only `S3`'s multiplicity
+differs, which is out of scope by design.
+
+### Every Group X assertion was mutation-tested, and every mutant was real
+
+Each mutation was applied, confirmed to have actually changed the artifact
+(content hash, or file mode for the `chmod` case), run, and reverted; the tree
+was verified clean after each.
+
+| Mutation | Caught by |
+|---|---|
+| page removed | `X1` (+ `E1`/`X3`–`X7` collaterally) |
+| README's link to the page rewritten | `X2` only |
+| one digit drifted in the page's block | `X3` only |
+| `chmod -x scripts/inventory.sh` | `X3` — *"missing or not executable"* |
+| markers deleted | `X3` |
+| block emptied, markers kept | `X3` — *"no content between the markers"* |
+| a 46th DEC added to the repo | `X3` |
+| `embedded as Go string literals` → `stored in golden files` | `X4` |
+| `comprehensive` inserted into the page | `X5` |
+| `DEC-025` citation removed | `X6` |
+| page truncated to 140 lines | `X7` |
+| `inventory:` recipe renamed | `X8` |
+| one blank line appended to README | `A1` — *"261 lines (expected 100..260)"*, confirming LD5's zero headroom |
+| `../SECURITY.md` → a non-existent path **in the page** | `E1`, confirming the source-list extension is live |
+
+### Links
+
+All 41 path links in the page resolve (checked independently of `E1`, resolved
+relative to `docs/`); the two anchor links target
+`#where-this-project-was-wrong-on-the-record`, which is the correct GitHub slug
+for `## Where this project was wrong, on the record`. `E1` strips anchors, so
+that one was checked by hand. The README section's single link resolves. The
+`E2` trap held: the page uses the relative `development.md` form, zero hits for
+the literal `docs/development.md`.
+
+### Claims audited against the repository
+
+Spot-checked ~30 claims. Confirmed true and re-derived: no `*.golden` files and
+no `testdata/` directories (both 0); all five named tests exist at the named
+paths; `TestPackageReadsNoWallClock` / `TestPackageEmitsNoReservedTagNamespace`
+really are source-scanning walkers; all 45 DECs carry `confidence:` and none
+claims 1.0; `DEC-041` is the only numbering gap in DEC-001..046 and its
+reservation is recorded at `PROJ-001-mvp/backlog.md:1041`; the `## Amendment`
+heading in `DEC-025` is verbatim as quoted; `DEC-043`'s third correction is
+dated 2026-08-10 and does replace a figure-dependent argument with a
+pool-minimum bound; `DEC-044`'s correction box carries ≈110 → 25 and traces
+where the figure spread; the PROJ-006 close is quoted word-for-word from
+`Project-Level Reflection`; a keyword grep for `correct|amend|supersede` matches
+**45 of 45** records, exactly as claimed; all six `W`-series descriptions match
+their source comments; CI runs only `gofmt`/`vet`/`test`, with no
+`golangci-lint`, no `-cover`, no badge, and no `test-docs`; `SECURITY.md` says
+"enforced by review rather than assumed" and no test asserts it; `DEC-040` does
+remove the signing/Gatekeeper path; the retro's headline finding is stated as
+quoted; the cask→formula item (v0.5.2, 2026-07-30) does postdate the retro
+(2026-07-04); `archive-spec.sh` really does reject `<answer>` placeholders;
+`lifetime-save` really does `mkdir -p docs/reports/lifetime` on first run; and
+the `framework-feedback/` / `research/` / `blog/` / `reports/` descriptions each
+match the directory contents.
+
+**Three claims did not survive.** They are the punch list below.
+
+### Punch list
+
+All three are defects in **literal ①**, faithfully transcribed by build. Each
+must be fixed in **both** the page and literal ① in this spec, so the next
+mechanical diff stays clean.
+
+**P1 — the page names the wrong third item, and the one it names is provably
+pinned.** `docs/engineering-practices.md:103-110` says the comment above
+`TestMemoryCmd_EndToEndMarkdownGolden` names "three things that golden does not
+pin — the pool composition, the fusion constants, and **the budget**."
+`internal/cli/memory_test.go:156-178` names: the **pool composition**, the
+fusion **constants**, and the declared **Matched ORDER**. The budget is not on
+that list — and `memoryCmdGolden1` (`internal/cli/memory_test.go:104`) contains
+a whole `## Budget` section including `- Budget: 2000 tokens`, so the golden
+*does* pin it. Confirmed by mutation: `memory.DefaultBudget` 2000 → 2048 reddens
+exactly `TestMemoryCmd_EndToEndMarkdownGolden`. This is the page's paragraph
+about mutation-verified claims, and it is the one claim on the page that fails a
+mutation check. Fix: name the declared Matched order as the third item.
+
+**P2 — `Closing the first three is the scope of STAGE-022` is contradicted by
+STAGE-022.** `docs/engineering-practices.md:248-249`. The first three bullets of
+`## What this does not measure` are benchmarks, lint+coverage, and
+documentation-assertions-not-in-CI.
+`STAGE-022-measured-and-enforced.md:91-95` heads a section **"Explicitly out of
+scope"** with "**Benchmarks and any scale/perf or concurrency harness.**
+Deferred to **PROJ-009**." And `test-docs` appears nowhere in STAGE-022 — a grep
+across PROJ-007/008/009 finds nothing scoping it into CI. STAGE-022's in-scope
+list is golangci-lint, coverage, and the three coupled defects — i.e. it closes
+the page's **second** and **fifth** bullets, not the first three. A reader who
+clicks the link the sentence provides lands on the sentence's refutation.
+Fix: state what STAGE-022 actually closes; benchmarks route to PROJ-009; and
+note that gating the documentation assertions in CI is currently owned by
+nothing (which is a legitimate thing for this page to say, and stronger than a
+wrong routing claim).
+
+**P3 — "each end with build-phase and ship-phase reflections" is false for 6 of
+75.** `docs/engineering-practices.md:89-93`. The bolded lead sentence ("Every
+archived spec carries its own reflection") is **true** — 75/75 carry
+`## Reflection`. The sentence after it is not: the three things it says are
+answered ("what was unclear, what was missing, what would be done differently")
+are the *build-phase* reflection's three questions, and six archived specs carry
+no build-phase reflection at all — `SPEC-045`, `SPEC-046`, `SPEC-048`,
+`SPEC-049`, `SPEC-050` (all PROJ-004) and `SPEC-071`. Each has a substantive
+`## Build Completion` and a `## Reflection (Ship)`, but none contains the
+"what was unclear" question. 69 of 75. Note the shape: this is a **current-state
+count written into prose as a universal quantifier**, which is exactly what LD1
+says must be derived rather than typed — so either re-word to the claim that is
+true without a count, or make it an inventory row and let `X3` hold it.
+
+### Not punch-list items
+
+- **The unstated precedence** (build reflection Q1: "transcribe verbatim" vs
+  `X3`'s "run `just inventory` and paste"). Real, honestly raised, and correctly
+  resolved anyway. It is a **ship-reflection / AGENTS.md §12 candidate**, not a
+  build defect: *when a literal caches derived output, the derivation outranks
+  the cache, and re-running it is build step one.* Under the §12 codification
+  meta-rule this is N=1 same-outcome — record it at ship, hold for N=3 (or an
+  opposing-outcome pair).
+- **`F4` after the `FAIL_COUNT` early-exit** — confirmed
+  (`scripts/test-docs.sh:1428`, after the `exit 1`). It does not matter here:
+  the page's number is derived **statically** precisely so it does not depend on
+  a run, and on a red run the harness exits 1, so nothing is comparing sets.
+  `F4` also predates this spec. Worth one clause in §12(b) row 4 at most.
+- **`PR (if applicable): none opened — build ran to commit only`** in Build
+  Completion is now stale: PR #168 is open. Trivial; fold into the punch-list
+  commit.
+- **`Projects: 9`** — settled as correct by the maintainer; not re-litigated.
+  The same reasoning covers `Stages: 21`.
+
+### Also checked
+
+Acceptance criteria: 9 of 10 met. The one that is not is
+"no bare adjective stands alone on the page" in its **stage** form — `X5` is
+green and the seven forbidden tokens are absent, but STAGE-021's criterion is
+"every claim backed by a countable artifact," and P1–P3 are claims backed by an
+artifact that contradicts them, which is the criterion's substance rather than
+its mechanical proxy.
+
+Constraints: `test-before-implementation` held (tests written at design in
+`## Failing Tests`, transcribed from literal ⑤; build ran fail-first and
+recorded it). `one-spec-per-pr` held — PR #168 references SPEC-079 only.
+`no-secrets-in-code` — nothing here touches credentials. No Go source touched,
+so the Go-scoped constraints do not apply. No DEC was owed: every choice traces
+to LD1–LD6, and build emitted no non-trivial decision of its own.
+
+Build reflection honesty: **yes.** All three answers are specific and
+self-critical, the deviation is disclosed in four places with its cause, and
+Q3's answer ("run the derivation first") is the correct general lesson. Build
+also flagged the `Projects`-row and `F4` questions to verify rather than
+burying them.
+
+**A punch-list delta deserves its own re-verify before this spec advances.**
+SPEC-075's re-verify found two further defects; SPEC-078 skipped one. All three
+items here are edits to prose that the mechanical guards do **not** reach —
+`X3` cannot see them, and `X5` is green through all three — which is precisely
+the class that needs a second pair of eyes rather than a re-run.
+
+---
+
 ## Reflection (Ship)
 
 *Appended during the **ship** cycle. Outcome-focused reflection, distinct
