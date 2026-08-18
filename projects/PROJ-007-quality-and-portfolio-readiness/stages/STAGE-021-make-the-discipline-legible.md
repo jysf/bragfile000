@@ -113,7 +113,7 @@ Ordered list of specs composing this stage. IDs assigned at creation.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-079 (design) — **the practices entry point.** README section + the
+- [ ] SPEC-079 (build) — **the practices entry point.** README section + the
       document it points at; every claim backed by a countable artifact; counts
       derived or pinned rather than typed. Framed 2026-08-16, **GO at complexity
       M** — the counting rule is a real design problem, not a formality. Framing
@@ -134,6 +134,17 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       guards" (there are six) and the brief's "zero deprecated" (DEC-004 is
       superseded by DEC-015 — which strengthens the story rather than damaging
       it).
+      **Built 2026-08-18** on `build/spec-079-practices-entry-point`. All six
+      literals transcribed; `just test-docs` green at **171 distinct assertion
+      ids** (was 163, delta exactly `X1`–`X8`), `just test` / `gofmt -l .` /
+      `go vet ./...` unaffected. `X3` earned its keep on day one: the design
+      snapshot recorded **7 projects**, but PR #165 (`PROJ-008`/`PROJ-009`
+      scaffolds) merged ~2h before the design PR, so the true count on `main`
+      is **9**. Transcribing literal ① verbatim made `X3` the *only* failing
+      assertion, naming exactly one drifted row; the fix was the guard's own
+      mechanical remedy (`just inventory`, paste). The counting guard caught a
+      stale count before a human read the page — which is the whole thesis of
+      this spec, demonstrated at its own expense.
 - [ ] (not yet framed) — **the godoc pass**, plus the two legibility repairs
       that need no design (`DEC-041` tombstone, open-questions hygiene).
 

@@ -777,3 +777,37 @@ questions:
       wrong, and would re-derive this analysis from scratch. Do not action
       without a real trigger — a user or agent actually blocked by the
       pipe, not a tidiness impulse.
+
+  - id: dec-amendment-heading-convention
+    question: "Should decision records adopt an explicit `## Amendment` heading as a convention, so 'decisions that record their own corrections' becomes countable rather than citable?"
+    priority: low
+    status: open
+    raised_by: claude-opus-5
+    raised_at: 2026-08-16
+    assigned_to: null
+    notes: |
+      Filed at SPEC-079 design (LD4). The claim is TRUE in substance — DEC-044
+      carries a correction box, DEC-043 carries a third correction to the same
+      paragraph, DEC-025 carries an explicit `## Amendment`, DEC-004 was
+      superseded and kept — but NOT COUNTABLE: exactly 1 of 45 records has a
+      `^## Amendment` heading, and a keyword grep for correct/amend/supersede
+      matches all 45 because ordinary decision prose uses those words.
+
+      DELIBERATELY NOT ADOPTED at SPEC-079, for three reasons: (1) it is a
+      process change binding every future DEC, riding in on a docs spec; (2)
+      day-one adoption would be 1/45, which is a weaker claim than naming four
+      specific records; (3) SPEC-078 is the cautionary case — the pr:/commit:
+      evidence-link convention sat at ZERO adoption because it was documented
+      but nothing carried it into the surface that writes.
+
+      What was done instead: docs/engineering-practices.md makes the claim by
+      citation, and the inventory table carries a DERIVED row counting records
+      with an explicit `## Amendment` section. So the current state is on the
+      page, honestly, and rises on its own if the convention is ever adopted.
+
+      RESOLVE WHEN: the derived count reaches 4 or more without anyone having
+      declared a convention (adopt it — the practice exists, write it down), OR
+      a reader/reviewer asks for the number and the citation list is not enough
+      (adopt it and retrofit deliberately as its own spec), OR PROJ-007 closes
+      with the count still at 1 (close this question: the citation form was
+      sufficient and the convention is not worth the process weight).

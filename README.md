@@ -231,6 +231,16 @@ the `project`-not-auto-filled gotcha, provenance stamping, and the `--db`
 override — is in
 [`docs/for-ai-agents.md`](docs/for-ai-agents.md).
 
+## How this repo is built
+
+Every change ships through a written specification whose tests are written
+before the implementation, and every non-obvious choice becomes a numbered
+decision record that stays in the repo when it later turns out to be wrong.
+What exists, what the tests actually pin, what is deliberately not measured,
+and where this project got something wrong and corrected it are indexed in
+[`docs/engineering-practices.md`](docs/engineering-practices.md) — where every
+number is printed by `just inventory` and pinned by `just test-docs`.
+
 ## Where to go next
 
 - [`docs/tutorial.md`](docs/tutorial.md) — the deep-dive

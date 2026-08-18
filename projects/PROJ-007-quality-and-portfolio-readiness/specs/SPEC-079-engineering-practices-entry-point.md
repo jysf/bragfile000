@@ -7,7 +7,7 @@
 task:
   id: SPEC-079
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -1167,28 +1167,93 @@ genuinely open on its own merits.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **Branch:** `build/spec-079-practices-entry-point`
+- **PR (if applicable):** none opened — build ran to commit only.
+- **All acceptance criteria met?** yes. `just test-docs` is green at **171
+  distinct assertion ids** (was 163; delta is exactly `X1`–`X8`, confirmed by
+  `comm` against the pre-build id set). `just test`, `gofmt -l .` and
+  `go vet ./...` are unaffected. The static id extraction and a live run agree
+  set-for-set (171 each); the run emits 172 `OK:` lines because `S3` still
+  double-emits — deliberately untouched, per Out of scope.
 - **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+  - none. Every choice was settled at design (LD1–LD6); build produced no
+    non-trivial decision of its own.
 - **Deviations from spec:**
-  - [list]
+  - **One row of literal ① is not byte-identical: `| Projects | 7 |` was
+    replaced with `| Projects | 9 |`.** This is not a build-time judgement
+    call — it is `X3`'s own prescribed remedy applied verbatim ("run
+    `just inventory` and paste between the markers"). The design session
+    measured 7 projects on a branch cut before PR #165 (`PROJ-008` /
+    `PROJ-009` scaffolds, merged 2026-08-16 12:41) landed; that PR merged
+    ~2h before the design PR (#166, 14:50), so on `main` the true count is 9.
+    Fail-first was run and recorded before the remedy: with literal ①
+    transcribed verbatim, `X3` was the **only** failing assertion and its
+    failure message named exactly one differing row. Every other line of the
+    block, and every other literal, transcribed byte-for-byte.
+  - **Cosmetic:** a single blank line separates the new
+    `dec-amendment-heading-convention` entry from the previous entry in
+    `guidance/questions.yaml`. Literal ⑥ carries no leading blank line, but
+    every one of the file's 17 prior entries is preceded by one. The entry's
+    own 33 lines are byte-identical to the literal.
+  - `cycle:` was edited to `build` by hand rather than via
+    `just advance-cycle`, per the build instruction.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - **`X3` fired on day one, and that is the finding.** The guard caught a
+    real drift between the design session's snapshot and `main` before a
+    human ever read the page — the same failure mode the spec was written to
+    prevent, demonstrated at the spec's own expense (cf. design finding #4).
+    Worth quoting in the ship reflection; no new spec needed.
+  - **The `Projects` row now counts candidate briefs.** `PROJ-008` and
+    `PROJ-009` are scaffolded candidates, not started projects, so "Projects |
+    9" is arguably over-counting relative to what a reader infers. If that
+    reads wrong at verify, the fix belongs in `inventory.sh` (filter on
+    `status:`), not on the page — which is the design working as intended.
+  - **`guidance/questions.yaml` will likely conflict at merge.** Open PR #167
+    also edits this file (it flips `tag-ordering-projection` to `answered`);
+    this branch appends a different, new question. Both changes are wanted;
+    the textual conflict is expected and trivially resolved by keeping both.
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Almost nothing, and that is the literal-artifact contract paying out:
+   six `sed -n 'A,Bp'` extractions and three insertions, with no prose
+   authored at build. The one genuine ambiguity was **what to do when a
+   literal disagrees with the repository** — the spec says "transcribe
+   verbatim", `X3` says "run `just inventory` and paste", and on the
+   `Projects` row those two instructions conflict. The spec never states
+   which wins. It resolves cleanly once you notice that literal ① is
+   explicitly a *cached copy* of literal ③'s output (LD1: "the script is the
+   source, the page is a cached copy"), so ③ outranks ① wherever they
+   disagree — but that precedence is inferable from LD1's argument rather
+   than stated as a build rule. A one-line note under "Notes for the
+   Implementer" ("if `X3` fires, ③ wins; paste and record it as a deviation")
+   would have removed the only pause in the build.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No constraint. One small convention was missing: literal ⑥ does not
+   carry the blank-line separator that every other entry in
+   `guidance/questions.yaml` has, so build had to decide whether "verbatim"
+   included the file's separator convention. Trivial, but it is the same
+   class as the §12 "flag-default explicitness" rule — a formatting detail
+   that is design-decidable and was left to build to infer. Beyond that, the
+   §12(b) table was accurate on every row that could be re-checked here
+   (A1 at 260, the page at 268, zero `X5` hits, `E2` clean, the id delta
+   exactly `X1`–`X8`), which is why there were no other surprises.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Run `scripts/inventory.sh` **first**, before transcribing the page, and
+   diff its output against the embedded block. I transcribed all six literals
+   and then discovered the `Projects` drift from `X3`'s failure output, which
+   was the correct order for producing fail-first evidence but meant the
+   discrepancy surfaced later than it needed to. Doing the round-trip check
+   as step one costs ten seconds and tells you immediately which rows, if
+   any, the design snapshot has aged out of. The broader version: for any
+   spec whose literal embeds derived output, the derivation is the first
+   thing to re-run at build, because a literal that caches a computation is
+   exactly the literal most likely to be stale by the time build starts.
 
 ---
 
