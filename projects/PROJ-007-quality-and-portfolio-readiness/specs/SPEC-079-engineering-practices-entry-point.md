@@ -139,10 +139,13 @@ mismatch it prints both, and the remedy is `just inventory` + paste.
 every number describing the repository's **current state** lives inside the
 guarded block. A number written into the prose is only ever a **dated historical
 fact** (a version that shipped without a compare-link; a figure that was
-corrected) — those do not rot. This is why the table carries fifteen rows rather
+corrected) — those do not rot. This is why the table carries sixteen rows rather
 than the five framing anticipated: every current-state number the page wanted to
 assert was pulled into it, including the confidence range and the
-`## Amendment` count.
+`## Amendment` count. (Fifteen at design; the sixteenth — the build-phase
+reflection count — was added at the verify punch list, where P3 found a
+current-state number that had been typed into the prose as a universal
+quantifier. The rule caught its own violation.)
 
 **Why this beats all three candidates framing listed:**
 
@@ -563,7 +566,7 @@ Two traps worth naming before you start:
 
 ---
 
-### ① `docs/engineering-practices.md` (new file, 268 lines)
+### ① `docs/engineering-practices.md` (new file, 275 lines)
 
 ```markdown
 # Engineering practices
@@ -603,6 +606,7 @@ The section that says the most about how this repository is run is
 | Projects | 7 | `projects/PROJ-*/brief.md` |
 | Stages | 21 | `projects/*/stages/STAGE-*.md` |
 | Specs carried to ship and archived | 75 | `projects/*/specs/done/` |
+| …of those, also carrying a build-phase reflection | 69 | `### Build-phase reflection` in those files |
 | Go source files | 69 | `internal/`, `cmd/` |
 | Go test files | 78 | `internal/`, `cmd/` |
 | Go test functions | 812 | `func Test*` in `*_test.go` |
@@ -654,11 +658,12 @@ specs demonstrate:
   spec carries a `## Failing Tests` section written during design; build makes
   them pass. `test-before-implementation` is a blocking constraint in
   [`../guidance/constraints.yaml`](../guidance/constraints.yaml).
-- **Every archived spec carries its own reflection.** The files under
-  `projects/*/specs/done/` each end with build-phase and ship-phase reflections
-  answering what was unclear, what was missing, and what would be done
-  differently. `scripts/archive-spec.sh` refuses to archive a spec whose
-  reflection still holds template placeholders.
+- **Every archived spec carries its own reflection.** Every file under
+  `projects/*/specs/done/` ends with a ship-phase `## Reflection (Ship)`. The
+  build-phase reflection that precedes it — what was unclear, what was missing,
+  what would be done differently — is carried by the subset counted in the
+  inventory above, not by all of them. `scripts/archive-spec.sh` refuses to
+  archive a spec whose reflection still holds template placeholders.
 
 ## What the tests actually pin
 
@@ -672,10 +677,10 @@ specs demonstrate:
   [`../internal/cli/memory_test.go`](../internal/cli/memory_test.go) carries a
   comment above `TestMemoryCmd_EndToEndMarkdownGolden` naming three things that
   golden does not pin — the pool composition, the fusion constants, and the
-  budget — each verified by mutating the implementation and observing the golden
-  stay green, and each paired with the test that does pin it. The rule behind it
-  is that a claim about what a test pins is aspirational until it has been
-  mutation-checked.
+  declared `Matched` order — each verified by mutating the implementation and
+  observing the golden stay green, and each paired with the test that does pin
+  it. The rule behind it is that a claim about what a test pins is aspirational
+  until it has been mutation-checked.
 - **Two implementations of the same rule are pinned to each other.**
   `TestProvenanceClassifier_GoPredicateMatchesSQLClause` in
   [`../internal/storage/provenance_agreement_test.go`](../internal/storage/provenance_agreement_test.go)
@@ -813,8 +818,13 @@ these are not.
   needs a decision rather than a patch. They are named in
   [`../projects/PROJ-007-quality-and-portfolio-readiness/brief.md`](../projects/PROJ-007-quality-and-portfolio-readiness/brief.md).
 
-Closing the first three is the scope of
-[`STAGE-022`](../projects/PROJ-007-quality-and-portfolio-readiness/stages/STAGE-022-measured-and-enforced.md).
+[`STAGE-022`](../projects/PROJ-007-quality-and-portfolio-readiness/stages/STAGE-022-measured-and-enforced.md)
+closes the lint gate and the coverage number, and one of the known defects — the
+`Entries:` envelope inconsistency. It does not close the rest: its *Explicitly
+out of scope* section defers benchmarks to
+[`PROJ-009`](../projects/PROJ-009-scale-baseline-and-harness/brief.md), running
+the documentation assertions in CI is owned by nothing today, and the no-network
+claim stays enforced by review.
 
 ## The rest, by path
 
@@ -919,6 +929,7 @@ conf_certain=$(n "$(confidences | awk '$1 >= 1.0' | wc -l)")
 projects=$(n "$(ls -d projects/PROJ-*/ 2>/dev/null | wc -l)")
 stages=$(n "$(ls projects/*/stages/STAGE-*.md 2>/dev/null | wc -l)")
 specs_done=$(n "$(ls projects/*/specs/done/SPEC-*.md 2>/dev/null | wc -l)")
+specs_build_reflection=$(n "$(grep -l '^### Build-phase reflection' projects/*/specs/done/SPEC-*.md 2>/dev/null | wc -l)")
 src=$(n "$(find internal cmd -name '*.go' ! -name '*_test.go' | wc -l)")
 tst=$(n "$(find internal cmd -name '*_test.go' | wc -l)")
 testfuncs=$(n "$(grep -rh '^func Test' internal cmd --include='*_test.go' | wc -l)")
@@ -939,6 +950,7 @@ cat <<EOF
 | Projects | ${projects} | \`projects/PROJ-*/brief.md\` |
 | Stages | ${stages} | \`projects/*/stages/STAGE-*.md\` |
 | Specs carried to ship and archived | ${specs_done} | \`projects/*/specs/done/\` |
+| …of those, also carrying a build-phase reflection | ${specs_build_reflection} | \`### Build-phase reflection\` in those files |
 | Go source files | ${src} | \`internal/\`, \`cmd/\` |
 | Go test files | ${tst} | \`internal/\`, \`cmd/\` |
 | Go test functions | ${testfuncs} | \`func Test*\` in \`*_test.go\` |
@@ -1168,7 +1180,7 @@ genuinely open on its own merits.
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** `build/spec-079-practices-entry-point`
-- **PR (if applicable):** none opened — build ran to commit only.
+- **PR (if applicable):** #168 (open).
 - **All acceptance criteria met?** yes. `just test-docs` is green at **171
   distinct assertion ids** (was 163; delta is exactly `X1`–`X8`, confirmed by
   `comm` against the pre-build id set). `just test`, `gofmt -l .` and
@@ -1254,6 +1266,98 @@ Process-focused: how did the build go? What friction did the spec create?
    spec whose literal embeds derived output, the derivation is the first
    thing to re-run at build, because a literal that caches a computation is
    exactly the literal most likely to be stale by the time build starts.
+
+### Punch-list iteration (2026-08-18, second build session)
+
+Verify returned ⚠ PUNCH LIST with three findings, all one defect class: a claim
+on the page contradicted by the path it cites. All three originated in
+**literal ①** and were faithfully transcribed, so each was fixed in **both**
+`docs/engineering-practices.md` and literal ① in this spec. Parity re-confirmed
+after editing: the two are byte-identical except the one pre-existing recorded
+`| Projects |` row (md5 equal once that row is normalised, 275 lines each). The
+`Projects` deviation was deliberately left as verify recorded it — it is settled,
+and `X3` self-corrects it on any rebuild.
+
+- **P1 — the third thing the golden does not pin.** The page named "the budget";
+  the comment at `internal/cli/memory_test.go:156-178` names the declared
+  `Matched` order. Re-ran the mutation rather than trusting the description:
+  `memory.DefaultBudget` 2000 → 2048 reddens `TestMemoryCmd_EndToEndMarkdownGolden`
+  on its `- Budget: 2048 tokens` line, so the golden **does** pin the budget.
+  Two further tests redden — `TestDefaultBudget_Is2000` (the explicit pin) and
+  `TestMemoryCmd_BareInvocationIsPlainRecency` (the second golden, which also
+  carries the `## Budget` block). Verify's "reddens exactly that test" is
+  therefore one test too narrow; the load-bearing half of the finding stands.
+  Mutation reverted, tree verified clean.
+
+- **P2 — what `STAGE-022` actually closes.** "Closing the first three is the
+  scope of STAGE-022" replaced with a sentence that names the items rather than
+  an ordinal range, so it survives the list being reordered. **Sequencing:**
+  PR #167 (`chore/defer-stage-022-decisions`) was checked and is **OPEN, not
+  merged**; it narrows STAGE-022 to lint + coverage + the `Entries:` envelope
+  and moves `MergeTags` / `$EDITOR` to `PROJ-001-mvp/backlog.md`. The
+  replacement was written so that **every clause is true both today and after
+  #167 merges** — it names lint, coverage and the `Entries:` envelope defect
+  (in scope under both states), routes benchmarks to `PROJ-009` via STAGE-022's
+  own *Explicitly out of scope* section, and states that gating the
+  documentation assertions in CI is owned by nothing. Confirmed: `test-docs`
+  appears **zero** times in STAGE-022 under both `main` and #167, and nowhere
+  in PROJ-008 or PROJ-009. The sentence does not enumerate how many defects
+  STAGE-022 carries, which is the only clause the merge would flip.
+
+- **P3 — a universal quantifier false for 6 of 75.** Verified independently:
+  75/75 archived specs end with `## Reflection (Ship)` (it is the last `##`
+  section in every one); **69** carry `### Build-phase reflection`. The six that
+  do not are SPEC-045, SPEC-046, SPEC-048, SPEC-049, SPEC-050 and SPEC-071 — as
+  verify found. One nuance verify did not record: **SPEC-046 does carry a
+  build-phase reflection**, under the heading `### Honest reflection`; it is
+  prose rather than the three questions. So five specs carry none at all, and
+  six lack the standard heading.
+  **Chosen fix: derive the count, per LD1 — not soften the wording.**
+  `scripts/inventory.sh` (and literal ③) gain a sixteenth row,
+  `…of those, also carrying a build-phase reflection`, whose "Where it lives"
+  column names the exact heading grepped — which is what makes 69 reproducible
+  and what makes SPEC-046's non-standard heading honestly outside the count
+  rather than silently miscounted. The prose now points at that row and says
+  explicitly "not by all of them".
+  **Why derive rather than weaken:** softening to "most" or "generally" fixes
+  the false quantifier but breaks the page's *second* rule — every claim points
+  at a path, a count, or a named test — trading a checkable falsehood for an
+  uncheckable vagueness. Deriving satisfies both rules at once, and it makes the
+  claim self-maintaining: when a seventh spec is archived without a build-phase
+  reflection, `X3` goes red and the number is re-derived, instead of the prose
+  quietly going wrong again. `scripts/inventory.sh`'s own header comment already
+  prescribes exactly this ("If you find yourself wanting to type a current-state
+  number into the prose, add a row here instead"), so this is the fix the
+  artifact asked for, not a new convention.
+
+**The new row was mutation-tested both ways.** Page-side: `69` → `70` turns
+`X3` red with the prescribed remedy. Source-side (the check that matters):
+renaming one archived spec's `### Build-phase reflection` heading drops the
+derived count to 68 and turns `X3` red — so the row pins the page to the
+repository, not to itself. Both mutants reverted; tree verified clean after each.
+
+**Gates after the punch list, all green:** `just test` (all packages ok),
+`just test-docs` (**ALL OK**, 172 `OK:` lines / **171 distinct ids** — unchanged,
+no assertion was added or weakened), `gofmt -l .` (empty), `go vet ./...`
+(clean). Bands re-checked: `README.md` is **untouched at 260 lines** (`A1`'s
+ceiling, zero headroom, as LD5 requires) and the page is **275 lines**, inside
+`X7`'s 150–300. `X5` remains green — none of the new prose uses a forbidden
+token.
+
+**One honest limit, not papered over.** All three findings were prose that the
+mechanical guards cannot reach: `X3` cannot see them and `X5` was green through
+all three. P3 is now genuinely pinned, because its claim was converted into a
+derived number. P1 and P2 are **not** pinned by any assertion and cannot be
+without one that only *appears* to cover the claim — an `assert_contains` on
+"declared `Matched` order" or on "`Entries:` envelope" would go green on the
+words while saying nothing about whether the cited path still agrees with them,
+which is the exact failure mode `X5` already demonstrates (green, has teeth,
+pins the wrong proposition). No such assertion was added. Re-verify remains the
+control for this class, which is why `cycle:` stays at `build`.
+
+- **Files changed in this iteration:** `docs/engineering-practices.md`,
+  `scripts/inventory.sh`, and this spec (literal ①, literal ③, LD1's row count,
+  the stale `PR: none opened` line, and this section).
 
 ---
 

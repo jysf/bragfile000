@@ -53,6 +53,7 @@ conf_certain=$(n "$(confidences | awk '$1 >= 1.0' | wc -l)")
 projects=$(n "$(ls -d projects/PROJ-*/ 2>/dev/null | wc -l)")
 stages=$(n "$(ls projects/*/stages/STAGE-*.md 2>/dev/null | wc -l)")
 specs_done=$(n "$(ls projects/*/specs/done/SPEC-*.md 2>/dev/null | wc -l)")
+specs_build_reflection=$(n "$(grep -l '^### Build-phase reflection' projects/*/specs/done/SPEC-*.md 2>/dev/null | wc -l)")
 src=$(n "$(find internal cmd -name '*.go' ! -name '*_test.go' | wc -l)")
 tst=$(n "$(find internal cmd -name '*_test.go' | wc -l)")
 testfuncs=$(n "$(grep -rh '^func Test' internal cmd --include='*_test.go' | wc -l)")
@@ -73,6 +74,7 @@ cat <<EOF
 | Projects | ${projects} | \`projects/PROJ-*/brief.md\` |
 | Stages | ${stages} | \`projects/*/stages/STAGE-*.md\` |
 | Specs carried to ship and archived | ${specs_done} | \`projects/*/specs/done/\` |
+| …of those, also carrying a build-phase reflection | ${specs_build_reflection} | \`### Build-phase reflection\` in those files |
 | Go source files | ${src} | \`internal/\`, \`cmd/\` |
 | Go test files | ${tst} | \`internal/\`, \`cmd/\` |
 | Go test functions | ${testfuncs} | \`func Test*\` in \`*_test.go\` |

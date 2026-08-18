@@ -35,6 +35,7 @@ The section that says the most about how this repository is run is
 | Projects | 9 | `projects/PROJ-*/brief.md` |
 | Stages | 21 | `projects/*/stages/STAGE-*.md` |
 | Specs carried to ship and archived | 75 | `projects/*/specs/done/` |
+| …of those, also carrying a build-phase reflection | 69 | `### Build-phase reflection` in those files |
 | Go source files | 69 | `internal/`, `cmd/` |
 | Go test files | 78 | `internal/`, `cmd/` |
 | Go test functions | 812 | `func Test*` in `*_test.go` |
@@ -86,11 +87,12 @@ specs demonstrate:
   spec carries a `## Failing Tests` section written during design; build makes
   them pass. `test-before-implementation` is a blocking constraint in
   [`../guidance/constraints.yaml`](../guidance/constraints.yaml).
-- **Every archived spec carries its own reflection.** The files under
-  `projects/*/specs/done/` each end with build-phase and ship-phase reflections
-  answering what was unclear, what was missing, and what would be done
-  differently. `scripts/archive-spec.sh` refuses to archive a spec whose
-  reflection still holds template placeholders.
+- **Every archived spec carries its own reflection.** Every file under
+  `projects/*/specs/done/` ends with a ship-phase `## Reflection (Ship)`. The
+  build-phase reflection that precedes it — what was unclear, what was missing,
+  what would be done differently — is carried by the subset counted in the
+  inventory above, not by all of them. `scripts/archive-spec.sh` refuses to
+  archive a spec whose reflection still holds template placeholders.
 
 ## What the tests actually pin
 
@@ -104,10 +106,10 @@ specs demonstrate:
   [`../internal/cli/memory_test.go`](../internal/cli/memory_test.go) carries a
   comment above `TestMemoryCmd_EndToEndMarkdownGolden` naming three things that
   golden does not pin — the pool composition, the fusion constants, and the
-  budget — each verified by mutating the implementation and observing the golden
-  stay green, and each paired with the test that does pin it. The rule behind it
-  is that a claim about what a test pins is aspirational until it has been
-  mutation-checked.
+  declared `Matched` order — each verified by mutating the implementation and
+  observing the golden stay green, and each paired with the test that does pin
+  it. The rule behind it is that a claim about what a test pins is aspirational
+  until it has been mutation-checked.
 - **Two implementations of the same rule are pinned to each other.**
   `TestProvenanceClassifier_GoPredicateMatchesSQLClause` in
   [`../internal/storage/provenance_agreement_test.go`](../internal/storage/provenance_agreement_test.go)
@@ -245,8 +247,13 @@ these are not.
   needs a decision rather than a patch. They are named in
   [`../projects/PROJ-007-quality-and-portfolio-readiness/brief.md`](../projects/PROJ-007-quality-and-portfolio-readiness/brief.md).
 
-Closing the first three is the scope of
-[`STAGE-022`](../projects/PROJ-007-quality-and-portfolio-readiness/stages/STAGE-022-measured-and-enforced.md).
+[`STAGE-022`](../projects/PROJ-007-quality-and-portfolio-readiness/stages/STAGE-022-measured-and-enforced.md)
+closes the lint gate and the coverage number, and one of the known defects — the
+`Entries:` envelope inconsistency. It does not close the rest: its *Explicitly
+out of scope* section defers benchmarks to
+[`PROJ-009`](../projects/PROJ-009-scale-baseline-and-harness/brief.md), running
+the documentation assertions in CI is owned by nothing today, and the no-network
+claim stays enforced by review.
 
 ## The rest, by path
 
