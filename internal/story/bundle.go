@@ -1,3 +1,14 @@
+// Package story builds and renders `brag story` (SPEC-049): audience-shaped
+// bundles of Threads and Beats over a window of entries. BuildThreads and
+// BuildThroughline (thread.go) project []storage.Entry into the threading
+// shape a Profile selects; ToStoryMarkdown/ToStoryJSON (bundle.go, this
+// file) render the result per DEC-014's envelope. Profile (profile.go) is
+// DATA, not a Go enum — bundled defaults live under profiles/*.yaml and
+// directives/*.md (embed.go, DEC-029 choice 2), with an optional
+// ~/.bragfile/story-profiles/ user override shadowing a bundled name by
+// name. The package reads storage.Entry values but never a *storage.Store
+// or a SQL driver, and reads no clock itself — the CLI resolves the window,
+// the directive text, and "now", and passes them in via StoryOptions.
 package story
 
 import (

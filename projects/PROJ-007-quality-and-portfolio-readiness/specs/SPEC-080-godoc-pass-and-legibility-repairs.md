@@ -7,7 +7,7 @@
 task:
   id: SPEC-080
   type: chore                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -1066,3 +1066,76 @@ go vet ./...
 All four re-verified at design with every literal staged (§12(b) rows 4–6,
 14); all pass. Build should see the identical result after transcribing the
 six literals — nothing here is order-dependent or timing-sensitive.
+
+## Build Completion
+
+*Filled in at the end of the **build** cycle, before advancing to verify.*
+
+- **Branch:** `build/spec-080-godoc-and-legibility-repairs`.
+- **PR (if applicable):** none opened (per the invoking instruction — do not
+  push, do not open a PR).
+- **All acceptance criteria met?** yes. `just test-docs` is green at **176
+  distinct assertion ids** (was 171; delta is exactly `Y1`–`Y5`, confirmed by
+  `comm` against the pre-build id set — nothing added beyond the five, nothing
+  lost). `just test`, `gofmt -l .` and `go vet ./...` are unaffected (all
+  clean). `go build ./...` exits 0. `go doc` on all five named packages
+  renders the new comment in full (verified individually, not just via
+  `gofmt`'s adjacency check).
+- **Order followed:** literal ③ (`scripts/inventory.sh`) and literal ②
+  (the DEC-041 tombstone) landed first, per the invoking instruction.
+  `./scripts/inventory.sh` was then run against that intermediate state —
+  `Decision records | 45 |` and `Decision numbers reserved... | 1 |` were
+  already correct at that point, and `Documentation assertions` /
+  `Questions...` rows still read the pre-build values (171; 18/8) because
+  literals ④ and ⑤ hadn't landed yet, confirming the script tracks live
+  state rather than anything cached. After ④ and ⑤ landed, `inventory.sh`
+  was re-run once more before touching literal ⑥, producing **176 / 18 / 6**
+  — the exact values literal ⑥ predicted. Literal ⑥ was then applied
+  unmodified; no reconciliation was needed because the script's live output
+  and the spec's cached diff agreed exactly.
+- **New decisions emitted:**
+  - none. Every choice was settled at design (LD1–LD4); build produced no
+    non-trivial decision of its own.
+- **Deviations from spec:**
+  - none. All six literals transcribed byte-for-byte — verified by `git diff`
+    against each literal's exact text for ①, ③, ⑥, and by direct line-count
+    (70) and content comparison for ②, ④, ⑤.
+  - `cycle:` was edited to `build` by hand rather than via
+    `just advance-cycle`, per the build instruction.
+- **Follow-up work identified:**
+  - none beyond what the spec already named as deliberately deferred
+    (`status.sh`'s off-by-one 46, the README restructure, STAGE-022 scope).
+
+### Build-phase reflection (3 questions, short answers)
+
+Process-focused: how did the build go? What friction did the spec create?
+
+1. **What was unclear in the spec that slowed you down?**
+   — Nothing. This is the second consecutive spec in this stage (after
+   SPEC-079) to apply the literal-artifact-as-spec contract, and the
+   "re-run the derivation first" ordering instruction (itself the
+   generalised lesson from SPEC-079's own `Projects | 7 → 9` drift) meant
+   there was no ambiguity about precedence: land ③/②, re-derive, reconcile,
+   *then* judge everything else. Unlike SPEC-079, no literal had gone stale
+   between design and build — `./scripts/inventory.sh`'s live output matched
+   literal ⑥ exactly on the first run, so there was nothing to reconcile.
+2. **Was there a constraint or decision that should have been listed but wasn't?**
+   — No. `no-sql-in-cli-layer` was restated as prose inside the new
+   `internal/cli` package comment (literal ①) and required no code change to
+   satisfy — the comment is accurate against the current import set, which
+   `go vet`/`go build` passing confirms indirectly (an added SQL import would
+   have broken the `no-sql-in-cli-layer`-guarded build, not just made the
+   comment stale). Everything else was comment-only, so no Go-scoped
+   constraint had any surface to violate.
+3. **If you did this task again, what would you do differently?**
+   — Nothing procedurally. One minor observation: literal ④'s Y1 check reads
+   the line immediately preceding each `package` declaration via
+   `sed -n "${y1_prev}p"`, which is exactly the adjacency rule `go doc` uses —
+   worth calling out that this build additionally ran `go doc` on all five
+   packages by hand (a stronger, tool-level confirmation than the shell
+   assertion alone gives), per the invoking instruction's explicit warning
+   that a blank-line-separated comment "compiles fine and documents nothing."
+   Both checks agreed on all five files; a future spec doing the same kind of
+   pass could fold the `go doc` check into `test-docs.sh` itself rather than
+   relying on Y1's line-adjacency proxy plus a manual `go doc` pass — Y1
+   already gets this exactly right, so this is a note, not a defect.

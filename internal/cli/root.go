@@ -1,3 +1,13 @@
+// Package cli implements every brag subcommand as a cobra.Command
+// constructor — one file per verb (add.go, list.go, ...) — plus the
+// scaffolding they share: ErrUser/UserErrorf for exit-code classification
+// (errors.go), the injectable clock seam tests substitute (clock.go),
+// atomic same-directory-rename config writes (atomicwrite.go), and the
+// calendar-window flag parsing shared by impact/story (window.go). It
+// imports no SQL driver and no database/sql — enforced by the
+// no-sql-in-cli-layer constraint — so every command reaches persistence
+// only through internal/storage, keeping the CLI a thin shell a future
+// frontend (TUI, API) could replace.
 package cli
 
 import (

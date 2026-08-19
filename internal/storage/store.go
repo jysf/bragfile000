@@ -1,3 +1,13 @@
+// Package storage is the only package that imports a SQL driver
+// (modernc.org/sqlite, pure Go — no CGO, DEC-001). Store wraps *sql.DB and
+// owns every persistence operation: Open applies pending embedded
+// migrations (migrate.go) behind a pre-migration backup safety belt
+// (backup.go, DEC-021) and a dev/prod migration guard (devguard.go,
+// DEC-026); Entry and ListFilter (entry.go) are the query vocabulary;
+// project.go adds the projects/locations schema (DEC-017/019/020). Every
+// other package reaches the database only through a *Store — enforced by
+// the no-sql-in-cli-layer constraint on internal/cli — which is what keeps
+// commands testable and a future frontend feasible.
 package storage
 
 import (

@@ -1,3 +1,11 @@
+// Package main is the brag CLI entrypoint. It resolves the build version
+// (goreleaser's ldflags, or the embedded module version for a
+// `go install ./cmd/brag@latest` build — see resolveVersion), wires every
+// internal/cli command onto the root cobra command, and maps the returned
+// error to an exit code: ErrUser and storage.ErrDevProdMigrate exit 1
+// (user-actionable), everything else exits 2 (internal fault). It holds no
+// business logic of its own — see internal/cli for the commands and
+// internal/storage for persistence.
 package main
 
 import (

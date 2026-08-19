@@ -178,7 +178,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       re-verify caught: the grep is syntactic, the claim was semantic, and they
       diverge on exactly one spec. Recorded rather than quietly corrected —
       it is the same defect class, in the stage file that owns it.)*
-- [ ] SPEC-080 (design) — **the godoc pass + the two legibility repairs.**
+- [ ] SPEC-080 (build) — **the godoc pass + the two legibility repairs.**
       Framed 2026-08-19, **GO at complexity S** — resized *down* by
       measurement. The brief's "no surfaced godoc" implied missing doc
       comments; there are **175 exported declarations and only 3 lack one**,
@@ -220,6 +220,21 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `test-docs.sh` harness before being reverted to literals — all green;
       `just test-docs` reaches **176** distinct assertions (was 171).
       Confidence 0.90.
+      **Built 2026-08-19** on `build/spec-080-godoc-and-legibility-repairs`.
+      All six literals transcribed byte-for-byte — verified by diff against
+      each literal, not by eye. Order followed the invoking instruction:
+      `inventory.sh` (③) and the `DEC-041` tombstone (②) landed first;
+      `./scripts/inventory.sh` was re-run against that intermediate state
+      (Decision records 45, reserved 1, both already correct) and again
+      after ④/⑤ landed, producing **176 / 18 / 6** — exactly what literal ⑥
+      predicted, so no reconciliation was needed before pasting it. `just
+      test-docs` is green at **176 distinct assertion ids** (delta exactly
+      `Y1`–`Y5`, confirmed by `comm`); `just test`, `gofmt -l .`, and
+      `go vet ./...` are unaffected; `go build ./...` exits 0; `go doc` on
+      all five named packages was run individually and renders the new
+      comment in full. `scripts/status.sh` reports 46 decisions, as the
+      design predicted (informational-only off-by-one, left untouched).
+      No deviations from the six literals.
 
 **Count:** 1 shipped / 1 active / 1 pending  *(the third — the README
 restructure + the A1 `wc -l` → `wc -w` switch — is agreed and not yet

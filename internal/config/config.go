@@ -1,3 +1,11 @@
+// Package config resolves the bragfile database path. ResolveDBPath applies
+// DEC-003's fixed order — an explicit flag value, then the BRAGFILE_DB env
+// var, then DefaultDBPath's ~/.bragfile/db.sqlite — expanding a leading
+// `~/` and returning an absolute path. internal/cli's commands call it to
+// resolve the --db flag; internal/storage's dev/prod migration guard
+// (DEC-026) calls it independently to find the real database regardless of
+// what path the caller passed. It has no dependency on internal/storage, so
+// both can import it without a cycle.
 package config
 
 import (
