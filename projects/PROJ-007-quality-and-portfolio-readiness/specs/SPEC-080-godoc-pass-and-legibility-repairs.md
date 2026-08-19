@@ -1139,3 +1139,185 @@ Process-focused: how did the build go? What friction did the spec create?
    pass could fold the `go doc` check into `test-docs.sh` itself rather than
    relying on Y1's line-adjacency proxy plus a manual `go doc` pass — Y1
    already gets this exactly right, so this is a note, not a defect.
+
+---
+
+## Verify Findings
+
+*Filled in during the **verify** cycle (fresh session, per AGENTS.md §6).*
+
+**Verdict: ⚠ PUNCH LIST.** The mechanical half is clean — all five gates
+green, all six literals transcribed byte-for-byte (verified by diff, not by
+assertion), the id delta is exactly `Y1`–`Y5` with nothing lost, and all ten
+untouched inventory numbers independently recompute correctly. Every one of
+`Y1`–`Y5` was mutation-tested and caught its mutant, each mutant hash-verified
+as a real change. The punch list is entirely in the **judgement** half: three
+factual claims inside the new godoc prose do not survive checking, and the
+build reflection asserts a guard that does not exist.
+
+Nothing below was fixed in place — each spans both the spec's embedded literal
+and the shipped artifact, so fixing one without the other breaks the
+literal-artifact contract.
+
+### P1 — "enforced by the `no-sql-in-cli-layer` constraint" is not true (blocking)
+
+`internal/cli/root.go` and `internal/storage/store.go` both state the SQL
+boundary is *"enforced by the no-sql-in-cli-layer constraint."* Nothing
+enforces it. Verified empirically: inserting `_ "database/sql"` into the
+**production** file `internal/cli/root.go` — six lines below the comment
+denying it — passes `go build`, `go vet`, `gofmt -l .`, `just test`, and
+`just test-docs`. No gate caught it.
+
+The repo already contains the guard this needs:
+`internal/mcpserver/import_audit_test.go`'s `TestNoSQLImport`, whose own
+comment reads *"The constraint's path glob covers `internal/cli/**` only;
+this test covers the gap for the new package."* The package the constraint
+was actually written for is the one without the test.
+
+**Fix:** either soften the wording in both literals to what the repo's own
+prose already says elsewhere (`internal/storage/storagetest`: *"without
+violating"*; `impact_test.go`: *"the production CLI layer stays SQL-free"*),
+or port `TestNoSQLImport` to `internal/cli` and make the word "enforced"
+true. The second is the better outcome and is small, but it is new test
+surface this spec did not scope.
+
+### P2 — build reflection Q2 is factually wrong (blocking)
+
+Q2 answers that *"an added SQL import would have broken the
+`no-sql-in-cli-layer`-guarded build, not just made the comment stale."* P1's
+mutation falsifies this directly. The reflection is honest in intent, but a
+future spec reading it will assume a guard exists that does not. Correct the
+answer to record that the constraint is convention-only for `internal/cli`.
+
+### P3 — "the only package that imports a SQL driver" is false (minor)
+
+`internal/storage/store.go`'s comment opens *"Package storage is the only
+package that imports a SQL driver."* `internal/storage/storagetest` is a
+distinct package whose **non-test** file `storagetest.go` imports
+`_ "modernc.org/sqlite"`. The repo's own established phrasing is *the storage
+**layer***, not the package — `storagetest`'s own comment says *"Living under
+`internal/storage/` keeps the `database/sql` dependency inside the storage
+layer."* Changing "package" to "layer" makes the sentence true.
+
+### P4 — "project.go adds the projects/locations schema" is contradicted by its own citation (minor)
+
+`internal/storage/store.go`'s comment says *"project.go adds the
+projects/locations schema (DEC-017/019/020)."* `project.go` contains zero
+`CREATE`/`ALTER`/`DROP` statements — it holds the `Store` methods
+(`CreateProject`, `AddLocation`, `ProjectForPath`, …). The schema is added by
+`internal/storage/migrations/0004_add_projects.sql`, which **DEC-017 — the
+first DEC cited — states explicitly** (line 45: *"The `0004_add_projects.sql`
+migration adds two tables"*). Suggested: *"project.go holds the
+projects/locations operations over the `0004_add_projects.sql` schema."*
+
+### P5 — "the row below" points the wrong way (minor)
+
+`docs/engineering-practices.md` (literal ⑥, spec line 1021): *"so it does not
+count itself in the row below."* The inventory table ends at
+`<!-- inventory:end -->` **above** that prose; the next bullet in the same
+section correctly says *"see the lowest, highest and 1.0 rows **above**."*
+One word: `below` → `above`.
+
+### Observations — not blocking, no action required in this spec
+
+- **The `insight.type` seam is the right call, with one new silent-loss
+  mode.** It reuses a field every one of the 45 records already carries, the
+  distinction is semantic rather than positional, and `Y3` pins it
+  semantically. Confirmed by scratch file: `type: decision` → 46/1,
+  `type: reservation` → 45/2. But `type: bogus` and *no type field* both
+  → 45/1 — counted by **neither** row. The old bare glob could not lose a
+  file; the filter can. Nothing asserts totality
+  (`decs + decs_reserved == ls decisions/DEC-*.md | wc -l`), and
+  `reservation` is absent from `decisions/_template.md`'s documented enum
+  (`decision | analysis | recommendation | observation`). A future spec
+  touching either should close both gaps.
+- **`Y3` earns its place, proven.** Mutating `inventory.sh` *and* the page
+  together so both agreed on 46 left `X3` **passing** and `Y3` the only
+  failure — exactly the blind spot the design predicted.
+- **`Y1` catches what no Go gate can.** A blank line between the comment and
+  `package config` passes `go build`, `go vet`, and `gofmt -l .` while
+  `go doc ./internal/config` renders **no package comment at all**. Only `Y1`
+  fails.
+- **`status.sh` behaves exactly as predicted** — 46 by filename glob against
+  the guarded 45. Confirmed, not touched.
+- **176 vs 177.** `test-docs.sh` prints 177 `OK:` lines because `S3` is
+  emitted twice; distinct ids are 176, matching both the script and the page.
+  The duplicate is unchanged from `HEAD~1` and the row is honestly labelled
+  *"distinct ids"*. Pre-existing, correct as defined.
+- **`internal/config`, nit only.** *"internal/storage's dev/prod migration
+  guard (DEC-026) calls it independently"* — the guard calls
+  `config.DefaultDBPath` (`devguard.go:39`), not `ResolveDBPath`, which is
+  what "it" refers to in the preceding clause. Substantively right, referent
+  loose.
+
+### Judgement on each of the five comments
+
+| Package | Verdict |
+|---|---|
+| `cmd/brag` | **Sound.** Every claim verified — `resolveVersion`, all 21 `AddCommand` calls (literally *every* `internal/cli` constructor), and the exact `ErrUser`/`ErrDevProdMigrate` → 1, else 2 mapping. |
+| `internal/cli` | **Sound but for P1.** File-to-concern map (`errors.go`, `clock.go`, `atomicwrite.go`, `window.go`) all correct; the SQL claim is true of production code but "enforced" is not. |
+| `internal/config` | **Sound.** Resolution order, `~/` expansion, absolute-path return, and the no-cycle claim all verified against the code. Only the P-list nit above. |
+| `internal/storage` | **Weakest of the five** — two false claims (P3, P4). The `Open` sequence (devguard → backup → apply) and `entry.go` vocabulary are exactly right. |
+| `internal/story` | **Strongest of the five.** Every claim verified, including the non-obvious one: `DEC-014`'s envelope legitimately governs `story` because **DEC-029 choice 5** explicitly *"EXTENDS DEC-014's envelope."* Purity claim (no `*storage.Store`, no driver, no clock) confirmed by grep. |
+
+Voice and depth sit comfortably inside the range of the ten pre-existing
+comments — denser than `export`/`aggregate`/`mcpserver`, comparable to
+`editor`/`memory`, less discursive than `timewindow`/`ftsquery`. No new
+comment is markedly thinner than the existing set.
+
+### Question closures — both hold
+
+- **`editor-template-format` → DEC-009: holds, cleanly.** The register asked a
+  binary ("YAML front-matter … or a simpler key-value header?"). DEC-009's
+  **Option E (chosen)** is `net/textproto` header + markdown body; **Option A
+  (YAML front-matter) is explicitly rejected**, and its stated reason —
+  *"Requires `gopkg.in/yaml.v3` (a new top-level dep needing its own DEC)"* —
+  is exactly the rationale the closure note cites. `EmptyTemplate()` returns
+  `"Title: \nTags: \nProject: \nType: \nImpact: \n\n"`, matching the claimed
+  fixed header order verbatim.
+- **`summary-grouping-heuristics` → `aggregate.GroupForHighlights`: holds.**
+  Read independently: buckets on `e.Project` only; `NoProjectKey` forced last;
+  remaining projects ordered `out[i].Project < out[j].Project` (alpha-ASC);
+  within a bucket, `CreatedAt` ASC with `ID` tie-break. `Type` is never a
+  grouping key — `internal/export/summary.go` renders it as a separate flat
+  `**By type**` list. Tags are not an axis. Exactly the closure's claim, and
+  exactly the "leaning toward" guess the 2026-04-19 entry recorded.
+  *One imprecision:* the note's parenthetical *"(alpha-ASC, `(no project)`
+  forced last per DEC-013/DEC-014's count-ordering rule)"* — that rule is
+  **count-DESC with alpha-ASC tiebreak**; only the `(no project)`-last clause
+  comes from it. The behavioural description is right; the attribution reads
+  as covering both properties.
+
+**The six that stayed open all still have live triggers.** Confirmed:
+`## Amendment` count is **1** against a 4+ resolve condition and PROJ-007 is
+still `status: active`; `brag spark --month` exists and is wired
+(`spark.go:43`, help text confirming the rolling-28-day reading the question
+flags); `docs/research/duckdb-federation-spike.md` exists and is a spike, not
+a shipped feature. The remaining three turn on a user report or a subjective
+dogfooding read. No answer was invented to shrink the register.
+
+### Mutation results — all five caught, every mutant hash-verified
+
+| Mutant | Change proven by | Result |
+|---|---|---|
+| `Y1` blank line before `package config` | sha256 `14589d46…` → `6983aab8…` | `FAIL: Y1` — while `go build`/`vet`/`gofmt` all pass |
+| `Y2` tombstone retyped `reservation`→`decision` | `30d3c43c…` → `830b5cad…` | `FAIL: Y2`, `Y3`, `X3` |
+| `Y3` filter reverted to bare glob | `e2db9558…` → `331ae2a7…` | `FAIL: Y3`, `X3` |
+| `Y3` **script + page both** set to 46 | both hashes changed | `FAIL: Y3` only — `X3` passes |
+| `Y4` open-count grep de-anchored (the historical bug) | `e2db9558…` → `3e0ce8e9…` | `FAIL: Y4`, `X3` |
+| `Y5` `editor-template-format` → `status: open` | `ed611ad6…` → `45fc1976…` | `FAIL: Y5`, `Y4`, `X3` |
+
+`Y4`/`Y5` cross-check as designed. Every mutation restored; tree verified
+clean after each.
+
+**Id delta:** `61 → 66` distinct `ok`/`fail` labels, added set exactly
+`{Y1,Y2,Y3,Y4,Y5}`, removed set **empty** (`comm` against `HEAD~1`).
+Page `171 → 176`, matching the script's static derivation.
+
+### Re-verify
+
+Per the stage's own history (SPEC-075's punch-list delta found two more
+defects; SPEC-078 skipped the re-verify and shipped an assertion pinning the
+wrong proposition), **the punch-list delta deserves its own re-verify pass
+before this spec advances.** P1 in particular can be closed two ways with
+materially different scope.
