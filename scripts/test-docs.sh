@@ -113,8 +113,14 @@ check_link_target() {
 
 # ===== Group A — README shape (positive) =====
 
-# A1 — README line count band 100..250
-assert_line_count_band "A1" "README.md" 100 250
+# A1 — README line count band 100..260
+# Re-pinned 250 -> 260 at SPEC-079 (LD5), TIGHT: 260 is the exact length of the
+# README after the `## How this repo is built` section, not a round number with
+# headroom. A guard widened whenever it fires is not a guard — the next line
+# added to the README fails this again and is again a decision. The band exists
+# (SPEC-021) to keep the README a user-facing quickstart, and a ten-line routing
+# section with no commands, flags or numbers does not change that.
+assert_line_count_band "A1" "README.md" 100 260
 
 # A2 — README opens with H1 in line 1 or 2
 if [ ! -f README.md ]; then
@@ -339,7 +345,7 @@ fi
 
 # E1 — Internal links resolve in README, CONTRIBUTING, development.md
 e1_pre_count=$FAIL_COUNT
-for src in README.md CONTRIBUTING.md docs/development.md; do
+for src in README.md CONTRIBUTING.md docs/development.md docs/engineering-practices.md; do
     [ -f "$src" ] || continue
     src_dir=$(dirname "$src")
     # Extract every ](url) and strip surrounding markers
@@ -1323,6 +1329,93 @@ if [ -n "$w6_pr" ] && [ -n "$w6_commit" ] && [ "$w6_pr" -lt "$w6_commit" ]; then
     ok "W6"
 else
     fail "W6" "docs/for-ai-agents.md must name pr: BEFORE commit: (pr=${w6_pr:-none} commit=${w6_commit:-none})"
+fi
+
+# ===== Group X — engineering-practices entry point (SPEC-079) =====
+
+PRACTICES_DOC="docs/engineering-practices.md"
+
+# X1 — the practices page exists.
+assert_file_exists "X1" "$PRACTICES_DOC"
+
+# X2 — the README points at it. This is the whole "entry point" claim: the page
+# is worthless if the front door does not name it.
+assert_contains_literal "X2" "README.md" "docs/engineering-practices.md"
+
+# X3 — THE COUNTING GUARD. The inventory block on the page must equal
+# `scripts/inventory.sh` output byte-for-byte. This is the assertion that makes
+# every number on the page unrottable: it does not check one hand-typed count
+# against one hand-typed expectation (which is just a second thing to maintain)
+# — it recomputes the whole table from the repo and diffs. The remedy on
+# failure is mechanical: run `just inventory`, paste between the markers.
+if [ ! -f "$PRACTICES_DOC" ]; then
+    fail "X3" "$PRACTICES_DOC does not exist"
+elif [ ! -x scripts/inventory.sh ]; then
+    fail "X3" "scripts/inventory.sh is missing or not executable"
+else
+    x3_want=$(./scripts/inventory.sh)
+    x3_got=$(awk '/<!-- inventory:begin/{f=1; next} /<!-- inventory:end/{f=0} f' "$PRACTICES_DOC")
+    if [ -z "$x3_got" ]; then
+        fail "X3" "$PRACTICES_DOC has no content between the inventory:begin/inventory:end markers"
+    elif [ "$x3_got" = "$x3_want" ]; then
+        ok "X3"
+    else
+        fail "X3" "inventory block is stale — run \`just inventory\` and paste between the markers:
+--- on the page ---
+$x3_got
+--- computed from the repo ---
+$x3_want"
+    fi
+fi
+
+# X4 — the page describes the test mechanism as it ACTUALLY is.
+# There are no golden FILES in this repo: `find . -name '*.golden'` is empty and
+# there are no testdata/ directories. The mechanism is byte-exact expected
+# output embedded as Go string literals. Deliberately a POSITIVE assertion, not
+# a NOT-contains on "golden file": the page has to be free to say what the
+# mechanism is NOT, and a NOT-contains would forbid exactly that sentence.
+assert_contains_literal "X4" "$PRACTICES_DOC" "embedded as Go string literals"
+
+# X5 — no adjective stands alone. STAGE-021's success criterion, mechanised.
+# Every token below is a claim a reader cannot check; the page is required to
+# point at a path, a count or a named test instead.
+assert_not_contains_iregex "X5" "$PRACTICES_DOC" 'rigorous|comprehensive|world-class|best-in-class|battle-tested|cutting-edge|state-of-the-art'
+
+# X6 — the corrections claim is made BY CITATION, not by count.
+# There is no counting rule for "decision records that log their own
+# correction" (only 1 of 45 DECs carries an explicit `## Amendment` heading, and
+# a keyword grep matches all 45 because ordinary prose uses those words), so the
+# page names the specific records. This pins that it keeps naming them.
+if [ ! -f "$PRACTICES_DOC" ]; then
+    fail "X6" "$PRACTICES_DOC does not exist"
+else
+    x6_missing=""
+    for x6_id in "DEC-004" "DEC-015" "DEC-025" "DEC-043" "DEC-044" "PROJ-006"; do
+        if ! grep -F -q -- "$x6_id" "$PRACTICES_DOC"; then
+            x6_missing="$x6_missing $x6_id"
+        fi
+    done
+    if [ -z "$x6_missing" ]; then
+        ok "X6"
+    else
+        fail "X6" "$PRACTICES_DOC must cite each correction record by id; missing:$x6_missing"
+    fi
+fi
+
+# X7 — the page stays an INDEX, not an essay. Same idiom as A1/C2/D2. The
+# stated failure mode for this document is that it turns into new prose about
+# the project instead of a route to artifacts that already exist; a length band
+# is the cheap mechanical form of that. Band, not a tight pin, because unlike
+# A1 there is no agreed length for a brand-new artifact to be re-pinned to.
+assert_line_count_band "X7" "$PRACTICES_DOC" 150 300
+
+# X8 — `just inventory` is wired, so the remedy X3 names actually exists.
+if [ ! -f justfile ]; then
+    fail "X8" "justfile does not exist"
+elif grep -E -q '^inventory:' justfile; then
+    ok "X8"
+else
+    fail "X8" "no '^inventory:' recipe in justfile"
 fi
 
 # ===== finalise =====

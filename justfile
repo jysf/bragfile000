@@ -156,3 +156,7 @@ run *ARGS:
 # Print the active project and variant
 info:
     @./scripts/info.sh
+
+# Print the engineering-practices inventory table (paste into docs/engineering-practices.md)
+inventory:
+    @./scripts/inventory.sh

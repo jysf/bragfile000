@@ -88,7 +88,7 @@ times by a coverage sentence that sounded true and pinned nothing (SPEC-073).
    backlog**, which a browsing reader never sees. Land a reservation tombstone
    in `decisions/` that names the holder and links the backlog item, so the gap
    stops reading as a lost decision.
-5. **Open-questions hygiene.** **7 of 17 are open** (was 8; see below). Three
+5. **Open-questions hygiene.** **8 of 18 are open.** (It was 8 of 17; `tag-ordering-projection` closed and SPEC-079 opened `dec-amendment-heading-convention`, so the count returned to 8 against a larger total. This line has now been wrong twice in three days, which is the argument for the hygiene pass deriving it rather than restating it.) Three
    date from **2026-04-19** and have not moved in four months
    (`shareable-ids`, `editor-template-format`, `summary-grouping-heuristics`) —
    at least one is likely answered-in-practice but never closed. For each open
@@ -122,7 +122,7 @@ Ordered list of specs composing this stage. IDs assigned at creation.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-079 (design) — **the practices entry point.** README section + the
+- [x] SPEC-079 (shipped on 2026-08-18) — **the practices entry point.** README section + the
       document it points at; every claim backed by a countable artifact; counts
       derived or pinned rather than typed. Framed 2026-08-16, **GO at complexity
       M** — the counting rule is a real design problem, not a formality. Framing
@@ -143,10 +143,51 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       guards" (there are six) and the brief's "zero deprecated" (DEC-004 is
       superseded by DEC-015 — which strengthens the story rather than damaging
       it).
+      **Built 2026-08-18** on `build/spec-079-practices-entry-point`. All six
+      literals transcribed; `just test-docs` green at **171 distinct assertion
+      ids** (was 163, delta exactly `X1`–`X8`), `just test` / `gofmt -l .` /
+      `go vet ./...` unaffected. `X3` earned its keep on day one: the design
+      snapshot recorded **7 projects**, but PR #165 (`PROJ-008`/`PROJ-009`
+      scaffolds) merged ~2h before the design PR, so the true count on `main`
+      is **9**. Transcribing literal ① verbatim made `X3` the *only* failing
+      assertion, naming exactly one drifted row; the fix was the guard's own
+      mechanical remedy (`just inventory`, paste). The counting guard caught a
+      stale count before a human read the page — which is the whole thesis of
+      this spec, demonstrated at its own expense.
+      **Verified 2026-08-18 — ⚠ PUNCH LIST (3 items), back to build.** The
+      mechanical half is clean: all six literals byte-faithful, `X3` confirmed
+      passing for the right reason (both sides non-empty and byte-identical,
+      and it goes red when the *repo* drifts, not just the page), the id delta
+      exactly `X1`–`X8` in both directions, and all eight Group X assertions
+      plus the re-pinned `A1` mutation-tested with the mutant proven real. The
+      `Projects` deviation was the correct resolution and is honestly recorded.
+      What did not survive is the page's own standard, in three prose claims no
+      guard reaches: it says the `TestMemoryCmd_EndToEndMarkdownGolden` comment
+      lists **the budget** as unpinned when the comment lists the declared
+      Matched order and the golden provably *does* pin the budget
+      (mutation-confirmed); it routes the first three "does not measure" gaps to
+      STAGE-022 when STAGE-022 lists benchmarks under **Explicitly out of
+      scope** and never mentions `test-docs` at all; and it says every archived
+      spec ends with a build-phase reflection when **six of 75 lack the standard
+      `### Build-phase reflection` heading — of which five carry none at all,
+      SPEC-046 having written one under `### Honest reflection`.** Each is a
+      claim backed by a path that contradicts it — the exact failure the page
+      exists to prevent. Fixed in both the page and literal ①; the delta was
+      re-verified (✅ 2026-08-18) before ship.
+      *(This sentence itself first read "six of 75 carry none", which the
+      re-verify caught: the grep is syntactic, the claim was semantic, and they
+      diverge on exactly one spec. Recorded rather than quietly corrected —
+      it is the same defect class, in the stage file that owns it.)*
 - [ ] (not yet framed) — **the godoc pass**, plus the two legibility repairs
       that need no design (`DEC-041` tombstone, open-questions hygiene).
 
-**Count:** 0 shipped / 1 active / 1 pending
+**Count:** 1 shipped / 0 active / 1 pending
+
+> **The stage is NOT complete.** `just archive-spec` printed *"All specs for
+> STAGE-021 are shipped"* on this ship — it counts written specs, not backlog
+> items, so an unframed entry is invisible to it. The godoc / `DEC-041` /
+> questions-hygiene spec below is still pending. Do not run the Stage Ship
+> prompt on the strength of that message.
 
 ## Design Notes
 
