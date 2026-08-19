@@ -178,10 +178,20 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       re-verify caught: the grep is syntactic, the claim was semantic, and they
       diverge on exactly one spec. Recorded rather than quietly corrected —
       it is the same defect class, in the stage file that owns it.)*
-- [ ] (not yet framed) — **the godoc pass**, plus the two legibility repairs
-      that need no design (`DEC-041` tombstone, open-questions hygiene).
+- [ ] SPEC-080 (frame) — **the godoc pass + the two legibility repairs.**
+      Framed 2026-08-19, **GO at complexity S** — resized *down* by measurement.
+      The brief's "no surfaced godoc" implied missing doc comments; there are
+      **175 exported declarations and only 3 lack one**, all conventional
+      interface methods Go style does not ask you to document. The real gap is
+      **7 of 15 packages with no package comment** — `cmd/brag`, `cli`,
+      `config`, `export`, `mcpserver`, `storage`, `story`, i.e. the largest ones,
+      which is how it went unnoticed. Same shape SPEC-079 found: the discipline
+      exists and is not surfaced. Two forks left to design — what shape the
+      `DEC-041` marker takes (and what it does to `inventory.sh`'s decision
+      count), and whether the hygiene pass derives its own number.
 
-**Count:** 1 shipped / 0 active / 1 pending
+**Count:** 1 shipped / 1 active / 1 pending  *(the third — the README
+restructure + A1 metric switch — is agreed and not yet scaffolded)*
 
 > **The stage is NOT complete.** `just archive-spec` printed *"All specs for
 > STAGE-021 are shipped"* on this ship — it counts written specs, not backlog
