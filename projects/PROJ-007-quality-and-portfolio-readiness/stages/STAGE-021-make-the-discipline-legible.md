@@ -88,13 +88,22 @@ times by a coverage sentence that sounded true and pinned nothing (SPEC-073).
    backlog**, which a browsing reader never sees. Land a reservation tombstone
    in `decisions/` that names the holder and links the backlog item, so the gap
    stops reading as a lost decision.
-5. **Open-questions hygiene.** 8 of 17 are open. Three date from **2026-04-19**
-   and have not moved in four months (`shareable-ids`,
-   `editor-template-format`, `summary-grouping-heuristics`) — at least one is
-   likely answered-in-practice but never closed. For each open question: mark
-   answered and link what settled it, delete it if it resolved informally, or
-   restate its resolve condition so it is actionable. **Do not close
-   `tag-ordering-projection`** — it is live and blocking (see STAGE-022).
+5. **Open-questions hygiene.** **7 of 17 are open** (was 8; see below). Three
+   date from **2026-04-19** and have not moved in four months
+   (`shareable-ids`, `editor-template-format`, `summary-grouping-heuristics`) —
+   at least one is likely answered-in-practice but never closed. For each open
+   question: mark answered and link what settled it, delete it if it resolved
+   informally, or restate its resolve condition so it is actionable.
+
+   *`tag-ordering-projection` was closed ahead of this spec (2026-08-18) and is
+   the worked example of what this item is for.* It had been open since
+   2026-06-06 carrying its own falsifiable trigger — drop the `position` column
+   if no production entry is observed with unsorted tags. Nobody had run it.
+   Measured: **260 of 278 tagged entries are not in name-ASC order**, so the
+   trigger fails and `position` stays. Resolved by observation, no DEC — the
+   pattern this hygiene pass should look for is exactly that: **a question whose
+   own stated condition has already been decided by reality, waiting only for
+   someone to check.**
 6. **The `pr:` cross-repo collision note in `BRAG.md`** — *(landed 2026-08-15,
    ahead of framing)*.
 
