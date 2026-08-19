@@ -178,26 +178,60 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       re-verify caught: the grep is syntactic, the claim was semantic, and they
       diverge on exactly one spec. Recorded rather than quietly corrected —
       it is the same defect class, in the stage file that owns it.)*
-- [ ] SPEC-080 (frame) — **the godoc pass + the two legibility repairs.**
-      Framed 2026-08-19, **GO at complexity S** — resized *down* by measurement.
-      The brief's "no surfaced godoc" implied missing doc comments; there are
-      **175 exported declarations and only 3 lack one**, all conventional
-      interface methods Go style does not ask you to document. The real gap is
-      **7 of 15 packages with no package comment** — `cmd/brag`, `cli`,
-      `config`, `export`, `mcpserver`, `storage`, `story`, i.e. the largest ones,
-      which is how it went unnoticed. Same shape SPEC-079 found: the discipline
-      exists and is not surfaced. Two forks left to design — what shape the
-      `DEC-041` marker takes (and what it does to `inventory.sh`'s decision
-      count), and whether the hygiene pass derives its own number.
+- [ ] SPEC-080 (design) — **the godoc pass + the two legibility repairs.**
+      Framed 2026-08-19, **GO at complexity S** — resized *down* by
+      measurement. The brief's "no surfaced godoc" implied missing doc
+      comments; there are **175 exported declarations and only 3 lack one**,
+      all conventional interface methods Go style does not ask you to
+      document. The real gap is **7 of 15 packages with no package comment**
+      — `cmd/brag`, `cli`, `config`, `export`, `mcpserver`, `storage`,
+      `story`, i.e. the largest ones, which is how it went unnoticed. Same
+      shape SPEC-079 found: the discipline exists and is not surfaced. Two
+      forks left to design — what shape the `DEC-041` marker takes (and what
+      it does to `inventory.sh`'s decision count), and whether the hygiene
+      pass derives its own number.
+      **Designed 2026-08-19.** Re-measurement caught the framing pass's own
+      counting error before locking anything else: **191 exported
+      declarations (not 175)** — a grep-shaped heuristic does not credit a
+      parenthesized `const (…)`/`var (…)` block's doc comment to every name
+      inside it, which is the rule `go/doc` actually follows — and **5
+      packages missing a comment (not 7)** — `internal/export` and
+      `internal/mcpserver` already had one; framing's grep said otherwise.
+      The undocumented-symbol list (3) and package count (15) both held.
+      Both forks settled with rejected alternatives: **Fork 1** — a
+      reservation tombstone lands in `decisions/` (`DEC-041`, marked
+      `insight.type: reservation`), and `inventory.sh`'s Decision records
+      count is redefined to filter on that field (stays 45; a new row counts
+      the reservation, 1) rather than counting every file matching the glob.
+      **Fork 2** — yes: `inventory.sh` gains two derived rows (18 questions
+      tracked, 6 open), anchored on the real entries' 4-space `status:`
+      indent, which structurally cannot match the file's own `#`-prefixed
+      header comment — the exact bug that produced "9 of 18." Per-question
+      triage closed 2 of the 8 open questions as **answered-in-practice**
+      (`editor-template-format` by `DEC-009`, one day after it was raised;
+      `summary-grouping-heuristics` by `SPEC-018`/`DEC-014`'s
+      `GroupForHighlights`, project-only grouping) — the same shape
+      `tag-ordering-projection` closed on, at SPEC-079. One more
+      (`shareable-ids`) gets a sharpened resolve-condition note; five stay
+      genuinely open on their own evidence. Every literal (five package
+      comments, the tombstone, the `inventory.sh`/`test-docs.sh`/
+      `questions.yaml`/practices-page diffs) was staged locally and run
+      through `gofmt`, `go vet`, `go build`, `go test ./...`, and the full
+      `test-docs.sh` harness before being reverted to literals — all green;
+      `just test-docs` reaches **176** distinct assertions (was 171).
+      Confidence 0.90.
 
 **Count:** 1 shipped / 1 active / 1 pending  *(the third — the README
-restructure + A1 metric switch — is agreed and not yet scaffolded)*
+restructure + the A1 `wc -l` → `wc -w` switch — is agreed and not yet
+scaffolded. It is counted here deliberately: with `0 pending` this stage reads
+as complete the moment SPEC-080 ships, and `just archive-spec` already reports
+stage completion off written specs rather than backlog items.)*
 
 > **The stage is NOT complete.** `just archive-spec` printed *"All specs for
-> STAGE-021 are shipped"* on this ship — it counts written specs, not backlog
-> items, so an unframed entry is invisible to it. The godoc / `DEC-041` /
-> questions-hygiene spec below is still pending. Do not run the Stage Ship
-> prompt on the strength of that message.
+> STAGE-021 are shipped"* on an earlier ship — it counts written specs, not
+> backlog items, so an unframed entry was invisible to it. SPEC-080 is now
+> framed and designed but not yet built, verified, or shipped. Do not run the
+> Stage Ship prompt until it is.
 
 ## Design Notes
 
