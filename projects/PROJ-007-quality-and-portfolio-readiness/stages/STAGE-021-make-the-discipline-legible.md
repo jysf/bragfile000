@@ -159,10 +159,16 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       (mutation-confirmed); it routes the first three "does not measure" gaps to
       STAGE-022 when STAGE-022 lists benchmarks under **Explicitly out of
       scope** and never mentions `test-docs` at all; and it says every archived
-      spec ends with a build-phase reflection when six of 75 carry none. Each is
-      a claim backed by a path that contradicts it — the exact failure the page
-      exists to prevent. Fix in both the page and literal ①, then **re-verify
-      the delta** before ship.
+      spec ends with a build-phase reflection when **six of 75 lack the standard
+      `### Build-phase reflection` heading — of which five carry none at all,
+      SPEC-046 having written one under `### Honest reflection`.** Each is a
+      claim backed by a path that contradicts it — the exact failure the page
+      exists to prevent. Fixed in both the page and literal ①; the delta was
+      re-verified (✅ 2026-08-18) before ship.
+      *(This sentence itself first read "six of 75 carry none", which the
+      re-verify caught: the grep is syntactic, the claim was semantic, and they
+      diverge on exactly one spec. Recorded rather than quietly corrected —
+      it is the same defect class, in the stage file that owns it.)*
 - [ ] (not yet framed) — **the godoc pass**, plus the two legibility repairs
       that need no design (`DEC-041` tombstone, open-questions hygiene).
 
