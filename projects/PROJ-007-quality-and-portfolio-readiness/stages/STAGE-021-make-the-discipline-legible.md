@@ -113,7 +113,7 @@ Ordered list of specs composing this stage. IDs assigned at creation.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-079 (build) — **the practices entry point.** README section + the
+- [x] SPEC-079 (shipped on 2026-08-18) — **the practices entry point.** README section + the
       document it points at; every claim backed by a countable artifact; counts
       derived or pinned rather than typed. Framed 2026-08-16, **GO at complexity
       M** — the counting rule is a real design problem, not a formality. Framing
@@ -172,7 +172,13 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 - [ ] (not yet framed) — **the godoc pass**, plus the two legibility repairs
       that need no design (`DEC-041` tombstone, open-questions hygiene).
 
-**Count:** 0 shipped / 1 active / 1 pending
+**Count:** 1 shipped / 0 active / 1 pending
+
+> **The stage is NOT complete.** `just archive-spec` printed *"All specs for
+> STAGE-021 are shipped"* on this ship — it counts written specs, not backlog
+> items, so an unframed entry is invisible to it. The godoc / `DEC-041` /
+> questions-hygiene spec below is still pending. Do not run the Stage Ship
+> prompt on the strength of that message.
 
 ## Design Notes
 

@@ -7,7 +7,7 @@
 task:
   id: SPEC-079
   type: story                      # epic | story | task | bug | chore
-  cycle: verify                    # frame | design | build | verify | ship
+  cycle: ship
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -1761,19 +1761,64 @@ byte-identical to `bb0d38f` apart from this section and the front-matter
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — **Re-run any derivation a literal caches, as the first act of build.**
+   Literal ① cached `| Projects | 7 |`; the true figure was 9, because PR #165
+   merged ~2h before the design PR but after the design branch was cut. `X3`
+   caught it, so nothing shipped wrong — but it was found last instead of first,
+   and checking costs one command.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — **One AGENTS.md §12 candidate, held at N=1.** Nothing states which wins
+   when a cached literal disagrees with its source: "transcribe verbatim" and
+   `X3`'s "run `just inventory` and paste" conflict directly, and the precedence
+   is only inferable from LD1 declaring the page a cache. The rule would be:
+   *when a literal caches derived output, the derivation outranks the cache;
+   re-run it as build step one.* Same-outcome N=1 — record here, promote at N=3.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — **Two, both already homed.** STAGE-021's second spec (godoc pass, the
+   `DEC-041` tombstone, open-questions hygiene). And the README restructure —
+   an MCP call-to-action promoted out of the Status blockquote, plus switching
+   A1 from `wc -l` to `wc -w` — sequenced after this spec precisely because A1
+   now sits at 260 with zero headroom.
+   Two smaller items recorded rather than actioned: the P3 row's label is
+   semantic (*"carrying a build-phase reflection"*) while its mechanism is a
+   heading grep, and they diverge on SPEC-046 — an undercount, so the page
+   understates its own discipline; and a **two-sided** W5/W6-style assertion
+   could pin the page↔`memory_test.go` coupling that P1 fixed, which the
+   one-sided `assert_contains` correctly rejected at build could not.
 
-4. **What can a user do now that they couldn't before?** — one sentence,
-   before → after; quote the confirming number if one exists, name the outcome
-   if not. Write `none` if this spec has no user-visible outcome — that is a
-   real, greppable result, not a blank. This is the line a brag's `impact` field
-   is transcribed from, and both halves are already written above (## Context is
-   the before, ## Goal is the after): confirm the prediction, don't reconstruct
-   it from memory.
-   — <answer>
+4. **What can a user do now that they couldn't before?**
+   — A stranger landing on the README can now reach the decision log, the spec
+   archive, the test regime, the security posture and the incident→hardening
+   pattern without knowing the directory layout — and every current-state number
+   they read is derived by `scripts/inventory.sh` and diffed by `X3`, which
+   caught real drift on its first run.
+
+### What the guards do not reach — stated plainly
+
+All three punch-list defects were **prose contradicted by the path it cited**,
+and none was reachable by a guard: `X3` cannot see them and `X5` was green
+through all three. Both passes were caught by a human-shaped read in verify.
+
+That is the honest limit of a mechanical check on prose, and it belongs on the
+record rather than being papered over: this spec mechanised the *numbers*, not
+the *claims*. The counting rule works — it caught the `Projects` drift inside a
+two-hour window — but a page can still assert something false about a file it
+links, and only reading both catches that.
+
+### A ship-cycle near-miss, recorded because it is the same defect class
+
+Answering question 1 above, the first attempt anchored on `## Reflection (Ship)`
+by substring rather than by line, and matched an **earlier occurrence inside
+literal ①** — the page's own prose quotes that heading. The replacement
+truncated the spec from 1,779 lines to 715, destroying literals ②–⑥, the
+Failing Tests body and Build Completion. Caught by a post-edit structural check,
+restored byte-identical from `ee0ab2f`, and reapplied with a line-anchored match.
+
+This is the third instance in this spec of *an edit anchoring on the wrong
+occurrence of a repeated marker* — the punch-list build hit it on
+`inventory:begin`, and this is the second. A spec that embeds literal copies of
+its own artifacts contains, by construction, duplicate anchors for every heading
+those artifacts contain. **Anchor on line-start matches and assert the match
+count before writing** — the assertion is one line and would have prevented both.
