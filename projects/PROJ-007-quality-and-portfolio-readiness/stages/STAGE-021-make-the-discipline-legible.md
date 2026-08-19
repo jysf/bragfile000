@@ -88,7 +88,7 @@ times by a coverage sentence that sounded true and pinned nothing (SPEC-073).
    backlog**, which a browsing reader never sees. Land a reservation tombstone
    in `decisions/` that names the holder and links the backlog item, so the gap
    stops reading as a lost decision.
-5. **Open-questions hygiene.** **7 of 17 are open** (was 8; see below). Three
+5. **Open-questions hygiene.** **8 of 18 are open.** (It was 8 of 17; `tag-ordering-projection` closed and SPEC-079 opened `dec-amendment-heading-convention`, so the count returned to 8 against a larger total. This line has now been wrong twice in three days, which is the argument for the hygiene pass deriving it rather than restating it.) Three
    date from **2026-04-19** and have not moved in four months
    (`shareable-ids`, `editor-template-format`, `summary-grouping-heuristics`) —
    at least one is likely answered-in-practice but never closed. For each open
