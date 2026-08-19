@@ -1046,6 +1046,73 @@ it is the reason this needed a DEC at all.
 
 ---
 
+## `MergeTags` leaves non-dense tag positions
+
+- **Source:** STAGE-018 audit backlog (deferred there as "real but COUPLED");
+  drafted as a DEC during PROJ-007 framing, then deferred by the maintainer
+  2026-08-18 once the defect was measured and turned out to be far smaller than
+  its one-line description.
+- **Reason deferred:** **It is an invariant tidy, not a defect users hit.**
+  Measured on a scratch database 2026-08-18:
+  - **Gaps are real.** `[a(0), dst(1), src(2), c(3)]` merged `src`→`dst` leaves
+    positions `0, 1, 3`.
+  - **Collisions are not.** No sequence of merges was found that gives two
+    taggings the same position on one entry. When the entry lacks `dst` the
+    graft takes the slot `src` just vacated; when it has `dst`, `NOT EXISTS`
+    skips the graft entirely. **STAGE-018's "gap or collide" overstates it** —
+    do not repeat the collide half without constructing a case.
+  - **No user-visible symptom.** Order is preserved and
+    `GROUP_CONCAT … ORDER BY position` does not care about gaps; both test
+    entries still rendered `a,dst,c`.
+  - **It self-heals.** `Update` deletes all of an entry's taggings and
+    re-inserts them densely from 0 (`store.go:283`), so any later `brag edit`
+    restores density.
+- **Revisit when:** something starts *assuming* density — a projection, an
+  export, or a migration that treats `position` as a contiguous ordinal — or
+  someone constructs an actual collision. Either makes it real; until then it is
+  cosmetic.
+- **Sketch:** after the graft-and-drop in `MergeTags` (`store.go:556`),
+  renumber each affected entry's taggings densely from 0 in existing position
+  order, tie-breaking on `(position, tag_id)` so the result is deterministic.
+  No migration, no schema change. Existing sparse rows can be left alone.
+- **Note:** the coupled question `tag-ordering-projection` is **already
+  answered** (2026-08-18, `guidance/questions.yaml`): `position` stays, because
+  260 of 278 tagged entries are not in name-ASC order. This item no longer
+  blocks anything. If it is ever built it emits the DEC.
+
+## `$EDITOR` containing a space cannot be resolved
+
+- **Source:** STAGE-018 audit backlog (deferred there as "real but a DECISION,
+  not a fix"); drafted as a DEC during PROJ-007 framing, deferred by the
+  maintainer 2026-08-18.
+- **Reason deferred:** **No current victim.** `internal/editor/launch.go:76` is
+  `strings.Fields(v)`, which is simultaneously what makes `EDITOR="code -w"`
+  work and what breaks `EDITOR="/Applications/My Editor/bin/edit"`. The two
+  cannot both work without a chosen rule. But the maintainer — the repo's only
+  human author — has `$EDITOR` and `$VISUAL` **unset** and falls through to
+  `vi`, so the broken path is unreachable in practice today.
+- **Revisit when:** it is reported, **or bragfile acquires a non-maintainer
+  user** — whichever comes first. The second half matters: on a
+  single-user tool "wait for a report" is a trigger that cannot fire, and the
+  failure is the kind users walk away from rather than file. A newcomer whose
+  editor lives under `/Applications/…` with a space hits it on their first
+  `brag add`, sees an exec error, and is more likely to stop than to open an
+  issue.
+- **Sketch (the rule that was drafted, if it is picked up):** try the **entire**
+  value as a path to an executable; if it resolves, use it verbatim with no
+  arguments; otherwise split on whitespace as today. Probe only when the value
+  contains whitespace, since without one both branches agree. Verified against
+  the four shapes that occur in practice — a spaced path resolves whole,
+  `code -w` and `/usr/bin/vi -R` split, bare `vi` is unaffected. Rejected:
+  shell-style quoting (needs a dependency or a hand-rolled parser, and pushes a
+  quoting rule onto the user for a variable every other tool reads without one);
+  handing the value to `sh -c` (git's approach, but it introduces shell
+  interpretation of an environment variable into a tool that has never spawned
+  a shell, and turns a malformed `$EDITOR` into arbitrary command execution).
+  **Known gap the rule does not close:** a spaced path *plus* arguments. That is
+  the intersection of two uncommon cases; a dedicated config key would be the
+  cheapest honest answer if it ever matters.
+
 ## ⏱ DATED: re-measure evidence-link adoption — 2026-09-14 or +50 entries
 
 **Source:** SPEC-078 (shipped 2026-08-14), LD4. Parked here because PROJ-006

@@ -31,11 +31,13 @@ Two halves, both small:
 - **Measured and enforced** — `golangci-lint` configured and gating,
   `go test -cover` reporting a number, a badge, and a floor chosen from the
   measured value rather than aspiration.
-- **The known-defect list emptied** — three defects are currently *recorded as
-  real and deliberately not fixed*, each because it needs a decision rather
-  than a patch. Carrying them past this project would mean the quality pass
-  left the honest list of open bugs untouched, which is the one outcome that
-  would make the whole project read as theatre.
+- **The one remaining known defect closed** — the `Entries:` envelope
+  inconsistency. Two sibling items (`MergeTags` position density, `$EDITOR`
+  quoting) were **deferred to `PROJ-001/backlog.md` on 2026-08-18** once each
+  was measured: neither has a current victim, and both carry their evidence and
+  a real revisit trigger. Deferring measured items is not the same as leaving
+  the list untouched — what would make the project read as theatre is a quality
+  pass that never looked.
 
 ## Why Now
 
@@ -59,10 +61,6 @@ with no story attached, which is the exact failure mode SPEC-073 hit four times.
   something the tests supposedly pin and watch the check fail, then confirm the
   mutant actually mutated. (SPEC-073's coverage sentence was wrong four times;
   SPEC-078's H9 was green, had teeth, and still pinned the wrong proposition.)
-- `guidance/questions.yaml` no longer lists `tag-ordering-projection` as open —
-  it is answered by a DEC, and `MergeTags` is fixed in the same change.
-- `$EDITOR` handling has a **recorded quoting rule**, and both
-  `EDITOR="code -w"` and an editor path containing a space work.
 - `brag memory`'s header no longer describes its candidate pool using the same
   word its five sibling exporters use for entries-in-scope.
 
@@ -72,21 +70,13 @@ with no story attached, which is the exact failure mode SPEC-073 hit four times.
 
 1. **`golangci-lint`** — config, per-linter rationale, CI gate.
 2. **Coverage** — `-cover` in CI, a reported number, a badge, an honest floor.
-3. **The three coupled defects**, each needing a decision recorded:
-   - **`MergeTags` position dup** (`storage/store.go`) — the graft copies
-     `s.position` verbatim, so after a merge an object's tag positions gap or
-     collide. Blocked on the open `tag-ordering-projection` question. Resolve
-     the question in the same change (see Design Notes for the recommendation).
-   - **`$EDITOR` with spaces** (`editor/launch.go:76`) — `strings.Fields(v)` is
-     simultaneously what makes `EDITOR="code -w"` work and what breaks
-     `EDITOR="/Applications/My Editor/bin/edit"`. Needs a chosen rule.
-   - **The `Entries:` envelope inconsistency** — six exporters emit that header
-     line; five use `len(entries)`, and `memory` alone uses `result.Candidates`,
-     the pool capped at `PoolLimit=200`. On a 368-entry corpus the header reads
-     `Entries: 200`, which a reader takes for the corpus size. Changing it moves
-     byte-exact goldens **and MCP resource output** (the resources are
-     byte-identical to `brag memory`), so it is an envelope decision, not a
-     label edit.
+3. **The `Entries:` envelope inconsistency** — six exporters emit that header
+   line; five use `len(entries)`, and `memory` alone uses `result.Candidates`,
+   the pool capped at `PoolLimit=200`. On a 368-entry corpus the header reads
+   `Entries: 200`, which a reader takes for the corpus size. Changing it moves
+   byte-exact goldens **and MCP resource output** (the resources are
+   byte-identical to `brag memory`), so it is an envelope decision, not a
+   label edit. This is now the stage's **only** correctness item.
 
 ### Explicitly out of scope
 
@@ -107,33 +97,21 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 - [ ] (not yet framed) — **lint + coverage in CI.** golangci-lint config with
       per-linter rationale, `-cover`, badge, measured floor; the coverage claim
       mutation-checked before it is written down.
-- [ ] (not yet framed) — **the three coupled defects.** Emits two DECs
-      (tag-ordering/`MergeTags`, `$EDITOR` quoting) and settles the `Entries:`
-      envelope semantics; each fix lands with a regression test.
+- [ ] (not yet framed) — **the `Entries:` envelope semantics.** One decision,
+      one fix, one regression test. Narrowed 2026-08-18 from "the three coupled
+      defects" after the other two were measured and deferred.
 
 **Count:** 0 shipped / 0 active / 2 pending
 
 ## Design Notes
 
-- **Recommended answer for `tag-ordering-projection`: keep `position`.** Tag
-  order is user-visible today — `brag show 374` renders tags in the order they
-  were supplied (topic tags, then `agent:`/`model:`/`session:`/`cost:`/
-  `tokens:`, then evidence tags), which is insertion order, not name-ASC.
-  Dropping the column would silently reorder every entry's display. So the
-  question resolves to *preserve original order*, and `MergeTags`' fix follows
-  from it: after grafting, **renumber each affected taggable's positions densely
-  from 0 in current position order**, with a deterministic tie-break. That
-  removes gaps and collisions without inventing a new ordering semantic.
-- **Recommended rule for `$EDITOR`: try the whole string as a path first, then
-  split.** If the entire value names an existing executable, run it with no
-  arguments; otherwise fall back to `strings.Fields`. Both real cases then work
-  with no configuration and no quoting rule for the user to learn:
-  `/Applications/My Editor/bin/edit` stats successfully and is used whole;
-  `code -w` does not stat and is split. The failure mode — a full command line
-  that happens to name an existing file — is vanishingly unlikely. Rejected
-  alternative: shell-style quoting, which needs a parser or a dependency and
-  pushes a quoting rule onto the user; also rejected: invoking a shell, which
-  this codebase deliberately avoids.
+- **The two deferred items keep their working.** `MergeTags` position density and
+  `$EDITOR` quoting were measured during PROJ-007 framing and deferred
+  2026-08-18; the drafted rules, the rejected alternatives, and the measurements
+  behind them live in `projects/PROJ-001-mvp/backlog.md`. Do not re-derive them
+  if either is ever picked up. Their coupled question,
+  `tag-ordering-projection`, is **already answered** — 260 of 278 tagged entries
+  are not in name-ASC order, so `position` stays.
 - **Pick linters deliberately.** A default `golangci-lint` enable-all produces a
   wall of findings that gets silenced with `//nolint`, which is worse than no
   lint. Enable a small set, justify each, and let the config itself be
