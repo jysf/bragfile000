@@ -1,16 +1,17 @@
-// Package storage is the core of the storage layer — the only layer that
-// imports a SQL driver (modernc.org/sqlite, pure Go — no CGO, DEC-001);
-// its storagetest test-helper subpackage imports the same driver for
-// tests that need raw SQL. Store wraps *sql.DB and owns every
+// Package storage is the core of the storage layer — the only layer
+// whose production code imports a SQL driver (modernc.org/sqlite, pure
+// Go — no CGO, DEC-001). Test files elsewhere import it too; the
+// storagetest test-helper subpackage exists so they need not, keeping
+// raw SQL inside internal/storage. Store wraps *sql.DB and owns every
 // persistence operation: Open applies pending embedded migrations
 // (migrate.go) behind a pre-migration backup safety belt (backup.go,
 // DEC-021) and a dev/prod migration guard (devguard.go, DEC-026); Entry
 // and ListFilter (entry.go) are the query vocabulary; project.go holds
 // the projects/locations operations over the 0004_add_projects.sql
-// schema (DEC-017/019/020). Every other package reaches the database
-// only through a *Store — the no-sql-in-cli-layer boundary on
-// internal/cli, held today by convention and review rather than an
-// automated test (see STAGE-022) — which is what keeps commands
+// schema (DEC-017/019/020). Every other package's production code
+// reaches the database only through a *Store — the no-sql-in-cli-layer
+// boundary on internal/cli, held today by convention and review rather
+// than an automated test (see STAGE-022) — which is what keeps commands
 // testable and a future frontend feasible.
 package storage
 

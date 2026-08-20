@@ -591,14 +591,14 @@ prose of its own. Verify diffs the working tree against these literals.
 // scaffolding they share: ErrUser/UserErrorf for exit-code classification
 // (errors.go), the injectable clock seam tests substitute (clock.go),
 // atomic same-directory-rename config writes (atomicwrite.go), and the
-// calendar-window flag parsing shared by impact/story (window.go). Its
-// production code imports no SQL driver and no database/sql — the
-// no-sql-in-cli-layer boundary, held today by convention and review, not
-// an automated test (internal/mcpserver has one, TestNoSQLImport;
-// internal/cli — the package the constraint's path glob actually covers —
-// does not; see STAGE-022) — so every command reaches persistence only
-// through internal/storage, keeping the CLI a thin shell a future
-// frontend (TUI, API) could replace.
+// calendar-window flag parsing shared by impact, story and coverage
+// (window.go). Its production code imports no SQL driver and no
+// database/sql — the no-sql-in-cli-layer boundary, held today by
+// convention and review, not an automated test (internal/mcpserver has
+// one, TestNoSQLImport; internal/cli — the package the constraint's path
+// glob actually covers — does not; see STAGE-022) — so every command
+// reaches persistence only through internal/storage, keeping the CLI a
+// thin shell a future frontend (TUI, API) could replace.
 ```
 
 *(Corrected at the SPEC-080 punch-list build, 2026-08-20 — P1. The original
@@ -608,6 +608,14 @@ constraint." Verify demonstrated empirically that nothing enforces it for
 passes `go build`, `go vet`, `gofmt -l .`, `just test`, and `just
 test-docs`. Fork chosen: narrow the claim (option a), not port
 `TestNoSQLImport` (option b) — see "Punch List Resolution" below.)*
+
+*(Amended at the re-verify return trip, 2026-08-20 — O1. `impact/story` →
+`impact, story and coverage`: `internal/cli/coverage.go` calls both
+`selectedWindow` (`coverage.go:59`) and `windowCutoff` (`coverage.go:68`),
+exactly as `impact.go` and `story.go` do. Those three are the complete
+caller set — `spark.go` names `selectedWindow` only in comments, to record
+that it deliberately does not use it. No other clause in this literal
+changed.)*
 
 **`internal/config/config.go`** — insert before `package config` (currently
 line 1):
@@ -627,19 +635,20 @@ line 1):
 line 1):
 
 ```go
-// Package storage is the core of the storage layer — the only layer that
-// imports a SQL driver (modernc.org/sqlite, pure Go — no CGO, DEC-001);
-// its storagetest test-helper subpackage imports the same driver for
-// tests that need raw SQL. Store wraps *sql.DB and owns every
+// Package storage is the core of the storage layer — the only layer
+// whose production code imports a SQL driver (modernc.org/sqlite, pure
+// Go — no CGO, DEC-001). Test files elsewhere import it too; the
+// storagetest test-helper subpackage exists so they need not, keeping
+// raw SQL inside internal/storage. Store wraps *sql.DB and owns every
 // persistence operation: Open applies pending embedded migrations
 // (migrate.go) behind a pre-migration backup safety belt (backup.go,
 // DEC-021) and a dev/prod migration guard (devguard.go, DEC-026); Entry
 // and ListFilter (entry.go) are the query vocabulary; project.go holds
 // the projects/locations operations over the 0004_add_projects.sql
-// schema (DEC-017/019/020). Every other package reaches the database
-// only through a *Store — the no-sql-in-cli-layer boundary on
-// internal/cli, held today by convention and review rather than an
-// automated test (see STAGE-022) — which is what keeps commands
+// schema (DEC-017/019/020). Every other package's production code
+// reaches the database only through a *Store — the no-sql-in-cli-layer
+// boundary on internal/cli, held today by convention and review rather
+// than an automated test (see STAGE-022) — which is what keeps commands
 // testable and a future frontend feasible.
 ```
 
@@ -654,6 +663,19 @@ adds the projects/locations schema" — `project.go` has zero DDL, the
 schema is added by `internal/storage/migrations/0004_add_projects.sql`
 (DEC-017 line 45 says so explicitly), so the claim is corrected to what
 `project.go` actually holds: the operations over that schema.)*
+
+*(Corrected again at the re-verify return trip, 2026-08-20 — R1. The P3 fix
+above was still false: `package` → `layer` escaped the `storagetest`
+counterexample without re-testing the narrowed claim, and `package cli`
+imports `modernc.org/sqlite` directly in `story_test.go`, `wrapped_test.go`,
+`coverage_test.go` and `impact_test.go`. Both uniqueness claims in this
+literal are now scoped to **production code** — the leading "only layer"
+claim and the later "Every other package reaches the database only through a
+`*Store`", which was false for the same reason and by the same test (four
+`internal/cli` test files call `sql.Open("sqlite", …)` and `db.Exec`
+directly). The scoping matches `internal/cli/root.go`'s own qualifier in
+literal ① above, so the two comments now agree. See "Re-verify Punch List
+Resolution" below for the rejected alternatives.)*
 
 **`internal/story/bundle.go`** — insert before `package story` (currently
 line 1):
@@ -1495,6 +1517,12 @@ whose whole charter is closing exactly this class of "measured but not
 enforced" gap — is the right place to design and land the assertion
 deliberately.
 
+*(Routed at the re-verify return trip, 2026-08-20 — R3. Naming two candidate
+venues and writing to neither is not a deferral, it is a disappearance. The
+assertion now has its own bullet in STAGE-022's `## Design Notes`, carrying
+the gap, the reason it is deferred, what would resolve it, and a trigger. See
+"Re-verify Punch List Resolution" below.)*
+
 ---
 
 ## Re-verify Findings (scoped delta review, 2026-08-20)
@@ -1692,3 +1720,198 @@ What must **not** be added is an `assert_contains` on the comment text. It would
 go green on the words while saying nothing about whether `internal/cli` still
 has no driver import — the SPEC-078 H9 failure mode, already on this repo's
 record, and the reason this delta needed its own review at all.
+
+---
+
+## Re-verify Punch List Resolution (second build return trip, 2026-08-20)
+
+*A third fresh session, per AGENTS.md §6, closing R1–R3. R4's judgements were
+approved and are not revisited; the six-literal transcription, `Y1`–`Y5` and
+their mutations, the 171 → 176 id delta, the reservation seam, and P1/P2/P4/P5
+are untouched.*
+
+### R1 — chosen wording: scope the claim to production code
+
+**Chosen: qualify both uniqueness claims in `internal/storage/store.go`'s
+package comment with "production code," matching the qualifier
+`internal/cli/root.go` already carries.**
+
+- *"the only layer that imports a SQL driver"* → *"the only layer **whose
+  production code** imports a SQL driver"*.
+- *"Every other package reaches the database only through a `*Store`"* →
+  *"Every other package**'s production code** reaches the database only
+  through a `*Store`"*.
+
+The second edit is the one the finding did not name. R1's instruction was to
+test the **whole sentence**, not the counterexample handed over; doing so
+surfaced a second, unscoped uniqueness claim eleven lines further down the same
+comment, false for exactly the same reason — `internal/cli`'s test files reach
+the database directly, not through a `*Store`
+(`coverage_test.go:56`, `impact_test.go:57`, `project_test.go:1004`,
+`wrapped_test.go:60` each call `sql.Open("sqlite", dbPath)` and then `db.Exec`).
+Scoping one and leaving the other would have reproduced the exact defect R1
+described — two claims in one comment that cannot both be read the same way.
+
+The `storagetest` clause was also re-worded so it can no longer be read as
+admitting test-support code into the uniqueness claim's scope: *"Test files
+elsewhere import it too; the storagetest test-helper subpackage exists so they
+need not, keeping raw SQL inside `internal/storage`."* The comment now states
+the counterexample itself rather than leaving it for the next reader's grep to
+find.
+
+**Evidence the whole sentence is true — not just that the named counterexample
+is gone.** Every non-`_test.go` file in the repo that imports `database/sql` or
+`modernc.org/sqlite`, enumerated exhaustively
+(`grep -rn '"database/sql"\|modernc.org/sqlite' --include='*.go' .`, import
+lines only, test files excluded):
+
+| Non-test file | Imports | Layer |
+|---|---|---|
+| `internal/storage/store.go` | both | storage |
+| `internal/storage/backup.go` | `database/sql` | storage |
+| `internal/storage/devguard.go` | `database/sql` | storage |
+| `internal/storage/migrate.go` | `database/sql` | storage |
+| `internal/storage/project.go` | `database/sql` | storage |
+| `internal/storage/storagetest/storagetest.go` | both | storage |
+
+Six files, one layer, no other. The claim holds under **both** available
+readings of "production code" — as *non-`_test.go` files* (`storagetest.go` is
+one, and it is inside `internal/storage/`), and as *code that ships in the
+binary* (`storagetest.go` is not, so it is simply out of scope). It is not
+narrowed to survive one counterexample; it is the proposition the STAGE-022
+grep the re-verify named would actually check.
+
+Cross-checked in the other direction: `internal/cli` has **no** non-`_test.go`
+file importing either — so `root.go`'s *"Its production code imports no SQL
+driver and no database/sql"* and `store.go`'s *"the only layer whose production
+code imports a SQL driver"* are now the same proposition seen from each side.
+The two comments agree.
+
+#### Rejected alternatives (AGENTS.md §12)
+
+- **Widen the exception list instead of scoping the claim** — *"the only layer
+  that imports a SQL driver, apart from four `internal/cli` test files."*
+  **Rejected.** It is the narrow-to-survive-this-counterexample move a third
+  time, and it pins a file count that drifts the next time a test opens a
+  database. A scope is stable; an exception list is a countdown.
+- **Drop the uniqueness claim and say what storage *is*** — *"Package storage
+  owns the SQL driver and every persistence operation."* **Rejected.** The
+  uniqueness *is* the architectural fact the package comment exists to carry
+  (DEC-001 plus the `no-sql-in-cli-layer` boundary); removing it because it was
+  hard to scope trades a checkable claim for a vaguer one, and would leave
+  `root.go`'s production-scoped claim with no counterpart on the storage side.
+- **State the driver's location without a superlative** — *"the driver is
+  imported in `store.go` and in the `storagetest` subpackage."* **Rejected.**
+  A file enumeration in a package comment goes stale on the next file that
+  opens a database; the scoped superlative is shorter, says more, and a grep
+  can check it.
+- **Rely on an unstated "test files don't count" convention.** **Rejected** —
+  and it was never available: the sentence's own second clause counts
+  `storagetest`, a test-helper package. Making the scope explicit is the fix.
+- **Also fix `store.go`'s `Store` *type* comment in this spec** (*"All
+  persistence flows through a Store; no other package imports a SQL driver"* —
+  false in the same way: `internal/storage/storagetest` is another package and
+  imports one, as do four `internal/cli` test files). **Rejected for this
+  spec.** It is unchanged since SPEC-002 (`git blame`: `02dcd0e`, 2026-04-20),
+  it is not part of literal ①, and this spec's `## Outputs` states *"No other
+  line in any of these five files changes"* — editing it would break the
+  artifact↔literal contract verify diffs against. Routed to STAGE-022 instead,
+  in the same bullet that already carries the stale `list_test.go:275` comment.
+
+### R2 — STAGE-022's routing note now costs the mechanism it recommends
+
+Corrected in
+`projects/PROJ-007-quality-and-portfolio-readiness/stages/STAGE-022-measured-and-enforced.md`,
+first Design Note. Both missing facts added, both verified first:
+
+- **`TestNoSQLImport` closes half the constraint.** `import_audit_test.go:27`
+  matches one string only — the import path as it appears in source,
+  `"database/sql"`, double quotes included — and nothing else. A driver-only
+  import walks past it.
+- **Five files, not four.** `database/sql` in `internal/cli`:
+  `coverage_test.go:5`, `impact_test.go:5`, `project_test.go:5`,
+  `wrapped_test.go:5`. `modernc.org/sqlite` in `internal/cli`:
+  `coverage_test.go:16`, `impact_test.go:15`, `story_test.go:14`,
+  `wrapped_test.go:17`. The two sets are not the same four:
+  `project_test.go` imports `database/sql` but not the driver (it relies on the
+  blank import in its siblings to register `sqlite`), and `story_test.go`
+  imports the driver but not `database/sql`. Union = **five**. The old note's
+  four are correct for a ported `TestNoSQLImport` and short by one for the
+  `depguard` rule it recommends first.
+- **Which way the constraint's text already points.** Its rule is *"Files under
+  `internal/cli/` must not import `database/sql` or any SQL driver"* — no
+  production-vs-test qualifier. On the literal reading, five test files violate
+  a blocking constraint today. The note now says so, and says explicitly that
+  amending the constraint is a decision for the spec that picks this up, not a
+  side effect of wiring a lint rule. **`guidance/constraints.yaml` is
+  unchanged.**
+- **One fact added beyond what R2 asked, because testing the note the way R1
+  demanded surfaced it.** The re-verify's own sketch of the future assertion —
+  a grep over non-`_test.go` files for `database/sql` and `modernc.org/sqlite`
+  — false-positives today: `internal/cli/root.go:8` is the only non-test hit
+  outside `internal/storage/`, and it is the package comment *describing* the
+  boundary, not an import. (It already read that way at `f3514cb`.) The
+  mechanism must match import lines rather than file text —
+  `TestNoSQLImport` handles the same hazard by excluding itself by filename
+  (`import_audit_test.go:20`); `depguard` avoids it by working on the import
+  graph. Recorded in the same Design Note so the assertion is not written twice.
+
+### R3 — the totality assertion, routed to STAGE-022
+
+**Venue: STAGE-022's `## Design Notes`, as its own bullet.**
+
+Why there and not `projects/PROJ-001-mvp/backlog.md`: the gap is CI-shaped —
+its resolution is one `scripts/test-docs.sh` assertion — and STAGE-022's
+charter is precisely "measured but not enforced." Its first backlog spec is the
+lint-and-CI pass, and AGENTS.md §12 ("During build") requires reading the
+parent `STAGE-*.md`, so anyone framing that spec meets the bullet on the
+documented path. The backlog is the right venue for a deferred *idea* with a
+revisit trigger; this is a deferred *check* with a decision attached to it.
+
+Why it survives this spec's archiving: `scripts/archive-spec.sh` moves spec
+files into `done/`. There is no `archive-stage.sh` and no `just` recipe that
+touches stage files — `justfile:83` is the only archive recipe and its argument
+is a `SPEC-NNN`. A stage file stays in
+`projects/PROJ-007-quality-and-portfolio-readiness/stages/` when the stage
+ships; only its `status:` changes.
+
+The bullet carries what the finding required: **what the gap is** (nothing
+asserts *Decision records* + *Decision numbers reserved* equals
+`ls decisions/DEC-*.md | wc -l`, so a file with a third `insight.type` or none
+is counted by neither row and vanishes silently while the page still
+round-trips); **why it is deferred** (the assertion cannot be written without
+deciding whether an unknown type is a typo to fail on or a category
+`inventory.sh` has not been taught — different assertion shapes); **what would
+resolve it** (pick the meaning, add the one assertion, keep
+`decisions/_template.md` outside the glob as it already is); and a **trigger**
+(the next spec adding to `decisions/`, or this stage's lint-and-CI spec).
+Current state recorded for the next reader: 45 + 1 = 46, exact today.
+
+### O1 — folded in
+
+The re-verify left this to judgement. **Folded in**, because it was a
+one-word factual completion in a comment whose whole product is orientation,
+and leaving a known-incomplete enumeration in place to be re-found later is the
+same deferral habit R3 was about. `internal/cli/root.go` now reads *"calendar-
+window flag parsing shared by impact, story and coverage (window.go)"*.
+Verified the enumeration is now complete, not merely longer: `selectedWindow`
+and `windowCutoff` have exactly three non-test callers —
+`coverage.go:59`/`:68`, `impact.go:66`/`:75`, `story.go:88`/`:96`/`:108`.
+`spark.go` names `selectedWindow` only in comments (`spark.go:73`, `:166`), to
+record that it deliberately uses a different flag set. Literal ① updated to
+match.
+
+### What was deliberately not done
+
+- **No `assert_contains` on comment text.** SPEC-078's H9 failure mode; it goes
+  green on the words and says nothing about the world.
+- **No production-code grep assertion in `scripts/test-docs.sh`.** The
+  re-verify named a good one and left it for STAGE-022; adding it here is new
+  production test surface, which is the same reasoning that settled P1's fork.
+  `test-docs.sh` is unchanged by this return trip — still 176 distinct ids.
+- **No change to `guidance/constraints.yaml`.** R2's finding is about a note
+  describing the constraint, not about the constraint.
+- **No change to `README.md`** (A1 at 260, zero headroom) and no change to
+  `scripts/inventory.sh`, `guidance/questions.yaml`, or
+  `docs/engineering-practices.md` — this trip touches two Go comments, one
+  stage file, and this spec.

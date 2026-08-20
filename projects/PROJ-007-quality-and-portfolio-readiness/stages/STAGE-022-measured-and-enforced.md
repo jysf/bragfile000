@@ -107,22 +107,93 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
 - **`no-sql-in-cli-layer` has no automated guard for the package it was
   written for.** Surfaced at SPEC-080 verify/punch-list-build
-  (2026-08-20, P1): `internal/mcpserver/import_audit_test.go`'s
-  `TestNoSQLImport` enforces the boundary for `internal/mcpserver`, but
-  the constraint's path glob (`guidance/constraints.yaml`) covers
-  `internal/cli/**`, which has no equivalent test. Verified empirically —
-  adding `_ "database/sql"` to `internal/cli/root.go` still passes
-  `go build`, `go vet`, `gofmt -l .`, `just test`, and `just test-docs`.
-  A `depguard` golangci-lint rule scoped to `internal/cli/**` (natural
-  fit alongside this stage's lint work) or a ported `TestNoSQLImport`
-  would close it. Either way, first decide whether the constraint covers
-  test files: four `internal/cli/*_test.go` files
-  (`coverage_test.go`, `impact_test.go`, `project_test.go`,
-  `wrapped_test.go`) already import `database/sql` for test fixtures, so
-  a naive walk-every-`.go`-file port fails immediately against them; a
-  stale comment at `internal/cli/list_test.go:275` also asserts "CLI
-  tests cannot import database/sql," which those four files already
-  disprove and would need fixing alongside the new test/lint rule.
+  (2026-08-20, P1; costed correctly at the re-verify return trip, R2):
+  `internal/mcpserver/import_audit_test.go`'s `TestNoSQLImport` enforces
+  the boundary for `internal/mcpserver`, but the constraint's path glob
+  (`guidance/constraints.yaml`) covers `internal/cli/**`, which has no
+  equivalent test. Verified empirically — adding `_ "database/sql"` to
+  `internal/cli/root.go` still passes `go build`, `go vet`, `gofmt -l .`,
+  `just test`, and `just test-docs`.
+
+  **Two candidate mechanisms, and they do not close the same thing.** A
+  `depguard` golangci-lint rule scoped to `internal/cli/**` (natural fit
+  alongside this stage's lint work), or a ported `TestNoSQLImport`.
+  Measured 2026-08-20:
+
+  - **A straight port of `TestNoSQLImport` closes half the constraint.**
+    It greps the literal string `"database/sql"` and nothing else
+    (`import_audit_test.go:27`), so a driver-only import walks past it.
+    `internal/cli/story_test.go` is exactly that case — it imports
+    `modernc.org/sqlite` and never `database/sql`.
+  - **A depguard rule written to the constraint trips five files, not
+    four.** The constraint reads *"must not import `database/sql` **or any
+    SQL driver**."* `database/sql`: `coverage_test.go`, `impact_test.go`,
+    `project_test.go`, `wrapped_test.go`. `modernc.org/sqlite`:
+    `coverage_test.go`, `impact_test.go`, `story_test.go`,
+    `wrapped_test.go`. Union: **five** — the four above plus
+    `story_test.go`.
+
+  **Decide the scope question first — and note which way the text already
+  points.** The constraint's text is unqualified by production-vs-test, so
+  on its literal reading **five test files violate a blocking constraint
+  today**. Amending it to say production-only, or accepting the violations
+  and reworking those tests through `storagetest`, is a decision a spec has
+  to make; do not change `guidance/constraints.yaml` as a side effect of
+  wiring a mechanism that assumes an answer.
+
+  **A content grep must match import lines, not file text.** The two package
+  comments that *describe* the boundary contain the literal strings, so a naive
+  whole-file grep false-positives on them: `internal/cli/root.go:8` is the only
+  non-`_test.go` hit for `database/sql` outside `internal/storage/`, and it is
+  a comment. `TestNoSQLImport` sidesteps this by excluding itself by filename
+  (`import_audit_test.go:20`) — a port would need the same care, and a
+  `depguard` rule avoids the problem entirely by working on the import graph
+  rather than on text. Measured 2026-08-20:
+  `grep -rn 'database/sql\|modernc.org/sqlite' --include='*.go' . |
+  grep -v '_test.go' | grep -v '^./internal/storage/'` returns exactly that one
+  comment line.
+
+  **Stale comments to fix alongside.** Two comments assert the boundary
+  more broadly than it holds: `internal/cli/list_test.go:275` (*"CLI tests
+  cannot import database/sql per the no-sql-in-cli-layer constraint"* —
+  the four files above disprove it), and `internal/storage/store.go`'s
+  `Store` **type** comment (*"no other package imports a SQL driver"* —
+  `internal/storage/storagetest` does, as do the `internal/cli` test
+  files; unchanged since SPEC-002, and outside SPEC-080's scope, whose
+  Outputs permit only the package doc comment to change in that file). The
+  **package** comments on `internal/storage/store.go` and
+  `internal/cli/root.go` were scoped to production code at SPEC-080's
+  re-verify return trip and are correct as written — they are the wording
+  a mechanism should be checked against.
+
+- **The `decisions/` totality gap — deferred at SPEC-080, routed here.**
+  `scripts/inventory.sh` emits two rows over `decisions/DEC-*.md`:
+  *Decision records* (`insight.type: decision`) and *Decision numbers
+  reserved, not yet decided* (`insight.type: reservation`). **Nothing
+  asserts the two rows add up to the number of `DEC-*.md` files on disk.**
+  A file carrying a third `insight.type`, or none at all, is counted by
+  neither row and vanishes from the inventory silently — while
+  `docs/engineering-practices.md` still round-trips byte-identical, because
+  the page is generated from the same two filters.
+  - **No current victim.** The sum is exact today (45 + 1 = 46, matching
+    `ls decisions/DEC-*.md | wc -l`), and every existing file's
+    `insight.type` was checked at SPEC-080 design and build. The gap needs
+    a *new* `DEC-*.md` to bite.
+  - **Why deferred rather than written.** The assertion cannot be added
+    without first deciding what a violation *means*: an untyped or
+    unknown-typed `DEC-*.md` is either a typo that should fail the build,
+    or a legitimately new category `inventory.sh` has not been taught yet.
+    Those want different assertion shapes (hard fail vs. a "teach
+    `inventory.sh` first" signal), so it is a design decision, not a chore
+    — which is why SPEC-080's punch-list return trip declined to make it by
+    implication.
+  - **What would resolve it.** Pick the meaning, then add one
+    `scripts/test-docs.sh` assertion that `decs + decs_reserved` equals
+    `ls decisions/DEC-*.md | wc -l`. `decisions/_template.md` is
+    deliberately outside every count (it does not match `DEC-*.md`) and
+    must stay outside this one.
+  - **Trigger.** The next spec that adds a file to `decisions/`, or this
+    stage's lint-and-CI spec — whichever comes first.
 - **The two deferred items keep their working.** `MergeTags` position density and
   `$EDITOR` quoting were measured during PROJ-007 framing and deferred
   2026-08-18; the drafted rules, the rejected alternatives, and the measurements
