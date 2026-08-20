@@ -164,7 +164,23 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
   **package** comments on `internal/storage/store.go` and
   `internal/cli/root.go` were scoped to production code at SPEC-080's
   re-verify return trip and are correct as written — they are the wording
-  a mechanism should be checked against.
+  a mechanism should be checked against — with one edge worth knowing before
+  the wording is copied (SPEC-080 second re-verify, 2026-08-20).
+  `store.go`'s leading claim uses the noun **layer** (*"the only layer whose
+  production code imports a SQL driver"*) and holds under both readings of
+  "production code": as *non-`_test.go` file* and as *code that ships*. Its
+  later claim uses the noun **package** (*"Every other package's production
+  code reaches the database only through a `*Store`"*) and holds only under
+  the second — `go list -deps ./cmd/brag` contains no `storagetest`, so
+  nothing that ships bypasses `*Store`, but `storagetest.go` is a
+  non-`_test.go` file in another package that calls `sql.Open` and `db.Exec`
+  directly. It is the same package this bullet cites two sentences up. A
+  mechanism written to the **layer** noun (or to `internal/storage/**`) has
+  no such edge; one written to the **package** noun would flag
+  `storagetest`. Non-blocking there and here: the comment names
+  `storagetest` as its own exception one sentence earlier, so no reader is
+  misled — but the two nouns are not interchangeable and a lint rule should
+  not treat them as if they were.
 
 - **The `decisions/` totality gap — deferred at SPEC-080, routed here.**
   `scripts/inventory.sh` emits two rows over `decisions/DEC-*.md`:

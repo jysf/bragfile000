@@ -7,7 +7,7 @@
 task:
   id: SPEC-080
   type: chore                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: verify                    # frame | design | build | verify | ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -1915,3 +1915,286 @@ match.
   `scripts/inventory.sh`, `guidance/questions.yaml`, or
   `docs/engineering-practices.md` — this trip touches two Go comments, one
   stage file, and this spec.
+
+---
+
+## Second Re-verify Findings (final scoped pass, 2026-08-20)
+
+**✅ APPROVED.** A fourth fresh session per AGENTS.md §6, scoped to
+`git diff f3514cb..9039818`. Everything the two prior passes approved was
+taken as approved and not re-derived. No blocking finding. Two non-blocking
+observations, both recorded below; the first has been routed into STAGE-022
+(a one-sentence addition to the Design Note it qualifies, made here rather
+than sent back — see *What this pass changed*).
+
+### R1 — both claims tested independently, exhaustively
+
+Gathered from the module's own import graph rather than from grep, so the
+answer does not depend on how a comment happens to be worded:
+`go list -f '{{.Imports}}' ./...` for production imports, `.TestImports` +
+`.XTestImports` for test-only imports, cross-checked per file against every
+tracked `.go` file's import block.
+
+**Claim A — *"the only layer whose production code imports a SQL driver."***
+Exactly two non-`_test.go` files in the module import `modernc.org/sqlite`:
+`internal/storage/store.go:29` and
+`internal/storage/storagetest/storagetest.go:13`. Both are inside
+`internal/storage/`. Widening to `database/sql` adds `backup.go:5`,
+`devguard.go:5`, `migrate.go:5`, `project.go:5`, `store.go:20`,
+`storagetest.go:9` — same directory, no others anywhere. At package
+granularity, `go list` reports production driver imports for
+`internal/storage` and `internal/storage/storagetest` and for no other
+package in the module. **True**, and true under both readings of "production
+code" the return trip named: as *non-`_test.go` file* (`storagetest.go` is
+one, and it is inside `internal/storage/`) and as *code that ships*
+(`go list -deps ./cmd/brag` contains no `storagetest` — the subpackage is
+imported only from `_test.go` files, in `internal/cli`, `internal/mcpserver`
+and `internal/storage`). The `.claude/worktrees/` tree was excluded
+throughout: it is gitignored, untracked, and absent from `go list ./...`.
+
+**Claim B — *"Every other package's production code reaches the database
+only through a `*Store`."*** True under the ships-in-the-binary reading, for
+the reason above. Under the non-`_test.go`-file reading it has exactly one
+counterexample, `internal/storage/storagetest/storagetest.go`: a distinct Go
+package whose non-test file calls `sql.Open("sqlite", dbPath)` and
+`db.Exec("UPDATE entries SET created_at = ? WHERE id = ?", …)` without a
+`*Store` in sight. Claim A's noun is **layer** and survives both readings;
+Claim B's noun is **package** and survives one. See observation **V1** — it
+is not blocking, and the reasoning is recorded there rather than here.
+
+Beyond `storagetest`, Claim B holds without qualification: no non-`_test.go`
+file outside `internal/storage/` imports `database/sql` or a driver at all,
+so no other package has any way to reach the database except through a
+`*Store`.
+
+### Do the two comments state the same proposition from each side?
+
+Yes, over the boundary they both describe, and not by accident.
+`internal/cli/root.go:7` claims *"Its production code imports no SQL driver
+and no database/sql"*; `internal/storage/store.go:11` claims *"Every other
+package's production code reaches the database only through a `*Store`."*
+Both are grounded in one verified fact — `internal/cli` has zero
+non-`_test.go` files importing either — and they fail together: a driver
+import added to any `internal/cli` production file falsifies `root.go`
+directly and falsifies `store.go` in the same edit, because that file would
+then reach the database other than through a `*Store`. They carry the same
+`production code` qualifier, cite the same constraint by id, and point at the
+same STAGE-022. The agreement is structural, not coincidental. `root.go`'s
+claim is the locally stronger one (it also excludes bare `database/sql`);
+`store.go`'s is the wider one (it ranges past `internal/cli`), which is
+where V1 lives.
+
+### The `storagetest` clause
+
+*"Test files elsewhere import it too; the storagetest test-helper subpackage
+exists so they need not, keeping raw SQL inside `internal/storage`."*
+Accurate on both halves, and it does close the ambiguity. On *why it
+exists*: `storagetest.go`'s own package comment says the same thing
+independently — *"Living under internal/storage/ keeps the database/sql
+dependency inside the storage layer, which lets CLI tests use these helpers
+without violating the no-sql-in-cli-layer constraint."* The description and
+its citation agree. On the *ambiguity*: the earlier wording was false because
+a reader could not tell whether test files counted. This wording counts them
+out loud in its first clause — *"Test files elsewhere import it too"* — and
+then explains them, rather than relying on an unstated convention. It states
+its own counterexample instead of leaving it for the next grep, and it is
+honest that `storagetest` has not displaced the direct imports (five
+`internal/cli` test files still carry them); *"so they need not"* is a
+statement of purpose, which is what it should be.
+
+### Leaving `store.go`'s `Store` **type** comment unfixed — judgement
+
+The comment (`store.go:32-34`, *"All persistence flows through a Store; no
+other package imports a SQL driver"*) is false, unqualified, in both halves:
+`storagetest` is another package that imports a driver, and
+`storagetest.Backdate` is a persistence write that does not flow through a
+`Store`. `git blame` puts it at `02dcd0e`, 2026-04-20 — SPEC-002, pre-dating
+this spec by four months.
+
+**The build's call was right, and I would take the same one.** Three
+reasons, in order of weight:
+
+1. **AGENTS.md §9 already decides this case.** The audit-grep cross-check
+   bullet (SPEC-018 lesson) tells build to treat a delta between what it
+   finds and what `## Outputs` enumerates as *a question for the spec author,
+   not a unilateral expansion of scope*. A true defect found mid-return-trip
+   is exactly that delta. The build held the line and routed it — the
+   codified behaviour, not an improvised one.
+2. **The `Outputs` contract is what makes the literals checkable at all.**
+   This spec's product is six literal artifacts that verify diffs against
+   byte-for-byte. If build may take one more line because the fix is
+   obviously right, the parity check stops being a check — and this spec, of
+   all specs, is about claims that survive scrutiny by being scrutinizable.
+   The alternative reading ("a spec about true comments should not ship a
+   false one") is real, but it buys one corrected line at the cost of the
+   mechanism that catches the next twenty.
+3. **The cost is bounded and disclosed.** The defect is pre-existing, has no
+   new victim, and now sits eleven lines below a package comment that says
+   the true thing in the reader's path. It is recorded in two places with a
+   named owner.
+
+**Routing exists and is actionable.** STAGE-022 `## Design Notes`, the
+*"Stale comments to fix alongside"* bullet: it names the file, quotes the
+exact false substring, names both counterexample classes (`storagetest` and
+the `internal/cli` test files), records the blame provenance and why
+SPEC-080 could not touch it, and pairs it with the second stale comment at
+`internal/cli/list_test.go:275` (verified: that line does read *"CLI tests
+cannot import database/sql per the no-sql-in-cli-layer constraint"*, and the
+four files disprove it). It sits in the same note as the mechanism that will
+make the boundary enforceable, so it gets fixed by the spec with the most
+reason to care.
+
+### R2 / R3 — would someone framing STAGE-022 act on these?
+
+Yes. Each was re-derived from the repo, not read.
+
+- **Five, not four — verified by set difference.** `database/sql` in
+  `internal/cli`: `coverage_test.go:5`, `impact_test.go:5`,
+  `project_test.go:5`, `wrapped_test.go:5`. `modernc.org/sqlite`:
+  `coverage_test.go:16`, `impact_test.go:15`, `story_test.go:14`,
+  `wrapped_test.go:17`. `project_test.go` imports `database/sql` and not the
+  driver; `story_test.go` imports the driver and not `database/sql`. Union =
+  **five**. All eight cited line numbers are exact.
+- **The driver-vs-`database/sql` distinction is real.**
+  `import_audit_test.go:27` is `strings.Contains(string(b), `"database/sql"`)`
+  — one literal, file text, nothing else; `:20` is the self-exclusion by
+  filename. A driver-only import walks past it, and `story_test.go` is that
+  case today. Both cited lines are exact.
+- **The false-positive note is the most useful thing in the delta, and it is
+  true.** Run over tracked files, `grep -rn
+  'database/sql\|modernc.org/sqlite' --include='*.go' .` minus `_test.go`
+  minus `^./internal/storage/` returns exactly one line:
+  `internal/cli/root.go:8` — the package comment *describing* the boundary,
+  not an import. The note now leads with **"A content grep must match import
+  lines, not file text"** and points at both the hazard
+  (`TestNoSQLImport`'s own filename exclusion) and the mechanism that
+  sidesteps it (`depguard`, on the import graph). Without this, the first
+  person to write the assertion writes a rule that fires on the sentence
+  telling them the rule is needed. *(Caveat for whoever writes it: run
+  verbatim on a working copy the grep also sweeps untracked scratch trees —
+  `.claude/worktrees/` added 13 hits here. Scope to tracked or module files;
+  the recommended import-graph mechanism avoids this too.)*
+- **The constraint's text is quoted correctly** and
+  `guidance/constraints.yaml` is unchanged (`internal/cli/**`, `blocking`,
+  no production-vs-test qualifier — so the note's "five files violate a
+  blocking constraint on its literal reading" is right, and it correctly
+  refuses to amend the constraint as a side effect).
+- **The totality bullet survives archiving.** `scripts/archive-spec.sh`
+  performs exactly one `mv` (line 49) and it moves the spec file; it only
+  *reads* the stage file (`find_stage`, line 56) to echo its path. No
+  `sed -i`, no redirect onto a stage path. `justfile:83` is the only archive
+  recipe and its argument is a `SPEC-NNN`; there is no `archive-stage.sh` in
+  `scripts/`. The bullet's own current-state number is exact: 46 `DEC-*.md`
+  files = 45 `type: decision` + 1 `type: reservation`.
+
+### O1 — the enumeration is complete, not merely longer
+
+`selectedWindow` and `windowCutoff` have exactly three non-test **caller**
+files: `coverage.go:59`/`:68`, `impact.go:66`/`:75`, `story.go:88`/`:96`/
+`:108`. Every other tracked occurrence is a comment (`impact.go:15`/`:58`,
+`story.go:76`/`:77`/`:84`, `window.go` itself, `store_test.go:811`) or a test
+call (`impact_test.go`, nine sites). `spark.go` names `selectedWindow` only
+at `:73` and `:166`, both comments, both recording that it deliberately uses
+a different flag set. `coverage.go:43-46` registers the same four flags
+`windowFlagNames` holds, so `coverage` is a real member of the set, not a
+coincidental caller. *"impact, story and coverage"* is the complete list.
+
+### Parity, adjacency, gates
+
+- **Literal ① — byte-identical, diffed by extracted line range.** The five
+  fenced `go` blocks under `### ①` were extracted programmatically (spec
+  lines 571-698) and diffed against each file's leading `//` block: `main.go` 8
+  lines, `root.go` 13, `config.go` 8, `store.go` 15, `bundle.go` 11 — five
+  of five identical, sha256 match on each, `diff` empty on each.
+- **The `Outputs` contract holds exactly.** `git diff main...HEAD` over the
+  five files is **55 insertions, 0 deletions, 0 modifications** — every hunk
+  is `@@ -0,0 +1,N @@`. *"No other line in any of these five files changes"*
+  is literally true.
+- **`go doc` on all five packages renders the comment.** Adjacency survived
+  every edit: `./cmd/brag`, `./internal/cli`, `./internal/config`,
+  `./internal/storage`, `./internal/story`.
+- **Gates.** `just test` ok, `just test-docs` ok, `gofmt -l .` clean,
+  `go vet ./...` clean, `go build ./...` clean. **177 `OK:` lines, 176
+  distinct ids**, the single duplicate being `S3` — the documented
+  pre-existing wart. Inventory block round-trips byte-identical against
+  `./scripts/inventory.sh` (21 rows, `docs/engineering-practices.md:27`).
+- **No truncation.** Spec 1496 → 1694 → 1917 lines across the three commits,
+  26 fences, balanced; STAGE-022 168 → 239. Monotonic, nothing lost.
+
+### Untouched-claim spot-check
+
+Four claims neither punch list touched, checked against their own citations:
+
+- `root.go` *"the injectable clock seam tests substitute (clock.go)"* —
+  `clock.go` is `var clock = time.Now`, a package var; `list_test.go`
+  substitutes it. **Holds.**
+- `root.go` *"atomic same-directory-rename config writes (atomicwrite.go)"* —
+  `atomicwrite.go:25` takes `filepath.Dir(path)`, creates the temp file
+  there rather than in `os.TempDir()` (`:21` says so), and `:53` is
+  `os.Rename`. The adjective "same-directory" is load-bearing and correct.
+  **Holds.**
+- `store.go` *"Open applies pending embedded migrations behind a
+  pre-migration backup safety belt and a dev/prod migration guard"* — `Open`
+  runs `devProdMigrateGuard` → `backupBeforeMigrations` → `applyMigrations`.
+  "Behind A and B" asserts both precede, which they do; it asserts no order
+  between A and B, and the code's own comment records that the guard is
+  deliberately first. **Holds.**
+- `bundle.go` *"reads storage.Entry values but never a `*storage.Store` or a
+  SQL driver, and reads no clock itself"* — no production file in
+  `internal/story` references `storage.Store`, `sql.`, `modernc`, or
+  `time.Now()`; the only textual hit is the comment making the claim.
+  **Holds.**
+
+Every line number cited in the delta's own write-up (twelve of them, across
+R1 and R2) resolves to the line claimed. That is a change from the earlier
+passes, which found claims contradicted by their own citations.
+
+### Observations — non-blocking, no action required in this spec
+
+- **V1 — the two uniqueness claims use different nouns, and only one of them
+  is airtight.** Claim A says *"only **layer**"*; Claim B says *"Every other
+  **package**"*. `internal/storage/storagetest` is inside the layer and is
+  another package, so the same subpackage that Claim A absorbs, Claim B
+  admits as a counterexample under the non-`_test.go` reading. The delta's
+  evidence paragraph runs the both-readings test and states its result — but
+  states it for Claim A only; Claim B is never put through it. Why this is
+  an observation and not a punch-list item: (a) Claim B is *true* under the
+  ships-in-the-binary reading, which is a reading the return trip named and
+  which `go list -deps` confirms — unlike P3 and R1's predecessors, which had
+  no true reading at all; (b) the comment names `storagetest` as its own
+  exception one sentence earlier, so the harm the finding guards against — a
+  reader trusting the claim and being surprised — does not occur; (c) the
+  operative gloss of the sentence is *"the no-sql-in-cli-layer boundary on
+  `internal/cli`"*, which is unconditionally true; (d) the fix is a one-word
+  noun swap inside literal ①, and re-opening the transcription surface for a
+  noun is a poor trade in a stage where a literal-copy edit has already
+  truncated a spec once. **Routed:** STAGE-022's *"Stale comments to fix
+  alongside"* bullet certifies the package comments as *"the wording a
+  mechanism should be checked against"*, which is the one place this could
+  bite — a `depguard` rule written to the **package** noun would flag
+  `storagetest`, one written to the **layer** noun would not. A qualifying
+  sentence was added there by this pass.
+- **V2 — `window.go:12-13` has the incompleteness O1 just fixed one file
+  over.** `windowFlagNames`'s comment reads *"the canonical, ordered set of
+  calendar-window flags shared by `brag impact` and `brag story`"*, but
+  `coverage.go:43-46` registers the same four flags and `coverage.go:59`
+  calls `selectedWindow`, which iterates the set. Same defect class as O1,
+  same one-word cost, and it is the *definition site* — the place a reader
+  looks first. Out of scope here: `window.go` is not one of literal ①'s five
+  files and the `Outputs` contract is what makes this spec checkable. **Not
+  routed**, and I am not inventing an owner for it: STAGE-022 is lint,
+  coverage and the `Entries:` envelope, and a backlog entry costs more than
+  the fix. It belongs to whoever next opens `window.go`. Recorded here so
+  that person has it.
+
+### What this pass changed
+
+- `projects/.../stages/STAGE-022-measured-and-enforced.md` — one sentence
+  appended to the *"Stale comments to fix alongside"* Design Note, carrying
+  V1's noun distinction to the place a mechanism gets written. Additive,
+  prose only, no assertion weakened. Called out explicitly per the pass's
+  own ground rule against silent repairs.
+- This section, and `cycle: build` → `cycle: verify` in the front-matter.
+- **Not** changed: no `assert_contains` on comment text (SPEC-078 H9 — green
+  on the words, silent on the world); no Go file; no literal; no
+  `scripts/test-docs.sh`; no `guidance/constraints.yaml`.
