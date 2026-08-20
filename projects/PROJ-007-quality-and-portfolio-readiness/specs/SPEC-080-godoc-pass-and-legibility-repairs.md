@@ -1494,3 +1494,201 @@ mutation coverage). A future spec adding to `decisions/` — or STAGE-022,
 whose whole charter is closing exactly this class of "measured but not
 enforced" gap — is the right place to design and land the assertion
 deliberately.
+
+---
+
+## Re-verify Findings (scoped delta review, 2026-08-20)
+
+*A fresh session per AGENTS.md §6, reviewing `git diff 19764dd..b5a2c66` only.
+The mechanical half approved at `19764dd` was not redone. Verdict:
+**⚠ PUNCH LIST** — three findings, one of them the same claim verify #1
+already flagged.*
+
+**Gates, re-run on the delta:** `just test` PASS; `just test-docs` PASS
+(177 `OK:` lines / 176 distinct ids, `S3` the documented double-emitter);
+`gofmt -l .` clean; `go vet ./...` clean; `go build ./...` clean. The
+inventory block round-trips **byte-identical** against `./scripts/inventory.sh`
+(21 rows). Artifact↔literal parity holds for **all five** literal ① comments
+(byte-identical by extracted line range) and for all three hunks of literal ⑥.
+
+**P1 demonstration, reproduced independently.** `_ "database/sql"` was added
+to the production `internal/cli/root.go`; `gofmt -l .`, `go build ./...`,
+`go vet ./...`, `just test` (and a forced `go test -count=1 ./internal/cli/`,
+to rule out a cached result — `ok 2.299s`), and `just test-docs` (177 `OK:`,
+exit 0) **all passed**. The mutation was reverted and the tree confirmed clean
+by `git status --porcelain` (empty) and by hash: `git hash-object
+internal/cli/root.go` == `git rev-parse HEAD:internal/cli/root.go` ==
+`a4e5ab6ee40168ee960a2882b4577833ee7867c0`. The corrected P1 claim is **true**,
+and every component of it independently confirmed: `TestNoSQLImport` exists at
+`internal/mcpserver/import_audit_test.go` and covers `internal/mcpserver`; the
+constraint's `paths:` glob is exactly `["internal/cli/**"]`; `internal/cli` has
+no equivalent test. P2, P4 and P5 are likewise **true** (evidence in each
+finding below where relevant).
+
+### R1 — P3's replacement is narrower but still false (blocking)
+
+`internal/storage/store.go` now claims storage is *"the only **layer** that
+imports a SQL driver."* It is not. Package `cli` imports `modernc.org/sqlite`
+directly in four files:
+
+```
+internal/cli/story_test.go:14    _ "modernc.org/sqlite"
+internal/cli/wrapped_test.go:17  _ "modernc.org/sqlite"
+internal/cli/coverage_test.go:16 _ "modernc.org/sqlite"
+internal/cli/impact_test.go:15   _ "modernc.org/sqlite"
+```
+
+All four declare `package cli` — the CLI layer, not the storage layer.
+
+The `package` → `layer` edit escapes the one counterexample verify #1 showed
+it (`storagetest`) without checking whether others exist. The obvious defence —
+"layer means production architecture; test files don't count" — is **not
+available to this sentence**, because its own second clause admits a
+test-support package into the claim's scope: *"its storagetest test-helper
+subpackage imports the same driver for tests that need raw SQL."* Having
+counted test-support imports as in-scope, the claim cannot then exclude
+`internal/cli`'s. The sibling comment written **in the same commit** carries
+exactly the qualifier this one lacks — `root.go`'s *"Its **production code**
+imports no SQL driver"* — so the delta scopes one claim correctly and leaves
+its twin unscoped. Two comments in one commit that cannot both be true.
+
+Fix is a qualifier, not a rewrite (e.g. *"the only layer whose production code
+imports a SQL driver"*), and must land in **both** `internal/storage/store.go`
+and literal ① in this spec.
+
+### R2 — STAGE-022's cost estimate is short by one file for the mechanism it recommends first (minor)
+
+The routing note names four colliding test files (`coverage_test.go`,
+`impact_test.go`, `project_test.go`, `wrapped_test.go`) as already importing
+`database/sql`. That is **exactly right for a ported `TestNoSQLImport`**, which
+greps the literal string `"database/sql"` — verified against the four files.
+
+But the note recommends, first and as the "natural fit," *a `depguard`
+golangci-lint rule scoped to `internal/cli/**`*, and the constraint it would
+implement forbids *"database/sql **or any SQL driver**."* A depguard rule
+written to the constraint also trips `internal/cli/story_test.go`, which
+imports the driver but **not** `database/sql` — five files, not four. The note
+under-states the cost of its own preferred mechanism.
+
+Two related facts belong in the same note: (a) `TestNoSQLImport` greps only
+`"database/sql"`, so a straight port closes only **half** the constraint and
+would not catch a driver-only import; (b) the constraint's text is
+`"Files under internal/cli/ must not import database/sql or any SQL driver"` —
+unqualified by production-vs-test. On its literal reading, five test files
+violate a **blocking** constraint today. The note frames this correctly as
+"first decide whether the constraint covers test files," but does not flag that
+the text as written already answers it in the direction that makes the current
+tree non-compliant. That strengthens the case for declining it here (see R4)
+and sharpens what STAGE-022 has to decide.
+
+### R3 — the deferred totality assertion was not routed anywhere durable (minor)
+
+P1's follow-up **was** routed well (see R4). The totality assertion was not
+routed at all. `STAGE-022-measured-and-enforced.md` mentions `SPEC-080` exactly
+once — in the P1 bullet — and contains no occurrence of `decs_reserved`,
+`totality`, or `reservation`. The deferral exists only in this spec's
+`## Punch List Resolution`, and `scripts/archive-spec.sh` moves a shipped spec
+into `done/`.
+
+The spec's own wording is the tell: *"A future spec adding to `decisions/` — or
+STAGE-022 … — is the right place."* It names two candidate venues and writes to
+neither. This repo already has an established venue for exactly this — STAGE-022's
+own second Design Note points at `projects/PROJ-001-mvp/backlog.md` for the two
+other deferred items and says "do not re-derive them." One bullet, in STAGE-022
+or that backlog, makes "deferred, not skipped" true.
+
+### R4 — judgements the delta got right
+
+- **P1's fork (a) over (b) — correct, and for the right reason.** This spec's
+  own Outputs says *"every code change is a comment"*; porting the audit test
+  adds production test surface **and** forces a constraints.yaml scope decision
+  the constraint's text leaves genuinely unsettled (see R2(b)). Declining that
+  inside a comments-only punch-list return trip was right. Crucially the fork
+  was closed by making the comment honest rather than by leaving the claim
+  standing — the correct direction, and the routing to STAGE-022 is real: the
+  bullet is **first** in `## Design Notes`, states the defect declaratively,
+  names the mechanism, the empirical proof, the scope question, the four files,
+  and the stale `list_test.go:275` comment, and hooks explicitly to the stage's
+  own in-scope item #1 (lint config). Someone framing that spec would find and
+  act on it. Its one weakness is that the Spec Backlog one-liner for the lint
+  item does not mention it — but AGENTS.md §12 requires reading the parent
+  `STAGE-*.md`, so it is findable by the documented path.
+- **The totality split is principled in reasoning, incomplete in execution.**
+  Not the easy half taken and the hard half renamed: the two halves differ in
+  kind. The template edit is a documentation fix to a non-inventoried file, and
+  it is genuinely count-neutral — every `inventory.sh` glob is
+  `decisions/DEC-*.md`, which `_template.md` does not match, and the inventory
+  block round-trips byte-identical after the edit (verified). The assertion
+  really does require choosing what a violation *means* — a typo to fail the
+  build on, or a new category `inventory.sh` has not been taught — and those two
+  want different assertion shapes. That is a design decision, not a chore. Only
+  the routing failed (R3).
+- **P2's correction is honest.** The original wrong belief is retained verbatim
+  (*"an added SQL import would have broken the `no-sql-in-cli-layer`-guarded
+  build"*) with the correction below it, explicitly stating *"the record of
+  having believed it is kept rather than deleted."* Every factual claim in the
+  correction was independently reproduced above.
+- **P4 confirmed by direct reading.** `internal/storage/project.go` contains
+  zero DDL — 15 `*Store` methods, and the only `CREATE`-matching strings are
+  `fmt.Errorf("create project: …")` error texts. The schema comes from
+  `internal/storage/migrations/0004_add_projects.sql`
+  (`CREATE TABLE projects`, `CREATE TABLE project_locations`,
+  `CREATE INDEX idx_project_locations_project`). DEC-017 line 45 reads
+  *"The `0004_add_projects.sql` migration **adds two tables and backfills
+  nothing**"* — the citation says what the comment implies.
+- **P5 confirmed by position.** The guarded inventory table spans lines 26–48
+  of `docs/engineering-practices.md`; the corrected sentence is at line 66.
+  The table is **above**. The sibling bullet four lines later independently
+  agrees (*"see the lowest, highest and 1.0 rows above"*). Both the artifact
+  and literal ⑥ carry `above`; the two surviving instances of `below` at spec
+  lines 1055 and 1268 are quoted history, not live claims — correct.
+- **Adjacency survives.** `go doc` renders the package comment for all five
+  packages (`internal/cli`, `internal/config`, `internal/storage`,
+  `internal/story`, `internal/mcpserver`); none was pushed off its `package`
+  line.
+
+### Untouched-claim spot-check
+
+Sampled claims the punch list did not touch, in the two changed comments and
+the three unchanged ones:
+
+| Claim | Verdict |
+|---|---|
+| `store.go`: "Entry and ListFilter (entry.go) are the query vocabulary" | ✅ `entry.go:11`, `entry.go:26` |
+| `store.go`: Open behind backup (backup.go, DEC-021) + devguard (devguard.go, DEC-026) | ✅ both called in `Open`; both DEC ids match their filenames |
+| `root.go`: "ErrUser/UserErrorf for exit-code classification (errors.go)" | ✅ `errors.go:11`, `errors.go:13` |
+| `root.go`: "the injectable clock seam tests substitute (clock.go)" | ✅ `clock.go` |
+| `root.go`: "atomic same-directory-rename config writes (atomicwrite.go)" | ✅ `CreateTemp(filepath.Dir(path))` + `os.Rename`, `atomicwrite.go:25-53` |
+| `bundle.go`: "reads storage.Entry values but never a `*storage.Store` or a SQL driver" | ✅ only occurrence of `storage.Store` in the package is the comment itself |
+| `config.go`: "no dependency on internal/storage, so both can import it without a cycle" | ✅ `internal/config` has no internal imports at all |
+| `root.go`: "calendar-window flag parsing shared by impact/story (window.go)" | ⚠ incomplete — see O1 |
+
+### Observations — not blocking, no action required in this spec
+
+- **O1. The `window.go` enumeration names two of three consumers.**
+  `internal/cli/coverage.go` calls both `selectedWindow` (`coverage.go:59`) and
+  `windowCutoff` (`coverage.go:68`), same as `impact.go` and `story.go`. The
+  claim is not false — it asserts no uniqueness — but it is incomplete in a
+  comment whose product is orientation. One word (`impact/story/coverage`)
+  if a later spec is in the file anyway.
+- **O2. `decisions/_template.md` is absent from `## Outputs`.** The P6 fix
+  modified it; the Outputs "Files modified" list still enumerates six artifacts
+  without it. It is documented in `## Punch List Resolution`, so it is
+  traceable, but a rebuild driven off Outputs would miss it.
+
+### On what is now pinnable
+
+The genuinely pinnable proposition in this delta is the SQL boundary itself,
+not the prose about it. Once R1 is fixed to a production-scoped claim, a grep
+over non-`_test.go` files under `internal/` and `cmd/` for `"database/sql"` and
+`modernc.org/sqlite`, asserting no hit outside `internal/storage/`, checks the
+world rather than the words — and it passes today (only `store.go`, `migrate.go`,
+`backup.go`, `devguard.go`, `project.go`, and `storagetest.go` match, all inside
+`internal/storage/`). It is correctly **left unpinned here**: that assertion is
+precisely the STAGE-022 follow-up, and adding it in this spec would contradict
+P1's own reasoning for choosing fork (a).
+
+What must **not** be added is an `assert_contains` on the comment text. It would
+go green on the words while saying nothing about whether `internal/cli` still
+has no driver import — the SPEC-078 H9 failure mode, already on this repo's
+record, and the reason this delta needed its own review at all.
