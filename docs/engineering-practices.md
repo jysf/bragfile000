@@ -63,7 +63,7 @@ sits in the directory between `DEC-040` and `DEC-042` naming the deferred
 feature that holds the number and pointing at the full design in
 [`../projects/PROJ-001-mvp/backlog.md`](../projects/PROJ-001-mvp/backlog.md).
 It is marked `insight.type: reservation`, not `decision`, so it does not
-count itself in the row below.
+count itself in the row above.
 
 - **Each record carries an honest confidence value.** `insight.confidence` is
   part of every record's front-matter, and no record claims certainty — see the

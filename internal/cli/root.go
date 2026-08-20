@@ -3,10 +3,13 @@
 // scaffolding they share: ErrUser/UserErrorf for exit-code classification
 // (errors.go), the injectable clock seam tests substitute (clock.go),
 // atomic same-directory-rename config writes (atomicwrite.go), and the
-// calendar-window flag parsing shared by impact/story (window.go). It
-// imports no SQL driver and no database/sql — enforced by the
-// no-sql-in-cli-layer constraint — so every command reaches persistence
-// only through internal/storage, keeping the CLI a thin shell a future
+// calendar-window flag parsing shared by impact/story (window.go). Its
+// production code imports no SQL driver and no database/sql — the
+// no-sql-in-cli-layer boundary, held today by convention and review, not
+// an automated test (internal/mcpserver has one, TestNoSQLImport;
+// internal/cli — the package the constraint's path glob actually covers —
+// does not; see STAGE-022) — so every command reaches persistence only
+// through internal/storage, keeping the CLI a thin shell a future
 // frontend (TUI, API) could replace.
 package cli
 

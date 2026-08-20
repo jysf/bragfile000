@@ -591,12 +591,23 @@ prose of its own. Verify diffs the working tree against these literals.
 // scaffolding they share: ErrUser/UserErrorf for exit-code classification
 // (errors.go), the injectable clock seam tests substitute (clock.go),
 // atomic same-directory-rename config writes (atomicwrite.go), and the
-// calendar-window flag parsing shared by impact/story (window.go). It
-// imports no SQL driver and no database/sql — enforced by the
-// no-sql-in-cli-layer constraint — so every command reaches persistence
-// only through internal/storage, keeping the CLI a thin shell a future
+// calendar-window flag parsing shared by impact/story (window.go). Its
+// production code imports no SQL driver and no database/sql — the
+// no-sql-in-cli-layer boundary, held today by convention and review, not
+// an automated test (internal/mcpserver has one, TestNoSQLImport;
+// internal/cli — the package the constraint's path glob actually covers —
+// does not; see STAGE-022) — so every command reaches persistence only
+// through internal/storage, keeping the CLI a thin shell a future
 // frontend (TUI, API) could replace.
 ```
+
+*(Corrected at the SPEC-080 punch-list build, 2026-08-20 — P1. The original
+literal claimed the boundary was "enforced by the no-sql-in-cli-layer
+constraint." Verify demonstrated empirically that nothing enforces it for
+`internal/cli`: adding `_ "database/sql"` to `internal/cli/root.go` still
+passes `go build`, `go vet`, `gofmt -l .`, `just test`, and `just
+test-docs`. Fork chosen: narrow the claim (option a), not port
+`TestNoSQLImport` (option b) — see "Punch List Resolution" below.)*
 
 **`internal/config/config.go`** — insert before `package config` (currently
 line 1):
@@ -616,17 +627,33 @@ line 1):
 line 1):
 
 ```go
-// Package storage is the only package that imports a SQL driver
-// (modernc.org/sqlite, pure Go — no CGO, DEC-001). Store wraps *sql.DB and
-// owns every persistence operation: Open applies pending embedded
-// migrations (migrate.go) behind a pre-migration backup safety belt
-// (backup.go, DEC-021) and a dev/prod migration guard (devguard.go,
-// DEC-026); Entry and ListFilter (entry.go) are the query vocabulary;
-// project.go adds the projects/locations schema (DEC-017/019/020). Every
-// other package reaches the database only through a *Store — enforced by
-// the no-sql-in-cli-layer constraint on internal/cli — which is what keeps
-// commands testable and a future frontend feasible.
+// Package storage is the core of the storage layer — the only layer that
+// imports a SQL driver (modernc.org/sqlite, pure Go — no CGO, DEC-001);
+// its storagetest test-helper subpackage imports the same driver for
+// tests that need raw SQL. Store wraps *sql.DB and owns every
+// persistence operation: Open applies pending embedded migrations
+// (migrate.go) behind a pre-migration backup safety belt (backup.go,
+// DEC-021) and a dev/prod migration guard (devguard.go, DEC-026); Entry
+// and ListFilter (entry.go) are the query vocabulary; project.go holds
+// the projects/locations operations over the 0004_add_projects.sql
+// schema (DEC-017/019/020). Every other package reaches the database
+// only through a *Store — the no-sql-in-cli-layer boundary on
+// internal/cli, held today by convention and review rather than an
+// automated test (see STAGE-022) — which is what keeps commands
+// testable and a future frontend feasible.
 ```
+
+*(Corrected at the SPEC-080 punch-list build, 2026-08-20 — P1, P3, P4. Three
+false claims in the original literal: (P1) "enforced by the
+no-sql-in-cli-layer constraint" — not true, see the `internal/cli` literal
+above; (P3) "the only package that imports a SQL driver" — false,
+`internal/storage/storagetest/storagetest.go` (a distinct, non-test-file
+package) also imports `modernc.org/sqlite`, so the claim is fixed to name
+the storage **layer**, the repo's own established term; (P4) "project.go
+adds the projects/locations schema" — `project.go` has zero DDL, the
+schema is added by `internal/storage/migrations/0004_add_projects.sql`
+(DEC-017 line 45 says so explicitly), so the claim is corrected to what
+`project.go` actually holds: the operations over that schema.)*
 
 **`internal/story/bundle.go`** — insert before `package story` (currently
 line 1):
@@ -1018,11 +1045,18 @@ fi
 +feature that holds the number and pointing at the full design in
  [`../projects/PROJ-001-mvp/backlog.md`](../projects/PROJ-001-mvp/backlog.md).
 +It is marked `insight.type: reservation`, not `decision`, so it does not
-+count itself in the row below.
++count itself in the row above.
 
  - **Each record carries an honest confidence value.** `insight.confidence` is
    part of every record's front-matter, and no record claims certainty — see the
 ```
+
+*(Corrected at the SPEC-080 punch-list build, 2026-08-20 — P5. The original
+literal's added line read "so it does not count itself in the row below,"
+directionally wrong: the inventory table this sentence refers to sits
+**above** the `## Decisions` section, not below, and the very next bullet
+in the same section correctly says "see the lowest, highest and 1.0 rows
+above." One word changed: `below` → `above`.)*
 
 **Note on the cached derived number in this diff (per the framing prompt's
 trap-2 warning).** The `Documentation assertions` value (176) and both new
@@ -1127,6 +1161,24 @@ Process-focused: how did the build go? What friction did the spec create?
    have broken the `no-sql-in-cli-layer`-guarded build, not just made the
    comment stale). Everything else was comment-only, so no Go-scoped
    constraint had any surface to violate.
+
+   **CORRECTED AT THE SPEC-080 PUNCH-LIST BUILD (2026-08-20), P2.** The
+   parenthetical above is false, and the record of having believed it is
+   kept rather than deleted. Verify falsified it directly: inserting
+   `_ "database/sql"` into the production `internal/cli/root.go` still
+   passes `go build`, `go vet`, `gofmt -l .`, `just test`, and
+   `just test-docs` — nothing catches it. `no-sql-in-cli-layer` is held
+   for `internal/cli` by convention and review, not by any automated
+   guard; the one guard that exists in the repo
+   (`internal/mcpserver/import_audit_test.go`'s `TestNoSQLImport`) was
+   written for `internal/mcpserver`, whose own comment says the
+   constraint's path glob covers `internal/cli/**` only — the package the
+   rule was actually written for has no test. The package comment (P1)
+   was corrected to say this honestly rather than claim enforcement.
+   Closing the gap itself (a ported audit test, or a `depguard`
+   golangci-lint rule scoped to `internal/cli/**`) is out of this spec's
+   scope and is now a noted follow-up in STAGE-022 — see this spec's
+   "Punch List Resolution" section below.
 3. **If you did this task again, what would you do differently?**
    — Nothing procedurally. One minor observation: literal ④'s Y1 check reads
    the line immediately preceding each `package` declaration via
@@ -1321,3 +1373,124 @@ defects; SPEC-078 skipped the re-verify and shipped an assertion pinning the
 wrong proposition), **the punch-list delta deserves its own re-verify pass
 before this spec advances.** P1 in particular can be closed two ways with
 materially different scope.
+
+---
+
+## Punch List Resolution (build return trip, 2026-08-20)
+
+*A fresh build session, per AGENTS.md §6, closing the five findings above.
+Each fix lands in both the shipped artifact and this spec's literal, per the
+invoking instruction — the literal is the source of truth for a future
+rebuild.*
+
+### P1 — fork chosen: (a) narrow the claim, not (b) port `TestNoSQLImport`
+
+**Chosen: (a).** Both package comments (`internal/cli/root.go`,
+`internal/storage/store.go`, literal ①) now say the boundary is *"held
+today by convention and review, not an automated test"* and name the gap
+explicitly — `internal/cli` is the package the constraint's path glob
+actually covers, and it is the one without a test; `internal/mcpserver`
+has one it didn't strictly need to have written first.
+
+**Rejected alternative: (b), port `TestNoSQLImport` to `internal/cli` —
+REJECTED for this spec.** Verified the cost the invoking instruction
+warned about is real, not hypothetical: `internal/cli/coverage_test.go`,
+`impact_test.go`, `project_test.go`, and `wrapped_test.go` all import
+`database/sql` today (confirmed by direct grep), so a naive port of
+`TestNoSQLImport`'s walk-every-`.go`-file shape fails immediately against
+production's own test suite. Closing it properly requires first deciding
+whether the constraint covers test files — a real scope question, not a
+mechanical one — and separately fixing a stale comment at
+`internal/cli/list_test.go:275` (*"CLI tests cannot import database/sql
+per the no-sql-in-cli-layer"*), which those same four files already
+disprove. That is new test surface and a new scope decision this
+docs-and-comments spec was never framed to carry (its own Outputs section
+says "every code change is a comment"); deciding it inside a punch-list
+return trip would repeat the exact failure pattern
+`guidance/constraints.yaml`'s `no-sql-in-cli-layer` entry itself warns
+against elsewhere in this repo's history (STAGE-021/constraints.yaml
+§"Packaging-shape changes are decisions, not hygiene" — small-looking
+diffs that are actually decisions deserve a decision pass, not an
+inline fix).
+
+**Where (b) landed instead.** Per the invoking instruction's own steering
+("STAGE-022's stated scope is signals that gate CI... An audit test may
+belong there"), a Design Notes entry was added to
+`projects/PROJ-007-quality-and-portfolio-readiness/stages/STAGE-022-measured-and-enforced.md`
+naming the gap, the four colliding test files, the stale
+`list_test.go:275` comment, and a candidate mechanism this repo doesn't
+have yet: a `depguard` golangci-lint rule scoped to `internal/cli/**`,
+which would pair naturally with STAGE-022's already-scoped lint-config
+item rather than requiring a hand-rolled walker test.
+
+### P2 — build reflection Q2
+
+Corrected in place (original claim retained below a provenance-style
+divider, matching this spec's own established pattern for closed
+questions in literal ⑤): the reflection now records that
+`no-sql-in-cli-layer` had no automated guard for `internal/cli` at build
+time, contrary to what Q2 originally asserted.
+
+### P3 — "the only package that imports a SQL driver"
+
+Fixed in `internal/storage/store.go`'s comment (and literal ①) by naming
+the storage **layer** — the repo's own established term
+(`storagetest.go`'s own comment: *"keeps the database/sql dependency
+inside the storage layer"*) — and explicitly naming
+`internal/storage/storagetest` as the sibling package that also imports
+`modernc.org/sqlite`.
+
+### P4 — "project.go adds the projects/locations schema"
+
+Fixed in the same comment: `project.go` now reads *"holds the
+projects/locations operations over the 0004_add_projects.sql schema
+(DEC-017/019/020)"*. Confirmed directly: `project.go` contains zero
+`CREATE`/`ALTER`/`DROP` statements (it is all `*Store` methods —
+`CreateProject`, `AddLocation`, `ProjectForPath`, etc.); the schema comes
+from `internal/storage/migrations/0004_add_projects.sql`
+(`CREATE TABLE projects`, `CREATE TABLE project_locations`); DEC-017 line
+45 — the first DEC the original comment cited — states this itself:
+*"The `0004_add_projects.sql` migration adds two tables and backfills
+nothing."*
+
+### P5 — "the row below"
+
+One word, fixed in both `docs/engineering-practices.md` and literal ⑥:
+`below` → `above`. Confirmed by position: the guarded inventory table
+(`<!-- inventory:begin -->` … `<!-- inventory:end -->`) sits above the
+`## Decisions` section in the file; the next bullet in the same section
+already correctly says *"see the lowest, highest and 1.0 rows above."*
+
+### P6 — the reservation-filter totality gap (non-blocking, decided)
+
+**Decided: add `reservation` to `decisions/_template.md`'s documented
+enum now; defer the totality assertion (`decs + decs_reserved == ls
+decisions/DEC-*.md | wc -l`) with this reason recorded.**
+
+The template fix is a one-line, zero-risk documentation correction —
+`decisions/_template.md` isn't itself a `DEC-*.md` file, so it is outside
+every inventory count and every `test-docs.sh` assertion; there is
+nothing to reconcile or re-derive. It closes half the gap verify named
+(the enum silently omitting a type every future tombstone author would
+otherwise have to infer from DEC-041 alone).
+
+The totality assertion is deferred, not skipped. Adding it is a real
+design decision this punch-list return trip should not make by
+implication: it requires choosing what a violation *means* (a third,
+untyped `insight.type` on a `DEC-*.md` file is either a typo to fail the
+build on, or a legitimately new category `inventory.sh` hasn't been
+taught yet — those two failure modes want different assertion shapes),
+and, per this spec's own ground rules, any new `test-docs.sh` assertion
+must be added by anchoring on line-start matches with the match count
+verified before writing — exactly the discipline that caught this
+spec's own earlier truncation incident (1,779 lines → 715). Rushing that
+inside a five-finding punch-list fix risks the same class of mistake the
+ground rules are warning against. The gap itself is low-severity by
+construction: it requires a *new* `DEC-*.md` file to carry a bogus or
+absent `insight.type`, and every one of the 46 files that exist today
+(45 decisions + the DEC-041 reservation) was independently verified at
+SPEC-080 design and build to carry a correct one (§12(b) row 7; Y3's
+mutation coverage). A future spec adding to `decisions/` — or STAGE-022,
+whose whole charter is closing exactly this class of "measured but not
+enforced" gap — is the right place to design and land the assertion
+deliberately.

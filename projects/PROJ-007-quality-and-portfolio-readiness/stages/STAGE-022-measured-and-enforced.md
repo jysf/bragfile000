@@ -105,6 +105,24 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
 ## Design Notes
 
+- **`no-sql-in-cli-layer` has no automated guard for the package it was
+  written for.** Surfaced at SPEC-080 verify/punch-list-build
+  (2026-08-20, P1): `internal/mcpserver/import_audit_test.go`'s
+  `TestNoSQLImport` enforces the boundary for `internal/mcpserver`, but
+  the constraint's path glob (`guidance/constraints.yaml`) covers
+  `internal/cli/**`, which has no equivalent test. Verified empirically —
+  adding `_ "database/sql"` to `internal/cli/root.go` still passes
+  `go build`, `go vet`, `gofmt -l .`, `just test`, and `just test-docs`.
+  A `depguard` golangci-lint rule scoped to `internal/cli/**` (natural
+  fit alongside this stage's lint work) or a ported `TestNoSQLImport`
+  would close it. Either way, first decide whether the constraint covers
+  test files: four `internal/cli/*_test.go` files
+  (`coverage_test.go`, `impact_test.go`, `project_test.go`,
+  `wrapped_test.go`) already import `database/sql` for test fixtures, so
+  a naive walk-every-`.go`-file port fails immediately against them; a
+  stale comment at `internal/cli/list_test.go:275` also asserts "CLI
+  tests cannot import database/sql," which those four files already
+  disprove and would need fixing alongside the new test/lint rule.
 - **The two deferred items keep their working.** `MergeTags` position density and
   `$EDITOR` quoting were measured during PROJ-007 framing and deferred
   2026-08-18; the drafted rules, the rejected alternatives, and the measurements
