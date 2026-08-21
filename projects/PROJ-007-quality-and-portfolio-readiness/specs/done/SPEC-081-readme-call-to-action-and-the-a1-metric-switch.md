@@ -7,7 +7,7 @@
 task:
   id: SPEC-081
   type: chore                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -1312,14 +1312,57 @@ it. No claim in this sample was contradicted by its own citation.
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — **When a count is challenged, re-derive both halves and name the unit.**
+   Fork 3 claimed the call-to-action would land "3rd of 10 `##` headings".
+   Build corrected the denominator to 11 and kept the ordinal; verify measured
+   it properly and found **no single reading makes "3rd of 11" true** — it is
+   2nd of 11 among `##`, 3rd of 12 counting the H1, 4th of 13 as GitHub renders
+   the outline. Each pass fixed the half it was handed. The rule that would have
+   caught it at design: an *X of N* claim is two measurements plus a unit, and
+   all three have to be stated.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — **AGENTS.md §12 now has an N=3 candidate.** Three same-outcome instances in
+   this stage of an *X of N* claim re-derived only on the challenged half:
+   SPEC-079's "six of 75 carry none" (six lacked the *heading*; five carried
+   none), the 8-of-18 / 9-of-18 / 7-of-17 open-questions family, and this
+   heading ordinal. §12's own bar for codifying a mechanical sub-rule is N=3
+   same-outcome. **Recommended at stage ship, not asserted here.**
+   — Two comment defects recorded, neither fixed in place: A1's comment calls
+   `docs/for-ai-agents.md` (2,120 words) "the smallest deep-dive doc in this
+   repo" — `docs/architecture.md` (1,577) and `docs/data-model.md` (1,908) are
+   smaller. The *conclusion* survives (1,400 sits below every long-form doc) but
+   the stated cushion does not: the nearest doc above the ceiling is 1,447, so
+   it is **47 words, not ~700**. And `A11`'s comment refers to A1 "bounding that
+   length" when A1 no longer measures lines at all.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — **STAGE-021 closes with this spec**, so the next work is STAGE-022, which
+   already carries four items routed from SPEC-080 (the missing `internal/cli`
+   audit test with `depguard` named as the mechanism; the deferred totality
+   assertion; the stale comments, including `store.go`'s `Store` type comment
+   false since 2026-04-20; and V1's package-vs-layer noun distinction). The two
+   comment defects above are the natural fifth and sixth — both are one-word
+   swaps whenever those files are next opened.
+   — **V2 remains recorded and unrouted:** `internal/cli/window.go:12-13` names
+   `impact` and `story` while `coverage.go` shares the same flag set. Declined
+   twice with a stated reason (`windowFlagNames` is unexported, so its comment
+   never reaches `go doc`), which is a decision rather than an oversight.
 
-4. **What can a user do now that they couldn't before?** — one sentence,
-   before → after; quote the confirming number if one exists, name the outcome
-   if not.
+4. **What can a user do now that they couldn't before?**
+   — An agent-using developer landing on the README sees `brag mcp install`
+   **2nd of 11 sections**, in a heading that names what it does, instead of
+   buried in a blockquote whose first word is "Status:" — with the detail still
+   at the bottom where detail belongs. And the guard on the README's size now
+   measures content rather than typography: a pure rewrap of the same 1,268
+   words moved `wc -l` across a **19-line range** while `wc -w` did not move at
+   all, so a formatting pass can no longer redden CI.
+
+### What this spec proved about the guard it changed
+
+SPEC-079's LD5 pinned A1 tight at 260 with zero headroom, reasoning that a guard
+widened whenever it fires is not a guard. That reasoning was right and this spec
+did not overturn it — it **changed the unit rather than the bound**, and proved
+the case by demonstration rather than assertion. The independence check is the
+part worth keeping: with the metric switched and the README untouched, the whole
+harness is green, so Change 2 was never carrying Change 1.

@@ -367,7 +367,15 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       placeholder rejection, 77/77 ship reflections, the README's "five tool
       schemas"): all held against their citations.
 
-**Count:** 2 shipped / 1 active / 0 pending
+**Count:** 3 shipped / 0 active / 0 pending — **the backlog is complete.**
+
+> `just archive-spec` printed *"All specs for STAGE-021 are shipped"* at each of
+> the three ships. It was **false the first two times** — it counts written
+> specs, not backlog items, so an unframed entry is invisible to it. This time
+> it is true. The warning that stood here through SPEC-079 and SPEC-080 has done
+> its job and is retired with the record of why it existed.
+>
+> **The stage is not closed until its Stage-Level Reflection is written.**
 
 *(The trailing fragment that sat here — the tail of a parenthetical about
 SPEC-081 being "agreed and not yet scaffolded" — was orphaned when SPEC-081 was
