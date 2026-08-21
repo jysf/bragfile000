@@ -7,7 +7,7 @@
 task:
   id: SPEC-081
   type: chore                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -1008,28 +1008,74 @@ clean.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
-- **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+- **Branch:** `build/spec-081-readme-cta-and-a1-metric`
+- **PR (if applicable):** not opened — per instruction, no push/PR this session.
+- **All acceptance criteria met?** yes — all 9 confirmed:
+  1. Lines 15–19 of the pre-change `README.md` are gone; the blockquote now
+     ends at line 14 (`… brew install jysf/tap/bragfile\`.`).
+  2. `## Wire it into your AI agent` lands byte-identical to literal ①
+     (diffed), between `## Install` and `## Capture an entry`.
+  3. `README.md:10` diffed byte-identical against `main`; `W3` green.
+  4. `assert_word_count_band` defined, called by exactly one assertion (`A1`,
+     band `900 1400`) — grepped and confirmed one call site.
+  5. `assert_line_count_band`'s body diffed byte-identical against `main`;
+     still called by exactly `C2`, `D2`, `J2`, `T2`, `X7` (five call sites,
+     grepped).
+  6. `A11` exists; passes on the new README; confirmed failing on the
+     pre-change README during the ordered build sequence (Run 2 shape).
+  7. `just test-docs` → **ALL OK** at **177** distinct assertion ids
+     (computed via `inventory.sh`'s own dedup pipeline, not a raw `OK:` line
+     count — those differ because some ids emit multiple runtime `OK:` lines).
+  8. `docs/engineering-practices.md`'s pasted inventory block diffed
+     byte-for-byte against a fresh `just inventory` run; page line count
+     unchanged at 283 (`X7` green).
+  9. `just test`, `gofmt -l .`, `go vet ./...` all green, unaffected.
+- **New decisions emitted:** none — matches the spec's own prediction (local
+  reasoning, recorded in the assertion comments).
 - **Deviations from spec:**
-  - [list]
+  - None in the five literals — all diffed byte-identical against the spec
+    text before and after the mutation check.
+  - **One narrative claim in Fork 3 does not hold and is reported, not
+    fixed, per the transcribe-verbatim-and-report rule.** The spec says the
+    call-to-action goes "to the third of ten `##` headings." Measured: the
+    pre-change README (`git show main:README.md`) has exactly **10** `##`
+    headings, so post-change, with the new section added, there are **11**
+    total, and the call-to-action is the **3rd of 11**, not "3rd of 10." The
+    literal artifacts (①–⑤) are unaffected — this is editorial prose in
+    Fork 3's argument, not a transcribed literal or a tested assertion — but
+    it's a factual slip worth naming since Fork 3 leans on the "third of
+    ten" framing to argue the outline win.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None beyond what's already recorded in the spec's own "Out of scope"
+    section (`internal/cli/window.go:12-13` V2, and switching C2/D2/J2/T2/X7
+    to word bands per their stated trigger).
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing. The five literals, the anchor line ranges, and the ordered
+   sequence (②③④ → `bash -n` → ① → `just test-docs` → ⑤ → `just test-docs`)
+   were all specific enough to follow mechanically — every anchor matched
+   exactly once, every diff came back clean on the first attempt.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — Not a constraint, but one useful thing to confirm empirically rather
+   than assume: the "177 distinct assertion ids" claim is about
+   `inventory.sh`'s deduped extraction from source, not a count of runtime
+   `OK:` lines from `just test-docs` (which is 178, because some ids can
+   legitimately emit more than one `OK:` at runtime). A build session that
+   grep-counted `OK:` lines instead of running `inventory.sh`'s own
+   extraction would have seen a mismatch and wrongly suspected a defect.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing procedurally. The one thing worth carrying forward: the Fork 3
+   "third of ten" miscount was only caught by re-deriving the pre-change
+   heading count from `git show main:README.md` instead of trusting the
+   spec's arithmetic — which is exactly the re-measurement discipline this
+   spec itself modeled against framing. Good habit to keep applying even
+   inside a "transcribe verbatim" build.
 
 ---
 

@@ -12,11 +12,6 @@ sync, no account.
 > coding agents capture and read entries as typed tool calls; and `brag
 > memory` returns a ranked, token-budgeted slice of your history that an MCP
 > client can auto-load with no tool call. `brew install jysf/tap/bragfile`.
->
-> Working with an AI agent? `brag mcp install` wires brag into Claude Code,
-> Cursor, or Claude Desktop as five typed tools plus an auto-loadable memory
-> resource — see
-> [Using brag from an AI agent (MCP)](#using-brag-from-an-ai-agent-mcp) below.
 
 ## Install
 
@@ -75,6 +70,13 @@ Requires Go 1.26+ if you build from source instead.
   serve` server in a client's config idempotently (`--client
   claude-code|claude-desktop|cursor`, `--scope project|user`, `--dry-run` to
   preview) — see [`docs/api-contract.md`](docs/api-contract.md).
+
+## Wire it into your AI agent
+
+Working with an AI agent? `brag mcp install` wires brag into Claude Code,
+Cursor, or Claude Desktop as five typed tools plus an auto-loadable memory
+resource. The flags, the resources and the gotchas are in
+[Using brag from an AI agent (MCP)](#using-brag-from-an-ai-agent-mcp) below.
 
 ## Capture an entry
 

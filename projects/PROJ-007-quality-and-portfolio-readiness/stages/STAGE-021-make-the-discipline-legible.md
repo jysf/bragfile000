@@ -291,6 +291,31 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `coverage` shares the flag set). Every literal was staged in a real tree,
       the harness run in three configurations, eight mutants killed, and the
       tree reverted clean. Confidence 0.88.
+      **Built 2026-08-20** on `build/spec-081-readme-cta-and-a1-metric`. All
+      five literals transcribed byte-for-byte — verified by diff against each
+      literal, not by eye. Order followed the invoking instruction: ②③④
+      landed on `scripts/test-docs.sh` first, `bash -n` clean, then ① on
+      `README.md` (260 → 262 lines, 1268 → 1277 words — exactly the predicted
+      +2/+9), then `just test-docs` failed on exactly one assertion (`X3`,
+      the stale inventory), then ⑤ (`just inventory`, pasted) — the script
+      printed **177**, agreeing with the spec's prediction, so nothing needed
+      reconciling by hand. `just test-docs` reached **ALL OK** at **177**
+      distinct assertion ids (delta exactly `A11`, confirmed both directions
+      via `comm` against `inventory.sh`'s own dedup pipeline — not the raw
+      `OK:` line count, which is 178 for unrelated reasons). The mutation
+      check requested at build time reproduced §12(b) run 4's last mutant:
+      mistyping `wc -w` as `wc -l` inside the new helper sent `A1` red on its
+      floor (`262 words` reported against a 900 floor); reverted, and the
+      helper re-diffed byte-identical to the literal. `assert_line_count_band`
+      diffed byte-identical to `main`, still called by exactly `C2`/`D2`/
+      `J2`/`T2`/`X7`. `README.md:10` diffed byte-identical to `main`; `W3`
+      green. `just test`, `gofmt -l .`, `go vet ./...` all green. One
+      deviation, reported not silently fixed: Fork 3's "third of ten `##`
+      headings" undercounts by one — the pre-change README has exactly 10
+      `##` headings (confirmed against `main`), so post-change with the new
+      section it's the **3rd of 11**, not "3rd of 10." No literal was wrong;
+      this is editorial prose in Fork 3's argument. No new DECs. Not pushed;
+      no PR opened, per instruction.
 
 **Count:** 2 shipped / 1 active / 0 pending
 

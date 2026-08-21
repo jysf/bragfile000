@@ -56,6 +56,40 @@ assert_line_count_band() {
     fi
 }
 
+# Word count, not line count. `wc -l` on a HARD-WRAPPED prose file conflates two
+# different events: adding content (what a size guard exists to catch) and
+# rewrapping a paragraph (which adds nothing). Measured at SPEC-081 design,
+# 2026-08-20: rewrapping README.md's prose across 64..100 columns — token stream
+# provably byte-identical, not one word added, removed or changed — moves
+# `wc -l` from 248 to 267, while `wc -w` stays at exactly 1268 every time. A
+# guard that fires on a non-event gets disarmed by habit, which is the
+# "bump the number until green" failure SPEC-079's LD5 refused.
+#
+# The honest limit: `wc -w` is reflow-invariant on UNPREFIXED lines only. A
+# blockquote's `>` and a list's `-` are themselves words, so rewrapping those
+# moves both counts by the same absolute amount — measured on README.md, at
+# most ±4. That is ±4 against a 500-word band here, where it was ±4 against a
+# 160-line one before.
+#
+# The other five callers stay on `assert_line_count_band` deliberately: the
+# defect is only LIVE where a file's reflow swing exceeds its guard's headroom,
+# and measured 2026-08-20 only A1 qualified (headroom 0, swing +7). The next
+# closest is X7 (headroom 17, swing +15). Switch a caller to this helper when
+# its swing exceeds its headroom, not before.
+assert_word_count_band() {
+    name="$1"; path="$2"; min="$3"; max="$4"
+    if [ ! -f "$path" ]; then
+        fail "$name" "file does not exist: $path"
+        return 0
+    fi
+    n=$(wc -w < "$path" | tr -d ' ')
+    if [ "$n" -ge "$min" ] && [ "$n" -le "$max" ]; then
+        ok "$name"
+    else
+        fail "$name" "$path has $n words (expected $min..$max)"
+    fi
+}
+
 assert_contains_literal() {
     name="$1"; path="$2"; pattern="$3"
     if [ ! -f "$path" ]; then
@@ -113,14 +147,31 @@ check_link_target() {
 
 # ===== Group A — README shape (positive) =====
 
-# A1 — README line count band 100..260
-# Re-pinned 250 -> 260 at SPEC-079 (LD5), TIGHT: 260 is the exact length of the
-# README after the `## How this repo is built` section, not a round number with
-# headroom. A guard widened whenever it fires is not a guard — the next line
-# added to the README fails this again and is again a decision. The band exists
-# (SPEC-021) to keep the README a user-facing quickstart, and a ten-line routing
-# section with no commands, flags or numbers does not change that.
-assert_line_count_band "A1" "README.md" 100 260
+# A1 — README word count band 900..1400.
+#
+# The INSTRUMENT changed at SPEC-081, from `wc -l` to `wc -w`; the band's
+# purpose (SPEC-021) is unchanged — keep the README a user-facing front door
+# rather than a manual. See `assert_word_count_band` above for why a line count
+# is the wrong instrument on a hard-wrapped file.
+#
+# This is NOT the old band widened. Converted at the README's own words-per-line
+# ratio measured 2026-08-20 (1268 words / 260 lines = 4.88), the old 100..260
+# lines was ~490..1268 words: a span of 780. This band spans 500 — 36% narrower.
+# The ceiling gains ~130 words of budget; the floor tightens by ~410.
+#   ceiling 1400 — past roughly 1500 words a README gets skimmed rather than
+#     read, so the guard fires BEFORE that point, not at it. The smallest
+#     deep-dive doc in this repo (`docs/for-ai-agents.md`, 2120 words on
+#     2026-08-20) sits well clear of it, so the README keeps its tier as the
+#     front door rather than becoming a second manual. The gap between the
+#     README's count and 1400 is a budget of about one short section —
+#     SPEC-079's `## How this repo is built` is 82 words — not slack: under
+#     `wc -w` headroom can only ever be spent on content, which is why a word
+#     budget tolerates headroom that a line budget cannot.
+#   floor 900 — a backstop against the README being hollowed out by a bad merge
+#     or an over-eager trim. Below 900 words it can no longer carry install,
+#     capture, retrieval and pointers at usable depth. The A-series above pins
+#     WHICH sections exist; this pins that they still have content in them.
+assert_word_count_band "A1" "README.md" 900 1400
 
 # A2 — README opens with H1 in line 1 or 2
 if [ ! -f README.md ]; then
@@ -205,6 +256,32 @@ else
         ok "A10"
     else
         fail "A10" "license section (heading=$has_heading mit=$has_mit)"
+    fi
+fi
+
+# A11 — the agent call-to-action is a scannable top-level heading near the top
+# of the README, not a sentence inside the Status blockquote.
+#
+# SPEC-081. The copy already existed — at README.md:16-19, inside
+# `> **Status:** …`, where a heading-skimmer never sees it at all and the reader
+# who does see it is skipping. Promoting it out of the blockquote is the change;
+# this assertion is what holds it there. The threshold is derived from the
+# file's own length rather than a pinned line number, so it cannot rot, and A1
+# above bounds that length so the two guards compose.
+if [ ! -f README.md ]; then
+    fail "A11" "README.md does not exist"
+else
+    a11_line=$(grep -n -i -E '^## .*agent' README.md | head -n 1 | cut -d: -f1)
+    a11_total=$(wc -l < README.md | tr -d ' ')
+    a11_third=$((a11_total / 3))
+    if [ -z "$a11_line" ]; then
+        fail "A11" "README.md has no '## …agent…' heading"
+    elif [ "$a11_line" -gt "$a11_third" ]; then
+        fail "A11" "first '## …agent…' heading is at line $a11_line of $a11_total (must be within the first third, i.e. line $a11_third)"
+    elif ! sed -n "$((a11_line + 1)),$((a11_line + 8))p" README.md | grep -F -q 'brag mcp install'; then
+        fail "A11" "the agent call-to-action section must name 'brag mcp install' within 8 lines of its heading"
+    else
+        ok "A11"
     fi
 fi
 
