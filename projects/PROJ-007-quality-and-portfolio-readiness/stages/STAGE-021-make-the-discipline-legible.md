@@ -243,7 +243,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       design predicted (informational-only off-by-one, left untouched).
       No deviations from the six literals.
 
-- [ ] SPEC-081 (frame) — **the README call-to-action + the A1 metric switch.**
+- [ ] SPEC-081 (design) — **the README call-to-action + the A1 metric switch.**
       Framed 2026-08-19, **GO at complexity S**. Promotes the existing MCP
       call-to-action out of the `> **Status:**` blockquote (readers skip status
       blocks; the full MCP section is at line 219 of 260), and switches `A1`
@@ -255,18 +255,56 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       the shape is a sibling helper rather than a repurpose; and `W3` pins the
       literal `> **Status:** v<latest> shipped` line against the CHANGELOG, so
       the blockquote cannot simply be deleted.
+      **Designed 2026-08-20.** All four forks settled with rejected
+      alternatives. Framing's headline numbers were re-measured and held (260
+      lines / 1,268 words; six callers; `W3` at `test-docs.sh:1280`); one
+      supporting claim did not — the practices page does **not** cite `A1`
+      anywhere, so the id's stability matters for the commit trail and the
+      derived id count, not for a citation that does not exist. **The metric
+      argument is demonstrated, not asserted:** rewrapping the README's prose
+      across 64–100 columns, token stream asserted byte-identical at every
+      width, moves `wc -l` across **248…267** while `wc -w` stays at **1268** —
+      four of seven rewraps turn CI red having added nothing, and the file is
+      not consistently wrapped today (68 vs 77–79 columns by section), so a
+      single normalising pass would do it. The honest limit is stated too: a
+      `>` or `-` marker is itself a word, so blockquote reflow moves both
+      counts, by ±4 against a 500-word band where it was ±4 against a 160-line
+      one. **Band = `900 1400`**, chosen without reference to Change 1 (which
+      costs +9 words) and argued from three legs — fire before the ~1,500-word
+      skim threshold rather than at it; keep the README's tier below the
+      smallest deep-dive doc in the repo at 2,120 words; and headroom that only
+      content can spend, which is the asymmetry a line budget cannot offer.
+      Converted at the README's own 4.88 words/line the old band was
+      ~490…1268, so **the admissible span narrows from 780 to 500 — 36% —**
+      and the switch tightens the guard overall. Sibling helper
+      `assert_word_count_band`; `A1` keeps its id; the other five callers stay
+      on lines because the defect is only LIVE where reflow swing exceeds
+      headroom, and measured, only A1 qualifies (headroom 0, swing +7) — X7 is
+      next at 17/+15 and gets a written trigger rather than an intention. New
+      `A11` holds the call-to-action in place (a heading in the first third,
+      naming `brag mcp install`), taking `test-docs` to **177**; the Status
+      blockquote keeps everything but the call-to-action, with `W3`'s line
+      untouched. V2 declined with reasons — `windowFlagNames` is unexported, so
+      it sits outside this stage's own `go doc` criterion — and re-recorded
+      with its corrected path (`internal/cli/window.go`, not
+      `internal/storage/`) and corrected fact (three callers, not two:
+      `coverage` shares the flag set). Every literal was staged in a real tree,
+      the harness run in three configurations, eight mutants killed, and the
+      tree reverted clean. Confidence 0.88.
 
 **Count:** 2 shipped / 1 active / 0 pending
-restructure + the A1 `wc -l` → `wc -w` switch — is agreed and not yet
-scaffolded. It is counted here deliberately: with `0 pending` this stage reads
-as complete the moment SPEC-080 ships, and `just archive-spec` already reports
-stage completion off written specs rather than backlog items.)*
+
+*(The trailing fragment that sat here — the tail of a parenthetical about
+SPEC-081 being "agreed and not yet scaffolded" — was orphaned when SPEC-081 was
+scaffolded on 2026-08-19 and its opening was replaced by the backlog entry
+above. Removed at SPEC-081 design, 2026-08-20: it was a stale claim about this
+spec, in the stage file about legibility.)*
 
 > **The stage is NOT complete.** `just archive-spec` printed *"All specs for
 > STAGE-021 are shipped"* on an earlier ship — it counts written specs, not
-> backlog items, so an unframed entry was invisible to it. SPEC-080 is now
-> framed and designed but not yet built, verified, or shipped. Do not run the
-> Stage Ship prompt until it is.
+> backlog items, so an unframed entry was invisible to it. SPEC-080 shipped
+> 2026-08-19; **SPEC-081 is now framed and designed but not yet built,
+> verified, or shipped.** Do not run the Stage Ship prompt until it is.
 
 ## Design Notes
 
