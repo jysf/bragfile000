@@ -243,7 +243,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       design predicted (informational-only off-by-one, left untouched).
       No deviations from the six literals.
 
-- [ ] SPEC-081 (design) — **the README call-to-action + the A1 metric switch.**
+- [ ] SPEC-081 (verify) — **the README call-to-action + the A1 metric switch.**
       Framed 2026-08-19, **GO at complexity S**. Promotes the existing MCP
       call-to-action out of the `> **Status:**` blockquote (readers skip status
       blocks; the full MCP section is at line 219 of 260), and switches `A1`
@@ -291,8 +291,91 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `coverage` shares the flag set). Every literal was staged in a real tree,
       the harness run in three configurations, eight mutants killed, and the
       tree reverted clean. Confidence 0.88.
+      **Built 2026-08-20** on `build/spec-081-readme-cta-and-a1-metric`. All
+      five literals transcribed byte-for-byte — verified by diff against each
+      literal, not by eye. Order followed the invoking instruction: ②③④
+      landed on `scripts/test-docs.sh` first, `bash -n` clean, then ① on
+      `README.md` (260 → 262 lines, 1268 → 1277 words — exactly the predicted
+      +2/+9), then `just test-docs` failed on exactly one assertion (`X3`,
+      the stale inventory), then ⑤ (`just inventory`, pasted) — the script
+      printed **177**, agreeing with the spec's prediction, so nothing needed
+      reconciling by hand. `just test-docs` reached **ALL OK** at **177**
+      distinct assertion ids (delta exactly `A11`, confirmed both directions
+      via `comm` against `inventory.sh`'s own dedup pipeline — not the raw
+      `OK:` line count, which is 178 for unrelated reasons). The mutation
+      check requested at build time reproduced §12(b) run 4's last mutant:
+      mistyping `wc -w` as `wc -l` inside the new helper sent `A1` red on its
+      floor (`262 words` reported against a 900 floor); reverted, and the
+      helper re-diffed byte-identical to the literal. `assert_line_count_band`
+      diffed byte-identical to `main`, still called by exactly `C2`/`D2`/
+      `J2`/`T2`/`X7`. `README.md:10` diffed byte-identical to `main`; `W3`
+      green. `just test`, `gofmt -l .`, `go vet ./...` all green. One
+      deviation, reported not silently fixed: Fork 3's "third of ten `##`
+      headings" undercounts by one — the pre-change README has exactly 10
+      `##` headings (confirmed against `main`), so post-change with the new
+      section it's the **3rd of 11**, not "3rd of 10." No literal was wrong;
+      this is editorial prose in Fork 3's argument. No new DECs. Not pushed;
+      no PR opened, per instruction.
+      **Verified 2026-08-21 — ✅ APPROVED.** All nine acceptance criteria hold
+      and all four gates are green. The mechanical half is clean end to end:
+      ①②③④ diff byte-identical against the spec, ⑤ round-trips against
+      `./scripts/inventory.sh` with both sides non-empty (matching md5, and
+      `X3` carries an explicit empty-block guard so a blank paste would fail
+      rather than pass), and the **code-only** diff of `test-docs.sh` against
+      `main` — comments stripped — is exactly three changes and nothing else.
+      Eight mutants re-run from scratch, each hash-verified as a real change
+      before the harness was run and the tree confirmed clean after: `A1` goes
+      red on its floor when `wc -w` is mistyped as `wc -l` (`262 words`), and
+      responds at **both** band edges reporting **1277** — the word count, not
+      262 — so it passes for the right reason; all three `A11` mutants killed.
+      Fork 2(a) was checked empirically rather than taken on its word:
+      repurposing `assert_line_count_band` to `wc -w` sends exactly
+      `C2`/`D2`/`J2`/`T2`/`X7` red and nothing else, so the five untouched
+      callers really are the guard the spec declined to add; the helper's body
+      diffs byte-identical to `main`. The reflow demonstration was
+      re-implemented independently and reproduces the design's table line for
+      line (248…267 lines, `wc -w` pinned at 1268 at every width). `W3` green,
+      `README.md:1-14` byte-identical to `main`, and the blockquote reads
+      coherently with the call-to-action gone — it was a new thought, not a
+      completed one, so nothing dangles. Three findings, all **recorded, none
+      blocking**, none touching a literal, an assertion or a count. (1) Fork 3's
+      ordinal: build fixed the denominator and left the ordinal, so **"3rd of
+      11" is true under no single reading** — measured fence-aware, the
+      call-to-action is 2nd of 11 `##` headings, 3rd of 12 counting the H1, 4th
+      of 13 in GitHub's rendered outline. The correct number strengthens Fork
+      3's argument rather than weakening it. **This is the third instance in
+      this stage of an `X of N` claim re-derived only on the challenged half**
+      (SPEC-079's "six of 75 carry none", and the 8-of-18/9-of-18 open-questions
+      family) — N=3 same-outcome on one mechanical sub-rule, which clears §12's
+      own codification bar. Recommended for codification at stage ship: *re-derive
+      both halves, not only the half that was challenged.* (2) `A1`'s comment
+      calls `docs/for-ai-agents.md` (2120) *"the smallest deep-dive doc in this
+      repo"*; `docs/architecture.md` (1577) and `docs/data-model.md` (1908) are
+      smaller. The claim is exact for the docs the README **routes to**, which is
+      the set Fork 1's tier list uses — "in this repo" over-reaches. The
+      conclusion survives (1400 still sits below every long-form doc), the stated
+      ~700-word cushion does not (47 to the nearest, 177 to the nearest
+      unambiguous deep-dive). Not a re-litigation of the band, which the 780→500
+      narrowing settles independently. (3) `A11`'s comment says *"A1 above bounds
+      that length"*, but `A1` now measures words while `A11`'s threshold is
+      `wc -l / 3` — and `test-docs.sh:275` is now the only place the harness
+      reads the README's line count at all. Checked before recording: the guard
+      does not depend on it — insertions above the heading trip `A11` for any
+      `k > 20` with no help from `A1` — so the sentence is decorative, worth a
+      word-swap when the comment is next touched. Also sampled seven claims
+      neither cycle touched (no golden files, three named tests, archive-spec's
+      placeholder rejection, 77/77 ship reflections, the README's "five tool
+      schemas"): all held against their citations.
 
-**Count:** 2 shipped / 1 active / 0 pending
+**Count:** 3 shipped / 0 active / 0 pending — **the backlog is complete.**
+
+> `just archive-spec` printed *"All specs for STAGE-021 are shipped"* at each of
+> the three ships. It was **false the first two times** — it counts written
+> specs, not backlog items, so an unframed entry is invisible to it. This time
+> it is true. The warning that stood here through SPEC-079 and SPEC-080 has done
+> its job and is retired with the record of why it existed.
+>
+> **The stage is not closed until its Stage-Level Reflection is written.**
 
 *(The trailing fragment that sat here — the tail of a parenthetical about
 SPEC-081 being "agreed and not yet scaffolded" — was orphaned when SPEC-081 was

@@ -35,12 +35,12 @@ The section that says the most about how this repository is run is
 | Decision records claiming confidence 1.0 | 0 | `insight.confidence` in the front-matter |
 | Projects | 9 | `projects/PROJ-*/brief.md` |
 | Stages | 21 | `projects/*/stages/STAGE-*.md` |
-| Specs carried to ship and archived | 77 | `projects/*/specs/done/` |
-| …of those, also carrying a build-phase reflection | 71 | `### Build-phase reflection` in those files |
+| Specs carried to ship and archived | 78 | `projects/*/specs/done/` |
+| …of those, also carrying a build-phase reflection | 72 | `### Build-phase reflection` in those files |
 | Go source files | 69 | `internal/`, `cmd/` |
 | Go test files | 78 | `internal/`, `cmd/` |
 | Go test functions | 812 | `func Test*` in `*_test.go` |
-| Documentation assertions (distinct ids) | 176 | `scripts/test-docs.sh`, run by `just test-docs` |
+| Documentation assertions (distinct ids) | 177 | `scripts/test-docs.sh`, run by `just test-docs` |
 | …of those, replacing a manual release-checklist item | 6 | the `W`-series in `scripts/test-docs.sh` |
 | Questions tracked in guidance/questions.yaml | 18 | `guidance/questions.yaml` |
 | …of those, still open | 6 | `status: open` in the same file |
