@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-022
-  status: proposed                  # proposed | active | shipped | cancelled | on_hold
+  status: active
   priority: medium
   target_complete: null
 
@@ -41,9 +41,22 @@ Two halves, both small:
 
 ## Why Now
 
-Verified 2026-08-15, all four gaps still hold: no `golangci-lint` config, no
-`-cover` anywhere, `func Benchmark` count **0**, no surfaced godoc. CI runs
-`gofmt`, `go vet` and `go test` and nothing else.
+Re-verified 2026-08-20 at stage activation. **Three of the original four gaps
+hold; one is closed.** No `golangci-lint` config, no `-cover` anywhere,
+`func Benchmark` count **0**. CI runs `gofmt`, `go vet` and `go test` and
+nothing else.
+
+**"No surfaced godoc" is closed** — SPEC-080 landed the five missing package
+comments, so all **15 of 15** packages now render one under `go doc`. Corrected
+here rather than carried, because a stage that opens on a stale premise is the
+defect STAGE-021 spent three specs learning to catch.
+
+**The coverage number this stage must present honestly, measured today:**
+**83.5% of statements** module-wide. Three packages sit at 100%
+(`internal/timewindow`, `internal/spark`, `internal/ftsquery`); the floor is
+`cmd/brag` at **23.7%**, which is the entrypoint and mostly `AddCommand`
+wiring. **Zero packages have no test files.** These are the figures the floor
+argument has to be built from — not a target to move toward.
 
 **Second, not first** — see STAGE-021's *Why Now*. Lint and coverage are table
 stakes; the discipline page is the differentiated half, and it establishes what
@@ -94,14 +107,24 @@ Ordered list of specs composing this stage. IDs assigned at creation.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] (not yet framed) — **lint + coverage in CI.** golangci-lint config with
-      per-linter rationale, `-cover`, badge, measured floor; the coverage claim
-      mutation-checked before it is written down.
+- [ ] SPEC-082 (frame) — **lint + coverage in CI.** Framed 2026-08-20,
+      **GO at complexity M**. Measured: **83.5%** module-wide statement
+      coverage, **zero** packages without test files, three packages at 100%,
+      floor `cmd/brag` at **23.7%** — the entrypoint, mostly `AddCommand`
+      wiring whose failure modes are covered one layer down in `internal/cli`.
+      That number is **not a problem to fix**: a floor set to force it upward is
+      the test-writing-to-hit-a-number this stage forbids. `golangci-lint` is
+      not installed locally, so how CI obtains it is a design fork. Four forks
+      handed over — which linters and why each; the floor and what it protects;
+      whether a badge may depend on an external service given this repo's
+      no-network identity; and whether `depguard` for `no-sql-in-cli-layer`
+      belongs here at all, given the unresolved production-vs-test scope
+      question underneath it.
 - [ ] (not yet framed) — **the `Entries:` envelope semantics.** One decision,
       one fix, one regression test. Narrowed 2026-08-18 from "the three coupled
       defects" after the other two were measured and deferred.
 
-**Count:** 0 shipped / 0 active / 2 pending
+**Count:** 0 shipped / 1 active / 1 pending
 
 ## Design Notes
 
