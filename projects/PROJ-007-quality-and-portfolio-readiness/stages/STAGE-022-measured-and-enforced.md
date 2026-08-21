@@ -55,8 +55,24 @@ defect STAGE-021 spent three specs learning to catch.
 **83.5% of statements** module-wide. Three packages sit at 100%
 (`internal/timewindow`, `internal/spark`, `internal/ftsquery`); the floor is
 `cmd/brag` at **23.7%**, which is the entrypoint and mostly `AddCommand`
-wiring. **Zero packages have no test files.** These are the figures the floor
-argument has to be built from — not a target to move toward.
+wiring. ~~**Zero packages have no test files.**~~ **Corrected at SPEC-082
+design, 2026-08-21: it is 1 of 15.** `go test ./...` prints
+`? internal/storage/storagetest [no test files]`. Fourteen of the fifteen
+packages carry at least one `_test.go`; the exception is the test-helper
+package SPEC-007 created so CLI tests could backdate rows without importing
+`database/sql`, and it is exercised only through its callers. The honest form
+is *every package that ships behaviour has tests; the one that does not is a
+test helper* — which is a better claim than the round zero and survives
+someone running the command. Corrected in place rather than carried, for the
+reason given two paragraphs up. These are the figures the floor argument has
+to be built from — not a target to move toward.
+
+**`cmd/brag`'s 23.7% is one function**, re-measured at SPEC-082 design:
+`go tool cover -func` lists `main` at 0.0% and `resolveVersion` at 100.0%.
+The package is **38 statements** of ~3,900 — 1.0% of the module — so its
+entire shortfall is `main`'s **29 uncovered statements, 0.74% of the module**.
+Taking it to 100% would move the headline figure by about seven tenths of a
+point and would require a test that invokes `main()`.
 
 **Second, not first** — see STAGE-021's *Why Now*. Lint and coverage are table
 stakes; the discipline page is the differentiated half, and it establishes what
@@ -107,7 +123,7 @@ Ordered list of specs composing this stage. IDs assigned at creation.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-082 (frame) — **lint + coverage in CI.** Framed 2026-08-20,
+- [ ] SPEC-082 (design) — **lint + coverage in CI.** Framed 2026-08-20,
       **GO at complexity M**. Measured: **83.5%** module-wide statement
       coverage, **zero** packages without test files, three packages at 100%,
       floor `cmd/brag` at **23.7%** — the entrypoint, mostly `AddCommand`
@@ -120,6 +136,41 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       no-network identity; and whether `depguard` for `no-sql-in-cli-layer`
       belongs here at all, given the unresolved production-vs-test scope
       question underneath it.
+      **Designed 2026-08-21.** All four forks settled with rejected
+      alternatives, every literal run through its tool at design, and the
+      enforcement mutation-checked five times. Re-measurement held on coverage
+      (83.5% module-wide; 23.7% / 75.4% / 78.8% / 82.4%; three packages at
+      100%) and on fork 4's evidence (depguard confirms **8 import lines
+      across exactly 5 files**, from the import graph rather than grep — and
+      `list_test.go`, which a whole-file grep hits, correctly does not appear).
+      **One framing figure was wrong:** *zero packages without test files* is
+      **1 of 15** — `internal/storage/storagetest`, corrected in *Why Now*
+      above. **And golangci-lint's own `uniq-by-line: true` default was hiding
+      43% of the evidence** — `default: all` reports 8,713 issues with it and
+      **15,300** without; `errorlint` reads as 2 and is 7, `rowserrcheck` (3)
+      and `sqlclosecheck` (1) read as **zero** and are real. Both are now
+      enabled; the shipped config turns the default off.
+      **Fork 1:** nine linters, `default: none`, each argued in `.golangci.yml`
+      itself, with the measured count for every rejected one recorded —
+      `gosec` 65, `modernize` 50, `revive` 16, `perfsprint` 14, `unparam` 10,
+      down to twenty candidates at zero that are still not enabled. The gate
+      goes green by **fixing all 19 findings, not excluding them** (two are
+      genuine production defects: a `!= io.EOF` comparison that a wrapped error
+      slips past, and a `%v` that drops the error chain — the first things
+      `errors-wrap-with-context` has caught since it was written in April).
+      **Fork 2:** module-wide **80.0%**, in one place (`scripts/coverage.sh`),
+      with the unit named — `go tool cover -func`, no `-coverpkg`, because
+      `-coverpkg=./...` reports **86.2%** on the identical suite. Per-package
+      floors rejected on `cmd/brag`. **Fork 3:** **no badge and no service** —
+      argued from *this page's* derived-not-typed rule, explicitly **not** from
+      `SECURITY.md`, whose no-network claim is scoped to the binary and would
+      survive Codecov intact. **Fork 4:** taken on, production files only
+      (`!$test`); `guidance/constraints.yaml` is **not** amended and the scope
+      question is logged in `guidance/questions.yaml` with both candidate
+      resolutions costed. Also claims this stage's routed `decisions/` totality
+      gap (`Z7`, hard-fail, mutation-checked), and moves `X7` from lines to
+      words — SPEC-081's own stated trigger, fired by this spec's page edit
+      landing at **301 lines, one over the ceiling**. Confidence 0.88.
 - [ ] (not yet framed) — **the `Entries:` envelope semantics.** One decision,
       one fix, one regression test. Narrowed 2026-08-18 from "the three coupled
       defects" after the other two were measured and deferred.
@@ -233,6 +284,24 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
     must stay outside this one.
   - **Trigger.** The next spec that adds a file to `decisions/`, or this
     stage's lint-and-CI spec — whichever comes first.
+  - **CLAIMED by SPEC-082 (design, 2026-08-21) as assertion `Z7`.** The meaning
+    was decided rather than deferred again: a **hard fail**, because the two
+    readings of an untyped `DEC-*.md` differ in intent but not in consequence —
+    either way the file is counted by neither row and the page under-reports —
+    and this harness has no warning tier. The failure message names both
+    remedies instead. Mutation-checked at design: a `DEC-999` carrying
+    `insight.type: bogus` left `scripts/inventory.sh` printing `45` and `1`
+    with **47** files on disk, so `X3` stayed green and only `Z7` caught it.
+
+- **A pre-existing goreleaser deprecation, surfaced at SPEC-082's design
+  pre-flight and deliberately left alone.** `goreleaser check` (2.17.1) fails
+  with `DEPRECATED: brews should not be used anymore` — **before and after**
+  SPEC-082's ldflags edit, so it is not that spec's doing. Per AGENTS.md §4
+  this is exactly the class that must not be treated as hygiene: the v0.1.0
+  formula→cask switch was a four-line deprecation fix that silently changed the
+  artifact's OS-trust path and produced the whole signing/Gatekeeper backlog.
+  It wants its own spec, run against `docs/distribution-decisions.md`'s
+  clean-host-trust category. Named here so it is not lost.
 - **The two deferred items keep their working.** `MergeTags` position density and
   `$EDITOR` quoting were measured during PROJ-007 framing and deferred
   2026-08-18; the drafted rules, the rejected alternatives, and the measurements
