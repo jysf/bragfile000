@@ -7,7 +7,7 @@
 task:
   id: SPEC-081
   type: chore                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -1076,6 +1076,233 @@ Process-focused: how did the build go? What friction did the spec create?
    spec's arithmetic — which is exactly the re-measurement discipline this
    spec itself modeled against framing. Good habit to keep applying even
    inside a "transcribe verbatim" build.
+
+---
+
+## Verify Findings
+
+*Filled in during the **verify** cycle (fresh session, per AGENTS.md §6).*
+
+**Verdict: ✅ APPROVED.** All nine acceptance criteria hold, all four gates are
+green, and the mechanical half is clean end to end: literals ①②③④ diff
+byte-identical against this document, literal ⑤ round-trips against
+`./scripts/inventory.sh` with both sides non-empty (21 lines, 1543 bytes,
+matching md5), and the code-only diff of `scripts/test-docs.sh` against `main`
+— every comment line stripped — is **exactly three changes** and nothing else:
+the new helper, `A1`'s call line, and `A11`. Eight mutants were re-run from
+scratch in this session; every one was hash-verified as a real change to the
+file before the harness was run, and the tree was confirmed clean by
+`git status --porcelain` after each revert.
+
+Three findings, all **recorded rather than blocking**. None touches a literal,
+an assertion, a derived count, or a gate; all three are editorial claims in
+prose, two of which now ship inside harness comments. Nothing was fixed in
+place — the design sections stay as design wrote them, and the corrections live
+here.
+
+### O1 — "3rd of 11 `##` headings" is true under no single reading
+
+Fork 3 argues the outline win with *"the third of ten `##` headings."* Build
+challenged the denominator, corrected it to 11, and reported **"3rd of 11"** —
+which fixes one half and leaves the other wrong. Measured here with a
+fence-aware parser (`grep -c '^# '` returns **2** on this README, because the
+bash comment at `README.md:87` inside a fenced block matches it; `grep -c '^## '`
+happens to return the right answer, 11, only because no `## ` line falls inside
+a fence):
+
+| Unit | Post-change total | CTA's position |
+|---|---:|---|
+| `##` headings only | 11 | **2nd** |
+| headings counting the `# Bragfile` H1 | 12 | **3rd** |
+| all headings as GitHub's outline renders them (H1 + H2 + the one H3) | 13 | **4th** |
+
+"3rd of 11" pairs the ordinal from the second row with the denominator from the
+first. The accurate statements are *2nd of 11 `##` headings*, *3rd of 12
+counting the H1*, or *4th of 13 in the rendered outline*. Design's original
+"3rd of ten" was wrong on both halves under the `##`-only reading it named.
+
+**Not blocking, and not a punch list.** No assertion, literal, or derived count
+depends on the figure; `A11` pins the heading by position-in-file, not by
+ordinal. The correct number also makes Fork 3's argument *stronger* rather than
+weaker — 2nd of 11 sits higher in the outline than 3rd of 11 — so nothing that
+was decided on this sentence would have been decided differently.
+
+**Stage-level note, since approving this closes STAGE-021.** This is the third
+recorded instance in this stage of the same mechanical failure: an `X of N`
+claim re-derived only on the half that was challenged. SPEC-079's verify
+correction — *"six of 75 carry none"* → *"six lack the heading, of which five
+carry none"* — is recorded in the stage file as the same defect class, and the
+open-questions item records a third family of it (`8 of 18` with a wrong total,
+then `9 of 18` wrong on both halves). Under §12's own codification meta-rule
+that is N=3 same-outcome on one mechanical sub-rule, which clears the bar:
+**re-derive both halves of an `X of N` claim, not only the challenged half.**
+Recommended for codification at stage ship, not asserted here.
+
+### O2 — "the smallest deep-dive doc in this repo" is scoped wider than its evidence
+
+Fork 1's second leg, now shipped verbatim in `A1`'s comment, reads: *"The
+smallest deep-dive doc in this repo (`docs/for-ai-agents.md`, 2120 words on
+2026-08-20) sits well clear of it"*, and the spec draws a *"~700-word gap"* from
+it. Measured across every long-form document in the tree:
+
+| doc | words |
+|---|---:|
+| `docs/macos-notarization-checklist.md` | 1447 |
+| `docs/architecture.md` | 1577 |
+| `docs/data-model.md` | 1908 |
+| `docs/for-ai-agents.md` | 2120 |
+
+Two deep-dive documents are smaller than the one named. The claim is exact
+under the reading Fork 1's tier list actually uses — *the docs the README routes
+to* (`BRAG.md`, `docs/api-contract.md`, `docs/engineering-practices.md`,
+`docs/for-ai-agents.md`, `docs/tutorial.md`) — where `for-ai-agents.md` at 2120
+genuinely is the smallest; it is the phrase "in this repo" that over-reaches.
+
+**The conclusion survives; the margin does not.** A ceiling of 1400 still sits
+below *every* long-form doc in the repo (1400 < 1447 < 1577 < 1908 < 2120), so
+the tier the leg exists to preserve is preserved. What is not true is the size
+of the cushion: the nearest long-form doc is 47 words away, and the nearest
+unambiguous deep-dive is 177 — not ~700. Recorded, not re-litigated: this does
+not reopen `900 1400`, which the invoking brief placed out of scope and which
+the narrowing argument (780 → 500, verified) settles independently.
+
+### O3 — `A11`'s "A1 above bounds that length" no longer describes what A1 measures
+
+`A11`'s comment closes: *"The threshold is derived from the file's own length
+rather than a pinned line number, so it cannot rot, and A1 above bounds that
+length so the two guards compose."* `A11`'s threshold is
+`$(wc -l < README.md) / 3`. As of this spec `A1` measures **words**, so it does
+not bound that quantity — and `scripts/test-docs.sh:275` (`a11_total`) is now
+the only place in the harness that reads `README.md`'s line count at all.
+Nothing bounds it.
+
+**Checked before recording: the guard does not depend on the claim.** Inserting
+`k` lines above the heading moves the heading to `74 + k` and the threshold to
+`(262 + k) / 3`; `A11` fails whenever `74 + k > (262 + k) / 3`, i.e. for any
+`k > 20`, with no help from `A1`. Insertions *below* the heading raise the
+threshold without moving the heading, which only loosens a guard that is
+already satisfied. So the composition sentence is decorative rather than
+load-bearing, and reads as true only if "length" is taken loosely as "size".
+Worth a word-swap whenever `A11`'s comment is next touched; not worth a return
+trip.
+
+### What was checked, and what it showed
+
+**Gates.** `just test` (all packages ok), `just test-docs` (**ALL OK**),
+`gofmt -l .` (empty), `go vet ./...` (clean), plus `bash -n scripts/test-docs.sh`
+(clean). `just test-docs` emits **178 `OK:` lines against 177 distinct ids**;
+`S3` is the sole duplicate, confirmed by `uniq -d` — the documented pre-existing
+wart, not this spec's business. `./scripts/inventory.sh` independently prints
+177.
+
+**A1 passes for the right reason — six mutants, each proven real.** Every
+mutation below was applied, its md5 confirmed changed against the pre-mutation
+hash (a no-op `sed` would have been caught, not assumed), the harness run, then
+reverted with `git status --porcelain` confirmed empty:
+
+| Mutant | Observed |
+|---|---|
+| `wc -w` → `wc -l` in `assert_word_count_band` (line 85) | `FAIL: A1: README.md has 262 words (expected 900..1400)` — red on the **floor**, and the only failure. Reproduces the build's report and §12(b) run 4's last row exactly. |
+| band → `900 1276` (ceiling one below actual) | `FAIL: A1: README.md has 1277 words (expected 900..1276)` |
+| band → `900 1277` (ceiling at actual) | ALL OK — ceiling inclusive |
+| band → `1278 1400` (floor one above actual) | `FAIL: A1: README.md has 1277 words (expected 1278..1400)` |
+| band → `1277 1400` (floor at actual) | ALL OK — floor inclusive |
+
+The band mutants matter beyond inclusivity: `A1` reports **1277**, the word
+count, not 262, the line count, so it is evaluating the metric it claims to.
+The spec's own four README-side edge mutants were reproduced as well — padded
+to 1401 → `FAIL … has 1401 words`; trimmed to exactly 1400 → green; truncated
+to 899 → `FAIL … has 899 words`; exactly 900 → green — all four matching §12(b)
+run 4's recorded messages verbatim.
+
+**`A11` fails when what it pins is broken — three mutants, each proven real.**
+Heading line deleted → `FAIL: A11: first '## …agent…' heading is at line 220 of
+261 (must be within the first third, i.e. line 87)`. Whole section relocated to
+just above `## License` → `FAIL: A11: … at line 214 of 262 …`. `brag mcp
+install` replaced with `brag setup` on line 76 only → `FAIL: A11: the agent
+call-to-action section must name 'brag mcp install' within 8 lines of its
+heading`. Tree clean after each.
+
+**The other five callers are untouched, and the no-guard-needed argument holds
+empirically.** `assert_line_count_band`'s body diffs byte-identical against
+`main` (matching md5, 13 lines), and its call sites are exactly `C2` (:348),
+`D2` (:369), `J2` (:665), `T2` (:1104), `X7` (:1487) — five, with the sixth
+(`A1`) migrated and the only other hit on `main` being the new helper's own
+comment. Fork 2(a)'s claim was not taken on the design's word: mutating
+`assert_line_count_band` itself to `wc -w` — the repurpose the sibling exists to
+avoid — sends **exactly those five red and nothing else**:
+
+```
+FAIL: C2: CONTRIBUTING.md has 253 lines (expected 30..120)
+FAIL: D2: docs/development.md has 474 lines (expected 50..200)
+FAIL: J2: examples/brag-slash-command.md has 77 lines (expected 5..30)
+FAIL: T2: docs/for-ai-agents.md has 2120 lines (expected 120..500)
+FAIL: X7: docs/engineering-practices.md has 2245 lines (expected 150..300)
+FAILED: 5 assertion(s) failed.
+```
+
+Each file's word count reproduces the design's table (253 / 474 / 77 / 2120 /
+2245) and each falls outside its own line band, so the five callers really are
+the test, and the decision not to add a guard is sound.
+
+**The reflow demonstration reproduces.** Re-implemented independently — greedy
+rewrap of unprefixed prose paragraphs only, fences and blockquotes untouched,
+`new.split() == original.split()` asserted at every width — against
+`git show main:README.md`: **248 / 250 / 254 / 259 / 263 / 265 / 267** lines at
+widths 100 / 92 / 84 / 76 / 72 / 68 / 64, with `wc -w` pinned at **1268** and
+the token stream identical every time. That is the spec's table line for line,
+and A1's `+7` swing against zero headroom. `docs/engineering-practices.md` came
+out at 270…295 (swing +12) against the design's 271…298 (+15) — a difference in
+which lines each implementation treats as reflowable prose, not a disagreement:
+X7's headroom is 17 either way, so Fork 2(c)'s written trigger ("switch a caller
+when its swing exceeds its headroom") is not yet met under either measurement.
+
+**`W3` and the blockquote.** `W3` is green (`OK:   W3`); `CHANGELOG.md`'s newest
+dated heading is `0.6.1` and `README.md:10` claims `v0.6.1`. `README.md:1-14`
+diff byte-identical against `main`, so the guarded line is untouched and the
+blockquote ends at line 14 on `brew install jysf/tap/bragfile`, with no orphan
+`>` separator. Read back with the CTA gone, it is a self-contained release-state
+claim — *what v0.6.1 contains*, then how to install it — with no forward
+pointer, no "see below", and no demonstrative left dangling: the removed
+paragraph began a new thought (*"Working with an AI agent?"*) rather than
+completing one. The blockquote loses its only link to the MCP section, which is
+the trade Fork 3 states and prices; the link now lives in the new section at
+`README.md:79`. It resolves — `## Using brag from an AI agent (MCP)` at
+`README.md:221` slugs to `using-brag-from-an-ai-agent-mcp` — though note `E1`
+does **not** check it: `check_link_target` strips `#…` and returns early on an
+empty target, so pure-anchor links are unverified by the harness. Pre-existing,
+identical on `main`, and out of scope here.
+
+**Reported numbers all reproduce.** README 260 → 262 lines and 1268 → 1277
+words; the removed block is 41 words and the new section 50, for the predicted
++9; `A11` is the only new id (`comm` against `main`'s extraction); the practices
+page is unchanged at 283 lines with a one-number diff. `X3` carries an explicit
+`[ -z "$x3_got" ]` guard, so an empty block fails rather than passing silently —
+the failure mode worth ruling out on a derived literal.
+
+**The promoted copy's factual claims hold against the code, not just the DECs.**
+`internal/mcpserver/server.go` makes exactly **five** `mcp.AddTool` calls —
+`brag_add`, `brag_list`, `brag_search`, `brag_stats`, `brag_memory` (:38–:58),
+five in the package as a whole — matching "five typed tools". "An auto-loadable
+memory resource" is `brag://memory/recent`, registered at
+`internal/mcpserver/resources.go:29` with the description *"Load this before you
+start work"*; `brag mcp install` is a real command
+(`internal/cli/mcp_install_test.go`). The claim sentence is also byte-unchanged
+from the copy that already stood on `main` — only the pointer sentence was
+rewritten.
+
+**Untouched-claim spot-check (seven sampled, all held).** *"There are no golden
+files"* — `find . -name '*.golden'` and `find -type d -name testdata` both
+return zero. `TestProvenanceClassifier_GoPredicateMatchesSQLClause` exists at
+`internal/storage/provenance_agreement_test.go:55`.
+`TestPackageReadsNoWallClock` exists in both files cited, and
+`TestPackageEmitsNoReservedTagNamespace` in `internal/memory`.
+`scripts/archive-spec.sh:33-37` really does reject `<answer>` placeholders.
+*"Every file under `projects/*/specs/done/` ends with a ship-phase
+`## Reflection (Ship)`"* — 77 of 77 carry the heading, zero missing. The
+README's *"five tool schemas"* pointer matches the five registrations, and
+`## How this repo is built`'s 82 words match the figure `A1`'s comment cites for
+it. No claim in this sample was contradicted by its own citation.
 
 ---
 
