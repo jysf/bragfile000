@@ -7,7 +7,7 @@
 task:
   id: SPEC-080
   type: chore                      # epic | story | task | bug | chore
-  cycle: verify                    # frame | design | build | verify | ship
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -2198,3 +2198,68 @@ passes, which found claims contradicted by their own citations.
 - **Not** changed: no `assert_contains` on comment text (SPEC-078 H9 — green
   on the words, silent on the world); no Go file; no literal; no
   `scripts/test-docs.sh`; no `guidance/constraints.yaml`.
+
+---
+
+## Reflection (Ship)
+
+*Appended during the **ship** cycle. Outcome-focused reflection, distinct
+from the process-focused build reflection above.*
+
+1. **What would I do differently next time?**
+   — **Test the claim, not the counterexample.** The same defect recurred three
+   times in this one spec: a comment claimed something false, verify named one
+   counterexample, the fix narrowed the wording just enough to survive *that*
+   example, and the narrowed claim was still false in general. `package` →
+   `layer` fixed `storagetest` and stayed false for `internal/cli`. The round
+   that finally worked did the opposite — it tested the whole sentence against
+   the repo and found a **second** unscoped claim eleven lines further down that
+   no finding had named. Three verify passes and two return trips is what
+   narrow-to-survive costs.
+
+2. **Does any template, constraint, or decision need updating?**
+   — **`decisions/_template.md` gained `reservation`** to its `insight.type`
+   enum — done in this spec, count-neutral.
+   — **`no-sql-in-cli-layer` needs a decision this spec deliberately did not
+   make.** It is a `severity: blocking` constraint whose path glob names
+   `internal/cli/**`, and **nothing tests it there** — demonstrated twice by
+   adding `_ "database/sql"` to `internal/cli/root.go` and watching every gate
+   pass. Worse, its text is unqualified by production-vs-test, so on a literal
+   reading **five `internal/cli` test files violate a blocking constraint
+   today**. Amending the constraint is a decision; routed to STAGE-022 with the
+   evidence rather than settled inside a comments-only spec.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — **The README restructure** — the MCP call-to-action promoted out of the
+   Status blockquote, and `test-docs` A1 switched from `wc -l` to `wc -w`. It is
+   STAGE-021's third backlog item, agreed and not yet scaffolded.
+   — **Four items are routed to STAGE-022**, all with evidence: the missing
+   `internal/cli` audit test (with `depguard` named as the mechanism, the five
+   colliding files, and the note that a content grep must match *import lines*,
+   not file text — the sketched assertion false-positives on `root.go:8`, the
+   comment describing the boundary); the deferred totality assertion; the stale
+   comments (`store.go`'s `Store` type comment, false since 2026-04-20;
+   `list_test.go:275`); and V1's package-vs-layer noun distinction.
+   — **V2 is recorded and unrouted:** `internal/storage/window.go:12-13` says the
+   window flags are "shared by `brag impact` and `brag story`" while
+   `coverage.go` registers the same four and calls `selectedWindow`. The same
+   defect this spec fixed one file over, at the definition site. Whoever next
+   edits prose should fold it in.
+
+4. **What can a user do now that they couldn't before?**
+   — `go doc` on the five largest previously-undocumented packages — `cmd/brag`,
+   `internal/cli`, `internal/config`, `internal/storage`, `internal/story` — now
+   returns a comment saying what the package is *for* and where its boundary
+   sits; `decisions/` no longer has an unexplained 040→042 gap; and the question
+   register describes live uncertainty only, **6 open of 18** rather than 8, with
+   both closures answered by artifacts that already existed on disk.
+
+### What this spec proved about its own stage
+
+STAGE-021's premise is that the discipline exists and is unsurfaced. This spec
+is the second confirmation: framing expected to *write documentation* and found
+**191 exported declarations with 3 undocumented**, all conventional interface
+methods. The real gap was five package comments. Both of the framing pass's own
+numbers were wrong — not stale, but produced by grep-shaped heuristics against an
+unchanged tree — which is the same failure the practices page's derived counts
+were built to prevent one spec earlier.
