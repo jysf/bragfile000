@@ -5,7 +5,7 @@
 
 stage:
   id: STAGE-021
-  status: active                    # proposed | active | shipped | cancelled | on_hold
+  status: shipped
   priority: high
   target_complete: null
 
@@ -15,7 +15,7 @@ repo:
   id: bragfile
 
 created_at: 2026-08-15
-shipped_at: null
+shipped_at: 2026-08-20
 ---
 
 # STAGE-021: make the discipline legible
@@ -420,13 +420,87 @@ spec, in the stage file about legibility.)*
 
 ## Stage-Level Reflection
 
-*Filled in when status moves to shipped. Run Prompt 1c (Stage Ship) in
-FIRST_SESSION_PROMPTS.md to draft this.*
+*Written at stage ship, 2026-08-20. Every figure below was re-measured against
+the repo rather than carried forward — which is, in part, what this stage turned
+out to be about.*
 
-- **Did we deliver the outcome in "What This Stage Is"?** <yes/no + notes>
-- **How many specs did it actually take?** <number vs. plan>
-- **What changed between starting and shipping?** <one sentence>
+- **Did we deliver the outcome in "What This Stage Is"?** **Yes — all six
+  success criteria, each checkable.** A reader reaches the DEC log, the spec
+  archive, the test regime, the security posture and the incident→hardening
+  pattern from a named README section. **15 of 15 packages** render a doc comment
+  under `go doc` (5 were missing; the other 10 already had one). `decisions/`
+  has no unexplained gap — `DEC-041` carries a reservation tombstone typed
+  `insight.type: reservation`, so the decision count stays honest at 45 with a
+  sibling row for the reservation. `guidance/questions.yaml` is **6 open of 18**,
+  down from 8, and **all six carry a stated resolve condition**. Every
+  current-state number on the practices page is derived by `scripts/inventory.sh`
+  and diffed by `X3`.
+
+  **What the stage did not achieve, stated plainly:** the guards reach *numbers*,
+  not *claims*. Across three specs, **eleven findings** were returned by verify,
+  and the ones that mattered were prose contradicted by the path it cited — a
+  golden that provably *did* pin what a page said it didn't; a scope sentence
+  refuted by the stage it pointed at; "the only layer that imports a SQL driver"
+  when four `internal/cli` test files import the driver. **`X3` cannot see any of
+  those, and `X5` was green through all of them.** They were caught by
+  human-shaped reads in verify, twice returning punch lists. That is the honest
+  limit of mechanising a documentation page, and the practices page now says so
+  in its own voice rather than implying broader coverage.
+
+- **How many specs did it actually take?** **Three, against a plan of two.**
+  SPEC-081 did not exist at framing; it was created *by* SPEC-079's LD5, which
+  re-pinned the README's length guard tight at 260 with zero headroom rather than
+  widening it. That decision was right and it had a cost — every subsequent
+  README edit would trip the guard — so a third spec was needed to fix the
+  *metric* rather than the bound. **A correct decision generating necessary
+  follow-on work is not scope creep; it is the plan being wrong about cost.**
+
+  The cycle count is the more interesting number: **nine PRs, six verify passes,
+  three punch lists, eleven findings.** SPEC-080 alone took three verify passes
+  and two return trips.
+
+- **What changed between starting and shipping?** The stage was framed as
+  documentation work and turned out to be **measurement work**. Two of its three
+  specs were resized *down* by re-measuring their own premise: SPEC-079's framing
+  claimed 164 doc assertions (163, and environment-dependent); SPEC-080's claimed
+  175 exported declarations with 7 packages missing comments (191 and 5 — a
+  per-name grep does not credit a doc comment on a parenthesized `const` block,
+  and the package check only read the alphabetically-first file per directory).
+  Neither was stale. Both were **grep-shaped heuristics that read as
+  authoritative**, against an unchanged tree.
+
 - **Lessons that should update AGENTS.md, templates, or constraints?**
-  - <one-line updates>
+  - **An *X of N* claim is two measurements plus a unit — when one half is
+    challenged, re-derive all three.** This reached §12's own N=3 same-outcome
+    bar inside a single stage: SPEC-079's "six of 75 carry none" (six lacked the
+    *heading*; five carried none); the open-questions family that was wrong three
+    times in four days as 8-of-18, 9-of-18 and 7-of-17; and SPEC-081's heading
+    ordinal, where build fixed the denominator and carried the wrong ordinal, so
+    that **no single reading made the corrected claim true.** Each pass fixed the
+    half it was handed. **Recommended for §12.**
+  - **When a literal caches derived output, the derivation outranks the cache —
+    re-run it as build step one.** Now N=2: SPEC-079's literal cached a project
+    count that went stale in a two-hour window between PRs, and SPEC-081's cached
+    an assertion id count its own change moved. Below the N=3 bar; **record and
+    hold.**
+  - **`just archive-spec` reports stage completion off written specs, not backlog
+    items.** It printed "All specs for STAGE-021 are shipped" at all three ships
+    and was **false twice**. Worth a fix in the template's tooling, and worth
+    knowing until then.
+
 - **Should any spec-level reflections be promoted to stage-level lessons?**
-  - <one-line items>
+  - **Yes: "test the claim, not the counterexample."** SPEC-080 hit the same
+    defect three times inside one spec — a false claim, one counterexample named,
+    a fix narrowed just enough to survive *that* example, still false in general.
+    `package` → `layer` fixed `storagetest` and stayed false for `internal/cli`.
+    The round that worked tested the whole sentence and found a *second* unscoped
+    claim eleven lines down that no finding had named. This is the same shape as
+    the *X of N* rule above and probably its general case.
+  - **Yes: a guard is only as honest as its unit.** SPEC-079 correctly refused to
+    widen A1 when it fired; SPEC-081 showed the guard had been measuring the
+    wrong *event* all along — a pure rewrap of the same 1,268 words moved
+    `wc -l` across a 19-line range while `wc -w` did not move at all. **Refusing
+    to weaken a guard and questioning what it measures are not in tension**, and
+    the second is the better move when available.
+  - **No** to promoting the reservation-type seam or the depguard routing — both
+    are STAGE-022's inheritance, already recorded there with evidence.

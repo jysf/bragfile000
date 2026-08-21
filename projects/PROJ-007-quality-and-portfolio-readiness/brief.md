@@ -92,18 +92,39 @@ standard signals a reviewer greps for are missing (verified in code 2026-08-07):
 *Framed 2026-08-15. Two stages, docs first — the candidate ordering was
 deliberately inverted.*
 
-- [ ] **STAGE-021 — make the discipline legible** *(active)*. The
-      engineering-practices entry point, a godoc pass, and three legibility
-      repairs (`SECURITY.md`, the `DEC-041` gap, open-questions hygiene). Not
-      writing docs — **building an index to work that already exists**: 45
-      decisions, 75 archived specs, a security review and a cross-project
-      retrospective currently sit behind a 1,186-word README with no entry
-      point to any of them.
+- [x] **STAGE-021 — make the discipline legible** *(shipped 2026-08-20)*.
+      Three specs against a plan of two — SPEC-081 was created by SPEC-079's own
+      LD5, which pinned the README guard tight rather than widening it. All six
+      success criteria met and checkable: 15/15 packages carry a rendered
+      `go doc` comment, `decisions/` has no unexplained gap, questions are 6 open
+      of 18 with every one carrying a resolve condition, and every current-state
+      number on the practices page is derived by a script and diffed by a test.
+      Honest limit recorded in the reflection: **the guards reach numbers, not
+      claims** — eleven verify findings across three specs, and the ones that
+      mattered were prose contradicted by the path it cited, invisible to `X3`
+      and `X5` both.
+
+      *Delivered:* the engineering-practices entry point, a godoc pass, and three
+      legibility repairs (`SECURITY.md`, the `DEC-041` reservation tombstone,
+      open-questions hygiene) — plus the README call-to-action and the A1 metric
+      switch that SPEC-079's own guard made necessary.
 - [ ] **STAGE-022 — quality measured and enforced, known defects closed**
       *(proposed)*. golangci-lint gating CI, coverage with an honest floor, and
-      the three defects that are recorded as real and deliberately unfixed
-      because each needs a decision rather than a patch (`MergeTags` position
-      dup, `$EDITOR` quoting, the `Entries:` envelope inconsistency).
+      **one** remaining correctness item — the `Entries:` envelope
+      inconsistency. *(Narrowed 2026-08-18: `MergeTags` position density and
+      `$EDITOR` quoting were measured, found to have no current victim, and
+      deferred to `PROJ-001/backlog.md` with evidence and real triggers.)*
+
+      **It also inherits six items routed from STAGE-021**, each with evidence:
+      the missing `internal/cli` audit test for the `no-sql-in-cli-layer`
+      constraint — a `severity: blocking` rule with **no test for the package
+      its own glob names**, with `depguard` named as the mechanism and the five
+      colliding test files listed; the deferred totality assertion for the
+      decision/reservation counts; three stale comments (`store.go`'s `Store`
+      type comment, false since 2026-04-20; `list_test.go:275`; V1's
+      package-vs-layer noun); and two from SPEC-081 (A1's "smallest deep-dive
+      doc" over-reach, and A11's comment describing an A1 that no longer
+      measures lines).
 
 **Why docs first, against this brief's own ROI ranking.** Lint and coverage are
 table stakes — having them proves the author knows the convention. The
