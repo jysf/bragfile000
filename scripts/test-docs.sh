@@ -1418,6 +1418,116 @@ else
     fail "X8" "no '^inventory:' recipe in justfile"
 fi
 
+# ===== Group Y — godoc pass + legibility repairs (SPEC-080) =====
+
+# Y1 — the five packages the godoc pass names now carry a package doc
+# comment: a `//` comment line immediately preceding `package X`, the exact
+# adjacency rule go/doc (and `go doc`) key off. Framing's "7 missing" was
+# wrong — internal/export and internal/mcpserver already had one; the real
+# gap, re-measured at design, was these five.
+y1_missing=""
+for y1_target in \
+    "cmd/brag/main.go" \
+    "internal/cli/root.go" \
+    "internal/config/config.go" \
+    "internal/storage/store.go" \
+    "internal/story/bundle.go"
+do
+    if [ ! -f "$y1_target" ]; then
+        y1_missing="$y1_missing $y1_target(missing-file)"
+        continue
+    fi
+    y1_pkgline=$(grep -n '^package ' "$y1_target" | head -1 | cut -d: -f1)
+    if [ -z "$y1_pkgline" ]; then
+        y1_missing="$y1_missing $y1_target(no-package-decl)"
+        continue
+    fi
+    y1_prev=$((y1_pkgline - 1))
+    if [ "$y1_prev" -lt 1 ] || ! sed -n "${y1_prev}p" "$y1_target" | grep -q '^//'; then
+        y1_missing="$y1_missing $y1_target"
+    fi
+done
+if [ -z "$y1_missing" ]; then
+    ok "Y1"
+else
+    fail "Y1" "missing a doc comment immediately before 'package':$y1_missing"
+fi
+
+# Y2 — the DEC-041 gap is explained IN decisions/, not only in the backlog:
+# a tombstone file exists and is explicitly marked `insight.type:
+# reservation`, not `decision` — the marker the Decision records count
+# (Y3/inventory.sh) relies on to NOT count it as a decision.
+y2_file=$(ls decisions/DEC-041-*.md 2>/dev/null | head -1)
+if [ -z "$y2_file" ]; then
+    fail "Y2" "no decisions/DEC-041-*.md tombstone file"
+elif grep -q '^  type: reservation' "$y2_file"; then
+    ok "Y2"
+else
+    fail "Y2" "$y2_file exists but is missing '  type: reservation' in its front-matter"
+fi
+
+# Y3 — the tombstone does not inflate the Decision records count, and its
+# own reservation is counted separately. Pins the SEMANTIC values, not just
+# X3-style script-vs-page self-consistency, which would happily pass even if
+# both sides agreed on a wrong number (the failure mode this pin exists to
+# catch: someone edits the type filter in inventory.sh and it silently starts
+# counting the tombstone as a decision — script and page would still agree,
+# just agree on 46).
+if [ ! -x scripts/inventory.sh ]; then
+    fail "Y3" "scripts/inventory.sh is missing or not executable"
+else
+    y3_out=$(./scripts/inventory.sh)
+    y3_bad=""
+    printf '%s\n' "$y3_out" | grep -F -q 'Decision records | 45 |' || y3_bad="$y3_bad decision-records!=45"
+    printf '%s\n' "$y3_out" | grep -F -q 'Decision numbers reserved, not yet decided | 1 |' || y3_bad="$y3_bad reserved-decisions!=1"
+    if [ -z "$y3_bad" ]; then
+        ok "Y3"
+    else
+        fail "Y3" "inventory.sh row value(s) wrong:$y3_bad"
+    fi
+fi
+
+# Y4 — the open-questions count is DERIVED (inventory.sh), not restated: the
+# fix for the STAGE-021 line that has been wrong three times in three days
+# (8 of 18 wrong total; 9 of 18 wrong on both halves, from a grep that
+# matched the file's own header comment; 7 of 17 correct until a merge
+# landed a new question). Pins the semantic values, same rationale as Y3.
+if [ ! -x scripts/inventory.sh ]; then
+    fail "Y4" "scripts/inventory.sh is missing or not executable"
+else
+    y4_out=$(./scripts/inventory.sh)
+    y4_bad=""
+    printf '%s\n' "$y4_out" | grep -F -q 'Questions tracked in guidance/questions.yaml | 18 |' || y4_bad="$y4_bad questions-total!=18"
+    printf '%s\n' "$y4_out" | grep -F -q 'of those, still open | 6 |' || y4_bad="$y4_bad questions-open!=6"
+    if [ -z "$y4_bad" ]; then
+        ok "Y4"
+    else
+        fail "Y4" "inventory.sh row value(s) wrong:$y4_bad"
+    fi
+fi
+
+# Y5 — the two questions answered in practice by this spec (editor-template-
+# format by DEC-009; summary-grouping-heuristics by SPEC-018/DEC-014 +
+# aggregate.GroupForHighlights) are marked closed in the register, not left
+# stale the way both sat since 2026-04-19 despite the answer already
+# existing.
+y5_missing=""
+for y5_id in "editor-template-format" "summary-grouping-heuristics"; do
+    y5_status=$(awk -v want="  - id: $y5_id" '
+        $0 == want { f=1; next }
+        f && /^  - id: / { exit }
+        f && /^    status: / { print; exit }
+    ' guidance/questions.yaml)
+    if [ "$y5_status" != "    status: answered" ]; then
+        y5_missing="$y5_missing $y5_id"
+    fi
+done
+if [ -z "$y5_missing" ]; then
+    ok "Y5"
+else
+    fail "Y5" "guidance/questions.yaml entries not marked 'status: answered':$y5_missing"
+fi
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

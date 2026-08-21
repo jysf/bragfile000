@@ -206,14 +206,43 @@ questions:
       `ulid TEXT UNIQUE` column, backfill, switch user-facing CLI to
       accept either form. No data loss.
 
+      STILL OPEN AT SPEC-080 HYGIENE PASS (2026-08-19): the trigger has NOT
+      fired. `docs/research/duckdb-federation-spike.md` (a pre-framing
+      research spike, explicitly "not the repo; only this report is
+      durable") found "bragfile has no global entry identity" and recommended
+      a file/export-level identity stamp over a per-entry one — but the spike
+      was never pulled into a shipped feature; no cross-machine sync or
+      export exists today. That report is prior art for WHEN this is
+      actioned, not evidence the trigger condition has been met.
+
   - id: editor-template-format
     question: "What exact format does the editor-launch markdown buffer use — YAML front-matter plus a body, or a simpler key-value header?"
     priority: medium
-    status: open
+    status: answered
     raised_by: claude
     raised_at: 2026-04-19
+    answered_at: 2026-08-19
     assigned_to: null
+    answered_by: DEC-009 (SPEC-009 / SPEC-010)
     notes: |
+      ANSWERED IN PRACTICE, FOUND STALE AT SPEC-080 DESIGN. This question was
+      raised 2026-04-19; DEC-009 settled it the very next day, 2026-04-20, and
+      the entry was simply never closed — the same shape as
+      `tag-ordering-projection`, a question whose own condition had already
+      been decided by reality.
+
+      NOT YAML front-matter — Option E: RFC822-style headers parseable via
+      stdlib `net/textproto.Reader.ReadMIMEHeader`, a blank line, then a
+      free-form markdown body as the entry's Description. Fixed header order
+      (Title, Tags, Project, Type, Impact); empty-valued fields omitted from
+      the render. Confirmed still exactly this in the shipped code
+      (`internal/editor/editor.go`'s `Render`/`EmptyTemplate`/`Parse`, and the
+      package doc comment SPEC-080 added, which states the format inline).
+      YAML/TOML front-matter were rejected in DEC-009 specifically to avoid a
+      new top-level dependency (`no-new-top-level-deps-without-decision`).
+
+      --- original entry, retained for provenance ---
+
       Arrives in STAGE-002 (SPEC for `brag edit` / `brag add` no-args).
       Leading candidate: YAML front-matter for optional fields (tags,
       project, type, impact), then `# <title>` and the description as
@@ -223,11 +252,28 @@ questions:
   - id: summary-grouping-heuristics
     question: "How does `brag summary --range week` decide on grouping order (project first vs type first vs tag first) when an entry has all three?"
     priority: low
-    status: open
+    status: answered
     raised_by: claude
     raised_at: 2026-04-19
+    answered_at: 2026-08-19
     assigned_to: null
+    answered_by: SPEC-018 (DEC-014) / aggregate.GroupForHighlights
     notes: |
+      ANSWERED IN PRACTICE, FOUND STALE AT SPEC-080 DESIGN. Same shape as
+      `editor-template-format`: the "leaning toward" guess below is exactly
+      what shipped, and the entry was never closed.
+
+      PROJECT is the only grouping axis for `## Highlights`. Confirmed in
+      `internal/aggregate/aggregate.go`'s `GroupForHighlights`: entries bucket
+      by `Project` (alpha-ASC, `(no project)` forced last per DEC-013/DEC-014's
+      count-ordering rule), and within each project bucket sort chrono-ASC by
+      `CreatedAt` with `ID` as tie-break. `Type` is never a grouping key for
+      Highlights — it gets its own separate flat `**By type**` count list,
+      never nested with project. Tags are not a grouping axis at all. DEC-014
+      §3 locks the by-type/by-project convention this implements.
+
+      --- original entry, retained for provenance ---
+
       Lands in STAGE-003. Leaning toward: always group by `project`
       first, then `type` second, with tags shown inline per entry.
       Make this choice when writing the summary spec — not now.

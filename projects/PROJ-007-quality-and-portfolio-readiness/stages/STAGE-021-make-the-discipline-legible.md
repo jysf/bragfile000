@@ -88,12 +88,19 @@ times by a coverage sentence that sounded true and pinned nothing (SPEC-073).
    backlog**, which a browsing reader never sees. Land a reservation tombstone
    in `decisions/` that names the holder and links the backlog item, so the gap
    stops reading as a lost decision.
-5. **Open-questions hygiene.** **8 of 18 are open.** (It was 8 of 17; `tag-ordering-projection` closed and SPEC-079 opened `dec-amendment-heading-convention`, so the count returned to 8 against a larger total. This line has now been wrong twice in three days, which is the argument for the hygiene pass deriving it rather than restating it.) Three
-   date from **2026-04-19** and have not moved in four months
-   (`shareable-ids`, `editor-template-format`, `summary-grouping-heuristics`) —
-   at least one is likely answered-in-practice but never closed. For each open
-   question: mark answered and link what settled it, delete it if it resolved
-   informally, or restate its resolve condition so it is actionable.
+5. **Open-questions hygiene.** **DONE — 6 of 18 open**, closed by SPEC-080 from 8.
+   *(The count is now derived by `scripts/inventory.sh` and pinned by `Y4`/`Y5`,
+   which is the point: this line was wrong three times in four days before the
+   spec that fixed it — 8 of 18 with a wrong total, 9 of 18 wrong on both halves
+   from a grep matching the file's own header comment, and 7 of 17 correct until
+   a merge landed a new question.)*
+
+   Two of the three long-dormant 2026-04-19 questions were closed as
+   **answered-in-practice**: `editor-template-format` by **DEC-009**, written
+   2026-04-20 — *the day after the question was raised* — and
+   `summary-grouping-heuristics` by `aggregate.GroupForHighlights`.
+   `shareable-ids` stays open with a sharpened note; its trigger has not fired.
+   No answers were invented to shrink the register.
 
    *`tag-ordering-projection` was closed ahead of this spec (2026-08-18) and is
    the worked example of what this item is for.* It had been open since
@@ -178,7 +185,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       re-verify caught: the grep is syntactic, the claim was semantic, and they
       diverge on exactly one spec. Recorded rather than quietly corrected —
       it is the same defect class, in the stage file that owns it.)*
-- [ ] SPEC-080 (design) — **the godoc pass + the two legibility repairs.**
+- [x] SPEC-080 (shipped on 2026-08-19) — **the godoc pass + the two legibility repairs.**
       Framed 2026-08-19, **GO at complexity S** — resized *down* by
       measurement. The brief's "no surfaced godoc" implied missing doc
       comments; there are **175 exported declarations and only 3 lack one**,
@@ -220,8 +227,23 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `test-docs.sh` harness before being reverted to literals — all green;
       `just test-docs` reaches **176** distinct assertions (was 171).
       Confidence 0.90.
+      **Built 2026-08-19** on `build/spec-080-godoc-and-legibility-repairs`.
+      All six literals transcribed byte-for-byte — verified by diff against
+      each literal, not by eye. Order followed the invoking instruction:
+      `inventory.sh` (③) and the `DEC-041` tombstone (②) landed first;
+      `./scripts/inventory.sh` was re-run against that intermediate state
+      (Decision records 45, reserved 1, both already correct) and again
+      after ④/⑤ landed, producing **176 / 18 / 6** — exactly what literal ⑥
+      predicted, so no reconciliation was needed before pasting it. `just
+      test-docs` is green at **176 distinct assertion ids** (delta exactly
+      `Y1`–`Y5`, confirmed by `comm`); `just test`, `gofmt -l .`, and
+      `go vet ./...` are unaffected; `go build ./...` exits 0; `go doc` on
+      all five named packages was run individually and renders the new
+      comment in full. `scripts/status.sh` reports 46 decisions, as the
+      design predicted (informational-only off-by-one, left untouched).
+      No deviations from the six literals.
 
-**Count:** 1 shipped / 1 active / 1 pending  *(the third — the README
+**Count:** 2 shipped / 0 active / 1 pending
 restructure + the A1 `wc -l` → `wc -w` switch — is agreed and not yet
 scaffolded. It is counted here deliberately: with `0 pending` this stage reads
 as complete the moment SPEC-080 ships, and `just archive-spec` already reports
