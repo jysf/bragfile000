@@ -243,7 +243,20 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       design predicted (informational-only off-by-one, left untouched).
       No deviations from the six literals.
 
-**Count:** 2 shipped / 0 active / 1 pending
+- [ ] SPEC-081 (frame) — **the README call-to-action + the A1 metric switch.**
+      Framed 2026-08-19, **GO at complexity S**. Promotes the existing MCP
+      call-to-action out of the `> **Status:**` blockquote (readers skip status
+      blocks; the full MCP section is at line 219 of 260), and switches `A1`
+      from `wc -l` to `wc -w`. The metric is the real fix: A1 counts lines on a
+      **hard-wrapped** file, so a pure rewrap turns CI red having added nothing —
+      and a guard that fires on non-events gets disarmed by habit, which is the
+      failure SPEC-079's LD5 refused. Framing pre-checked two constraints design
+      would otherwise have hit: `assert_line_count_band` has **six callers**, so
+      the shape is a sibling helper rather than a repurpose; and `W3` pins the
+      literal `> **Status:** v<latest> shipped` line against the CHANGELOG, so
+      the blockquote cannot simply be deleted.
+
+**Count:** 2 shipped / 1 active / 0 pending
 restructure + the A1 `wc -l` → `wc -w` switch — is agreed and not yet
 scaffolded. It is counted here deliberately: with `0 pending` this stage reads
 as complete the moment SPEC-080 ships, and `just archive-spec` already reports
