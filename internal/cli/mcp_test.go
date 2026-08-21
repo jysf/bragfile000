@@ -55,7 +55,7 @@ func TestMCP_ServeHelpSaysLocalStdio(t *testing.T) {
 // sentinel wrapped with %w, EOF appended with %v (so it is NOT in the errors.Is
 // chain), which is why it must be matched via the jsonrpc.Error code sentinel.
 func TestIsCleanShutdown(t *testing.T) {
-	serverClosing := fmt.Errorf("%w: %v", &jsonrpc.Error{Code: -32004, Message: "server is closing"}, io.EOF)
+	serverClosing := fmt.Errorf("%w: %w", &jsonrpc.Error{Code: -32004, Message: "server is closing"}, io.EOF)
 	cases := []struct {
 		name string
 		err  error
@@ -117,7 +117,7 @@ func TestServe_InFlightClientCloseIsCleanExit(t *testing.T) {
 		close(release)
 		t.Fatal("tool handler never started; cannot exercise in-flight close")
 	}
-	cw.Close()     // client closes stdin while the request is in flight
+	_ = cw.Close() // client closes stdin while the request is in flight
 	close(release) // handler completes and tries to respond over the closing conn
 
 	select {

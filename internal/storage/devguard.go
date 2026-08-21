@@ -85,7 +85,7 @@ func devProdMigrateGuard(ctx context.Context, db *sql.DB, path string, src fs.FS
 	}
 	return fmt.Errorf("%w: %q has %d pending migration(s) and this is an unreleased build (%q). "+
 		"Refusing to migrate your real ~/.bragfile. Use a released `brag`, point --db / %s at a "+
-		"throwaway copy, or set %s=1 to override.",
+		"throwaway copy, or set %s=1 to override",
 		ErrDevProdMigrate, path, len(pending), buildVersion, "BRAGFILE_DB", envAllowDevProdMigrate)
 }
 

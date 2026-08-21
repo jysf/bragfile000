@@ -51,7 +51,7 @@ func handleMemory(s *storage.Store) func(context.Context, *mcp.CallToolRequest, 
 		if err != nil {
 			var qe *memory.ErrQuery
 			if errors.As(err, &qe) {
-				return nil, nil, fmt.Errorf("brag_memory: %v", qe)
+				return nil, nil, fmt.Errorf("brag_memory: %w", qe)
 			}
 			return nil, nil, fmt.Errorf("brag_memory: %w", err)
 		}

@@ -18,14 +18,11 @@ import (
 	"github.com/jysf/bragfile000/internal/storage"
 )
 
-// version is set to "dev" for local builds. goreleaser injects the
-// real values via ldflags (-X main.version=... -X main.commit=...
-// -X main.date=...) at release-build time. See .goreleaser.yaml.
-var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
-)
+// version is set to "dev" for local builds. goreleaser injects the real
+// value via an ldflag (-X main.version=...) at release-build time. See
+// .goreleaser.yaml. main.commit and main.date were removed at SPEC-082:
+// goreleaser set them and nothing ever read them.
+var version = "dev"
 
 func main() {
 	// Resolve before anything reads it: goreleaser's ldflags win, and a
