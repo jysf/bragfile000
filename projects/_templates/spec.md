@@ -158,4 +158,9 @@ from the process-focused build reflection above.*
    is transcribed from, and both halves are already written above (## Context is
    the before, ## Goal is the after): confirm the prediction, don't reconstruct
    it from memory.
+   **If this answer is not `none`, capture it before closing the cycle** — the
+   sentence is the deliverable, and an uncaptured one decays into a
+   reconstruction. Evidence ref: under `one-spec-per-pr` this spec has exactly
+   one PR by construction, so tag `pr:<n>` rather than a commit hash (a
+   squash-merge destroys the branch commit you were looking at).
    — <answer>
