@@ -243,7 +243,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       design predicted (informational-only off-by-one, left untouched).
       No deviations from the six literals.
 
-- [ ] SPEC-081 (verify) — **the README call-to-action + the A1 metric switch.**
+- [x] SPEC-081 (shipped on 2026-08-21) — **the README call-to-action + the A1 metric switch.**
       Framed 2026-08-19, **GO at complexity S**. Promotes the existing MCP
       call-to-action out of the `> **Status:**` blockquote (readers skip status
       blocks; the full MCP section is at line 219 of 260), and switches `A1`
@@ -483,10 +483,23 @@ out to be about.*
     count that went stale in a two-hour window between PRs, and SPEC-081's cached
     an assertion id count its own change moved. Below the N=3 bar; **record and
     hold.**
+    **RESOLVED at SPEC-082 ship (2026-08-21).** Reached **N=3** — SPEC-082's
+    `Y4` pinned the two question-register counts its own new question moved.
+    Codified into `AGENTS.md` §9, with the second half the third case added:
+    enumerate every guard that caches a value *before* writing `## Failing
+    Tests`, not just the one the spec is already thinking about.
   - **`just archive-spec` reports stage completion off written specs, not backlog
     items.** It printed "All specs for STAGE-021 are shipped" at all three ships
     and was **false twice**. Worth a fix in the template's tooling, and worth
     knowing until then.
+    **FIXED at SPEC-082 ship (2026-08-21)**, after a third false positive in
+    STAGE-022. `scripts/archive-spec.sh` now reads **both** sources — spec files
+    *and* unchecked `- [ ]` items in the stage's `## Spec Backlog` — and reports
+    "all WRITTEN specs are shipped, but N backlog item(s) remain" instead of
+    claiming completion. Fixing it immediately surfaced a stale record this
+    stage had carried since its own close: `SPEC-081` was still `- [ ]` at
+    `(verify)` while the count line beneath it already read *"the backlog is
+    complete."* Corrected in the same pass.
 
 - **Should any spec-level reflections be promoted to stage-level lessons?**
   - **Yes: "test the claim, not the counterexample."** SPEC-080 hit the same

@@ -64,13 +64,33 @@ if [ -n "$STAGE_ID" ]; then
 fi
 
 # Check if this was the last active spec in the stage.
+#
+# TWO SOURCES, BOTH REQUIRED. Written spec FILES are only half the stage: a
+# stage's Spec Backlog can carry items that have no spec file yet (planned,
+# not yet framed). Counting files alone reports a stage complete while planned
+# work remains — this claimed "All specs are shipped" three times against a
+# non-empty backlog (twice in STAGE-021, once in STAGE-022) before being fixed.
 if [ -n "$STAGE_ID" ]; then
     REMAINING=$(find "$SPEC_DIR" -maxdepth 1 -name "SPEC-*.md" 2>/dev/null \
                 | xargs -I{} awk -v sid="$STAGE_ID" '/^---$/{f=!f; next} f && /^[[:space:]]+stage:/ && $2 == sid {print FILENAME; exit}' {} \
                 | wc -l | tr -d ' ')
-    if [ "$REMAINING" = "0" ]; then
+
+    # Unchecked "- [ ]" items in the stage file's ## Spec Backlog section,
+    # including entries that name no SPEC id yet.
+    UNPLANNED=0
+    if [ -n "$STAGE_FILE" ] && [ -f "$STAGE_FILE" ]; then
+        UNPLANNED=$(awk '/^## Spec Backlog/{f=1; next} f && /^## /{exit} f && /^- \[ \]/{c++} END{print c+0}' "$STAGE_FILE")
+    fi
+
+    if [ "$REMAINING" = "0" ] && [ "$UNPLANNED" = "0" ]; then
         echo ""
         echo "${GREEN}All specs for ${STAGE_ID} are shipped.${RESET}"
         echo "Consider running the Stage Ship prompt (Prompt 1c) in FIRST_SESSION_PROMPTS.md."
+    elif [ "$REMAINING" = "0" ]; then
+        echo ""
+        echo "${GREEN}All WRITTEN specs for ${STAGE_ID} are shipped${RESET}, but its Spec"
+        echo "Backlog still lists ${UNPLANNED} unchecked item(s) with no spec file yet."
+        echo "${DIM}The stage is NOT complete. Frame the remaining item(s), or strike them"
+        echo "from the backlog deliberately, before running the Stage Ship prompt.${RESET}"
     fi
 fi

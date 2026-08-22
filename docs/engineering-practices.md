@@ -148,8 +148,10 @@ specs demonstrate:
   the `coverage` job in CI — fails below **80.0%**. The floor sits below the
   measurement (83.5% of statements on 2026-08-21) on purpose, so that ordinary
   refactoring never turns CI red and nobody is ever rewarded for a test written
-  to move a percentage. The lowest package is `cmd/brag` at 23.7%: one
-  function, `main`, 29 statements out of ~3,900. It is left there.
+  to move a percentage. The lowest package is `cmd/brag` at 23.7% (same
+  measurement date): one function, `main`, 29 statements out of ~3,900. It is
+  left there. Note both per-package figures are dated observations, not guards:
+  only the 80.0% floor is enforced, and only it is diffed against this page.
 
 ## Guards that replaced remembered checks
 
