@@ -271,9 +271,11 @@ func seedListEntry(t *testing.T, dbPath, title, tags, project, typ string) stora
 	return e
 }
 
-// mustBackdate forwards to storagetest.Backdate and t.Fatals on error;
-// CLI tests cannot import database/sql per the no-sql-in-cli-layer
-// constraint, so the SQL UPDATE lives in the storagetest sub-package.
+// mustBackdate forwards to storagetest.Backdate and t.Fatals on error.
+// no-sql-in-cli-layer binds production files only (DEC-047), so a CLI
+// test MAY open a database directly — four in this package do. This one
+// does not: the helper already exists, and every raw UPDATE is one more
+// copy of storage's schema living outside internal/storage.
 func mustBackdate(t *testing.T, dbPath string, id int64, at time.Time) {
 	t.Helper()
 	if err := storagetest.Backdate(dbPath, id, at); err != nil {

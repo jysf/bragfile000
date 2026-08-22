@@ -64,10 +64,13 @@ linters:
         # the only one in go.mod (DEC-001), and a driver imported WITHOUT
         # database/sql is exactly the case a "database/sql" grep walks past.
         #
-        # WHY PRODUCTION FILES ONLY (`!$test`). The production-vs-test scope
-        # question is decided in SPEC-082 LD7, not here. Five of the 30
-        # *_test.go files under internal/cli/ carry eight offending imports
-        # today; that half of the constraint is open, named, and unguarded.
+        # WHY PRODUCTION FILES ONLY (`!$test`). Because production files are
+        # the whole constraint. DEC-047 (2026-08-22) scoped the rule text to
+        # them, so `!$test` is the mechanism AGREEING with the rule, not
+        # falling short of it. Four *_test.go files under internal/cli/ open a
+        # database directly, all four to backdate a fixture the store stamps
+        # with time.Now(); that is out of scope by decision, and
+        # internal/storage/storagetest is the preferred route for new ones.
         no-sql-in-cli-layer:
           files:
             - "**/internal/cli/*.go"

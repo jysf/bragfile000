@@ -1,8 +1,10 @@
 // Package storagetest exposes test-only helpers that need raw SQL
 // access to a Bragfile database. Living under internal/storage/ keeps
-// the database/sql dependency inside the storage layer, which lets CLI
-// tests use these helpers without violating the no-sql-in-cli-layer
-// constraint.
+// the database/sql dependency — and the schema knowledge that rides
+// with it — inside the storage layer. A CLI test may open a database
+// directly if it wants to (no-sql-in-cli-layer binds production files
+// only, DEC-047); this package is the preferred route because it keeps
+// that SQL in one place, not because the constraint forbids the other.
 package storagetest
 
 import (

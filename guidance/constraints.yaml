@@ -29,12 +29,12 @@ constraints:
     rationale: "DEC-001 — pure-Go sqlite driver; STAGE-004 distribution depends on cross-compile working out of the box."
 
   - id: no-sql-in-cli-layer
-    rule: "Files under internal/cli/ must not import database/sql or any SQL driver. All persistence goes through internal/storage."
+    rule: "Production files under internal/cli/ — every *.go except *_test.go — must not import database/sql or any SQL driver. All persistence goes through internal/storage."
     severity: blocking
     paths: ["internal/cli/**"]
     added_by: claude
     added_at: 2026-04-19
-    rationale: "Architecture principle 2 (architecture.md) — CLI is a thin shell over storage. Keeps commands testable and future frontends (TUI, API) feasible."
+    rationale: "Architecture principle 2 (architecture.md) — CLI is a thin shell over storage. Keeps commands testable and future frontends (TUI, API) feasible: a TUI reusing internal/cli links its production code, never its *_test.go files. Scoped to production files by DEC-047 (2026-08-22), this rule's first amendment — added_at above remains the original date. Enforced by depguard (.golangci.yml, rule no-sql-in-cli-layer). Test files needing raw SQL should prefer internal/storage/storagetest."
 
   - id: storage-tests-use-tempdir
     rule: "Storage-layer tests MUST use t.TempDir() for the DB path, never a shared or on-disk path. No test relies on ~/.bragfile/."
