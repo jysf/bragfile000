@@ -256,6 +256,29 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
   misled — but the two nouns are not interchangeable and a lint rule should
   not treat them as if they were.
 
+  **Two more, created by SPEC-082 itself (build, 2026-08-21).** The package
+  comments called *correct as written* above are still correctly **scoped** to
+  production code — that clause is untouched and remains the wording a
+  mechanism should be checked against. What SPEC-082 falsified is the
+  *enforcement* clause each one also carries. `internal/cli/root.go:9` says the
+  boundary is *"held today by convention and review, not an automated test
+  (`internal/mcpserver` has one, `TestNoSQLImport`; `internal/cli` — the package
+  the constraint's path glob actually covers — does not; see STAGE-022)"*, and
+  `internal/storage/store.go:13` makes the same claim, *"held today by
+  convention and review rather than an automated test (see STAGE-022)"*. Both
+  point forward at **this stage**, and this stage's first spec is the automated
+  test they say does not exist: `depguard` now fails the `lint` job on either
+  import, mutation-checked both halves (M-A, M-B).
+
+  Neither was fixed in SPEC-082's build, for the reason that spec gives for
+  `list_test.go:275`: the correct rewording depends on **LD7's deferred
+  production-vs-test scope question**, and a comment rewritten before that
+  answer lands would have to be rewritten again. All three now share one
+  resolve condition. Note what does *not* catch these — `Y1` asserts only that
+  a package doc comment **exists**, not what it claims, so `just test-docs`
+  stays green with both sentences false. That is the stage's own honest limit
+  restated at file scope: **the guards reach numbers, not claims.**
+
 - **The `decisions/` totality gap — deferred at SPEC-080, routed here.**
   `scripts/inventory.sh` emits two rows over `decisions/DEC-*.md`:
   *Decision records* (`insight.type: decision`) and *Decision numbers
