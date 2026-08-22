@@ -529,3 +529,99 @@ files (18)"** where a list is present anyway. Delete the count, keep the list.
 - **Mutation-checking the enforcement, not just asserting it exists.** Three of
   five mutations produced output that differed from naive expectation. Without
   them the gate would have been believed rather than known.
+
+## 6. The work-log hook exists at spec level and is missing at every other level — plus nothing traverses it
+
+*Added after the section above was filed. An earlier draft of this note excluded
+work-log feedback as "a product concern, not a template one." **That was wrong**
+— the template already carries the integration explicitly, so how well it works
+is squarely template feedback. Correcting it here rather than silently.*
+
+**What already exists, and works.** The spec template's ship reflection asks
+*"What can a user do now that they couldn't before?"* — one sentence,
+before → after, `none` permitted as a real greppable answer — and tells the
+author outright that **this is the line a work-log's `impact` field is
+transcribed from**, that both halves are already written (`## Context` is the
+before, `## Goal` is the after), and to *confirm the prediction, don't
+reconstruct it from memory.* That is a genuinely good design. It converts
+impact-writing from recall into confirmation, which is the same move the
+`§12(b)` pre-flight makes for artifacts. Nothing below argues against it.
+
+Three gaps around it, in descending order of value.
+
+### 6a. The question is per-spec; capture happens per-stage
+
+The guidance a work-log gives its own users is *one entry per shipped thing, not
+per commit.* In this repo the natural unit has been the **stage close** — and
+the **stage template has no equivalent question at all.** The spec template asks
+what a user can now do; the stage template, which closes the unit anyone would
+actually write an entry about, asks nothing of the kind.
+
+So the hook fires N times at the wrong granularity and zero times at the right
+one. An author with five answered spec-level sentences and no stage-level one
+still has to synthesise the entry from scratch at exactly the moment the
+template stops asking.
+
+**Recommended:** give the stage template the same question, scoped to the stage.
+It costs one block, it reuses a proven prompt, and it lands where capture
+actually happens.
+
+### 6b. Nothing carries the answer across the boundary
+
+The ship question **produces** the impact sentence. Nothing then says *record
+it.* There is no step, in any template artifact, between "write the sentence"
+and the work-log existing.
+
+The evidence is unusually clean, because it happened during this session and can
+be checked. `SPEC-081` answered the question well on 2026-08-20 — a specific
+before → after with two confirming numbers. **No entry was created.** The corpus
+sat unchanged from 2026-08-19 through the stage close (2026-08-20) and two more
+merged PRs, until an entry was written on 2026-08-22 — and only because a
+**hand-written session-handoff note** said *"unbragged work … worth one entry
+for the stage close."* A prose reminder in a scratch file did the job the cycle
+model was the right place to do.
+
+**Recommended:** one clause on the existing question — *"if this answer is not
+`none`, capture it before closing the cycle"* — or a sibling question. The
+template already knows the artifact exists; it just stops one step short of it.
+
+### 6c. The traversal is one-directional, so the drop-in guide re-derives what ship already confirmed
+
+The link points **template → work-log** and never back. A drop-in agent guide is
+written to be read cold in any repo, so it tells the agent to compose `impact`
+from scratch. In a template project that is redundant at best and divergent at
+worst: ship already produced a *confirmed* impact line, and an agent composing
+independently will write a different one — usually worse, because it is
+reconstructing rather than confirming, which is the exact failure the ship
+question was designed to prevent.
+
+**Recommended (for whoever owns the guide, not the template):** a short "if this
+project uses the spec-driven template" section — take `impact` from the ship
+answer; the description is the spec's story; do not re-derive.
+
+### 6d. Bonus: the evidence link is already derivable and is being treated as a judgment call
+
+Work-log guidance here says: prefer a **PR reference** over a commit hash,
+because a squash-merge destroys the branch commit you were looking at and a hash
+that resolves for nobody is worse than no evidence at all. Correct, and hard-won.
+
+The template makes that ref **derivable rather than discretionary**: under
+`one-spec-per-pr` — a *blocking* constraint — every spec has exactly one PR by
+construction. So the evidence tag is a lookup, not a decision, in any project
+running this template. Neither document says so.
+
+### What this does not argue
+
+Not that the template should depend on any particular work-log tool. The
+upstream generalisation from a product name to *"a downstream work-log"* is the
+right call and should stand. Every recommendation above is tool-agnostic: ask
+the question at the stage level too, say "capture it" once, and let whoever owns
+the tool-specific guide close the loop from their side.
+
+### One measurement worth having
+
+**11 of 78** archived specs in this repo carry the ship question at all — it was
+added late and never backfilled, which is fine and expected. But it means the
+per-spec hook has a short track record, and the stage-level gap in **6a** has
+never been tested by a stage close that had it. Worth knowing before weighing
+how much of the above is confirmed versus predicted.
