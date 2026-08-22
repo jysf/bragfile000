@@ -387,3 +387,145 @@ harvested that the bottleneck has moved from "do we codify lessons?" to
 "can we *see* the lessons that are ready to codify?" The discipline
 graduated from a habits problem to a bookkeeping one — which is a good
 problem to have, and the WATCH-list ledger is the cheap fix for it.
+
+---
+
+# Field note — one build session under the literal-artifact pattern (2026-08-22, ~79 specs / 21 stages)
+
+*Not a mining round. A single build session (SPEC-082, a lint + coverage
+gating spec: 2 new files, 19 modified, 19 lint findings fixed, 5 mutation
+checks) produced five findings that generalise past `bragfile`, so they are
+recorded here while they are cheap. Same lens as the rounds above: feedback
+for the template author. Deliberately excluded — feedback on `BRAG.md`'s
+`impact` field, which is a product concern of this repo, not a template one.*
+
+**Headline: `literal-artifact-as-spec` held again, and the interesting
+failures were all in the machinery *around* the literals, not the literals.**
+Every one of the nine embedded artifacts transcribed with zero drift — the
+practices page landed at **301 lines / 2,468 words**, matching design's
+measured prediction to the word. What went wrong went wrong in how the spec
+*reasoned about* its own change, and in how build *confirmed* its own
+mutations. That is a healthy place for the failures to be, but three of these
+are cheap to fix in the template.
+
+## 1. A spec that moves a derived value must enumerate every guard that caches it
+
+The strongest recommendation here.
+
+The derive-and-diff pattern (a script derives current-state numbers; an
+assertion diffs the document against the script) is working well and should
+not change. But it creates a specific hazard the template does not warn about:
+**a second assertion can also cache the same derived number as a literal**, and
+nothing enumerates the cachers.
+
+Concretely: this spec adds one entry to a question register. It correctly
+reasoned that this moves two rows of a generated inventory table, and correctly
+routed that through the round-trip assertion (`X3`) and the regenerated block.
+It missed that a *different* assertion (`Y4`) also pins those same two counts
+as literals, for a different and legitimate reason — `Y4` exists to catch the
+derivation script itself drifting. Build hit the red, diagnosed it, and
+re-pinned with a comment naming the spec. Cost: minutes. But it was found by
+running the harness, not by the spec's own *Failing Tests* section, which is
+where design is supposed to have predicted it.
+
+**Recommended, cheap:** add to the design-phase checklist — *before writing the
+Failing Tests section, grep the harness for every literal occurrence of any
+value this spec changes.* One `grep` catches the whole class. This is the
+second-order form of a rule already at N=3 in this repo (*when a literal caches
+derived output, the derivation outranks the cache*); the first-order rule is
+about documents, and this is the same rule pointed at the test harness.
+
+## 2. Mutation-check confirmation must not use `git diff` on files the spec creates
+
+A real gap in the `§12(b)` / mutation-check protocol, and the kind that fails
+silently in the safe-looking direction.
+
+The protocol correctly insists the mutant be **confirmed to have mutated**
+before its failure is credited — good rule, earned. But the obvious
+implementation (`git diff --quiet <file>`) returns **clean for an untracked
+file**. This spec's mutation target was `scripts/coverage.sh`, a file the spec
+itself creates, so the first run reported *"mutant did not mutate"* while the
+mutant was sitting on disk. The detector was wrong, not the mutant.
+
+The failure mode is nasty precisely because it is conservative-looking: it
+reports a *missing* mutation, so it reads as a careful guard working, and the
+natural next move is to go re-write a mutation that was already correct.
+
+**Recommended:** the protocol should prescribe **content-hash comparison**
+(capture a hash before, after, and after-revert), not `git diff`. It is
+strictly more general, works identically for tracked and untracked files, and
+additionally proves the *revert* was exact — which `git diff` gives you for
+free on tracked files and not at all on new ones. This session used it to
+confirm the reverted file was byte-identical to the spec's literal.
+
+## 3. "Confirm the mutant mutated" is necessary but not sufficient — confirm it mutated *only* what you intended
+
+Same session, different mutation. A probe file was created to trip a totality
+assertion; it carried a plausible-looking `confidence: 0.50` in its front
+matter. It tripped the intended assertion — and also moved a *lowest-confidence*
+row in the same generated table, turning a second assertion red for an entirely
+unrelated reason.
+
+The mutation "passed" in the sense that the target failed. But the run no longer
+demonstrated the proposition the design decision actually claims, which was
+*this assertion catches what that one cannot*. Re-run with the confidence value
+inside the existing range, the second assertion stayed green and the target was
+the only failure — which is the real claim.
+
+**Recommended:** extend the existing rule to two clauses — *confirm the mutant
+mutated, and confirm it changed exactly one thing.* A probe with side effects
+produces a red for the wrong reason, and a red for the wrong reason is
+indistinguishable from a red for the right one in a build log. This pairs
+naturally with the repo-level lesson **test the claim, not the counterexample**.
+
+## 4. Strengthen `literal-artifact-as-spec` at the *application* step, not the authoring step
+
+The pattern is validated and should stay the default. This is about how build
+applies it.
+
+Build extracted every literal from the spec's own fenced blocks **by line
+range**, then applied each with an assertion that the target text occurred
+**exactly once** before writing. That is mechanically better than retyping, and
+it earned its keep immediately: one hunk was first anchored on a range that
+resolved to a closing ``` fence — which occurs **seven times** in the target
+file. A manual application would have silently corrupted it in seven places.
+This repo has already truncated a spec once this way (1,779 lines → 715), so
+the failure is not hypothetical.
+
+**Recommended, optional:** the implementer-notes convention could make this
+easier by giving each fenced block a stable label, so build can address blocks
+by name rather than by line range. Even without that, one line of build
+guidance — *never apply a literal without asserting the anchor's match count* —
+would carry most of the value. The assertion caught this, not the care.
+
+## 5. Minor: a spec's own self-counts are unguarded prose
+
+This spec's *Outputs* section says "Modified files (**18**)" while its own list
+enumerates **19**; its punch-list section is titled "**19** edits" while
+specifying **21** replacement blocks (three import-block additions serve 19
+findings). Nothing depended on either number and build simply followed the
+enumerated list.
+
+Worth one sentence only because it is the exact class this repo has been burned
+by five times: *a count produced by hand is a hypothesis*. Specs are documents
+that make counted claims about themselves, and unlike the documents this
+framework has taught us to guard, **nothing derives a spec's self-counts.** Not
+proposing a mechanism — a linter for prose arithmetic is worse than the disease.
+Proposing only that spec templates prefer **"the files below"** over **"Modified
+files (18)"** where a list is present anyway. Delete the count, keep the list.
+
+## What this session validates and argues *not* to change
+
+- **Separate sessions per cycle.** Build genuinely did not know design's
+  reasoning and had to re-derive it from the spec. Every gap above was found
+  because the spec had to stand alone, which is the point.
+- **`§12(b)` design-time pre-flight — run every literal through its own tool at
+  design and record the output.** This is the single highest-value thing in the
+  spec. It let build *diff against a prediction* rather than judge a result:
+  "19 issues before, 0 after" and "301 lines / 2,468 words" are falsifiable
+  claims, and matching them exactly is strong evidence the transcription is
+  correct. Every finding above is about machinery this practice does not cover;
+  none is an argument against it.
+- **Mutation-checking the enforcement, not just asserting it exists.** Three of
+  five mutations produced output that differed from naive expectation. Without
+  them the gate would have been believed rather than known.
