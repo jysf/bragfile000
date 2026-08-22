@@ -10,8 +10,6 @@ import (
 
 	"github.com/jysf/bragfile000/internal/storage"
 	"github.com/spf13/cobra"
-
-	_ "modernc.org/sqlite"
 )
 
 // newStoryTestRoot builds a fresh root with the story subcommand attached

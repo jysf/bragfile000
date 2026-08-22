@@ -1460,8 +1460,8 @@ assert_not_contains_iregex "X5" "$PRACTICES_DOC" 'rigorous|comprehensive|world-c
 
 # X6 — the corrections claim is made BY CITATION, not by count.
 # There is no counting rule for "decision records that log their own
-# correction" (only 1 of 45 DECs carries an explicit `## Amendment` heading, and
-# a keyword grep matches all 45 because ordinary prose uses those words), so the
+# correction" (only 1 of 46 DECs carries an explicit `## Amendment` heading, and
+# a keyword grep matches all of them because ordinary prose uses those words), so
 # page names the specific records. This pins that it keeps naming them.
 if [ ! -f "$PRACTICES_DOC" ]; then
     fail "X6" "$PRACTICES_DOC does not exist"
@@ -1562,13 +1562,18 @@ fi
 # both sides agreed on a wrong number (the failure mode this pin exists to
 # catch: someone edits the type filter in inventory.sh and it silently starts
 # counting the tombstone as a decision — script and page would still agree,
-# just agree on 46).
+# just agree on 47).
+#
+# RE-PINNED 45 -> 46 at SPEC-083, which adds DEC-047. Deliberate corpus
+# change, not drift. Note this is the SECOND guard on a number SPEC-083
+# moves — Y4 pins the other — which is exactly the pair AGENTS.md §9's
+# half (b) exists for: grep the harness for every literal the spec moves.
 if [ ! -x scripts/inventory.sh ]; then
     fail "Y3" "scripts/inventory.sh is missing or not executable"
 else
     y3_out=$(./scripts/inventory.sh)
     y3_bad=""
-    printf '%s\n' "$y3_out" | grep -F -q 'Decision records | 45 |' || y3_bad="$y3_bad decision-records!=45"
+    printf '%s\n' "$y3_out" | grep -F -q 'Decision records | 46 |' || y3_bad="$y3_bad decision-records!=46"
     printf '%s\n' "$y3_out" | grep -F -q 'Decision numbers reserved, not yet decided | 1 |' || y3_bad="$y3_bad reserved-decisions!=1"
     if [ -z "$y3_bad" ]; then
         ok "Y3"
@@ -1586,13 +1591,16 @@ fi
 # RE-PINNED 18/6 -> 19/7 at SPEC-082, which appends the
 # no-sql-in-cli-layer-test-scope question (LD7). This is a deliberate
 # corpus change, not drift: the pin moves with the register it describes.
+#
+# RE-PINNED AGAIN 19/7 -> 19/6 at SPEC-083, which ANSWERS that same question
+# (DEC-047). The total does not move: the entry is closed, not removed.
 if [ ! -x scripts/inventory.sh ]; then
     fail "Y4" "scripts/inventory.sh is missing or not executable"
 else
     y4_out=$(./scripts/inventory.sh)
     y4_bad=""
     printf '%s\n' "$y4_out" | grep -F -q 'Questions tracked in guidance/questions.yaml | 19 |' || y4_bad="$y4_bad questions-total!=19"
-    printf '%s\n' "$y4_out" | grep -F -q 'of those, still open | 7 |' || y4_bad="$y4_bad questions-open!=7"
+    printf '%s\n' "$y4_out" | grep -F -q 'of those, still open | 6 |' || y4_bad="$y4_bad questions-open!=6"
     if [ -z "$y4_bad" ]; then
         ok "Y4"
     else
@@ -1745,6 +1753,117 @@ if [ "$z7_sum" -eq "$z7_files" ]; then
     ok "Z7"
 else
     fail "Z7" "the inventory covers $z7_sum of $z7_files decisions/DEC-*.md files ($z7_decisions decision + $z7_reserved reservation). A DEC-*.md with a missing or unknown 'insight.type' is counted by neither row: fix its front-matter, or teach scripts/inventory.sh a row for the new type."
+fi
+
+# ===== Group AA — the constraint amendment (SPEC-083 / DEC-047) =====
+#
+# SPEC-083 NARROWED a blocking constraint's prose. That is the manoeuvre where
+# enforcement quietly erodes: the mechanism keeps running while the rule it
+# points at drifts out from under it. These three assertions pin the narrowing
+# to exactly what was decided, so a later widening, a severity downgrade or a
+# revert of the repaired comments has to be a deliberate edit to this file too.
+#
+# What is deliberately NOT asserted: anything about the test half. It is
+# unguarded BY DECISION (DEC-047), and both available assertions would be
+# wrong. "No CLI test imports SQL" contradicts the decision. "Some CLI test
+# imports SQL" fires the day someone finally ports them to storagetest, which
+# is the outcome the decision's own revisit triggers want. An unenforced half
+# stays unenforced; it is documented in .golangci.yml and in DEC-047 instead.
+
+CONSTRAINTS_YAML="guidance/constraints.yaml"
+
+# AA1 — THE ANTI-EROSION GUARD. Reads the no-sql-in-cli-layer entry as a block
+# (its `- id:` line to the next one) and checks four things inside it: the rule
+# text is production-scoped, the severity is STILL blocking, the path glob is
+# unchanged, and the rationale cites the record that authorised the change.
+# Severity is the load-bearing one — the spec that narrowed this rule must not
+# be remembered as the spec that softened it.
+if [ ! -f "$CONSTRAINTS_YAML" ]; then
+    fail "AA1" "$CONSTRAINTS_YAML does not exist"
+else
+    aa1_block=$(awk '
+        /^  - id: no-sql-in-cli-layer$/ { f=1; print; next }
+        f && /^  - id: / { exit }
+        f { print }
+    ' "$CONSTRAINTS_YAML")
+    aa1_bad=""
+    if [ -z "$aa1_block" ]; then
+        aa1_bad=" [no constraint with id no-sql-in-cli-layer]"
+    else
+        printf '%s\n' "$aa1_block" | grep -q '^    rule: "Production files under internal/cli/' \
+            || aa1_bad="$aa1_bad [rule text is not scoped to production files]"
+        printf '%s\n' "$aa1_block" | grep -q '^    severity: blocking$' \
+            || aa1_bad="$aa1_bad [severity is no longer blocking]"
+        printf '%s\n' "$aa1_block" | grep -F -q 'paths: ["internal/cli/**"]' \
+            || aa1_bad="$aa1_bad [paths glob changed]"
+        printf '%s\n' "$aa1_block" | grep -F -q 'DEC-047' \
+            || aa1_bad="$aa1_bad [rationale does not cite DEC-047]"
+    fi
+    if [ -z "$aa1_bad" ]; then
+        ok "AA1"
+    else
+        fail "AA1" "$CONSTRAINTS_YAML no-sql-in-cli-layer:$aa1_bad"
+    fi
+fi
+
+# AA2 — the register entry is closed, cites the record that closed it, and that
+# record exists on disk. Y5's idiom plus the citation: a question marked
+# answered with no pointer to the answer is how `editor-template-format` sat
+# stale for four months with its answer already shipped.
+aa2_block=$(awk '
+    /^  - id: no-sql-in-cli-layer-test-scope$/ { f=1; print; next }
+    f && /^  - id: / { exit }
+    f { print }
+' guidance/questions.yaml)
+aa2_bad=""
+if [ -z "$aa2_block" ]; then
+    aa2_bad=" [no question with id no-sql-in-cli-layer-test-scope]"
+else
+    printf '%s\n' "$aa2_block" | grep -q '^    status: answered$' \
+        || aa2_bad="$aa2_bad [status is not answered]"
+    printf '%s\n' "$aa2_block" | grep -F -q 'DEC-047' \
+        || aa2_bad="$aa2_bad [does not cite DEC-047]"
+fi
+ls decisions/DEC-047-*.md >/dev/null 2>&1 \
+    || aa2_bad="$aa2_bad [decisions/DEC-047-*.md does not exist]"
+if [ -z "$aa2_bad" ]; then
+    ok "AA2"
+else
+    fail "AA2" "guidance/questions.yaml no-sql-in-cli-layer-test-scope:$aa2_bad"
+fi
+
+# AA3 — the five comments this spec repaired stay repaired. Every phrase below
+# was a FALSE claim standing on main: two package comments said the boundary
+# was held "by convention and review, not an automated test" months after
+# SPEC-082 made it a lint gate; store.go's Store TYPE comment said "no other
+# package imports a SQL driver" while internal/storage/storagetest does (the
+# import graph says exactly two non-test files import a driver, and that is the
+# other one); list_test.go said CLI tests "cannot import database/sql", which
+# was wrong under BOTH readings of the rule; and storagetest's package comment
+# gave the constraint as the reason CLI tests route through it, which stopped
+# being a reason when DEC-047 scoped the constraint to production files.
+#
+# NOT-contains by design: each needle is the false claim itself, so a revert
+# fails while the replacement prose stays free to be reworded — just not back.
+aa3_bad=""
+while IFS='|' read -r aa3_file aa3_phrase; do
+    [ -n "$aa3_file" ] || continue
+    if [ ! -f "$aa3_file" ]; then
+        aa3_bad="$aa3_bad [$aa3_file is missing]"
+    elif grep -F -q -- "$aa3_phrase" "$aa3_file"; then
+        aa3_bad="$aa3_bad [$aa3_file still says \"$aa3_phrase\"]"
+    fi
+done <<EOF
+internal/cli/root.go|convention and review
+internal/storage/store.go|convention and review
+internal/storage/store.go|no other package imports a
+internal/cli/list_test.go|cannot import database/sql
+internal/storage/storagetest/storagetest.go|without violating
+EOF
+if [ -z "$aa3_bad" ]; then
+    ok "AA3"
+else
+    fail "AA3" "a claim SPEC-083 corrected is back in the tree:$aa3_bad"
 fi
 
 # ===== finalise =====

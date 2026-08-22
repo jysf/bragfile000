@@ -10,9 +10,9 @@
 // the projects/locations operations over the 0004_add_projects.sql
 // schema (DEC-017/019/020). Every other package's production code
 // reaches the database only through a *Store — the no-sql-in-cli-layer
-// boundary on internal/cli, held today by convention and review rather
-// than an automated test (see STAGE-022) — which is what keeps commands
-// testable and a future frontend feasible.
+// boundary on internal/cli, enforced there by depguard since SPEC-082
+// and scoped to production files by DEC-047 — which is what keeps
+// commands testable and a future frontend feasible.
 package storage
 
 import (
@@ -30,8 +30,11 @@ import (
 )
 
 // Store is the typed wrapper around *sql.DB for the bragfile database.
-// All persistence flows through a Store; no other package imports a
-// SQL driver.
+// Everything that ships persists through a Store: only two non-test files
+// import a SQL driver — this one and internal/storage/storagetest, which
+// is absent from `go list -deps ./cmd/brag`. Test code is the deliberate
+// exception; four internal/cli test files open a database directly to age
+// a fixture (DEC-047).
 type Store struct {
 	db *sql.DB
 }

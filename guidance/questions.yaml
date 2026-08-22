@@ -896,11 +896,18 @@ questions:
   - id: no-sql-in-cli-layer-test-scope
     question: "Does the no-sql-in-cli-layer constraint bind test files, or only production code?"
     priority: medium
-    status: open
+    status: answered
     raised_by: claude-opus-5
     raised_at: 2026-08-21
+    answered_at: 2026-08-22
     assigned_to: null
+    answered_by: DEC-047 (SPEC-083) — user decision, 2026-08-21
     notes: |
+      ANSWERED — resolution (A). The constraint binds PRODUCTION code only.
+      guidance/constraints.yaml's rule text now says so, severity is unchanged
+      at blocking, and DEC-047 carries the reasoning, the rejected alternative
+      and the accepted cost. The original filing, unedited, follows.
+
       Filed at SPEC-082 design (LD7). The constraint's RULE TEXT is unqualified
       — "Files under internal/cli/ must not import database/sql or any SQL
       driver" — so on its literal reading FIVE of the 30 *_test.go files under
@@ -947,8 +954,13 @@ questions:
       path glob (internal/cli/**), which is the same class of side effect as
       narrowing it.
 
-      RESOLVE WHEN: the next spec that opens internal/cli/list_test.go (whose
-      line-275 comment is wrong under BOTH readings and is on STAGE-021's
+      RESOLVE WHEN (as filed): the next spec that opens internal/cli/list_test.go
+      (whose line-275 comment is wrong under BOTH readings and is on STAGE-021's
       routed stale-comment list), or the next spec that needs a sixth CLI test
       to backdate a row — whichever comes first. Either one has to answer this
       to write a correct comment or a correct helper.
+
+      WHAT ACTUALLY RESOLVED IT: the first trigger, one spec later. SPEC-083
+      opened list_test.go, could not write a true comment without an answer,
+      and the user decided the scope question directly. DEC-047 records it and
+      names the revisit triggers for the cost that resolution (A) accepts.

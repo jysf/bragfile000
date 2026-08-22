@@ -5,12 +5,12 @@
 // atomic same-directory-rename config writes (atomicwrite.go), and the
 // calendar-window flag parsing shared by impact, story and coverage
 // (window.go). Its production code imports no SQL driver and no
-// database/sql — the no-sql-in-cli-layer boundary, held today by
-// convention and review, not an automated test (internal/mcpserver has
-// one, TestNoSQLImport; internal/cli — the package the constraint's path
-// glob actually covers — does not; see STAGE-022) — so every command
-// reaches persistence only through internal/storage, keeping the CLI a
-// thin shell a future frontend (TUI, API) could replace.
+// database/sql — the no-sql-in-cli-layer boundary, enforced on every
+// non-test file here by depguard since SPEC-082 (.golangci.yml) and
+// scoped to exactly those files by DEC-047 — so every command reaches
+// persistence only through internal/storage, keeping the CLI a thin
+// shell a future frontend (TUI, API) could replace. Test files in this
+// package may open a database directly; four do, to backdate a fixture.
 package cli
 
 import (
