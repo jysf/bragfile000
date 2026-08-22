@@ -185,7 +185,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       rather than fixed — `root.go:9` and `store.go:13` both still claim the
       boundary is held "by convention and review, not an automated test" — held
       because the correct rewording depends on LD7's deferred scope question.
-- [ ] SPEC-083 (frame) — **`no-sql-in-cli-layer` binds production code.**
+- [ ] SPEC-083 (design) — **`no-sql-in-cli-layer` binds production code.**
       Framed 2026-08-21, **GO at complexity S**. Answers the
       `no-sql-in-cli-layer-test-scope` question SPEC-082 logged rather than
       resolved (LD7), on the user's decision that the constraint binds
@@ -207,6 +207,41 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       gaps stay unfixed, so CLI tests will keep reaching for `sql.Open`.
       `severity: blocking` is unchanged and the gate is not weakened —
       M-A/M-B must still fire. Confidence 0.92.
+      **Designed 2026-08-22.** All five forks settled with rejected
+      alternatives; every literal written into a throwaway worktree, run
+      through its tool, and verified back — **16 of 16 embedded literals are
+      byte-verbatim** against the tree that passed the battery. Framing's three
+      numbers held on re-derivation from the import graph (**5 of 30 files,
+      8 import lines**, 29 production files); after the spec it is **4 files,
+      7 lines**, cross-validated by removing `!$test` and reading depguard's
+      own count. **Fork 1:** `rule:` carries the scope, `paths:` does not move
+      (the glob syntax has no negation, and `paths:` names *territory* while
+      the rule names *compliance*); the amendment convention is set here —
+      change `rule:`, cite the DEC in `rationale:`, leave `added_at` alone.
+      **Fork 2:** four triggers (T1 volume=6, T2 kind, T3 subpackage shape,
+      T4 a real frontend), each with its re-derivation command; T1 and T2
+      resolve differently on purpose. **Fork 3:** **five** comments, not
+      three — `storagetest.go`'s reason clause (falsified by the decision) and
+      `store.go`'s `Store` **type** comment (falsified by the measurement,
+      routed by this stage's own Design Notes) are named scope additions, not
+      quiet ones. **Fork 4:** `story_test.go` only; the other three blank
+      driver imports are redundant-but-accurate and stay. **Fork 5:** no
+      assertion on the test half — both candidates are wrong, one by
+      contradiction and one by firing on improvement — and three assertions on
+      the *amendment* instead (`AA1` pins `severity: blocking`; 184 → **187**
+      ids).
+      **Two things the pre-flight caught that reading would not have.**
+      (1) `Y3` independently pins the decision count that `X3` also pins, and
+      the §9 half-(b) grep missed it because searching for the *concept* finds
+      `Y4` while only searching for the *value* finds `Y3` — its worked example
+      even uses `46` as the wrong answer, a number this spec makes right.
+      (2) A locked decision was **killed**: design had added a driver import to
+      `project_test.go` to fix a cross-file free-ride that does not exist —
+      `internal/storage`'s production code registers the driver, proven by
+      stripping all four blank imports and watching the one test that calls
+      `sql.Open` pass. Seven mutations, each with the mutant confirmed present
+      by content hash: M-A/M-B still fail the lint gate, M-C…M-G fire the new
+      assertions. Confidence 0.94.
 - [ ] (not yet framed) — **the `Entries:` envelope semantics.** One decision,
       one fix, one regression test. Narrowed 2026-08-18 from "the three coupled
       defects" after the other two were measured and deferred.
