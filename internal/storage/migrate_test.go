@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"path/filepath"
 	"testing"
 	"testing/fstest"
@@ -119,7 +120,7 @@ func TestMigrate_FailedMigrationRollsBack(t *testing.T) {
 	err = db.QueryRow(
 		"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'bad'",
 	).Scan(&got)
-	if err != sql.ErrNoRows {
+	if !errors.Is(err, sql.ErrNoRows) {
 		t.Errorf("expected no bad table; got name=%q err=%v", got, err)
 	}
 }

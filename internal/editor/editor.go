@@ -13,6 +13,7 @@ package editor
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/textproto"
@@ -73,7 +74,7 @@ func EmptyTemplate() []byte {
 func Parse(buf []byte) (Fields, error) {
 	tp := textproto.NewReader(bufio.NewReader(bytes.NewReader(buf)))
 	hdr, err := tp.ReadMIMEHeader()
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return Fields{}, fmt.Errorf("parse buffer headers: %w", err)
 	}
 	f := Fields{

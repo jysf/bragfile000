@@ -46,7 +46,7 @@ func newFilterTestServer(t *testing.T) (*mcp.ClientSession, *storage.Store, stri
 	if err != nil {
 		t.Fatalf("client connect: %v", err)
 	}
-	t.Cleanup(func() { cs.Close() })
+	t.Cleanup(func() { _ = cs.Close() })
 	return cs, s, dbPath
 }
 

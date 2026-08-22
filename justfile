@@ -145,6 +145,15 @@ test-docs:
 test-hook:
     @./scripts/test-capture-nudge.sh
 
+# Run the lint gate (.golangci.yml). Needs golangci-lint v2.13.1 — the version
+# pinned in .github/workflows/ci.yml — to reproduce CI exactly.
+lint:
+    @golangci-lint run
+
+# Measure Go statement coverage and fail below the floor (scripts/coverage.sh).
+coverage:
+    @./scripts/coverage.sh
+
 # Run brag without installing. Usage: just run list   |   just run add --title "x"
 run *ARGS:
     @go run ./cmd/brag {{ARGS}}

@@ -1,0 +1,124 @@
+# .golangci.yml — the lint gate. Nine linters, each chosen; nothing inherited.
+#
+# WHY A SHORT LIST. Run with `linters.default: all`, golangci-lint reports
+# **15,300** issues on this tree (measured 2026-08-21, v2.13.1). A gate that
+# size is not a gate: it gets silenced with `//nolint` and then means nothing.
+# Every linter below is enabled because it guards a rule this repository has
+# already written down, or a bug class in the one layer that holds state. The
+# measured finding count for every linter considered and REJECTED is in
+# SPEC-082 — including the ones that report zero today.
+#
+# HOW TO RUN IT. `just lint` locally, and the `lint` job in
+# .github/workflows/ci.yml on every pull request. The linter version is
+# pinned in that workflow.
+
+version: "2"
+
+linters:
+  default: none
+  enable:
+    # --- standard-set linters that earn their place here ---
+    - errcheck        # an unchecked error is the bug class that AGENTS.md §8
+                      # and the errors-wrap-with-context constraint both
+                      # presuppose away. See settings.errcheck for what is
+                      # excluded and why.
+    - ineffassign     # a value assigned and never read is a logic error, not
+                      # a style opinion. Zero findings today; zero config.
+    - staticcheck     # the SA (correctness) / S (simplify) / ST (style) suite.
+                      # The QF (quickfix) family is excluded below, with reason.
+    - unused          # AGENTS.md §8: "No dead code. Delete, don't comment out."
+
+    # --- linters that mechanise a rule this repo already wrote down ---
+    - depguard        # guidance/constraints.yaml `no-sql-in-cli-layer`,
+                      # severity BLOCKING, which had no automated guard for the
+                      # package its own path glob names. See settings.depguard.
+    - errorlint       # the errors-wrap-with-context constraint is about %w and
+                      # errors.Is; errorlint is the only linter that checks
+                      # either one.
+    - nolintlint      # guards this gate's own escape hatch. There are zero
+                      # //nolint directives in the tree today; this keeps any
+                      # future one specific, explained, and load-bearing.
+
+    # --- linters chosen for what this app is ---
+    # An embedded-SQLite CLI. internal/storage is the only layer that holds
+    # state, and every list / search / digest path reads rows out of it.
+    - rowserrcheck    # an unchecked rows.Err() silently TRUNCATES a result set:
+                      # the query "succeeds" and returns fewer entries.
+    - sqlclosecheck   # rows/stmt closed without defer leaks on an early return.
+
+  settings:
+    depguard:
+      rules:
+        # Mechanises: "Files under internal/cli/ must not import database/sql
+        # or any SQL driver. All persistence goes through internal/storage."
+        # (guidance/constraints.yaml, no-sql-in-cli-layer, severity: blocking.)
+        #
+        # WHY DEPGUARD AND NOT A GREP. The package comments that DESCRIBE this
+        # boundary contain the literal strings, so a whole-file grep
+        # false-positives on the documentation of the rule
+        # (internal/cli/root.go). depguard reads the import list, not the text.
+        #
+        # WHY THE DENY LIST NAMES A DRIVER. The constraint says "or any SQL
+        # driver" — a category no import-path list can express. This is a LIST:
+        # a second driver would have to be added to it. modernc.org/sqlite is
+        # the only one in go.mod (DEC-001), and a driver imported WITHOUT
+        # database/sql is exactly the case a "database/sql" grep walks past.
+        #
+        # WHY PRODUCTION FILES ONLY (`!$test`). The production-vs-test scope
+        # question is decided in SPEC-082 LD7, not here. Five of the 30
+        # *_test.go files under internal/cli/ carry eight offending imports
+        # today; that half of the constraint is open, named, and unguarded.
+        no-sql-in-cli-layer:
+          files:
+            - "**/internal/cli/*.go"
+            - "!$test"
+          deny:
+            - pkg: "database/sql"
+              desc: "internal/cli is a thin shell over internal/storage; persistence goes through *storage.Store (guidance/constraints.yaml no-sql-in-cli-layer)"
+            - pkg: "modernc.org/sqlite"
+              desc: "the SQL driver is imported by internal/storage only (DEC-001, guidance/constraints.yaml no-sql-in-cli-layer)"
+
+    errcheck:
+      # Unconfigured, errcheck reports 236 issues on this tree. 231 of them are
+      # two idioms where the returned error is unactionable at the call site.
+      # They are listed here BY NAME rather than hidden behind an exclusion
+      # preset, so a reader can weigh each one instead of looking it up:
+      exclude-functions:
+        # (1) Writes to the command's own io.Writer. The CLI has no logging
+        # channel to report a failed write to (AGENTS.md §8: "Logging: none"),
+        # and the writer is a *bytes.Buffer in every test.
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+        # (2) Deferred cleanup. A failed Close on a read path, or a Rollback
+        # after a successful Commit (which always returns sql.ErrTxDone),
+        # carries nothing a caller can act on.
+        - (*database/sql.DB).Close
+        - (*database/sql.Rows).Close
+        - (*database/sql.Tx).Rollback
+        - (*os.File).Close
+        - (*github.com/jysf/bragfile000/internal/storage.Store).Close
+
+    nolintlint:
+      require-explanation: true   # a directive must say why
+      require-specific: true      # bare `//nolint` is not allowed; name the linter
+      allow-unused: false         # a directive that suppresses nothing is deleted
+
+  exclusions:
+    rules:
+      # QF1001 "could apply De Morgan's law" is a quickfix SUGGESTION, not a
+      # correctness check. All three sites are ordering assertions of the form
+      # `if !(a < b && b < c)`, where the De Morgan inverse reads worse.
+      - linters:
+          - staticcheck
+        text: "QF1001"
+
+issues:
+  # golangci-lint reports ONE issue per line by default and silently drops the
+  # rest. Measured 2026-08-21: `linters.default: all` reports 8,713 issues with
+  # that default and 15,300 with it off — the default hides 43% of them. A repo
+  # whose documentation rule is "every number is derived, not typed" does not
+  # ship a linter configured to under-report.
+  uniq-by-line: false
+  max-issues-per-linter: 0
+  max-same-issues: 0

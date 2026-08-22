@@ -40,10 +40,10 @@ The section that says the most about how this repository is run is
 | Go source files | 69 | `internal/`, `cmd/` |
 | Go test files | 78 | `internal/`, `cmd/` |
 | Go test functions | 812 | `func Test*` in `*_test.go` |
-| Documentation assertions (distinct ids) | 177 | `scripts/test-docs.sh`, run by `just test-docs` |
+| Documentation assertions (distinct ids) | 184 | `scripts/test-docs.sh`, run by `just test-docs` |
 | …of those, replacing a manual release-checklist item | 6 | the `W`-series in `scripts/test-docs.sh` |
-| Questions tracked in guidance/questions.yaml | 18 | `guidance/questions.yaml` |
-| …of those, still open | 6 | `status: open` in the same file |
+| Questions tracked in guidance/questions.yaml | 19 | `guidance/questions.yaml` |
+| …of those, still open | 7 | `status: open` in the same file |
 | Benchmarks | 0 | none exist — see "What this does not measure" |
 <!-- inventory:end -->
 
@@ -134,6 +134,22 @@ specs demonstrate:
   counted above, over the README, `CONTRIBUTING.md`, the tutorial, the agent
   docs, the JSON schema, the goreleaser config, the CI workflows and the
   `CHANGELOG`.
+- **A blocking constraint has a machine behind it.**
+  [`../.golangci.yml`](../.golangci.yml) enables nine linters, each argued in
+  the file itself; run with `linters.default: all`, golangci-lint reports
+  15,300 issues on this tree, which is why the list is short and why every
+  rejected linter's count is written down. One of the nine is `depguard`, wired
+  to `no-sql-in-cli-layer`: adding `_ "database/sql"` to
+  `internal/cli/root.go` passed `go build`, `go vet`, `gofmt`, `just test` and
+  `just test-docs`, and now fails the `lint` job. It guards production files
+  only — the test-file half of that constraint is open, and the config says so.
+- **Coverage carries a floor, not a target.**
+  [`../scripts/coverage.sh`](../scripts/coverage.sh) — `just coverage` locally,
+  the `coverage` job in CI — fails below **80.0%**. The floor sits below the
+  measurement (83.5% of statements on 2026-08-21) on purpose, so that ordinary
+  refactoring never turns CI red and nobody is ever rewarded for a test written
+  to move a percentage. The lowest package is `cmd/brag` at 23.7%: one
+  function, `main`, 29 statements out of ~3,900. It is left there.
 
 ## Guards that replaced remembered checks
 
@@ -243,10 +259,12 @@ these are not.
 
 - **No benchmarks.** There is no performance or scale baseline; `func Benchmark`
   appears nowhere in the tree, as the inventory shows.
-- **No lint gate and no coverage number.** CI
-  ([`../.github/workflows/ci.yml`](../.github/workflows/ci.yml)) runs `gofmt -l
-  .`, `go vet ./...` and `go test ./...`. There is no `golangci-lint`, no
-  `-cover`, and no badge.
+- **No coverage badge, and no coverage service.** The number is not published
+  to Codecov or Coveralls, and there is no badge, because a badge is a *cached*
+  number served by a third party and the first rule on this page is that a
+  current number is derived. What exists instead: `just coverage` prints it and
+  CI fails below the floor. The trade is real — a reader has to run a command
+  where a badge would have shown a number.
 - **The documentation assertions are not run by CI.** `just test-docs` is a
   local command; nothing enforces it on a pull request.
 - **The no-network claim is enforced by review**, not by a test — as
@@ -256,12 +274,12 @@ these are not.
   [`../projects/PROJ-007-quality-and-portfolio-readiness/brief.md`](../projects/PROJ-007-quality-and-portfolio-readiness/brief.md).
 
 [`STAGE-022`](../projects/PROJ-007-quality-and-portfolio-readiness/stages/STAGE-022-measured-and-enforced.md)
-closes the lint gate and the coverage number, and one of the known defects — the
-`Entries:` envelope inconsistency. It does not close the rest: its *Explicitly
-out of scope* section defers benchmarks to
-[`PROJ-009`](../projects/PROJ-009-scale-baseline-and-harness/brief.md), running
-the documentation assertions in CI is owned by nothing today, and the no-network
-claim stays enforced by review.
+closed the lint gate and the coverage floor, both described above. It does not
+close the rest: its *Explicitly out of scope* section defers benchmarks to
+[`PROJ-009`](../projects/PROJ-009-scale-baseline-and-harness/brief.md), the
+`Entries:` envelope inconsistency is its remaining correctness item, running
+the documentation assertions in CI is owned by nothing today, and the
+no-network claim stays enforced by review.
 
 ## The rest, by path
 

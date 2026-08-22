@@ -7,7 +7,7 @@
 task:
   id: SPEC-082
   type: chore                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -1847,19 +1847,83 @@ var version = "dev"
 
 *Filled in during the build cycle.*
 
-- **Deviations from the spec:** <none / list>
-- **New DEC-* files created:** <none / list>
-- **Constraints checked:** <list>
-- **Gates:** `just test` · `just test-docs` · `gofmt -l .` · `go vet ./...` ·
-  `just lint` · `just coverage` · `actionlint` · `goreleaser check`
-- **Mutation checks M-A…M-E:** <results, and confirmation each mutant mutated>
-- **`just inventory` value pasted:** <number>
+- **Deviations from the spec:** **one**, forced and mechanical. `Y4` pins the
+  question-register counts as literals (`18`/`6`) inside `scripts/test-docs.sh`.
+  Output 8 (the new `no-sql-in-cli-layer-test-scope` entry) moves them to
+  `19`/`7`, so `Y4` failed once every other artifact was staged. The spec's
+  *Failing Tests* section tracked that move through `X3` and the inventory block
+  only; `Y4` was missed. Re-pinned `18/6 -> 19/7` with a comment naming SPEC-082
+  and stating that the corpus changed deliberately — the same re-pin discipline
+  SPEC-079 LD5 used, not a band-widening. Assertion count is unaffected (`Y4` is
+  one id either way). Nothing else deviates; every literal in *Notes for the
+  Implementer* was transcribed byte-for-byte.
+- **New DEC-* files created:** none.
+- **Constraints checked:** `no-sql-in-cli-layer` (mechanised, production half;
+  `guidance/constraints.yaml` **unchanged** — `git diff` empty, AC-12);
+  `errors-wrap-with-context` (errorlint; two first-ever production violations
+  fixed); `no-new-top-level-deps-without-decision` (does not apply — `go.mod`
+  and `go.sum` diffs both empty); `test-before-implementation` (Group Z and the
+  `X7` switch landed first and were observed red — `Z1`–`Z6` failing, `Z7`
+  green, `X3` failing — before any artifact was written); `one-spec-per-pr`;
+  `storage-tests-use-tempdir` (unaffected).
+- **Gates:** `just test` **pass** · `just test-docs` **ALL OK** · `gofmt -l .`
+  **empty** · `go vet ./...` **clean** · `just lint` **0 issues** ·
+  `golangci-lint config verify` **exit 0** · `just coverage`
+  **`total: 83.5%   floor: 80.0%`** · `actionlint .github/workflows/ci.yml`
+  **exit 0** · `goreleaser check` **unchanged** — the pre-existing `brews`
+  deprecation, byte-identical output before and after this spec's ldflags edit
+  (captured both ways), nothing new.
+- **Mutation checks M-A…M-E:** all five fired; each mutant confirmed present on
+  disk before the failure was credited, and confirmed reverted after.
+  **M-A** `_ "database/sql"` in `internal/cli/root.go` → depguard, at
+  `root.go:17:2`, the design's exact site. **M-B** `_ "modernc.org/sqlite"` →
+  depguard at `root.go:19:2`. **M-C** bare `//nolint` → nolintlint, 3 issues
+  (unspecific / unused / unexplained), confirming all three settings have teeth.
+  **M-D** `FLOOR=90.0` → exit **1**, `coverage 83.5% is below the floor of
+  90.0%`; reverted file is byte-identical to the spec's literal (sha compared).
+  Note: `git diff --quiet` is blind to `scripts/coverage.sh` because the file is
+  **untracked**, so the first M-D run reported "did not mutate" when the mutant
+  was in fact on disk — detection was redone against content hashes. The
+  detector was wrong, not the mutant. **M-E** `decisions/DEC-999-mutation-probe.md`
+  with `insight.type: bogus` → `Z7` fails with *"the inventory covers 46 of 47"*
+  while `scripts/inventory.sh` still prints `Decision records | 45`. Run twice:
+  the first probe carried `confidence: 0.50`, which moved the *lowest-confidence*
+  row and took `X3` red for an unrelated reason. Re-run at `confidence: 0.90` to
+  isolate the variable, `X3` stayed **green** and `Z7` was the **only** failure —
+  which is the proposition LD10 actually claims. Probe deleted.
+- **`just inventory` value pasted:** **184** documentation assertions, with
+  `Questions tracked` **19** and `…of those, still open` **7** — the three rows
+  the spec predicted, derived and pasted, not hand-edited. The derivation agreed
+  with the spec's arithmetic in all three cases.
 
 ### Build-phase reflection (3 questions, short answers)
 
-- **What was unclear in the spec?**
-- **What was missing that you had to decide yourself?**
-- **What would you do differently?**
+- **What was unclear in the spec?** Almost nothing — this is the least
+  ambiguous spec in the project so far, because §12(b) ran every literal through
+  its own tool at design and recorded the output, so build could *diff against a
+  prediction* rather than judge a result. Two numbers in the spec's own prose are
+  off and neither mattered: *Outputs* says "Modified files (18)" while its own
+  list enumerates **19** (item range "11–18" names eleven files), and §10 is
+  titled "19 edits" while it specifies **21** replacement blocks for 19 lint
+  findings (three `errors` imports are separate blocks). Both are counts of the
+  spec's own contents — the same hypothesis-not-measurement failure the stage is
+  organised around, arriving from the direction nobody guards.
+- **What was missing that you had to decide yourself?** The `Y4` re-pin (see
+  *Deviations*). It is the second-order form of the thing this spec is about: the
+  spec correctly reasoned that adding a question moves the two inventory rows, and
+  correctly routed that through `X3` and the pasted block — but a *second* guard
+  also pinned those same two numbers as literals, and nothing enumerated the
+  pinners. `X3` and `Y4` both cache the same derived value in different places.
+- **What would you do differently?** Extract literals mechanically rather than
+  retyping them. Every artifact here was cut from the spec's own fenced blocks by
+  line range and applied with a uniqueness assertion, and that caught a real
+  error: the `AGENTS.md` hunk was first anchored on a line range that resolved to
+  the closing ``` fence, which occurs **7** times in `AGENTS.md` — a
+  silent 7-way corruption if it had been applied. That is the same truncation
+  failure this project has already suffered once. The assertion, not the care,
+  is what caught it. Corroborating evidence that the transcription is exact:
+  `docs/engineering-practices.md` landed at **301 lines / 2,468 words**, matching
+  the design's measured prediction to the word.
 
 ---
 

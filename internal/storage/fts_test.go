@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"io/fs"
 	"path/filepath"
 	"sort"
@@ -292,7 +293,7 @@ func TestFTS_TriggerInsertAddsToIndex(t *testing.T) {
 	err = db.QueryRow(
 		`SELECT rowid, title FROM entries_fts WHERE rowid = ?`, inserted.ID,
 	).Scan(&rowid, &title)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("entries_fts has no row for id=%d", inserted.ID)
 	}
 	if err != nil {
@@ -334,7 +335,7 @@ func TestFTS_TriggerUpdateReplacesIndexedRow(t *testing.T) {
 	err = db.QueryRow(
 		`SELECT rowid FROM entries_fts WHERE entries_fts MATCH ?`, oldExpr,
 	).Scan(&oldRow)
-	if err != sql.ErrNoRows {
+	if !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("MATCH %s returned rowid=%d err=%v, want ErrNoRows", oldExpr, oldRow, err)
 	}
 
@@ -467,7 +468,7 @@ func TestFTS_UnicodeTokenizerSplitsOnPunctuation(t *testing.T) {
 		`SELECT rowid FROM entries_fts WHERE entries_fts MATCH ?`,
 		"xxx_missing_tag",
 	).Scan(&missing)
-	if err != sql.ErrNoRows {
+	if !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("MATCH xxx_missing_tag: rowid=%d err=%v, want ErrNoRows", missing, err)
 	}
 }
