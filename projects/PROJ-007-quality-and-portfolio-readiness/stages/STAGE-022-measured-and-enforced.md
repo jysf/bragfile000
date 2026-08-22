@@ -185,11 +185,33 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       rather than fixed — `root.go:9` and `store.go:13` both still claim the
       boundary is held "by convention and review, not an automated test" — held
       because the correct rewording depends on LD7's deferred scope question.
+- [ ] SPEC-083 (frame) — **`no-sql-in-cli-layer` binds production code.**
+      Framed 2026-08-21, **GO at complexity S**. Answers the
+      `no-sql-in-cli-layer-test-scope` question SPEC-082 logged rather than
+      resolved (LD7), on the user's decision that the constraint binds
+      production code and not test code. Re-measured at framing from the import
+      graph: **5 of the 30 `*_test.go` files** under `internal/cli/` carry
+      **8 offending import lines** — and what they *do* with SQL is the argument.
+      Four backdate fixtures (`UPDATE entries` / `UPDATE projects`); the fifth,
+      `story_test.go`, does nothing at all — its blank driver import is **dead**,
+      confirmed at framing by deleting it and watching `go vet` stay clean and
+      the package's tests pass. **None uses SQL for persistence**, which is the
+      clause the rule is about. Three artifacts already assume this reading
+      (depguard's `!$test`, `root.go`'s package comment, and the existence of
+      `internal/storage/storagetest`) and only the rule text disagrees.
+      Ships `DEC-047` — **the first amendment to `guidance/constraints.yaml` in
+      the repo's history**, unchanged since SPEC-001 — plus the rule text, the
+      question's `answered` status, and the three stale comments the ambiguity
+      was blocking, including `list_test.go:275`, which is wrong under *both*
+      readings. Accepted cost recorded, not hidden: `storagetest`'s backdating
+      gaps stay unfixed, so CLI tests will keep reaching for `sql.Open`.
+      `severity: blocking` is unchanged and the gate is not weakened —
+      M-A/M-B must still fire. Confidence 0.92.
 - [ ] (not yet framed) — **the `Entries:` envelope semantics.** One decision,
       one fix, one regression test. Narrowed 2026-08-18 from "the three coupled
       defects" after the other two were measured and deferred.
 
-**Count:** 1 shipped / 0 active / 1 pending
+**Count:** 1 shipped / 1 active / 1 pending
 
 ## Design Notes
 
