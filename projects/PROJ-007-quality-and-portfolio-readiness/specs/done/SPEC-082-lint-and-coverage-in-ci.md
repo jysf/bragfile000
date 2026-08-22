@@ -7,7 +7,7 @@
 task:
   id: SPEC-082
   type: chore                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: ship                      # frame | design | build | verify | ship
   blocked: false
   priority: medium
   complexity: M                    # S | M | L  (L means split it)
@@ -1929,4 +1929,56 @@ var version = "dev"
 
 ## Reflection (Ship)
 
-*Filled in during the ship cycle.*
+*Appended during the **ship** cycle. Outcome-focused reflection, distinct
+from the process-focused build reflection above.*
+
+*Note: this spec was created with a bare `## Reflection (Ship)` heading rather
+than the four questions the spec template defines — a template-drift the build
+session caught. The questions are restored here and answered; the drift itself
+is recorded as the trigger for the template work that shipped alongside.*
+
+1. **What would I do differently next time?**
+   — **Enumerate every guard that caches a value before writing the Failing
+   Tests section.** Design reasoned correctly that adding one question moves two
+   inventory rows, and routed that through `X3` and the regenerated block — then
+   missed that `Y4` pins those same two counts as literals for its own reason.
+   One `grep` for the old values across the harness would have caught it at
+   design instead of at build. This is the second-order form of a rule already
+   at N=3 here: *when a literal caches derived output, the derivation outranks
+   the cache.* The first-order rule points at documents; this points at the test
+   harness, and nothing enumerated the cachers.
+
+2. **Does any template, constraint, or decision need updating?**
+   — **Yes, and it shipped with this spec.** Three items. (a) The mutation-check
+   protocol should prescribe **content hashes, not `git diff`** — `git diff` is
+   blind to files the spec itself creates, so M-D's real mutant read as a
+   missing one. (b) "Confirm the mutant mutated" needs a second clause: *confirm
+   it changed exactly one thing* — M-E's first probe moved an unrelated derived
+   row and produced a red for the wrong reason. (c) The work-log hook: this
+   question's sibling Q4 exists per-spec but the **stage template had no
+   equivalent**, and nothing said "capture it." Both fixed in
+   `projects/_templates/`. All three are filed upstream in
+   `docs/framework-feedback/process-feedback.md` (PR #179).
+   `guidance/constraints.yaml` was deliberately **not** touched — see LD7.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — **Yes, and it is already the stage's second spec:** the `Entries:` envelope.
+   Measured at ship — six emitters in `internal/export/`, five use `len(entries)`,
+   `memory.go` uses `result.Candidates` capped at `PoolLimit=200`, so `brag
+   memory` reports `Entries: 200` against a **382-entry** corpus today. It is
+   STAGE-022's fourth success criterion and the only one still open.
+   Separately, **LD7's scope question** is unresolved and now blocks three routed
+   stale comments; whichever spec next opens `internal/cli/list_test.go` has to
+   answer it.
+
+4. **What can a user do now that they couldn't before?**
+   — A contributor opening a pull request now gets **two machine verdicts that
+   did not exist before**: nine chosen linters at **0 issues**, and statement
+   coverage measured against an **80.0%** floor (83.5% today). Concretely, the
+   blocking `no-sql-in-cli-layer` constraint went from *unenforced for the very
+   package its path glob names* — adding `_ "database/sql"` to
+   `internal/cli/root.go` passed `go build`, `go vet`, `gofmt`, `just test` and
+   `just test-docs` — to failing CI on either that import or a bare
+   `modernc.org/sqlite`, both mutation-checked. Two latent production defects
+   were surfaced and fixed on the way: a `!= io.EOF` comparison a wrapped error
+   slipped past, and a `%v` that dropped the error chain.

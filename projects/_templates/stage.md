@@ -87,3 +87,15 @@ FIRST_SESSION_PROMPTS.md to draft this.*
   - <one-line updates>
 - **Should any spec-level reflections be promoted to stage-level lessons?**
   - <one-line items>
+- **What can a user do now that they couldn't before, at STAGE scope?** — one
+  sentence, before → after; quote the confirming number if one exists, name the
+  outcome if not. Write `none` if this stage had no user-visible outcome — a
+  real, greppable result, not a blank.
+
+  Not a concatenation of the spec-level answers: those are per-spec, and the
+  unit anyone actually records is the stage. Read the spec answers, then say
+  what the *stage* bought — the thing that is true now and was not when the
+  stage opened. **If this answer is not `none`, capture it before moving status
+  to shipped.** Evidence ref: the stage's PRs are known, so tag the one that
+  closed it.
+  - <answer | none>

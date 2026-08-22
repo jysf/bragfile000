@@ -123,7 +123,7 @@ Ordered list of specs composing this stage. IDs assigned at creation.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-082 (design) — **lint + coverage in CI.** Framed 2026-08-20,
+- [x] SPEC-082 (shipped 2026-08-21) — **lint + coverage in CI.** Framed 2026-08-20,
       **GO at complexity M**. Measured: **83.5%** module-wide statement
       coverage, **zero** packages without test files, three packages at 100%,
       floor `cmd/brag` at **23.7%** — the entrypoint, mostly `AddCommand`
@@ -171,11 +171,25 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       gap (`Z7`, hard-fail, mutation-checked), and moves `X7` from lines to
       words — SPEC-081's own stated trigger, fired by this spec's page edit
       landing at **301 lines, one over the ceiling**. Confidence 0.88.
+      **Shipped 2026-08-21 (#178).** Built in one session: 19 lint findings
+      fixed and none excluded (zero `//nolint` in the tree), 177 → **184**
+      assertion ids, `golangci-lint run` at **0 issues**, coverage **83.5%**
+      against an enforced **80.0%** floor, all five mutations fired with each
+      mutant confirmed present before its failure was credited. All nine
+      literals transcribed byte-exact — the practices page landed at **301
+      lines / 2,468 words**, matching design's prediction to the word. **One
+      deviation:** `Y4` also pinned the two question-register counts as
+      literals (18/6 → 19/7); design routed the move through `X3` and the
+      inventory block and never enumerated the second cacher. Re-pinned, not
+      widened. Two package comments were **falsified by this spec** and routed
+      rather than fixed — `root.go:9` and `store.go:13` both still claim the
+      boundary is held "by convention and review, not an automated test" — held
+      because the correct rewording depends on LD7's deferred scope question.
 - [ ] (not yet framed) — **the `Entries:` envelope semantics.** One decision,
       one fix, one regression test. Narrowed 2026-08-18 from "the three coupled
       defects" after the other two were measured and deferred.
 
-**Count:** 0 shipped / 1 active / 1 pending
+**Count:** 1 shipped / 0 active / 1 pending
 
 ## Design Notes
 

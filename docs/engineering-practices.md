@@ -35,8 +35,8 @@ The section that says the most about how this repository is run is
 | Decision records claiming confidence 1.0 | 0 | `insight.confidence` in the front-matter |
 | Projects | 9 | `projects/PROJ-*/brief.md` |
 | Stages | 21 | `projects/*/stages/STAGE-*.md` |
-| Specs carried to ship and archived | 78 | `projects/*/specs/done/` |
-| …of those, also carrying a build-phase reflection | 72 | `### Build-phase reflection` in those files |
+| Specs carried to ship and archived | 79 | `projects/*/specs/done/` |
+| …of those, also carrying a build-phase reflection | 73 | `### Build-phase reflection` in those files |
 | Go source files | 69 | `internal/`, `cmd/` |
 | Go test files | 78 | `internal/`, `cmd/` |
 | Go test functions | 812 | `func Test*` in `*_test.go` |
@@ -148,8 +148,10 @@ specs demonstrate:
   the `coverage` job in CI — fails below **80.0%**. The floor sits below the
   measurement (83.5% of statements on 2026-08-21) on purpose, so that ordinary
   refactoring never turns CI red and nobody is ever rewarded for a test written
-  to move a percentage. The lowest package is `cmd/brag` at 23.7%: one
-  function, `main`, 29 statements out of ~3,900. It is left there.
+  to move a percentage. The lowest package is `cmd/brag` at 23.7% (same
+  measurement date): one function, `main`, 29 statements out of ~3,900. It is
+  left there. Note both per-package figures are dated observations, not guards:
+  only the 80.0% floor is enforced, and only it is diffed against this page.
 
 ## Guards that replaced remembered checks
 
