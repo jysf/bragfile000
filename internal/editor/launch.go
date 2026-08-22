@@ -37,7 +37,7 @@ func Launch(initial []byte, edit EditFunc) ([]byte, bool, error) {
 		return nil, false, fmt.Errorf("create temp: %w", err)
 	}
 	path := f.Name()
-	defer os.Remove(path)
+	defer func() { _ = os.Remove(path) }()
 	if _, err := f.Write(initial); err != nil {
 		_ = f.Close()
 		return nil, false, fmt.Errorf("write temp: %w", err)

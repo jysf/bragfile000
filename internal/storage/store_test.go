@@ -1126,6 +1126,7 @@ func TestMigrate_ETL_Lossless(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query tags: %v", err)
 	}
+	defer rows.Close()
 	var tagNames []string
 	for rows.Next() {
 		var n string
@@ -1134,7 +1135,9 @@ func TestMigrate_ETL_Lossless(t *testing.T) {
 		}
 		tagNames = append(tagNames, n)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterate tags: %v", err)
+	}
 	wantNames := []string{"auth", "perf", "solo"}
 	if len(tagNames) != len(wantNames) {
 		t.Fatalf("tag names = %v, want %v", tagNames, wantNames)
@@ -1246,6 +1249,9 @@ func TestAdd_TagsWriteThroughJoin(t *testing.T) {
 			t.Fatalf("scan: %v", err)
 		}
 		pairs = append(pairs, p)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterate taggings: %v", err)
 	}
 	if len(pairs) != 2 {
 		t.Fatalf("taggings count = %d, want 2", len(pairs))
@@ -1378,6 +1384,9 @@ func TestUpdate_TagsReplacedThroughJoin(t *testing.T) {
 			t.Fatalf("scan: %v", err)
 		}
 		names = append(names, n)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterate taggings: %v", err)
 	}
 	if len(names) != 2 || names[0] != "b" || names[1] != "c" {
 		t.Errorf("taggings names = %v, want [b c]", names)

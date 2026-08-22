@@ -39,7 +39,7 @@ func newTestServer(t *testing.T, clientName string) (*mcp.ClientSession, *storag
 	if err != nil {
 		t.Fatalf("client connect: %v", err)
 	}
-	t.Cleanup(func() { cs.Close() })
+	t.Cleanup(func() { _ = cs.Close() })
 	return cs, s
 }
 

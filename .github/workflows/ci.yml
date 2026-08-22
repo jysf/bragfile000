@@ -1,6 +1,7 @@
 # .github/workflows/ci.yml — PR + main-push gating
 # Runs gofmt, go vet, go test on macOS-latest + ubuntu-latest with
-# the Go version declared in go.mod.
+# the Go version declared in go.mod, plus golangci-lint and the
+# coverage floor on ubuntu-latest.
 
 name: ci
 
@@ -44,3 +45,47 @@ jobs:
 
       - name: Run go test ./...
         run: go test ./...
+
+  # golangci-lint. One OS is enough: the linters are static analysis over the
+  # same source, and the two OS-specific surfaces this repo has (path handling
+  # and the $EDITOR launch) are exercised by the matrix above.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+
+      # The golangci-lint version is pinned HERE and nowhere else; match it
+      # locally to reproduce a CI failure. The action's default `verify: true`
+      # also validates .golangci.yml against golangci-lint's own JSON schema,
+      # so a malformed config fails loudly instead of silently linting less.
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a  # v9.3.0
+        with:
+          version: v2.13.1
+
+  # Coverage. scripts/coverage.sh owns both the floor and the definition of the
+  # number; neither is restated here, so the workflow and the local
+  # `just coverage` cannot disagree.
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+
+      - name: Measure coverage and enforce the floor
+        run: ./scripts/coverage.sh

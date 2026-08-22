@@ -73,7 +73,7 @@ matching how `DEC-*` already numbered.)
 - **Framework:** `spf13/cobra` for CLI argv + subcommands.
 - **Database:** SQLite 3, embedded, accessed via `modernc.org/sqlite` (pure Go, **no CGO**). See DEC-001.
 - **Testing:** Go stdlib `testing` package. Storage tests use `t.TempDir()` (enforced by `storage-tests-use-tempdir` constraint).
-- **Linter / Formatter:** `gofmt` (enforced) + `go vet`. `golangci-lint` welcome but not required in CI yet.
+- **Linter / Formatter:** `gofmt` (enforced) + `go vet` + `golangci-lint` (v2.13.1, pinned in `.github/workflows/ci.yml`; nine linters, each argued in `.golangci.yml`). All three gate CI. Run the lint gate locally with `just lint`.
 - **Hosting:** None. Local CLI only.
 - **Distribution:** `goreleaser` → GitHub Releases → a binary Homebrew **formula** on the shared tap `github.com/jysf/homebrew-tap` (DEC-040). Install via `brew install jysf/tap/bragfile`.
 - **CI:** GitHub Actions (to be set up in STAGE-005). Must run `go test ./...` and `gofmt -l .` and fail on any diff.

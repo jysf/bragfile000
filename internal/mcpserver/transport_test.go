@@ -39,7 +39,7 @@ func TestServer_StdoutCarriesNoStrayBytes(t *testing.T) {
 	w.Close()
 	os.Stdout = old
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	if buf.Len() != 0 {
 		t.Errorf("os.Stdout must be empty during MCP handling, got %q", buf.String())
 	}

@@ -893,3 +893,62 @@ questions:
       (adopt it and retrofit deliberately as its own spec), OR PROJ-007 closes
       with the count still at 1 (close this question: the citation form was
       sufficient and the convention is not worth the process weight).
+  - id: no-sql-in-cli-layer-test-scope
+    question: "Does the no-sql-in-cli-layer constraint bind test files, or only production code?"
+    priority: medium
+    status: open
+    raised_by: claude-opus-5
+    raised_at: 2026-08-21
+    assigned_to: null
+    notes: |
+      Filed at SPEC-082 design (LD7). The constraint's RULE TEXT is unqualified
+      — "Files under internal/cli/ must not import database/sql or any SQL
+      driver" — so on its literal reading FIVE of the 30 *_test.go files under
+      internal/cli/ violate a BLOCKING constraint today, across EIGHT import
+      lines. Measured by depguard (the import graph, not grep) 2026-08-21:
+      coverage_test.go, impact_test.go, project_test.go, wrapped_test.go import
+      database/sql; coverage_test.go, impact_test.go, story_test.go,
+      wrapped_test.go import modernc.org/sqlite. Note internal/cli/list_test.go
+      is NOT among them — a whole-file grep hits it, but line 275 is a comment.
+
+      Three things point the same way about intent: the constraint's own
+      rationale is about a future TUI/API frontend reusing internal/cli, which
+      links production code and not _test.go files; internal/cli/root.go's
+      package comment (scoped at SPEC-080's re-verify) already says "Its
+      PRODUCTION CODE imports no SQL driver and no database/sql"; and
+      internal/storage/storagetest exists solely so CLI tests can reach raw SQL
+      without importing it.
+
+      TWO CANDIDATE RESOLUTIONS, both costed at SPEC-082 design:
+      (A) Amend the rule text to say "production code", making the mechanism
+          and the rule agree. Cheapest, and matches all three signals above.
+          Requires deciding it deliberately — SPEC-082 deliberately did NOT do
+          this, because a spec must not amend the rule it is mechanising.
+      (B) Rework the five test files through internal/storage/storagetest and
+          enforce the rule as literally written. story_test.go needs only a dead
+          blank import deleted (it imports the driver and never calls sql.Open).
+          The other four backdate rows via sql.Open + UPDATE; storagetest.Backdate
+          already covers entries.created_at but not updated_at, and
+          project_test.go backdates the projects table, so this needs two new
+          helpers. Then depguard drops `!$test` and the constraint is true as
+          written.
+
+      WHAT SPEC-082 DID INSTEAD: wired depguard on internal/cli production files
+      only — closing the gap SPEC-080 demonstrated empirically (adding
+      `_ "database/sql"` to internal/cli/root.go passed go build, go vet, gofmt,
+      just test AND just test-docs) — and made the open half visible in three
+      places: the `!$test` line's comment in .golangci.yml, the practices-page
+      sentence that claims the gate, and this entry. guidance/constraints.yaml
+      was NOT touched.
+
+      ALSO OPEN, same shape, deliberately not widened here: internal/mcpserver
+      has TestNoSQLImport but it greps the literal "database/sql" only, so it is
+      driver-blind. Extending depguard there would widen a blocking constraint's
+      path glob (internal/cli/**), which is the same class of side effect as
+      narrowing it.
+
+      RESOLVE WHEN: the next spec that opens internal/cli/list_test.go (whose
+      line-275 comment is wrong under BOTH readings and is on STAGE-021's
+      routed stale-comment list), or the next spec that needs a sixth CLI test
+      to backdate a row — whichever comes first. Either one has to answer this
+      to write a correct comment or a correct helper.
