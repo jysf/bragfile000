@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -106,7 +107,7 @@ const memoryCmdGolden1 = `# Bragfile Memory
 Generated: 2026-08-08T12:00:00Z
 Scope: lifetime
 Filters: --query auth --project orbit
-Entries: 8
+Candidates: 8
 
 ## Slice
 
@@ -132,7 +133,7 @@ const memoryCmdGolden2 = `# Bragfile Memory
 Generated: 2026-08-08T12:00:00Z
 Scope: lifetime
 Filters: (none)
-Entries: 8
+Candidates: 8
 
 ## Slice
 
@@ -588,8 +589,8 @@ func TestMemoryCmd_ProjectIsSoftBoostNotFilter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
 	}
-	if !strings.Contains(out, "Entries: 8") {
-		t.Errorf("expected Entries: 8, got:\n%s", out)
+	if !strings.Contains(out, "Candidates: 8") {
+		t.Errorf("expected Candidates: 8, got:\n%s", out)
 	}
 	i7 := strings.Index(out, "- 7 ")
 	i4 := strings.Index(out, "- 4 ")
@@ -652,4 +653,106 @@ func TestMemoryCmd_StdoutOnlyCarriesTheDocument(t *testing.T) {
 			t.Errorf("expected empty stdout, got %q", outBuf.String())
 		}
 	})
+}
+
+// TestMemoryCmd_CandidateCountGrowsWhenAFlagAddsARead is the CLAIM test for
+// DEC-048, not the counterexample. A bare `Candidates: 200` is the one case
+// that looks like a cap. It is not: the number is the deduped union of up to
+// three PoolLimit-capped reads (DEC-043 sub-decision 5), so it GROWS when a
+// flag adds a read, and it is bounded by min(3*PoolLimit, corpus).
+//
+// Corpus: 200 fillers (all current) plus two entries backdated to 2020 — one
+// in project orbit, one matching the query "auth". Neither is reachable by
+// the bare recency read, so each flag adds exactly one candidate.
+//
+// The header is also budget-INDEPENDENT: the same four values were measured
+// at --budget 100 and --budget 20000 during design. 100 is used here so
+// Skipped is non-zero and the Included+Skipped invariant is not satisfied
+// trivially.
+func TestMemoryCmd_CandidateCountGrowsWhenAFlagAddsARead(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	for i := 1; i <= 200; i++ {
+		if _, err := s.Add(storage.Entry{Title: fmt.Sprintf("filler %d", i)}); err != nil {
+			t.Fatalf("add filler %d: %v", i, err)
+		}
+	}
+	orbitEntry, err := s.Add(storage.Entry{Project: "orbit", Title: "ancient orbit note"})
+	if err != nil {
+		t.Fatalf("add orbit entry: %v", err)
+	}
+	authEntry, err := s.Add(storage.Entry{Title: "ancient auth note"})
+	if err != nil {
+		t.Fatalf("add auth entry: %v", err)
+	}
+	s.Close()
+	if err := storagetest.Backdate(dbPath, orbitEntry.ID, time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("backdate orbit entry: %v", err)
+	}
+	if err := storagetest.Backdate(dbPath, authEntry.ID, time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("backdate auth entry: %v", err)
+	}
+
+	withNowFunc(t, time.Date(2026, 8, 8, 12, 0, 0, 0, time.UTC))
+
+	cases := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"bare", nil, "Candidates: 200"},
+		{"query adds the match read", []string{"--query", "auth"}, "Candidates: 201"},
+		{"project adds the project read", []string{"--project", "orbit"}, "Candidates: 201"},
+		{"both reads", []string{"--query", "auth", "--project", "orbit"}, "Candidates: 202"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			args := append([]string{"--budget", "100"}, tc.args...)
+			out, errStr, err := runMemoryCmd(t, dbPath, args...)
+			if err != nil {
+				t.Fatalf("unexpected error: %v (stderr: %s)", err, errStr)
+			}
+
+			var header, included, skipped string
+			for _, ln := range strings.Split(out, "\n") {
+				switch {
+				case strings.HasPrefix(ln, "Entries:"):
+					t.Errorf("provenance still carries an Entries: line: %q", ln)
+				case strings.HasPrefix(ln, "Candidates: "):
+					header = ln
+				case strings.HasPrefix(ln, "- Included: "):
+					included = strings.TrimPrefix(ln, "- Included: ")
+				case strings.HasPrefix(ln, "- Skipped: "):
+					skipped = strings.TrimPrefix(ln, "- Skipped: ")
+				}
+			}
+			if header != tc.want {
+				t.Errorf("header = %q, want %q\n%s", header, tc.want, out)
+			}
+
+			// Included + Skipped == Candidates (DEC-044), restated against the
+			// new label at the CLI layer.
+			n, err := strconv.Atoi(strings.TrimPrefix(tc.want, "Candidates: "))
+			if err != nil {
+				t.Fatalf("bad want literal %q: %v", tc.want, err)
+			}
+			inc, err := strconv.Atoi(included)
+			if err != nil {
+				t.Fatalf("parse Included %q: %v", included, err)
+			}
+			skip, err := strconv.Atoi(skipped)
+			if err != nil {
+				t.Fatalf("parse Skipped %q: %v", skipped, err)
+			}
+			if inc+skip != n {
+				t.Errorf("Included(%d)+Skipped(%d) != %d", inc, skip, n)
+			}
+			if skip == 0 {
+				t.Errorf("Skipped == 0 at --budget 100; the invariant check is trivial")
+			}
+		})
+	}
 }

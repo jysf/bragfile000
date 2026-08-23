@@ -101,11 +101,15 @@ with no story attached, which is the exact failure mode SPEC-073 hit four times.
 2. **Coverage** — `-cover` in CI, a reported number, a badge, an honest floor.
 3. **The `Entries:` envelope inconsistency** — six exporters emit that header
    line; five use `len(entries)`, and `memory` alone uses `result.Candidates`,
-   the pool capped at `PoolLimit=200`. On a 368-entry corpus the header reads
-   `Entries: 200`, which a reader takes for the corpus size. Changing it moves
-   byte-exact goldens **and MCP resource output** (the resources are
-   byte-identical to `brag memory`), so it is an envelope decision, not a
-   label edit. This is now the stage's **only** correctness item.
+   the deduped union of up to three `PoolLimit`-capped reads — a
+   pool-composition artifact, not a cap, bounded by `min(3 × PoolLimit,
+   corpus)` and **growing** under `--query`/`--project` rather than narrowing.
+   On the live corpus the header reads `Entries: 200` bare and `Entries: 243`
+   with `--project`, which a reader takes for the corpus size moving the wrong
+   way. Changing it moves byte-exact goldens **and MCP resource output** (the
+   resources are byte-identical to `brag memory`), so it is an envelope
+   decision, not a label edit. This is now the stage's **only** correctness
+   item.
 
 ### Explicitly out of scope
 
@@ -260,7 +264,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `sql.Open` pass. Seven mutations, each with the mutant confirmed present
       by content hash: M-A/M-B still fail the lint gate, M-C…M-G fire the new
       assertions. Confidence 0.94.
-- [x] SPEC-084 (frame) — **the `Entries:` envelope semantics.** Framed
+- [ ] SPEC-084 (design) — **the `Entries:` envelope semantics.** Framed
       2026-08-22, **GO at S**. Narrowed 2026-08-18 from "the three coupled
       defects" after the other two were measured and deferred; the stage's
       only remaining correctness item.
@@ -293,6 +297,26 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       forks handed to design, including whether `Scope: lifetime` — falsified
       by `TestMemoryCmd_ThreeReadsComposeThePool` — joins the repair, which is
       the fork that decides S vs M.
+
+      **Designed 2026-08-22, built 2026-08-23.** All six forks settled with
+      rejected alternatives: the markdown label and the JSON key both rename
+      to `Candidates:`/`"candidates"` (the JSON namespace already used
+      `"entries"` for an array elsewhere, so the bare-integer key was a second,
+      independent collision the frame did not have); the decision lives in a
+      new `DEC-048` legislating the DEC-014 provenance-count line rather than
+      an `## Amendment` on DEC-044; the five sibling exporters are untouched;
+      and `Scope: lifetime` **stays** — it is the stated premise of a DEC-045
+      sub-decision — with only its two false justifications repaired to
+      *"hard-coded — memory applies no time window."* Build's fail-first run
+      hit **exactly 12** failing test functions (nine premise-audit literals
+      plus three new tests), matching design's own pre-flight number.
+      **One SPEC-084 forecast, and one thing design's own pre-flight
+      predicted:** `internal/export/memory_test.go:247`'s cached golden byte
+      length moved `778 → 781` — a value no grep for `Entries`/`entries`
+      would have found. All five mutations (M-A…M-E) confirmed present by
+      content hash and restored from a `/tmp` backup. `just test-docs`
+      **ALL OK at 188 ids** (`Decision records` 46 → 47, `Documentation
+      assertions` 187 → 188).
 
 **Count:** 2 shipped / 1 active / 0 pending
 

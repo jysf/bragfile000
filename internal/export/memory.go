@@ -11,13 +11,19 @@ import (
 )
 
 // MemoryOptions controls the rule-based memory-slice digest (SPEC-073), the
-// eighth DEC-014 consumer. Scope is always "lifetime" (memory ranks the
-// whole corpus, like stats) and is hard-coded rather than a field. Filters
-// is the pre-formatted markdown line ("(none)" or "--query X --project Y" in
-// declared order); FiltersJSON is the object the JSON envelope renders
-// (Go's map encoder sorts keys alphabetically — the documented DEC-014
-// markdown/JSON ordering asymmetry). Now is injected for a deterministic
-// Generated: line.
+// eighth DEC-014 consumer. Scope is always "lifetime" and is hard-coded
+// rather than a field: DEC-014's Scope: is the TIME WINDOW a document covers,
+// and memory applies none — a count bound (PoolLimit) is not a date bound.
+// That is the property DEC-045 sub-decision 8 leans on when it withholds
+// since/until/day from brag_memory. It is NOT a claim that every entry was
+// ranked: the pool is capped, so entries older than the PoolLimit-th most
+// recent are unreachable on a bare invocation (proven by
+// TestMemoryCmd_ThreeReadsComposeThePool/bare-recency-read-is-capped).
+// Filters is the pre-formatted markdown line ("(none)" or "--query X
+// --project Y" in declared order); FiltersJSON is the object the JSON
+// envelope renders (Go's map encoder sorts keys alphabetically — the
+// documented DEC-014 markdown/JSON ordering asymmetry). Now is injected for a
+// deterministic Generated: line.
 type MemoryOptions struct {
 	Filters     string
 	FiltersJSON map[string]string
@@ -26,13 +32,23 @@ type MemoryOptions struct {
 
 // ToMemoryMarkdown renders a memory.Result as the DEC-014/DEC-043/DEC-044
 // memory-slice digest: header + provenance block, then ## Slice (the ranked,
-// budget-trimmed entry lines) and ## Budget (the accounting). Entries: N is
-// the CANDIDATE-POOL size, not the included count — the ## Budget section
-// decomposes it. On an empty candidate pool only the header block (through
-// "Entries: 0") is emitted — no ## Slice, no ## Budget (DEC-014 part 4). A
-// non-empty pool that includes zero entries still renders both sections.
-// Returns bytes with the trailing "\n" stripped (matches every other
-// renderer).
+// budget-trimmed entry lines) and ## Budget (the accounting).
+//
+// The provenance count is Candidates: N (DEC-048) — how many DISTINCT entries
+// were RANKED. It is not the corpus size and not the included count; ##
+// Budget decomposes it (Included + Skipped == Candidates). It is a
+// pool-composition artifact, not a cap: Gather runs up to three
+// PoolLimit-capped reads and Slice dedupes their union, so the number GROWS
+// when --query or --project adds a read. It is bounded by
+// min(3*PoolLimit, corpus), never by PoolLimit alone. The five sibling
+// DEC-014 exporters keep Entries:, which counts entries in scope and NARROWS
+// under a filter; this number does the opposite, which is why it does not
+// share the word.
+//
+// On an empty candidate pool only the header block (through "Candidates: 0")
+// is emitted — no ## Slice, no ## Budget (DEC-014 part 4). A non-empty pool
+// that includes zero entries still renders both sections. Returns bytes with
+// the trailing "\n" stripped (matches every other renderer).
 func ToMemoryMarkdown(result memory.Result, opts MemoryOptions) ([]byte, error) {
 	var buf bytes.Buffer
 	fmt.Fprintln(&buf, "# Bragfile Memory")
@@ -40,7 +56,7 @@ func ToMemoryMarkdown(result memory.Result, opts MemoryOptions) ([]byte, error) 
 	fmt.Fprintf(&buf, "Generated: %s\n", opts.Now.UTC().Format(time.RFC3339))
 	fmt.Fprintln(&buf, "Scope: lifetime")
 	fmt.Fprintf(&buf, "Filters: %s\n", opts.Filters)
-	fmt.Fprintf(&buf, "Entries: %d\n", result.Candidates)
+	fmt.Fprintf(&buf, "Candidates: %d\n", result.Candidates)
 
 	if result.Candidates == 0 {
 		return trimTrailingNewline(buf.Bytes()), nil
@@ -86,7 +102,7 @@ type memoryEnvelope struct {
 	GeneratedAt     string             `json:"generated_at"`
 	Scope           string             `json:"scope"`
 	Filters         map[string]string  `json:"filters"`
-	Entries         int                `json:"entries"`
+	Candidates      int                `json:"candidates"`
 	Budget          int                `json:"budget"`
 	EstimatedTokens int                `json:"estimated_tokens"`
 	Included        int                `json:"included"`
@@ -119,7 +135,7 @@ func ToMemoryJSON(result memory.Result, opts MemoryOptions) ([]byte, error) {
 		GeneratedAt:     opts.Now.UTC().Format(time.RFC3339),
 		Scope:           "lifetime",
 		Filters:         opts.FiltersJSON,
-		Entries:         result.Candidates,
+		Candidates:      result.Candidates,
 		Budget:          result.Budget,
 		EstimatedTokens: result.EstimatedTokens,
 		Included:        result.Included,
