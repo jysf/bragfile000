@@ -7,7 +7,7 @@
 task:
   id: SPEC-083
   type: chore                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -1453,18 +1453,106 @@ command that re-derives it is given.
 
 *Filled in during the build cycle.*
 
-- **Deviations from the spec:** <none / list>
-- **New DEC-* files created:** DEC-047 (planned — not a deviation)
-- **Constraints checked:** <list>
-- **Gates:** <list>
-- **Mutation checks M-A…M-G:** paste each result **and** the before/after
-  content hashes that confirm the mutant was present.
+- **Deviations from the spec:** none. All ten modified files and the one new
+  file match the literals in *Notes for the Implementer* verbatim; the
+  `story_test.go` deletion is exactly the two lines specified;
+  `project_test.go`, `coverage_test.go`, `impact_test.go`, `wrapped_test.go`
+  are untouched (confirmed: absent from `git status --short`).
+- **New DEC-* files created:** `decisions/DEC-047-no-sql-in-cli-layer-binds-production-code.md`
+  (planned — not a deviation). Carries `type: decision`; `Z7` passes.
+- **Constraints checked:**
+  - `no-sql-in-cli-layer` (blocking) — `severity` and `paths` byte-identical
+    to main (confirmed by diff: only `rule:` and `rationale:` lines changed);
+    `golangci-lint run` still 0 issues; M-A and M-B still fire. Not weakened.
+  - `one-spec-per-pr` — single branch (`build/spec-083-production-scope`),
+    single PR, opens after this report.
+  - `test-before-implementation` — Group `AA` and the `Y3`/`Y4` re-pins were
+    written first (step 1 of Order of work) and confirmed failing for the
+    exact stated reasons before any implementation file was touched.
+  - `no-cgo`, `timestamps-in-utc-rfc3339`, `storage-tests-use-tempdir`,
+    `stdout-is-for-data-stderr-is-for-humans`, `errors-wrap-with-context` —
+    N/A, confirmed: no production behavior changed, the only Go diff outside
+    comments is the two-line import deletion in `story_test.go`.
+- **Gates:**
+  - `gofmt -l .` → clean
+  - `go vet ./...` → clean
+  - `just test` → all packages `ok` (`storagetest` has no test files, as before)
+  - `golangci-lint config verify` → exit 0
+  - `golangci-lint run` → 0 issues
+  - `just test-docs` → **ALL OK**, `X3`/`X6`/`X7`/`Y3`/`Y4`/`Z7`/`AA1`/`AA2`/`AA3`
+    all `OK`
+  - `./scripts/inventory.sh` output, pasted verbatim and byte-identical to the
+    block now on `docs/engineering-practices.md` between the
+    `inventory:begin`/`inventory:end` markers (`X3`):
+
+    ```
+    | What | Value | Where it lives |
+    |---|---:|---|
+    | Decision records | 46 | `decisions/DEC-*.md` (`insight.type: decision`) |
+    | …of those, superseded by a later record | 1 | `superseded_by:` in the front-matter |
+    | …of those, carrying an explicit `## Amendment` section | 1 | `decisions/DEC-*.md` |
+    | Decision numbers reserved, not yet decided | 1 | `decisions/DEC-*.md` (`insight.type: reservation`) |
+    | Lowest confidence value on a decision record | 0.65 | `insight.confidence` in the front-matter |
+    | Highest confidence value on a decision record | 0.95 | `insight.confidence` in the front-matter |
+    | Decision records claiming confidence 1.0 | 0 | `insight.confidence` in the front-matter |
+    | Projects | 9 | `projects/PROJ-*/brief.md` |
+    | Stages | 21 | `projects/*/stages/STAGE-*.md` |
+    | Specs carried to ship and archived | 79 | `projects/*/specs/done/` |
+    | …of those, also carrying a build-phase reflection | 73 | `### Build-phase reflection` in those files |
+    | Go source files | 69 | `internal/`, `cmd/` |
+    | Go test files | 78 | `internal/`, `cmd/` |
+    | Go test functions | 812 | `func Test*` in `*_test.go` |
+    | Documentation assertions (distinct ids) | 187 | `scripts/test-docs.sh`, run by `just test-docs` |
+    | …of those, replacing a manual release-checklist item | 6 | the `W`-series in `scripts/test-docs.sh` |
+    | Questions tracked in guidance/questions.yaml | 19 | `guidance/questions.yaml` |
+    | …of those, still open | 6 | `status: open` in the same file |
+    | Benchmarks | 0 | none exist — see "What this does not measure" |
+    ```
+  - `wc -w docs/engineering-practices.md` → **2,525 words**, inside `X7`'s
+    1800..2700 band, matching the design pre-flight exactly.
+
+- **Mutation checks M-A…M-G:** all seven ran; each mutant confirmed present
+  by `shasum -a 256` before/after, each restore confirmed by hash returning
+  to its pre-mutation value. All hashes match the design pre-flight's §12(b)
+  values exactly.
+
+  | # | Mutation | Hash before → after | Result | Restored hash matches before? |
+  |---|---|---|---|---|
+  | M-A | `_ "database/sql"` in `internal/cli/root.go` | `7145bf1e…` → `5a7a73a5…` | `internal/cli/root.go:17:2: import 'database/sql' is not allowed from list 'no-sql-in-cli-layer' … (depguard)` — 1 issue | yes, `7145bf1e…` |
+  | M-B | `_ "modernc.org/sqlite"` in `internal/cli/root.go` | `7145bf1e…` → `c2b8ecad…` | `internal/cli/root.go:17:2: import 'modernc.org/sqlite' is not allowed from list 'no-sql-in-cli-layer' … (depguard)` — 1 issue | yes, `7145bf1e…` |
+  | M-C | `severity: blocking` → `warning` | `3fcbca05…` → `3a67a358…` | `FAIL: AA1: guidance/constraints.yaml no-sql-in-cli-layer: [severity is no longer blocking]` | yes, `3fcbca05…` |
+  | M-D | rule text reverted to unqualified wording | `3fcbca05…` → `d9965e6b…` | `FAIL: AA1: guidance/constraints.yaml no-sql-in-cli-layer: [rule text is not scoped to production files]` | yes, `3fcbca05…` |
+  | M-E | register entry back to `status: open` | `bfb807a0…` → `c95d0e4c…` | `FAIL: AA2: guidance/questions.yaml no-sql-in-cli-layer-test-scope: [status is not answered]` | yes, `bfb807a0…` |
+  | M-F | `"convention and review"` restored in `root.go` | `7145bf1e…` → `f15a137e…` | `FAIL: AA3: … [internal/cli/root.go still says "convention and review"]` | yes, `7145bf1e…` |
+  | M-G | `"no other package imports a"` restored in `store.go` | `8091ff9d…` → `860c5704…` | `FAIL: AA3: … [internal/storage/store.go still says "no other package imports a"]` | yes, `8091ff9d…` |
+
+  Unmutated, after every restore: `golangci-lint run` → 0 issues, `just test-docs` → ALL OK.
 
 ### Build-phase reflection (3 questions, short answers)
 
-- **What was unclear in the spec?**
-- **What was missing that you had to decide yourself?**
-- **What would you do differently?**
+- **What was unclear in the spec?** Nothing substantive. One mechanical
+  ambiguity: §7d's instruction to "paste it over the existing
+  `# ===== finalise =====` line" while the shown literal block does not
+  itself include that line. Resolved by inserting Group AA immediately
+  before the marker and leaving the marker itself in place — matches "the
+  block below ends with that line" only if read as describing the file's
+  resulting shape, not the literal's own trailing content. Worth a one-line
+  spec clarification if this pattern (insert-before-a-marker-line) recurs.
+- **What was missing that you had to decide yourself?** Nothing — every
+  literal, every anchor, and every expected value was in the spec.
+- **What would you do differently?** During the M-F mutation probe I
+  restored `internal/cli/root.go` with `git checkout -- internal/cli/root.go`
+  instead of the `/tmp` backup used for the other probes. Since the §4a
+  comment edit was uncommitted, this discarded it back to main's original
+  wording — caught immediately by the hash check (`08008e2a…` ≠ the expected
+  `7145bf1e…`), reapplied the edit via `Edit`, and confirmed the reapplied
+  file hashed back to the exact pre-mutation value before continuing. No
+  incorrect state reached a commit. Lesson: during mutation probes on an
+  uncommitted branch, restore only from an explicit backup copy of the
+  *current working tree* (`cp file /tmp/backup` beforehand), never from
+  `git checkout`, which reverts to the last commit — a different baseline
+  than "before this mutation" whenever the file already carries uncommitted
+  spec edits.
 
 ## Reflection (Ship)
 
