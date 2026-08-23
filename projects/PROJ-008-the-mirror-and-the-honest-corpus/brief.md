@@ -4,7 +4,7 @@
 
 project:
   id: PROJ-008
-  status: proposed                  # proposed | active | shipped | cancelled
+  status: active
   priority: high
   target_ship: null
 
@@ -12,6 +12,7 @@ repo:
   id: bragfile
 
 created_at: 2026-08-16
+activated_at: 2026-08-23
 shipped_at: null
 ---
 
@@ -143,6 +144,18 @@ lands."* It landed in v0.6.0.
 
 - [ ] (not yet defined) — **impact quality**: the classifier and its consumers.
       Almost certainly first — it unblocks the other two.
+
+> **USER PRIORITY, stated 2026-08-23 at activation: `brag learn` matters most.**
+> Recorded here as a framing input, not as a settled ordering. It sits against
+> the brief's own argument two sections up — *one classifier, three surfaces* —
+> which puts impact quality first because the other pillars consume it. Framing
+> owes an explicit call, with the rejected option written down. Two things
+> weigh for `brag learn` beyond the preference: its promotion condition from the
+> PROJ-005 synthesis (*"promote if the memory work lands"*) **already fired**
+> when v0.6.0 shipped, and it is the only pillar that changes what the corpus
+> can *hold* rather than how it is read — a wins-only corpus flatters every
+> surface built on it, including the classifier. If framing still puts impact
+> quality first, it must say why the flattery problem can wait.
 - [ ] (not yet defined) — **`brag learn`**: the corpus learns to hold failures.
 - [ ] (not yet defined) — **the mirror**: observations over the corpus.
 - [ ] (not yet defined) — **story-surface v2**: the arc.
