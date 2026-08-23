@@ -582,7 +582,7 @@ design typed into the table, produced by a different route.
 
 **Pass 3 — implementation applied.** `go test ./...` → **14/14 packages ok**;
 `just lint` → **0 issues**; `go vet ./...` → clean; `gofmt -l .` → empty.
-`git diff --stat` over `internal/`: four files, +176/−16. And
+`git diff --stat` over `internal/`: four files, +206/−30. And
 `git diff --name-only -- internal/export/ internal/aggregate/` returns nothing
 outside `export/memory*` — **AC-7 verified at design, not asserted.**
 
@@ -1053,7 +1053,7 @@ four sites the frame did not name (Findings 1, 3, 4 and the MCP pin).*
 | `internal/mcpserver/resources_test.go` | **One new test.** Nothing in this package pins the header today — see LD6. |
 | `decisions/DEC-044-memory-slice-token-budget-and-line-shape.md` | **Three** sites: `:173`, `:251`, `:406`. The frame named one. |
 | `docs/api-contract.md` | Two sites: the memory provenance bullet (`:892-895`, both the `Scope:` gloss and the count) and the invariant (`:903`). |
-| `docs/engineering-practices.md` | The STAGE-022 sentence (`:285`) **+ the regenerated inventory block** (two rows move). |
+| `docs/engineering-practices.md` | The STAGE-022 sentence (`:285`) **+ the regenerated inventory block** (three rows move). |
 | `scripts/test-docs.sh` | New `U9`; `Y3` re-pinned 46 → 47; `X6` comment denominator 46 → 47. |
 | `CHANGELOG.md` | A `### Changed` entry under `[Unreleased]`. The JSON key rename is a breaking change and is named as one. |
 | `projects/PROJ-007-quality-and-portfolio-readiness/stages/STAGE-022-measured-and-enforced.md` | Success criterion, the SPEC-084 backlog entry, the count line. |
@@ -1283,7 +1283,7 @@ style `Y3`/`Y4` already use records the move as deliberate, not drift.
 
 **LD11 — the practices-page sentence and the inventory block change in the
 same edit; the block is regenerated, never hand-edited.** `X3` diffs it
-byte-for-byte against `scripts/inventory.sh`. Two rows move.
+byte-for-byte against `scripts/inventory.sh`. Three rows move.
 
 ### Rejected alternatives (build-time)
 
@@ -1334,7 +1334,7 @@ byte-for-byte against `scripts/inventory.sh`. Two rows move.
 7. The 36 non-memory `Entries:` test assertions and `docs/tutorial.md:325` are
    untouched. `git diff --stat` shows no `internal/export/{coverage,markdown,
    spark,wrapped,impact}.go` and no `internal/aggregate/`. Verified at design:
-   the whole `internal/` diff is four files, +176/−16.
+   the whole `internal/` diff is four files, +206/−30.
    `internal/export/memory_test.go:247`'s length assertion still **exists** and
    reads `781` — re-derived, not deleted.
 8. `just test`, `just lint` (**0 issues**), `gofmt -l .` (empty),
@@ -1429,7 +1429,7 @@ Re-pin `'Decision records | 46 |'` → `| 47 |` and `decision-records!=46` →
 ### Changed — `X3`
 
 No script change; the **inventory block on the practices page** must be
-regenerated. Two rows move (`46 → 47`, `187 → 188`). Fails with a full
+regenerated. Three rows move (`46 → 47`, `187 → 188`, `812 → 815`). Fails with a full
 script-vs-page diff until `just inventory` is run and the output pasted.
 
 ### Changed — `X6`
@@ -2003,9 +2003,13 @@ no-network claim stays enforced by review.
 ```
 
 Then run **`just inventory`** and paste its output between the
-`<!-- inventory:begin -->` / `<!-- inventory:end -->` markers. Two rows move:
-`Decision records` 46 → 47, `Documentation assertions (distinct ids)`
-187 → 188. **Do not hand-edit a row** — `X3` diffs the whole table.
+`<!-- inventory:begin -->` / `<!-- inventory:end -->` markers. **Three** rows
+move: `Decision records` 46 → 47, `Documentation assertions (distinct ids)`
+187 → 188, and `Go test functions` 812 → 815 — §2/§3/§4 add exactly three test
+functions, so this row was derivable and was still missed by reasoning about
+which rows the change "touches" instead of running the generator. **Do not
+hand-edit a row** — `X3` diffs the whole table, which is why the block was
+correct anyway.
 
 `X7` band check: 2,525 words at design, band 1800..2700, 175 words of ceiling
 headroom. The replacement is net-neutral.
@@ -2339,7 +2343,7 @@ release tooling has never seen.)*
      work, and §11 itself asks for `[x] SPEC-084 (ship)` and a `3 shipped`
      count line — both would be false statements before verify/ship actually
      happen. Resolved by writing what's true now: the cycle tag moved
-     `(frame)` → `(build)`, checkbox stays unchecked, the in-scope item 3
+     `(frame)` → `(design)`, checkbox stays unchecked, the in-scope item 3
      description was reconciled with the framing text already below it
      (a same-file internal-consistency fix, not a ship-state claim), and a
      consolidated "Designed 2026-08-22, built 2026-08-23" paragraph captures
