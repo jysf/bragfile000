@@ -92,6 +92,41 @@ lands."* It landed in v0.6.0.
 3. **The mirror** — rule-based pattern detection over the corpus, with an
    honest bar for what counts as an observation worth surfacing.
 4. **Story-surface v2** — the arc-shaped narrative output.
+5. **The read path's discoverability** — *candidate, added 2026-08-23.*
+   `brag memory` is the corpus-as-working-memory call and it is well built:
+   three bounded reads deduped into a candidate pool, ranked by RRF (DEC-043),
+   fitted to a token budget, and exposed over MCP as `brag://memory/recent`
+   and `brag://memory/project/{name}` — which an agent can attach **with no
+   tool call at all** (DEC-045). `docs/for-ai-agents.md` §3–§4 documents all of
+   it properly.
+
+   **The problem is that none of that travels.** `BRAG.md` is the file designed
+   to be dropped into any repo and read cold, and it is **write-only**: its
+   *"Your role, in one sentence"* casts the agent purely as a capturer
+   (*"propose a brag entry… only execute `brag add` after the user approves"*),
+   and `brag memory` appears **twice**, both in passing inside the
+   plugin-install section. The plugin reinforces the asymmetry — the only hook
+   is a **`Stop`** hook (capture-nudge, session end). There is no session-start
+   counterpart. So an agent working in another repo with `BRAG.md` dropped in
+   is told to write to the corpus and never told to read it.
+
+   This belongs to PROJ-008 rather than anywhere else because the mirror and
+   `brag learn` both make the corpus more worth reading, and all three fail the
+   same way if nothing tells an agent to read it. Measured 2026-08-23 on the
+   live tree.
+
+   **Shape of the fix (for framing, not settled):** a "read before you write"
+   section in `BRAG.md` with the three real invocations, and possibly a
+   `SessionStart` hook mirroring the existing `Stop` one. Note the second half
+   is a behaviour change in the plugin and should be argued, not assumed —
+   auto-loading context every session has a cost, and the MCP resource path may
+   already be the better answer for agents that support it.
+
+   **Same shape as a finding already filed upstream** in
+   `docs/framework-feedback/process-feedback.md` §6: a capability exists, and
+   the artifact that would cause it to be used does not mention it. That one
+   was about the spec template's work-log hook; this one is about `BRAG.md`'s
+   read path. Two instances now — worth noticing as a class.
 
 ### Explicitly out of scope
 - **Any LLM inside the binary.** Rule-based core, prose via pipe — the same
