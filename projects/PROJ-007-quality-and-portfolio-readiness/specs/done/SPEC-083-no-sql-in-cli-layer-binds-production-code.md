@@ -7,7 +7,7 @@
 task:
   id: SPEC-083
   type: chore                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -1560,17 +1560,57 @@ command that re-derives it is given.
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — **Never restore a mutation probe with `git checkout`.** During M-F the
+   build restored `internal/cli/root.go` from git rather than its `/tmp`
+   backup, discarding the uncommitted §4 comment edit. The content-hash check
+   caught it immediately and the edit was reapplied and re-confirmed — the
+   protocol worked. But the lesson generalises further than the incident: during
+   a build **most** files carry uncommitted work, so `git checkout <path>` is
+   never a safe restore, and its danger is invisible because it looks like the
+   careful move. Take the backup before the probe; restore from the backup;
+   confirm the hash returns. This is the second half of a rule whose first half
+   (confirm the mutant by content hash, because `git diff` is blind to untracked
+   files) was earned one spec earlier.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — **`AGENTS.md` §12, at N=2.** The two halves above are one protocol —
+   *confirm by hash, restore from a backup* — and both were learned the
+   expensive way in consecutive specs (SPEC-082's untracked-file blindness,
+   SPEC-083's git-checkout restore). Recommended for §12's mutation-check
+   guidance at the stage close.
+   — **`AGENTS.md` §9 half-(b) wants one word sharper.** It says grep the
+   harness for every literal occurrence of a changed value. Design here found
+   `Y3` pinning the same decision count `X3` round-trips, and named *why* the
+   grep had missed it: **searching for the concept finds `Y4`; only searching
+   for the value finds `Y3`.** "Grep for the value, not the idea" is the form
+   that would have worked.
+   — `guidance/constraints.yaml` was amended, deliberately and for the first
+   time in the repo's history, by this spec. That is DEC-047, not a follow-up.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — **No new spec; two routed notes**, both surfaced by verify and both in
+   files this spec deliberately stopped short of. (a) `root.go` and
+   `.golangci.yml` now cache the numeral **four** with nothing guarding it, and
+   `DEC-047`'s T1 trigger is **not** that guard — T1 asks an economic question
+   (when do helpers cost less than copies, threshold six), so at five files both
+   comments are wrong and nothing fires. The fix is to drop the numeral, not to
+   move T1. An assertion pinning "exactly four" is foreclosed by LD6: it would
+   fire the day someone ports the tests to `storagetest`, which is the outcome
+   the triggers want. (b) `store.go:11`'s *"Every other package's production
+   code reaches the database only through a `*Store`"* is the **V1
+   package-vs-layer noun** already routed out of STAGE-021 — but DEC-047 has now
+   **made it decidable**: with "production code" defined as every `*.go` except
+   `*_test.go`, the sentence is plainly false for `storagetest`, so a wording
+   debate became a mechanical fix. Both belong to whichever spec next opens
+   those files.
 
-4. **What can a user do now that they couldn't before?** — one sentence,
-   before → after; quote the confirming number if one exists, name the outcome
-   if not. Write `none` if this spec has no user-visible outcome — that is a
-   real, greppable result, not a blank. **If this answer is not `none`, capture
-   it before closing the cycle.** Evidence ref: tag `pr:<n>`.
-   — <answer | none>
+4. **What can a user do now that they couldn't before?**
+   — A contributor reading `guidance/constraints.yaml` now gets a rule that
+   **means what the linter enforces**: `no-sql-in-cli-layer` says production
+   files, depguard checks production files, and five comments that contradicted
+   one or the other are gone. Before, the blocking rule said something **5 of
+   the 30** CLI test files violated — while the gate deliberately ignored them
+   and three separate comments described the boundary three different ways. The
+   gate itself is untouched and proved so: `severity: blocking` and `paths`
+   byte-identical, `golangci-lint run` still 0 issues, and both depguard
+   mutations still fire. Evidence ref: `pr:183`.

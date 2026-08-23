@@ -185,7 +185,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       rather than fixed — `root.go:9` and `store.go:13` both still claim the
       boundary is held "by convention and review, not an automated test" — held
       because the correct rewording depends on LD7's deferred scope question.
-- [ ] SPEC-083 (design) — **`no-sql-in-cli-layer` binds production code.**
+- [x] SPEC-083 (shipped on 2026-08-22) — **`no-sql-in-cli-layer` binds production code.**
       Framed 2026-08-21, **GO at complexity S**. Answers the
       `no-sql-in-cli-layer-test-scope` question SPEC-082 logged rather than
       resolved (LD7), on the user's decision that the constraint binds
@@ -207,6 +207,24 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       gaps stay unfixed, so CLI tests will keep reaching for `sql.Open`.
       `severity: blocking` is unchanged and the gate is not weakened —
       M-A/M-B must still fire. Confidence 0.92.
+      **Shipped 2026-08-22 (#183).** `DEC-047` minted — the first amendment to
+      `guidance/constraints.yaml` in the repo's history. The gate was *proved*
+      untouched, not asserted: `severity` / `paths` / `added_by` / `added_at`
+      byte-identical to main (the whole diff is **two lines**, `rule:` and
+      `rationale:`), `golangci-lint run` still **0 issues**, both depguard
+      mutations still fire. Five comments repaired, `story_test.go`'s dead
+      import deleted, the other four files untouched — LD5 restraint held. New
+      Group `AA`, of which `AA1` is a standing anti-erosion guard that fails if
+      `severity` ever leaves `blocking`. 184 → **187** assertion ids, 45 → **46**
+      decisions, 7 → **6** open questions, all derived and pasted. All seven
+      mutations re-run at verify with every mutant hash-confirmed and every
+      restore returned to its exact pre-mutation hash; `root.go`'s `7145bf1e…`
+      matched across design, build **and** verify, proving nothing drifted
+      across three sessions. **One build incident, self-reported and caught by
+      the protocol:** an M-F restore used `git checkout` instead of the `/tmp`
+      backup and discarded an uncommitted comment edit; the hash check caught
+      it and it was reapplied. Verify confirmed completeness independently —
+      all 16 fenced literals present, byte-identical, exactly once each.
       **Designed 2026-08-22.** All five forks settled with rejected
       alternatives; every literal written into a throwaway worktree, run
       through its tool, and verified back — **16 of 16 embedded literals are
@@ -246,7 +264,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       one fix, one regression test. Narrowed 2026-08-18 from "the three coupled
       defects" after the other two were measured and deferred.
 
-**Count:** 1 shipped / 1 active / 1 pending
+**Count:** 2 shipped / 0 active / 1 pending
 
 ## Design Notes
 
@@ -326,6 +344,40 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
   `storagetest` as its own exception one sentence earlier, so no reader is
   misled — but the two nouns are not interchangeable and a lint rule should
   not treat them as if they were.
+
+  **DEC-047 made this one decidable (SPEC-083 verify, 2026-08-22).** The
+  package-vs-layer noun above was an unresolvable wording debate while
+  "production code" had no written definition. DEC-047 supplies one — *every
+  `*.go` except `*_test.go`* — and under it `store.go:11`'s *"Every other
+  package's production code reaches the database only through a `*Store`"* is
+  plainly **false**: `storagetest.go` is a non-test file in another package
+  that reaches the DB through `sql.Open`. The claim is defensible in context
+  (the same comment carves out `storagetest` twice) and SPEC-083 deliberately
+  did not touch it, but the item's status has changed from *"stale, needs a
+  judgment call"* to *"stale, fix is now mechanical."*
+
+- **A numeral SPEC-083 introduced, with no guard and a trigger that is not one**
+  (SPEC-083 verify, 2026-08-22). `internal/cli/root.go:13` and
+  `.golangci.yml:71` both now say **four** CLI test files open a database
+  directly. True on 2026-08-22 — exactly `coverage_test.go`, `impact_test.go`,
+  `project_test.go`, `wrapped_test.go` call `sql.Open` — and unguarded: `AA3`
+  is NOT-contains only, so it proves the old false phrase is gone and can never
+  prove the new sentence true.
+
+  **`DEC-047`'s T1 trigger is not the guard, and should not be made into one.**
+  T1 fires at **six** and asks an economic question — when does writing
+  `storagetest.BackdateUpdated` / `BackdateProject` cost less than maintaining
+  the copies. "Is this comment accurate?" is a different question that breaks at
+  **five**. Lowering T1 to five would damage a working trigger to patch an
+  unrelated hole. An assertion pinning *exactly four* is separately foreclosed
+  by LD6's own reasoning: it would fire the day someone ports those tests to
+  `storagetest`, which is the outcome the triggers exist to encourage.
+
+  **The fix is to drop the numeral** (*"some do"*) from both comments and leave
+  T1 alone. Not done at verify because both are literal artifacts of a
+  literal-artifact spec, and an in-transit prose edit would leave the tree
+  disagreeing with the spec's own §4 literal with no record of why. Belongs to
+  whichever spec next opens those files.
 
   **Two more, created by SPEC-082 itself (build, 2026-08-21).** The package
   comments called *correct as written* above are still correctly **scoped** to
