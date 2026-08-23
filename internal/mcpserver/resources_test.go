@@ -168,6 +168,37 @@ func TestResourceRecent_IsByteIdenticalToMemoryMarkdown(t *testing.T) {
 	}
 }
 
+// TestResourceRecent_CarriesTheCandidatesHeader pins the AGENT-VISIBLE bytes
+// (DEC-045, DEC-048). The byte-identity test above compares two renderings of
+// the SAME function, so it passes whatever the header says — it proves parity,
+// not correctness. Nothing in this package would have failed if the header
+// regressed; this is the assertion that would.
+func TestResourceRecent_CarriesTheCandidatesHeader(t *testing.T) {
+	cs, s := newTestServer(t, "claude-code")
+	seedViaStore(t, s, "one", "two", "three")
+	fixed := time.Date(2026, 8, 8, 12, 0, 0, 0, time.UTC)
+	restore := setNowFunc(t, func() time.Time { return fixed })
+	defer restore()
+
+	res, err := cs.ReadResource(context.Background(), &mcp.ReadResourceParams{URI: uriMemoryRecent})
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	body := res.Contents[0].Text
+	lines := strings.Split(body, "\n")
+	for _, ln := range lines {
+		if strings.HasPrefix(ln, "Entries:") {
+			t.Errorf("resource body still carries an Entries: line: %q", ln)
+		}
+	}
+	if len(lines) < 6 {
+		t.Fatalf("body has %d lines, want at least 6:\n%s", len(lines), body)
+	}
+	if lines[5] != "Candidates: 3" {
+		t.Errorf("line 6 = %q, want %q\nbody:\n%s", lines[5], "Candidates: 3", body)
+	}
+}
+
 func TestResourceRecent_UsesDefaultBudget(t *testing.T) {
 	cs, s := newTestServer(t, "claude-code")
 	seedViaStore(t, s, "one")

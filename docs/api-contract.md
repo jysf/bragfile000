@@ -889,10 +889,16 @@ namespace.
 
 Document structure:
 
-- **Provenance:** `Generated:` (RFC3339), `Scope: lifetime` (memory ranks
-  the whole corpus, like `stats`), `Filters:` (`--query <text> --project
-  <name>` in that declared order, or `(none)`), and `Entries: N` — the
-  **candidate-pool** size, not the included count.
+- **Provenance:** `Generated:` (RFC3339), `Scope: lifetime` (hard-coded —
+  memory applies no time window), `Filters:` (`--query <text> --project
+  <name>` in that declared order, or `(none)`), and `Candidates: N` — how
+  many distinct entries were **ranked**. Not the corpus size and not the
+  included count: the pool is the deduped union of up to three
+  200-row-capped reads, so it **grows** when `--query` or `--project` adds
+  one (`200` bare, `243` with `--project` on a 387-entry corpus).
+  `Entries:` on the other DEC-014 consumers means entries in scope and
+  narrows under a filter — see
+  [DEC-048](../decisions/DEC-048-provenance-count-names-what-it-counted.md).
 - **Body** (markdown; omitted entirely on an empty pool per
   [DEC-014](../decisions/DEC-014-rule-based-output-shape.md)):
   - `## Slice` — one line per included entry, in rank order:
@@ -900,7 +906,7 @@ Document structure:
     for an absent project or type and the impact clause only when non-empty.
     No truncation, ever — an entry is included whole or skipped whole.
   - `## Budget` — `Budget:`, `Estimated:`, `Included:`, `Skipped:` (tokens
-    and counts). `Included + Skipped == Entries`.
+    and counts). `Included + Skipped == Candidates`.
 
 Flags:
 
@@ -918,7 +924,7 @@ Flags:
 - `--format markdown|json` defaults to `markdown`. The budget is **always**
   measured against the markdown line in both formats, so the two formats
   return the same entries in the same order. JSON top-level keys:
-  `generated_at`, `scope`, `filters`, `entries`, `budget`,
+  `generated_at`, `scope`, `filters`, `candidates`, `budget`,
   `estimated_tokens`, `included`, `skipped`, `slice`. Each `slice` item is a
   narrow 9-key projection: `id`, `created_at`, `project`, `type`, `title`,
   `impact`, `rank`, `score` (rounded to 6 decimal places), `tokens`.

@@ -1272,6 +1272,33 @@ assert_contains_literal "U7" "docs/api-contract.md" "never stamped on an entry"
 # U8 — architecture.md's package table names internal/memory
 assert_contains_literal "U8" "docs/architecture.md" "internal/memory"
 
+# U9 — the memory provenance count is documented under its NEW name, and the
+# false gloss on Scope: is gone. Two claims, one id — the doc-level guard on
+# LD1 and LD5, the shape V3 already uses for the soft-boost correction.
+#
+# THE NEGATIVE NEEDLE IS A FRAGMENT ON PURPOSE. The falsified sentence wraps:
+#   892| ... `Scope: lifetime` (memory ranks
+#   893| the whole corpus, like `stats`), ...
+# so `grep -F 'memory ranks the whole corpus'` returns ZERO hits against the
+# BROKEN file — a needle spanning the wrap would pass vacuously forever.
+# Verified at SPEC-084 design. grep is line-oriented; this doc wraps at 74.
+if [ ! -f docs/api-contract.md ]; then
+    fail "U9" "docs/api-contract.md does not exist"
+else
+    u9_bad=""
+    if ! grep -F -q -- '`Candidates: N`' docs/api-contract.md; then
+        u9_bad="$u9_bad [memory provenance does not name Candidates: N]"
+    fi
+    if grep -F -q -- '(memory ranks' docs/api-contract.md; then
+        u9_bad="$u9_bad [the falsified 'memory ranks the whole corpus' gloss is still present]"
+    fi
+    if [ -z "$u9_bad" ]; then
+        ok "U9"
+    else
+        fail "U9" "docs/api-contract.md:$u9_bad"
+    fi
+fi
+
 # ===== Group V — MCP resources docs (SPEC-074 / DEC-045) =====
 
 # V1 — for-ai-agents.md names all three resource URIs
@@ -1460,7 +1487,7 @@ assert_not_contains_iregex "X5" "$PRACTICES_DOC" 'rigorous|comprehensive|world-c
 
 # X6 — the corrections claim is made BY CITATION, not by count.
 # There is no counting rule for "decision records that log their own
-# correction" (only 1 of 46 DECs carries an explicit `## Amendment` heading, and
+# correction" (only 1 of 47 DECs carries an explicit `## Amendment` heading, and
 # a keyword grep matches all of them because ordinary prose uses those words), so
 # page names the specific records. This pins that it keeps naming them.
 if [ ! -f "$PRACTICES_DOC" ]; then
@@ -1562,18 +1589,19 @@ fi
 # both sides agreed on a wrong number (the failure mode this pin exists to
 # catch: someone edits the type filter in inventory.sh and it silently starts
 # counting the tombstone as a decision — script and page would still agree,
-# just agree on 47).
+# just agree on 48).
 #
-# RE-PINNED 45 -> 46 at SPEC-083, which adds DEC-047. Deliberate corpus
-# change, not drift. Note this is the SECOND guard on a number SPEC-083
-# moves — Y4 pins the other — which is exactly the pair AGENTS.md §9's
-# half (b) exists for: grep the harness for every literal the spec moves.
+# RE-PINNED 46 -> 47 at SPEC-084, which adds DEC-048. Deliberate corpus
+# change, not drift. This is the THIRD consecutive spec whose §9 half-(b)
+# value-grep found Y3 where a concept-grep ("what pins the decision count?")
+# found only X3 — SPEC-083 recorded the same miss in this comment. Grep for
+# the value, not the idea.
 if [ ! -x scripts/inventory.sh ]; then
     fail "Y3" "scripts/inventory.sh is missing or not executable"
 else
     y3_out=$(./scripts/inventory.sh)
     y3_bad=""
-    printf '%s\n' "$y3_out" | grep -F -q 'Decision records | 46 |' || y3_bad="$y3_bad decision-records!=46"
+    printf '%s\n' "$y3_out" | grep -F -q 'Decision records | 47 |' || y3_bad="$y3_bad decision-records!=47"
     printf '%s\n' "$y3_out" | grep -F -q 'Decision numbers reserved, not yet decided | 1 |' || y3_bad="$y3_bad reserved-decisions!=1"
     if [ -z "$y3_bad" ]; then
         ok "Y3"

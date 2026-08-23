@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`brag memory`'s headline count is now `Candidates: <N>`, not
+  `Entries: <N>`** ([DEC-048](decisions/DEC-048-provenance-count-names-what-it-counted.md)).
+  The number was never the corpus size and never a cap: it is the deduped
+  union of up to three 200-row reads, so it *grew* when you passed a flag —
+  `200` bare and `243` with `--project` on the same 387-entry corpus, while
+  `brag export --project` correctly *narrowed* 387 → 74. Same word, same
+  flag, opposite directions. The five other commands that print `Entries:`
+  are unchanged and correct; on those it means entries in scope.
+  `brag://memory/recent` and `brag://memory/project/{name}` carry the new
+  header too, since they are byte-identical to `brag memory`.
+- **Breaking: `brag memory --format json` (and the `brag_memory` MCP tool
+  with `format: "json"`) renames the `entries` key to `candidates`.** Same
+  number, honest name — and it removes a collision with the `entries` key
+  that means *an array of entry objects* on `brag impact`, `brag review`,
+  `brag summary` and `brag wrapped`. Update any `jq .entries` to
+  `jq .candidates`.
+
 ## [0.6.1] - 2026-08-13
 
 A correctness-and-edges release. **No schema change, no migration, no new

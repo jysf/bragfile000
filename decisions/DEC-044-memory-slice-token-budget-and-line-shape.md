@@ -170,7 +170,7 @@ trade — better packing over strict rank monotonicity — and it is why the env
 **reports `Included` and `Skipped`** rather than leaving the caller to infer them.
 Output order remains rank order, so the slice still reads best-first.
 
-`Included + Skipped == Entries` (the deduped candidate-pool size) is an invariant,
+`Included + Skipped == Candidates` (the deduped candidate-pool size) is an invariant,
 pinned by a test.
 
 ### 4. The budget is spent on the ENTRY LINES; the envelope is named overhead
@@ -248,7 +248,7 @@ Markdown gains a `## Budget` section (after `## Slice`):
 
 JSON carries `budget`, `estimated_tokens`, `included`, `skipped` as flat top-level
 keys (DEC-014 choice 2), plus a per-item `tokens`. Per DEC-014 choice 4, on an
-**empty candidate pool** the document ends after `Entries: 0` and both body sections
+**empty candidate pool** the document ends after `Candidates: 0` and both body sections
 are omitted; JSON still emits every key. A **non-empty** pool that includes zero
 entries (budget too small for any line) still renders both sections — `## Slice`
 empty, `## Budget` reporting `Included: 0` — because that is precisely the case a
@@ -403,7 +403,7 @@ by a test rather than by a paragraph.
   enough to their client's real accounting that they never need to re-tune.
 - `estimated_tokens == Σ EstimateTokens(rendered line)` over the included set —
   pinned by `TestSlice_EstimateMatchesRenderedBody`.
-- `Included + Skipped == Entries` — pinned by `TestSlice_CountsPartitionTheCandidatePool`.
+- `Included + Skipped == Candidates` — pinned by `TestSlice_CountsPartitionTheCandidatePool`.
 - A budget too small for the rank-1 entry still includes a later, cheaper one —
   pinned by `TestSlice_SkipsOversizeAndContinues` and by the `--budget 40` golden
   (`Included: 2`, `Skipped: 6`, `Estimated: 37`).
@@ -413,6 +413,11 @@ by a test rather than by a paragraph.
   literal — pinned by `TestPackageEmitsNoReservedTagNamespace`. If that test ever
   fails, the question is *"is something about to stamp the estimate?"* before it is
   *"should the guard be relaxed?"*.
+
+> **Renamed at SPEC-084/DEC-048 (2026-08-22).** The rendered label is
+> `Candidates:`, not `Entries:`. The invariant is unchanged — only the word
+> it is stated against. `Entries:` now means entries in scope on every
+> DEC-014 consumer that emits it.
 
 **Revisit if:**
 - **(a) The divisor proves badly wrong in practice** — a user's client reports a

@@ -7,7 +7,7 @@
 task:
   id: SPEC-084
   type: bug                        # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -2317,18 +2317,79 @@ release tooling has never seen.)*
 
 ## Build Completion
 
-*Filled in during the build cycle.*
-
-- **Deviations from the spec:** <none / list>
-- **New DEC-* files created:** <none / list>
-- **Constraints checked:** <list>
-- **Gates:** <list>
+- **Deviations from the spec:**
+  1. `docs/api-contract.md:921` (the `--format markdown|json` flags bullet's
+     "JSON top-level keys" list) also names `entries` and was not in the
+     spec's "two sites" enumeration for that file. Neither `grep -rn
+     'Entries:'` nor a case-sensitive `grep 'Entries'` finds it — it is
+     lowercase, has no colon, and sits inside a backtick-quoted key list —
+     which is the same class of miss Finding 8 names for the cached golden
+     byte length. Fixed it (`entries` → `candidates`) since leaving it would
+     ship a factually wrong JSON key list. No test guards this specific line;
+     `U9` guards the provenance bullet and the `Scope:` gloss, not this one.
+  2. STAGE-022's stage file was updated during build rather than left for
+     verify/ship. AGENTS.md §12 "During build" lists four actions (fill Build
+     Completion, advance-cycle, create DECs, open PR) and none of them is
+     "update the parent stage file" — and `git log` on this exact file across
+     SPEC-082 and SPEC-083 confirms build never touched the backlog
+     entry/checkbox/count line for either; only frame, design, and ship did.
+     Design for SPEC-084 skipped its own stage-file update (unlike SPEC-083's
+     design, which did), so the entry was still frame-only going into build.
+     Order of work step 8 explicitly lists "the stage file (§11)" as build
+     work, and §11 itself asks for `[x] SPEC-084 (ship)` and a `3 shipped`
+     count line — both would be false statements before verify/ship actually
+     happen. Resolved by writing what's true now: the cycle tag moved
+     `(frame)` → `(build)`, checkbox stays unchecked, the in-scope item 3
+     description was reconciled with the framing text already below it
+     (a same-file internal-consistency fix, not a ship-state claim), and a
+     consolidated "Designed 2026-08-22, built 2026-08-23" paragraph captures
+     what design settled (which its own session never wrote down) plus what
+     build measured. Left untouched for verify/ship, matching precedent:
+     Success Criteria wording, the checkbox flip, the count-line bump to
+     "shipped," and the two AGENTS.md promotion candidates (§9 half-(b) at
+     N=3/N=4) that SPEC-083's ship reflection shows get written at ship time.
+- **New DEC-* files created:** `decisions/DEC-048-provenance-count-names-what-it-counted.md`.
+- **Constraints checked:** `test-before-implementation` (12 failing test
+  functions written and observed red for their stated assertion before
+  `memory.go` was touched — verbatim match to design's own fail-first count);
+  `one-spec-per-pr` (single branch, single PR); `no-sql-in-cli-layer`
+  (untouched, no SQL added); `stdout-is-for-data-stderr-is-for-humans`
+  (untouched, no new output stream).
+- **Gates:** `go test ./...` 14/14 packages ok; `gofmt -l .` empty;
+  `go vet ./...` clean; `just lint` 0 issues; `golangci-lint config verify`
+  exit 0; `just test-docs` ALL OK at 188 assertion ids (`Decision records`
+  46 → 47, `Documentation assertions` 187 → 188, both regenerated via
+  `just inventory` and pasted, never hand-edited); `git diff --stat -- internal/`
+  confined to exactly the four files the spec named (`memory.go`,
+  `memory_test.go` ×2, `resources_test.go`) — no sibling exporter, no
+  `internal/aggregate/` file touched. Live-corpus re-measurement (388 entries,
+  grown by one since design): `Candidates: 200 / 232 / 243 / 247` across the
+  four flag combinations, `brag export --project bragfile` still narrows
+  387→74 (388→74 today) unchanged. Empty-corpus markdown and JSON both
+  terminate correctly at `Candidates: 0`. All five mutations (M-A…M-E)
+  confirmed present by `shasum -a 256` before their failure was credited and
+  restored from a `/tmp` backup with the hash returned to its exact
+  pre-mutation value afterward (never `git checkout`) — see the transcript
+  above for each hash pair.
 
 ### Build-phase reflection (3 questions, short answers)
 
-- **What was unclear in the spec?**
-- **What was missing that you had to decide yourself?**
-- **What would you do differently?**
+- **What was unclear in the spec?** Whether "Notes for the Implementer"
+  §11's stage-file instructions (marking the backlog entry `(ship)`, bumping
+  the count line to "shipped") were meant for build to execute literally now,
+  or were forward-looking content for verify/ship to write once true. The
+  spec's own Order of work bundles it into build's step 8, but AGENTS.md's
+  cycle model and two consecutive specs' git history say otherwise. Resolved
+  in favor of the documented cycle model and observed precedent — see
+  Deviations.
+- **What was missing that you had to decide yourself?** The
+  `docs/api-contract.md:921` JSON-key-list site (Deviation 1) — the spec's
+  own enumeration said "two sites" for this file and this wasn't one of them.
+- **What would you do differently?** Nothing in the code/test/doc path — the
+  spec's literals, line numbers, and measured values all matched the live
+  tree exactly, which made this the fastest build in the stage so far. Flag
+  the stage-file-timing ambiguity at design time next, so build doesn't have
+  to adjudicate a cycle-ownership question mid-session.
 
 ## Reflection (Ship)
 

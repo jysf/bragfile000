@@ -42,7 +42,7 @@ const memoryGolden1 = `# Bragfile Memory
 Generated: 2026-08-08T12:00:00Z
 Scope: lifetime
 Filters: --query auth --project orbit
-Entries: 8
+Candidates: 8
 
 ## Slice
 
@@ -67,7 +67,7 @@ const memoryGolden2 = `# Bragfile Memory
 Generated: 2026-08-08T12:00:00Z
 Scope: lifetime
 Filters: (none)
-Entries: 8
+Candidates: 8
 
 ## Slice
 
@@ -92,7 +92,7 @@ const memoryGolden3 = `# Bragfile Memory
 Generated: 2026-08-08T12:00:00Z
 Scope: lifetime
 Filters: (none)
-Entries: 8
+Candidates: 8
 
 ## Slice
 
@@ -111,7 +111,7 @@ const memoryGolden4 = `# Bragfile Memory
 Generated: 2026-08-08T12:00:00Z
 Scope: lifetime
 Filters: (none)
-Entries: 0`
+Candidates: 0`
 
 const memoryJSONGolden = `{
   "generated_at": "2026-08-08T12:00:00Z",
@@ -120,7 +120,7 @@ const memoryJSONGolden = `{
     "project": "orbit",
     "query": "auth"
   },
-  "entries": 8,
+  "candidates": 8,
   "budget": 2000,
   "estimated_tokens": 143,
   "included": 8,
@@ -244,8 +244,8 @@ func TestToMemoryMarkdown_BlendedGolden(t *testing.T) {
 	if string(got) != memoryGolden1 {
 		t.Errorf("markdown mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, memoryGolden1)
 	}
-	if len(got) != 778 {
-		t.Errorf("byte length = %d, want 778", len(got))
+	if len(got) != 781 {
+		t.Errorf("byte length = %d, want 781", len(got))
 	}
 }
 
@@ -278,7 +278,7 @@ func TestToMemoryMarkdown_TightBudgetGolden(t *testing.T) {
 }
 
 // TestToMemoryMarkdown_EmptyCorpusGolden: byte-exact against Golden 4 — the
-// document ends after Entries: 0, no ## Slice, no ## Budget (DEC-014 part 4).
+// document ends after Candidates: 0, no ## Slice, no ## Budget (DEC-014 part 4).
 func TestToMemoryMarkdown_EmptyCorpusGolden(t *testing.T) {
 	result := memory.Slice(nil, memory.Options{Budget: 2000})
 	opts := MemoryOptions{Filters: "(none)", FiltersJSON: map[string]string{}, Now: memoryFixtureNow}
@@ -350,7 +350,7 @@ func TestToMemoryJSON_EmptyCorpusEmitsEveryKey(t *testing.T) {
 	}
 	s := string(got)
 	for _, want := range []string{
-		`"entries": 0`,
+		`"candidates": 0`,
 		`"budget": 0`,
 		`"estimated_tokens": 0`,
 		`"included": 0`,
@@ -398,5 +398,31 @@ func TestToMemoryMarkdown_TrailingNewlineStripped(t *testing.T) {
 	}
 	if strings.HasSuffix(string(got), "\n") {
 		t.Errorf("markdown ends with a newline: %q", got)
+	}
+}
+
+// TestToMemoryMarkdown_HeaderIsCandidatesNotEntries pins DEC-048 at the
+// renderer: the provenance count is a `Candidates:` line and there is no
+// `Entries:` line at all. Line equality and HasPrefix, never
+// strings.Contains — `Candidates: 8` does not contain `Entries: 8`, so a
+// Contains-shaped guard looks sufficient while silently tolerating any future
+// two-line or suffixed variant (AGENTS.md §9, the heading-level addendum).
+func TestToMemoryMarkdown_HeaderIsCandidatesNotEntries(t *testing.T) {
+	result := memory.Slice(memoryFixtureEntries(), memory.Options{Budget: 2000})
+	got, err := ToMemoryMarkdown(result, MemoryOptions{Filters: "(none)", Now: memoryFixtureNow})
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	sawCandidates := false
+	for _, ln := range strings.Split(string(got), "\n") {
+		if strings.HasPrefix(ln, "Entries:") {
+			t.Errorf("provenance still carries an Entries: line: %q", ln)
+		}
+		if ln == "Candidates: 8" {
+			sawCandidates = true
+		}
+	}
+	if !sawCandidates {
+		t.Errorf("expected a line %q, got:\n%s", "Candidates: 8", got)
 	}
 }
