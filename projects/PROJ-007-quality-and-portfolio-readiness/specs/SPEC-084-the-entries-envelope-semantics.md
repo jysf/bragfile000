@@ -361,6 +361,39 @@ artifact, not a cap — which reshapes fork 2 and prices it.
    re-cost. If design defers it, it must be routed as a named follow-up, not
    dropped — a known-false header line is exactly the kind of item this stage
    exists to close.
+6. **The second collision, compounding the first: `--project` means two things
+   too.** The contrast that makes this defect legible —
+   `export --project bragfile` → **74** (down from 387) versus
+   `memory --project bragfile` → **243** (up from 200) — is *not* one word
+   behaving inconsistently. It is **two** words doing so at once, and both are
+   documented:
+
+   | Command | `--project` help text |
+   |---|---|
+   | `brag export` | *"filter to entries with this project (exact match)"* |
+   | `brag memory` | *"boost entries in this project (**a soft boost, not a filter**)"* |
+
+   The boost semantics are deliberate and locked by **DEC-043** — *"a soft
+   boost, never a filter"* — and they are exactly why `Gather` adds the third
+   read that makes the number grow. So the flag is behaving correctly and the
+   header is not.
+
+   **Why this is a fork and not a footnote:** a reader who sees `243` cannot
+   tell whether the number rose because `Entries:` means something different
+   here or because `--project` does. Repair only the header and that ambiguity
+   survives in a subtler form — the number will be correctly labelled and still
+   surprising, because the flag that moved it is doing the opposite of what the
+   same flag does one command over.
+
+   Design must decide **whether the chosen header wording resolves this or
+   merely relabels it**, and say which. Candidate (b) `Entries: N of M` is the
+   one most exposed: under a boost there is no meaningful `M`, because nothing
+   was filtered out. Testing a fix only against the bare `200` case would miss
+   this entirely — *test the claim, not the counterexample.*
+
+   Framing takes no position on changing `--project`'s semantics; DEC-043 locks
+   them and this spec must not relitigate a ranking decision. The fork is about
+   what the **header** must say to be unambiguous **given** them.
 
 ## Verdict
 
