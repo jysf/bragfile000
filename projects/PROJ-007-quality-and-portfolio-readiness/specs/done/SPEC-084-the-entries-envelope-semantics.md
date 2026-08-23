@@ -7,7 +7,7 @@
 task:
   id: SPEC-084
   type: bug                        # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: medium
   complexity: S                    # S | M | L  (L means split it)
@@ -2401,17 +2401,55 @@ release tooling has never seen.)*
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — **Regenerate the derived table; do not reason about which of its rows
+   will move.** Two of this spec's three verify findings are the same mistake
+   at different depths. The `812 → 815` row was **fully derivable** — §2/§3/§4
+   specify exactly three new test functions — and was still predicted wrong,
+   because the prediction asked *which rows does this change touch* instead of
+   running `just inventory`. The `778 → 781` byte length was the harder case:
+   it caches a **derived property** of the thing being changed and shares no
+   token with it, so no grep in this spec could have found it. Neither broke
+   anything, because `X3` diffs the whole table and the block is regenerated
+   wholesale — the failure was in the *prediction*, not the artifact. The
+   generator is cheap. Run it.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — **Yes: `AGENTS.md` §9 half-(b) wants a third clause, and this spec is the
+   evidence for it.** The rule says grep for the literal occurrences of a value
+   the spec changes. That reaches the case where you know the value; it does
+   not reach a value you did not know would move. Proposed at the stage close:
+   *don't reason about which derived rows move — regenerate and diff; and when
+   a value caches a derived property of what you are changing, only running the
+   implementation finds it.* Confirming cases now at **N=4** (SPEC-079's stale
+   project count, SPEC-081's assertion-id count, SPEC-082's `Y3`/`Y4` pair,
+   SPEC-084's 778 and 812).
+   — **`Y3` has now cached a value this spec moves for the fourth consecutive
+   spec.** That is no longer a lesson about greps; it is an argument that `Y3`
+   and `X3` pin the same numbers by different means and one of them should
+   derive rather than cache. Worth deciding at the stage close rather than
+   re-learning at SPEC-085.
+   — `DEC-048` is this spec's own decision output, not a follow-up.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — **No new spec.** The routed items already carry the remaining work: the
+   unguarded **"four"** numeral in `root.go:13` / `.golangci.yml:71`,
+   `store.go:11`'s **V1 package-vs-layer noun** (which `DEC-047` made
+   mechanically decidable), the `goreleaser` `brews` deprecation **plus** the
+   Homebrew formula not installing shell completions (same file, one spec), and
+   dynamic completion for `--project` / `--tag` / `--type` (PROJ-008). Note
+   `DEC-048` **binds the other five exporters forward** without editing them, so
+   no follow-up is owed there — that was fork 4's whole point.
 
-4. **What can a user do now that they couldn't before?** — one sentence,
-   before → after; quote the confirming number if one exists, name the outcome
-   if not. Write `none` if this spec has no user-visible outcome — that is a
-   real, greppable result, not a blank. **If this answer is not `none`, capture
-   it before closing the cycle.** Evidence ref: tag `pr:<n>`.
-   — <answer | none>
+4. **What can a user do now that they couldn't before?**
+   — An agent or a person reading `brag memory` can now tell **what the number
+   at the top of the document counts**. It says `Candidates:` — the deduped
+   pool the ranker considered — and the JSON key says `candidates` to match.
+   Before, it said `Entries:`, the same word five sibling exporters use for
+   *entries in scope*, while reporting something else entirely: a
+   pool-composition artifact that **grows** when you filter. Measured on a
+   387-entry corpus, `brag memory --project bragfile` reported **243** where
+   `brag export --project bragfile` reported **74** — the same word and the
+   same flag moving in opposite directions. `DEC-048` now legislates the name
+   at the envelope level and binds all six exporters forward, so the collision
+   between four earlier decision records cannot quietly reopen. Evidence ref:
+   `pr:187`.

@@ -264,7 +264,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `sql.Open` pass. Seven mutations, each with the mutant confirmed present
       by content hash: M-A/M-B still fail the lint gate, M-C…M-G fire the new
       assertions. Confidence 0.94.
-- [ ] SPEC-084 (design) — **the `Entries:` envelope semantics.** Framed
+- [x] SPEC-084 (shipped on 2026-08-23) — **the `Entries:` envelope semantics.** Framed
       2026-08-22, **GO at S**. Narrowed 2026-08-18 from "the three coupled
       defects" after the other two were measured and deferred; the stage's
       only remaining correctness item.
@@ -316,9 +316,26 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       would have found. All five mutations (M-A…M-E) confirmed present by
       content hash and restored from a `/tmp` backup. `just test-docs`
       **ALL OK at 188 ids** (`Decision records` 46 → 47, `Documentation
-      assertions` 187 → 188).
+      assertions` 187 → 188, and `Go test functions` 812 → 815 — a **third**
+      row the spec predicted would not move, corrected on the branch at verify).
 
-**Count:** 2 shipped / 1 active / 0 pending
+      **Shipped 2026-08-23 (#187).** Verify returned **PASS with a three-item
+      punch list, all record accuracy and no code defect** — the acceptance
+      criterion's stale diffstat (`+176/−16`, actually `+206/−30`; the gap is
+      exactly the two doc-comment rewrites the same spec mandates), a Build
+      Completion line that misdescribed its own edit, and the undercounted
+      inventory row above. All three were fixed **on the branch before the
+      merge**, so the record is correct as it lands rather than amended after —
+      a stage named *measured and enforced* should not ship a spec whose own
+      numbers are stale. Verify diffed **all 21** fenced literals (20 byte-exact;
+      the one variance is §10's own written fallback, this CHANGELOG having no
+      `### Breaking` heading) and re-ran all five mutations from `/tmp` backups
+      with hashes restored. Independent replay: reverting `memory.go` to main's
+      version with tests at HEAD fails **exactly 12** test functions, and main's
+      `memory.go` hashes to the value the spec recorded at its design
+      pre-flight.
+
+**Count:** 3 shipped / 0 active / 0 pending — **the backlog is complete.**
 
 ## Design Notes
 
