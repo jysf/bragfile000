@@ -19,6 +19,20 @@ if [ -z "$SPEC_FILE" ]; then
     die "Spec not found: ${SPEC_ID}"
 fi
 
+# IDEMPOTENCY GUARD. find_spec searches recursively, so it also finds a spec
+# that is ALREADY archived — and the move below derives DONE_DIR from the
+# file's own directory, which would then be specs/done/done/. A second run
+# therefore buried the spec one level deeper and silently broke the layout.
+# Hit twice: SPEC-083 ship and SPEC-084 ship, both repaired by hand.
+# Archiving is a one-way step; running it again is a no-op, not an error.
+case "$SPEC_FILE" in
+    */done/*)
+        echo "${SPEC_ID} is already archived: ${SPEC_FILE}"
+        echo "Nothing to do."
+        exit 0
+        ;;
+esac
+
 # Check cycle is ship
 CYCLE=$(awk '/^---$/{f=!f; next} f && /^[[:space:]]+cycle:/{print $2; exit}' "$SPEC_FILE" 2>/dev/null || echo "")
 if [ "$CYCLE" != "ship" ]; then
