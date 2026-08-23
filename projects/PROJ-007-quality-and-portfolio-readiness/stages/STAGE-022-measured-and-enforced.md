@@ -260,11 +260,41 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `sql.Open` pass. Seven mutations, each with the mutant confirmed present
       by content hash: M-A/M-B still fail the lint gate, M-C…M-G fire the new
       assertions. Confidence 0.94.
-- [ ] (not yet framed) — **the `Entries:` envelope semantics.** One decision,
-      one fix, one regression test. Narrowed 2026-08-18 from "the three coupled
-      defects" after the other two were measured and deferred.
+- [x] SPEC-084 (frame) — **the `Entries:` envelope semantics.** Framed
+      2026-08-22, **GO at S**. Narrowed 2026-08-18 from "the three coupled
+      defects" after the other two were measured and deferred; the stage's
+      only remaining correctness item.
 
-**Count:** 2 shipped / 0 active / 1 pending
+      Framing **corrected this entry's own premise.** The number is not "the
+      pool capped at `PoolLimit=200`" — `Gather` performs up to three capped
+      reads and dedupes their union, so `Entries:` on `brag memory` is a
+      pool-composition artifact bounded by `min(3 × PoolLimit, corpus)`.
+      Measured against the live 387-entry corpus: bare `200`, `--query brag`
+      `232`, `--project bragfile` `243`, both `247`. The sharpest statement of
+      the defect is the contrast — `brag export --project bragfile` reads
+      `Entries: 74` (down from 387) while `brag memory --project bragfile`
+      reads `Entries: 243` (**up** from 200). Same word, same flag, opposite
+      directions. A fix validated only against `Entries: 200` would be false
+      in general.
+
+      Root cause is a **collision between two DEC-level definitions**, not
+      drift: DEC-013 created the line, DEC-014 (the envelope all six inherit)
+      never adopted it, DEC-028 legislated a variant, and DEC-044:173
+      deliberately redefined it as the candidate pool. The code comment and
+      `api-contract.md:894` already state the truth — only the rendered output
+      lies.
+
+      Blast radius re-derived, and larger than the entry assumed: the **JSON**
+      `"entries"` key (`export/memory.go:89`, `:122`) is a second surface the
+      entry did not name; the 45 `Entries:` test hits span **ten** files, of
+      which exactly **two** move (7 inline literals — no `.golden` files exist)
+      and 36 must not; MCP resources make it an agent-visible contract
+      (DEC-045) whose byte-identity test stays green through the change. Five
+      forks handed to design, including whether `Scope: lifetime` — falsified
+      by `TestMemoryCmd_ThreeReadsComposeThePool` — joins the repair, which is
+      the fork that decides S vs M.
+
+**Count:** 2 shipped / 1 active / 0 pending
 
 ## Design Notes
 
