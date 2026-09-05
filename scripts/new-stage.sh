@@ -40,6 +40,18 @@ if [ ! -f "$TEMPLATE" ]; then
     die "Template not found: ${TEMPLATE}. Did init run correctly?"
 fi
 
+# A project has no stages/ directory until its first stage is framed, so a
+# missing directory here is the NORMAL state for stage one, not an error —
+# create it rather than refusing. Without this, the bare `cp` below failed
+# with a raw "No such file or directory" that named the *file* and never the
+# missing parent, so the cause had to be guessed. Hit twice during PROJ-008
+# framing (2026-09-05), once here and once in new-spec.sh.
+STAGE_DIR=$(dirname "$STAGE_FILE")
+if [ ! -d "$STAGE_DIR" ]; then
+    mkdir -p "$STAGE_DIR" || die "Could not create stage directory: ${STAGE_DIR}"
+    info "Created ${STAGE_DIR} (first stage in ${PROJECT_ID})"
+fi
+
 cp "$TEMPLATE" "$STAGE_FILE"
 
 sed_inplace() {
