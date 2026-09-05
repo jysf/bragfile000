@@ -27,8 +27,17 @@ if [ -z "$PROJECT_DIR" ]; then
     die "Project not found: ${PROJECT_ID}"
 fi
 
-# Verify stage exists in this project
-STAGE_FILE=$(find "${PROJECT_DIR}/stages" -type f -name "${STAGE_ID}-*.md" 2>/dev/null | head -n1)
+# Verify stage exists in this project.
+#
+# The trailing `|| true` is load-bearing, not decoration. `find` exits 1 when
+# ${PROJECT_DIR}/stages does not exist — which is precisely the state of a
+# project whose first stage has not been framed yet — and under `set -e` plus
+# `pipefail` that non-zero status propagates out of the command substitution
+# and kills the script HERE, before the `die` below can name the cause. The
+# symptom was a bare "exit code 1" with no message at all, strictly less
+# legible than the raw `cp` failure this commit is fixing. `next_id` in
+# _lib.sh already guards the same pipeline the same way.
+STAGE_FILE=$(find "${PROJECT_DIR}/stages" -type f -name "${STAGE_ID}-*.md" 2>/dev/null | head -n1 || true)
 if [ -z "$STAGE_FILE" ]; then
     die "Stage not found in ${PROJECT_ID}: ${STAGE_ID}"
 fi
@@ -54,6 +63,19 @@ fi
 
 if [ ! -f "$TEMPLATE" ]; then
     die "Template not found: ${TEMPLATE}. Did init run correctly?"
+fi
+
+# A project has no specs/ directory until its first spec is framed, so a
+# missing directory here is the NORMAL state for spec one, not an error —
+# create it rather than refusing. Same shape, same session as the new-stage.sh
+# guard: the bare `cp` failed with a raw "No such file or directory" naming the
+# *file* and never the missing parent. Hit during PROJ-008 framing (2026-09-05),
+# immediately after the stages/ one, because the workaround for the first
+# (mkdir -p by hand) did not generalise to the second.
+SPEC_DIR=$(dirname "$SPEC_FILE")
+if [ ! -d "$SPEC_DIR" ]; then
+    mkdir -p "$SPEC_DIR" || die "Could not create spec directory: ${SPEC_DIR}"
+    info "Created ${SPEC_DIR} (first spec in ${PROJECT_ID})"
 fi
 
 # Copy template, substitute placeholders
