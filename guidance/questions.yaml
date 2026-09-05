@@ -1018,3 +1018,67 @@ questions:
       the CLI and the three brag:// MCP resources (SPEC-074 LD9), so any
       change moves `Candidates:` on all four surfaces and their byte-exact
       goldens.
+  - id: mutation-probe-class-vs-literal
+    question: "When a spec specifies a mutation probe as a CLASS (\"give learn a --type flag\") rather than as a literal replacement string, should its mutation table record the post-mutation content hash at all, given that hash is not reproducible in a later session?"
+    priority: low
+    status: open
+    raised_by: claude-opus-5
+    raised_at: 2026-09-05
+    assigned_to: null
+    notes: |
+      Filed at SPEC-085 verify. SPEC-085 design recorded a post-mutation
+      `shasum -a 256` for all eight probes. Build reproduced five exactly
+      (M-A, M-C, M-D, M-F, M-H) and three not (M-B, M-E, M-G).
+
+      The split is not random, and it is predictable at design time:
+
+        - the five that MATCHED are point mutations with one obvious form —
+          swap a value ("failed" -> "failure"), add a known call
+          (emitMilestone), delete a named sentence.
+        - the three that did NOT required build to INVENT text: a whole flag
+          declaration with a description string, a wording change, dropping a
+          note. The spec named the class; the literal was build's to choose.
+
+      In all three the FIRED ASSERTION MESSAGE matched design's record
+      verbatim, so the probes are sound and nothing was weakened.
+
+      NOT A PROTOCOL VIOLATION. AGENTS.md §12 clause (1) requires only that
+      the hash MOVE (pre != post) — that is what proves the mutant landed and
+      what `git diff --quiet` gets wrong on an untracked file. It has never
+      required post == a previously recorded value. Build met the written
+      protocol; the mismatch is against a stronger expectation nobody wrote
+      down.
+
+      WHY IT IS STILL WORTH A REGISTER ENTRY: a recorded value that cannot be
+      reproduced invites exactly the move clause (1) exists to prevent — "the
+      natural next move is to rewrite a mutation that was already correct."
+      Build did not take it (it explained the mismatch in its reflection),
+      but the next session has no way to know which of the eight hashes are
+      reproducible and which are not.
+
+      DELIBERATELY NOT CODIFIED, by this repo's own meta-rule. AGENTS.md §12's
+      codification meta-rule clears at N=2 for paired opposing outcomes and
+      N=3 for same-outcome confirming cases. This is N=1: three instances
+      inside ONE spec, produced in one sitting by one design habit, with no
+      opposing case — nothing shows that recording a class-hash has ever cost
+      anything, and nothing shows omitting it has ever saved anything. Cost
+      here was zero. Adding a clause to AGENTS.md §12 or to the spec template
+      on that evidence would be a process change binding every future spec,
+      riding in on a single clean observation — the objection SPEC-079 raised
+      against the corrections-convention and the reason that one is still a
+      question rather than a rule.
+
+      THE CHEAP FIX NEEDS NO RULE: a spec's mutation table can mark which
+      probes are literal-specified (hash reproducible; a mismatch is a real
+      signal) and which are class-specified (hash moves; the value is not
+      reproducible and the fired assertion is the contract). That is one
+      column inside one spec, not a process change.
+
+      RESOLVE WHEN: a second, independent spec records class-specified
+      mutation hashes and a build session either (a) CHASES the mismatch or
+      rewrites a correct mutant — that pairs an opposing outcome against
+      SPEC-085's clean handling and clears the bar at N=2, promote a fourth
+      clause to AGENTS.md §12; or (b) handles it cleanly again — a third
+      same-outcome case, promote at N=3. OR a session reports the recorded
+      post-hash was actually USEFUL on a class-specified probe, which closes
+      this as a non-question.

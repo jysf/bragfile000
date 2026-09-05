@@ -7,7 +7,7 @@
 task:
   id: SPEC-085
   type: story                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: verify
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -910,7 +910,7 @@ split.
 |---|---:|---|
 | `internal/cli/learn.go` | 166 | `NewLearnCmd` + `runLearn`/`runLearnFlags`/`runLearnEditor`/`insertLearned`, and the `FailureType` const. Embedded verbatim in *Notes for the Implementer* §1. |
 | `internal/cli/learn_test.go` | 166 | 5 test functions. Embedded verbatim in §2. |
-| `decisions/DEC-049-a-failure-is-a-reserved-type-value-pinned-by-a-verb.md` | 181 | The decision record. **Must carry `  type: decision`** in its front-matter or `Z7` fails and the inventory silently under-reports. Embedded verbatim in §3. |
+| `decisions/DEC-049-a-failure-is-a-reserved-type-value-pinned-by-a-verb.md` | 181 | The decision record. **Must carry `  type: decision`** in its front-matter or `Z7` fails and the inventory under-reports by one. Embedded verbatim in §3. **Corrected at verify:** the under-report is not *silent* — mutation-tested, `X3`, `Y3` and `Z7` all three fire (see *Verify*). |
 
 ### Modified files (11)
 
@@ -2304,6 +2304,375 @@ re-derived on the build tree, not copied from design.
   place the spec deliberately left underspecified, because pinning the exact
   mutation string would be design prescribing an implementation detail of a
   throwaway probe.
+
+## Verify
+
+Verified on 2026-09-05 from `main` at `d8c69d7` (**PR #197 had already
+merged** — build's "open, not merged" starting state was stale by the time
+this session opened; branched `verify/spec-085-brag-learn` from the merged
+main rather than from the build branch). Corpus re-derived at **401** in the
+probe copy (398 live + the 3 failures this session wrote to a copy);
+`~/.bragfile/db.sqlite` was never written.
+
+**Verdict: ⚠ PUNCH LIST — applied here, not sent back.** Everything SPEC-085
+claims for itself holds. Two omissions were found in its own artifacts and
+fixed in this PR; the substantial finding is about **SPEC-086's premise**, not
+about anything SPEC-085 shipped.
+
+### What was attacked
+
+Build's checklist was not re-run. Five attacks were chosen for what a passing
+build cannot see.
+
+#### 1. Does a `failed` row degrade any existing consumer? — **two surfaces read wrong, and neither is the pair SPEC-086 names**
+
+A copy of the live corpus was given three `brag learn` entries and driven
+through every surface that reads `type`. Minimal standalone reproduction (two
+entries, one of each kind):
+
+```
+$ brag --db /tmp/min.sqlite add   -t "Shipped the worker pool PoC" -p demo -i "cut p50 by 40%" -k shipped
+$ brag --db /tmp/min.sqlite learn -t "shared-worker pool did not cut cold starts" -p demo -i "cost two days and produced nothing reusable"
+```
+
+| Surface | Renders `type` in markdown? | Reads |
+|---|---|---|
+| `memory`, `brag://memory/recent`, `brag_memory` | **yes** — `[demo/failed]` | correct |
+| `export`, `show` | **yes** (per-entry table) | correct |
+| `list`, `search`, `spark`, `stats`, `coverage`, `tags` | n/a (type-blind or neutral) | correct |
+| `review` | no, but heading is `## Entries` + reflection questions | correct |
+| `brag_list` / `brag_search` (MCP) | **yes** — full entry JSON carries `"type":"failed"` | correct |
+| `impact` | no | **as SPEC-086 describes** |
+| `wrapped` | no (in *Impact moments*) | **as SPEC-086 describes** |
+| `summary` | no (in *Highlights*) | **reads wrong — not in SPEC-086's pair** |
+| `story` markdown | no | **reads wrong — not in SPEC-086's pair** |
+
+**`impact` and `wrapped`: the damage is exactly what SPEC-086 describes and no
+worse.** Confirmed by reproduction, not inherited:
+
+```
+$ brag --db /tmp/min.sqlite impact --quarter
+Entries: 2/2 with impact
+## Impact
+### demo
+- 1: Shipped the worker pool PoC
+  cut p50 by 40%
+- 2: shared-worker pool did not cut cold starts
+  cost two days and produced nothing reusable
+```
+
+Silently included, unmarked, unrepresentable as a failure — SPEC-086 §2
+verbatim. `wrapped`'s *Impact moments* is the same document. `wrapped`'s
+`## Rhythm` → *Top types* **does** render `failed` honestly, so the leak is
+confined to the section SPEC-086 already owns. The JSON is the same 4-key
+`impactEntry`. **No worse than described.**
+
+**The finding: SPEC-086's Fork B classifies `story` and `summary` as
+"neutral", and measured, they are not.** Fork B reads:
+
+> *"`wrapped`/`impact` are celebratory; `summary`/`story`/`export`/`coverage`
+> are neutral, and a neutral surface arguably needs no section at all."*
+
+`export` and `coverage` are genuinely neutral — verified above. The other two
+are not:
+
+**(a) `brag story --audience exec` is the most promotional surface in the
+tool, and it is a prompt, not a display.** Its markdown output is fed to an
+LLM together with a directive it also prints:
+
+```
+$ brag --db /tmp/min.sqlite story --quarter --audience exec
+## Threads
+### demo
+- ★ 1: Shipped the worker pool PoC
+  cut p50 by 40%
+- ★ 2: shared-worker pool did not cut cold starts
+  cost two days and produced nothing reusable
+
+## Framing directive
+# Framing directive — audience: exec (promote, impact-forward)
+- Lead with business impact. Every beat below carries a ★ impact
+  statement; build the narrative from those outcomes, not the activity.
+- Terse and promotional. One or two sentences per outcome. No process,
+  no messy middle — the highest-impact thread leads.
+- Quantify wherever the impact beats give you a metric.
+```
+
+Expected: a failure is distinguishable from a win. Actual: both are `★` beats,
+and the directive instructs the model to build a **promotional** narrative
+from every one of them and to **quantify** from `"cost two days and produced
+nothing reusable"`. This is a strictly worse outcome than `impact`'s, because
+`impact` shows a human a mislabelled row while `story` instructs a model to
+launder it. Two further notes: `--audience me`'s directive is genuinely candid
+(*"Include the messy middle: struggles, false starts… are the point"*), so
+**"is `story` celebratory?" is not a property of the command — it is a
+property of the profile**, and Fork B's per-surface framing cannot express
+that; and `story --format json` **does** carry `"type":"failed"` on each beat,
+so the markdown path is the only lossy one.
+
+**(b) `brag summary`'s section is literally named `## Highlights`.**
+
+```
+$ brag --db /tmp/min.sqlite summary --range week
+**By type**
+- failed: 1
+- shipped: 1
+## Highlights
+### demo
+- 1: Shipped the worker pool PoC
+- 2: shared-worker pool did not cut cold starts
+```
+
+The *By type* block is honest; *Highlights* lists a two-day dead end as a
+highlight with no type rendered, in either format (`summary`'s JSON highlight
+is a 2-key `{id,title}` — narrower than `impact`'s 4-key).
+
+**Consequence for SPEC-086, not for SPEC-085:** Fork B must be answered
+against the measured framing of each surface, not an assumed one. Nothing here
+asks SPEC-085 to change; it is filed so SPEC-086's design does not inherit a
+premise verify has already falsified — the same service SPEC-085's design did
+for framing.
+
+**One sharpening of SPEC-085's own "interim risk", which is stated as bounded
+because *"the user controls when the first one is written"*.** True, but
+`BRAG.md`'s new section (this PR) instructs the agent that *"The `impact`
+field is still worth filling in"* and shows `-i` in its example. So the
+leaking shape is now the **documented default path**, not merely a possibility.
+The risk is still acceptable and still bounded; the reason it is bounded is
+the empty corpus, not user restraint.
+
+#### 2. `--type` negation: confirmed inexpressible, and it fails **silently**
+
+`internal/storage/store.go:388` is exact-match inclusion on a single string:
+
+```go
+if f.Type != "" {
+    conds = append(conds, "e.type = ?")
+    args = append(args, f.Type)
+}
+```
+
+Every obvious attempt at *"everything except failures"* returns **exit 0 and
+zero rows** — no error, no diagnostic:
+
+```
+$ brag --db /tmp/min.sqlite list                      # 2 rows (baseline)
+$ brag --db /tmp/min.sqlite list --type '!failed'     # 0 rows, exit 0
+$ brag --db /tmp/min.sqlite list --type '-failed'     # 0 rows, exit 0
+$ brag --db /tmp/min.sqlite list --type 'shipped,failed'  # 0 rows, exit 0
+$ brag --db /tmp/min.sqlite list --type shipped --type milestone  # 0 rows, exit 0 (cobra last-wins)
+$ brag --db /tmp/min.sqlite list --type ''            # exit 1: "--type must not be empty"
+```
+
+So the claim holds, and the failure mode is worse than "unsupported": a user
+filtering failures out of a review gets an **empty document rather than a
+diagnostic**. Only the empty string is rejected.
+
+**Nothing in this PR implies otherwise.** `git diff 2913c80..d8c69d7` over the
+doc set returns no added line containing `except`/`exclude`/`minus`/`negat`
+in a retrieval claim; `list --help` says `filter to entries with this type
+(exact match)`; every doc teaches the positive form `brag list --type failed`
+only. Worth carrying to SPEC-086, whose Fork A needs exactly this negation.
+
+#### 3. The Z7 double-claim: **first half true, second half false**
+
+The spec's Outputs table warns DEC-049 *"**Must carry `  type: decision`** …
+or `Z7` fails **and the inventory silently under-reports**."* Both halves
+tested by mutation (backup to the session scratchpad, `shasum -a 256` before
+and after, restore from the backup — never `git checkout`):
+
+```
+$ shasum -a 256 decisions/DEC-049-*.md        # be0a6b71…
+$ perl -i -pe 's/^  type: decision  .*\n$//' decisions/DEC-049-*.md
+$ shasum -a 256 decisions/DEC-049-*.md        # 56f78528…   (mutant landed)
+$ ./scripts/inventory.sh | grep 'Decision records'
+| Decision records | 47 | ...
+$ ./scripts/test-docs.sh
+FAIL: X3: inventory block is stale — run `just inventory` and paste between the markers:
+FAIL: Y3: inventory.sh row value(s) wrong: decision-records!=48
+FAIL: Z7: the inventory covers 48 of 49 decisions/DEC-*.md files (47 decision + 1 reservation)…
+FAILED: 3 assertion(s) failed.
+$ cp <backup> decisions/DEC-049-*.md
+$ shasum -a 256 decisions/DEC-049-*.md        # be0a6b71…  ✔ restored
+```
+
+- **Half (a) — Z7 fires: TRUE**, with a message that names the exact cause.
+- **Half (b) — "silently under-reports": FALSE.** The row does move (48 → 47),
+  but **three** assertions fire, not zero. `Y3` pins the literal and `X3` diffs
+  the whole block, so a lost DEC is loud on three independent channels.
+
+The warning is half-right and the wrong half is the one that would matter:
+it tells a future author the guard is weak where it is in fact triple-covered.
+Corrected in place under *Outputs* below. (The "silent" reading is only
+reachable if an author *also* regenerated the block and re-pinned `Y3` to the
+under-reported value — and `Z7` exists precisely to be the backstop there,
+which is what its own failure message says.)
+
+#### 4. The two routed items, re-checked rather than inherited
+
+**`docs/tutorial.md` — correctly routed; incomplete, not wrong.**
+
+- *No assertion depends on it.* Group `AB` targets exactly `BRAG.md`,
+  `README.md`, `docs/api-contract.md` — `grep -c tutorial` over the Group AB
+  block returns **0**, and the harness is `ALL OK` without it.
+- *Not wrong.* The two places the tutorial talks about `type` are
+  `tutorial.md:82` (*"`--type` is free-form text — pick whatever feels useful
+  … No enforced enum"*) and `tutorial.md:135`. Both describe **`brag add`**,
+  and LD2 keeps `brag add --type` free-form and unvalidated — so both remain
+  literally true. The tutorial's scope line already disclaims completeness
+  (*"See `docs/api-contract.md` for the full command surface"*), and
+  `api-contract.md` **was** updated.
+- *One thing to carry forward, not a defect:* `tutorial.md:82`'s *"pick
+  whatever feels useful"* is now the only user-facing sentence that invites
+  the fragmentation `AB2-neg` guards against elsewhere. It is not false, and
+  it is not this spec's to fix; it belongs with the tutorial section
+  SPEC-086 will write.
+- `W3` (the *"shipped as of v0.6.1"* pin) keys on the latest **dated**
+  CHANGELOG section, and SPEC-085's entry went to `## [Unreleased]` — so W3 is
+  unaffected until the release cut, as it should be.
+
+**The DEC-004 sweep — count re-derived, routing confirmed.**
+
+```
+$ grep -rn 'DEC-004' --include='*.go' . | wc -l
+11
+```
+
+**11 confirmed**, across 9 files, and `internal/story/thread.go:143` does carry
+the `DEC-004/DEC-015` idiom the spec names as the model. **This PR adds no new
+stale citation**: the only added `DEC-004` line in `2913c80..d8c69d7` is inside
+DEC-049's own prose and reads *"DEC-015 — tags are normalized; supersedes
+DEC-004"*, which is the correct form. No assertion depends on the Go-source
+citations. **One trap for whoever takes the chore:** `X6` requires
+`docs/engineering-practices.md` to keep citing the literal `DEC-004` (it is one
+of six ids in X6's list), so a repo-wide "fix the stale citations" pass that
+rewrites that page will turn `X6` red for the right reason and the wrong cause.
+
+#### 5. Group `AB`'s unprobed branches — all have teeth
+
+The eight design/build mutations proved `AB1b`, `AB2a`, `AB2-neg`, `AB3c` and
+`AB4`. `AB2-neg` is a 3-file × 4-needle nested loop — **12 branches, of which
+M-F exercised exactly one** (`BRAG.md` × `--type failure`). Four unprobed
+branches were driven, full hash protocol each:
+
+| Probe | Mutation | Hash | Fired |
+|---|---|---|---|
+| `V-M1` | `README.md` teaches `--type abandoned` | `42d0820e` → `d0d05205` | `AB2-neg: … [README.md teaches '--type abandoned']` |
+| `V-M2` | drop the `AB3a` sentence from `docs/api-contract.md` | `1fc45113` → `2f81f69c` | `AB3a: … missing literal` |
+| `V-M3` | drop the `AB3b` sentence from `docs/api-contract.md` | `1fc45113` → `1fa8871d` | `AB3b: … missing literal` |
+| `V-M4` | remove `README.md`'s `brag list --type failed` line | `42d0820e` → `3f2be8c3` | `AB2b: … missing literal` |
+
+All four restored to their pre-mutation hash. **Nothing found** — the untested
+needle (`abandoned`), the untested file (`README.md`) and the two untested
+`AB3` positives are all live. Incidental cross-check: `V-M2`/`V-M3`'s
+pre-mutation hash `1fc45113` is byte-identical to the baseline design recorded
+for `docs/api-contract.md` at `81e639d`, independently confirming the
+transcription introduced no drift.
+
+### What did not hold — two omissions in SPEC-085's own artifacts, fixed here
+
+**F1 — the `Y3`/`Y4` re-pin notes the spec asked for were never written.**
+Not a build error: the spec **contradicts itself**. Its `## Failing Tests`
+says, under *Changed — `Y4`*:
+
+> *"Add a re-pin note in the style of the existing SPEC-082/SPEC-083 notes…"*
+
+while its `## Notes for the Implementer` §9 embedded literal diff changes
+**only the two value lines**. Under the literal-artifact contract build
+transcribes the literal verbatim — which it did, correctly, and reported
+"Deviations: none", also correctly. The result:
+
+```
+$ git diff 2913c80..d8c69d7 -- scripts/test-docs.sh | grep -E '^[-+].*RE-PINNED'
+(no output)
+```
+
+`Y3`'s pin reads `48` while its comment history stops at *"RE-PINNED 46 -> 47
+at SPEC-084"*; `Y4`'s reads `20/7` while its history stops at SPEC-083's
+`19/6`. That is the exact drift those notes exist to prevent — `Y3`'s own
+comment records that three consecutive specs' value-greps found it, and the
+next author re-pinning `48 → 49` would read a baseline of 47. **Both notes
+added in this PR.**
+
+This is also a gap in the §12(b) recipe worth naming: the design pre-flight's
+literal round-trip proved *the literal survives extraction*, which is a
+different claim from *the literal implements every instruction the spec gives
+elsewhere*. Nothing cross-checks `## Failing Tests` against the embedded diff.
+
+**F2 — the mutation-class hash finding: recorded, deliberately NOT codified.**
+Build reproduced 5 of 8 design hashes (M-A/M-C/M-D/M-F/M-H) and not M-B/M-E/
+M-G, with the fired-assertion message matching verbatim in all three. The split
+is predictable, not random: the five that matched are point mutations with one
+obvious form; the three that did not required build to **invent** text, because
+the spec named the class.
+
+**The protocol was not violated.** AGENTS.md §12 clause (1) requires only that
+the hash **move** — `pre != post` — which is what proves the mutant landed and
+what `git diff --quiet` gets wrong on an untracked file. It has never required
+`post` to equal a previously recorded value. The mismatch is against a
+stronger expectation nobody wrote down.
+
+**The call: no note in the spec template, and no new AGENTS.md §12 clause —
+filed as a `guidance/questions.yaml` entry instead.** Reasoning, against this
+repo's own codification meta-rule (N=2 paired-opposing, N=3 same-outcome):
+this is **N=1** — three instances inside one spec, produced in one sitting by
+one design habit, with no opposing case, and the cost was zero because build
+noticed and explained it. A template note binds every future spec on that
+evidence; that is the objection SPEC-079 raised against the corrections
+convention, and the reason that one is still a question. The cheap fix needs
+no rule at all: a mutation table can mark which probes are literal-specified
+(a hash mismatch is real signal) and which are class-specified (the fired
+assertion is the contract). Filed as **`mutation-probe-class-vs-literal`**
+with both promotion triggers and the closing trigger, so a second independent
+case can settle it either way — the same shape SPEC-085 used for the two
+memory questions, and the reason `AB4` asserts *examined* rather than merely
+*open*.
+
+Consequence, regenerated and diffed rather than predicted: questions **20 → 21**
+and open **7 → 8**; `Y4` re-pinned to `21`/`8`; the inventory block
+regenerated. `diff <(./scripts/inventory.sh) <(block)` is empty. **No other
+row moved** — the doc-assertion count held at 198 because the `Y3`/`Y4` notes
+add comments, not assertion ids. Proved live rather than assumed:
+
+```
+$ perl -i -0pe 's/(mutation-probe-class-vs-literal.*?\n    )status: open/${1}status: answered/s' guidance/questions.yaml
+$ ./scripts/test-docs.sh
+FAIL: X3: inventory block is stale …
+FAIL: Y4: inventory.sh row value(s) wrong: questions-open!=8
+$ cp <backup> guidance/questions.yaml     # hash 6860b32c restored ✔
+```
+
+### What held — re-derived independently, not inherited
+
+- **All five gates green** after the punch-list edits: `go test ./...` **1070
+  tests, 14 packages `ok` + 1 with no test files = 15**; `gofmt -l .` empty;
+  `go vet ./...` clean; `just lint` **0 issues**; `just test-docs` **ALL OK at
+  199 `OK:` lines / 198 distinct ids**, `grep -c 'OK:   AB'` = **10**.
+- **Live corpus re-derived** (read-only copy): **398** entries, **18** distinct
+  non-empty `type` values, **0** rows of `type='failed'` — design's figures
+  hold unchanged.
+- **AC-2 / AC-3 / AC-4** re-run end-to-end on a temp DB, matching the recorded
+  traces byte-for-byte, including `brag memory`'s
+  `- 1 2026-09-05 [bragfile/failed] …` line.
+- **LD6 verified live over the wire**, not by reading source: a real
+  `tools/list` on `brag mcp serve` returns `brag_add.properties.type` carrying
+  *"One value is reserved: \"failed\" … Use it verbatim; do not invent a
+  spelling."*, and the tool count is unchanged at five.
+- **AC-11 holds:** no golden file is touched by `2913c80..d8c69d7`, and the
+  MCP resource surface still renders the memory slice byte-identically.
+- `NEXT-SESSION-PROMPT.md` was left modified and uncommitted throughout, as
+  instructed — not committed, not reverted.
+
+### Punch list
+
+| # | Item | Status |
+|---|---|---|
+| F1 | `Y3`/`Y4` re-pin notes missing (spec self-contradiction) | **fixed in this PR** |
+| F2 | mutation-class hash reproducibility | **filed** as `mutation-probe-class-vs-literal`; not codified, with reasons |
+| F3 | `Z7`'s *"silently under-reports"* is false | **corrected in place** under *Outputs* |
+| F4 | SPEC-086 Fork B calls `story`/`summary` neutral; measured, they are not | **routed to SPEC-086** — no SPEC-085 change |
+| F5 | the leaking shape is `BRAG.md`'s documented default, not merely possible | **routed to SPEC-086** — sharpens the interim risk, does not invalidate it |
+| F6 | `X6` pins `DEC-004` in `docs/engineering-practices.md` | **routed** to the DEC-004 sweep chore as a named trap |
 
 ## Reflection (Ship)
 

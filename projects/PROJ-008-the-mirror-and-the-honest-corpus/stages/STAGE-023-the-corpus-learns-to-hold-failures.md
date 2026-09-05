@@ -161,14 +161,14 @@ STAGE-024's framing, recorded here because it is what settled the ordering.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-085 (design) — the capture verb, its schema home, and its behaviour
+- [ ] SPEC-085 (verify) — the capture verb, its schema home, and its behaviour
       in `brag memory`; five forks, all settled. Complexity **M**, re-affirmed
       after the split below.
 - [ ] SPEC-086 (frame) — digest posture: the `## What didn't work` section on
       `wrapped` and `impact`, and the two DEC-048 count renames it forces.
       **Blocked on SPEC-085.**
 
-**Count:** 0 shipped / 1 design / 1 framed
+**Count:** 0 shipped / 1 verify / 1 framed
 
 ### The conditional spec fired (2026-09-05, at SPEC-085 design)
 
@@ -266,6 +266,43 @@ string `brag memory` appears **zero** times in the file, not twice.
 The gap is real but differently shaped, and smaller: **the read section exists
 and omits the one command written for agents.** STAGE-024 should frame it
 against that, not against "BRAG.md is write-only."
+
+### Correction from SPEC-085 verify (2026-09-05) — for SPEC-086 framing
+
+**SPEC-086's Fork B splits the seven `--type` surfaces into *celebratory*
+(`wrapped`, `impact`) and *neutral* (`summary`, `story`, `export`,
+`coverage`), and asks design to decide per surface. Two of those four are
+misclassified, measured on a corpus carrying `type: failed` rows.**
+
+`export` and `coverage` are genuinely neutral — `export` renders `type` in its
+per-entry table, `coverage` is provenance-only. The other two are not:
+
+| Surface | What it actually does with a failure |
+|---|---|
+| `story --audience exec` | renders it as a `★` beat with **no `type` in markdown**, under a printed directive that says *"build the narrative from those outcomes"*, *"Terse and promotional… No process, no messy middle"*, *"Quantify wherever the impact beats give you a metric."* The output is a **prompt for an LLM**, so this is a strictly worse leak than `impact`'s: `impact` shows a human a mislabelled row, `story` instructs a model to launder it. |
+| `summary` | its section is literally `## Highlights`; the failure appears there with no `type` in either format (`summary`'s JSON highlight is a 2-key `{id,title}`, narrower than `impact`'s 4-key). |
+
+Two constraints this puts on Fork B:
+
+1. **"Is `story` celebratory?" is not a property of the command.**
+   `--audience me`'s directive is candid by design (*"Include the messy middle:
+   struggles, false starts… are the point"*) while `--audience exec`'s is
+   promotional. Fork B's per-surface framing cannot express a per-**profile**
+   answer, and needs to.
+2. **`story --format json` already carries `"type": "failed"` on each beat.**
+   Only the markdown path is lossy — which makes `story` a cheaper fix than
+   `impact`/`wrapped`, not a more expensive one.
+
+Reproductions are in SPEC-085's `## Verify`. Nothing here changes SPEC-085,
+and none of it was known at the time Fork B was written — it needed a corpus
+with failures in it, which is what SPEC-085 shipped the ability to make.
+
+**Also sharpened, not overturned:** SPEC-085's *interim risk* is bounded partly
+because *"the user controls when the first [failure with an impact] is
+written."* True, but `BRAG.md`'s new section tells the agent *"The `impact`
+field is still worth filling in"* and shows `-i` in its example — so the
+leaking shape is the **documented default path**. The risk is still acceptable;
+what bounds it is the empty corpus, not user restraint.
 
 ### The Fork 3 finding, which belongs to the stage rather than to one spec
 
