@@ -98,6 +98,19 @@ brag add \
   --impact "unblocked mobile v3 release"
 ```
 
+Work that did **not** work gets its own verb, so the corpus is not a
+wins-only ledger:
+
+```bash
+brag learn -t "shared-worker pool did not cut cold starts" \
+           -i "cost two days and produced nothing reusable"
+brag list --type failed          # read them back
+```
+
+`brag learn` pins the entry type to `failed` — there is no `--type` flag on
+it — so these stay greppable instead of fragmenting across near-duplicate
+spellings.
+
 For longer narrative entries, `brag add` with no flags opens
 `$EDITOR` against a templated buffer:
 

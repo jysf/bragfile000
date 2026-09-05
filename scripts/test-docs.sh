@@ -1601,7 +1601,7 @@ if [ ! -x scripts/inventory.sh ]; then
 else
     y3_out=$(./scripts/inventory.sh)
     y3_bad=""
-    printf '%s\n' "$y3_out" | grep -F -q 'Decision records | 47 |' || y3_bad="$y3_bad decision-records!=47"
+    printf '%s\n' "$y3_out" | grep -F -q 'Decision records | 48 |' || y3_bad="$y3_bad decision-records!=48"
     printf '%s\n' "$y3_out" | grep -F -q 'Decision numbers reserved, not yet decided | 1 |' || y3_bad="$y3_bad reserved-decisions!=1"
     if [ -z "$y3_bad" ]; then
         ok "Y3"
@@ -1627,8 +1627,8 @@ if [ ! -x scripts/inventory.sh ]; then
 else
     y4_out=$(./scripts/inventory.sh)
     y4_bad=""
-    printf '%s\n' "$y4_out" | grep -F -q 'Questions tracked in guidance/questions.yaml | 19 |' || y4_bad="$y4_bad questions-total!=19"
-    printf '%s\n' "$y4_out" | grep -F -q 'of those, still open | 6 |' || y4_bad="$y4_bad questions-open!=6"
+    printf '%s\n' "$y4_out" | grep -F -q 'Questions tracked in guidance/questions.yaml | 20 |' || y4_bad="$y4_bad questions-total!=20"
+    printf '%s\n' "$y4_out" | grep -F -q 'of those, still open | 7 |' || y4_bad="$y4_bad questions-open!=7"
     if [ -z "$y4_bad" ]; then
         ok "Y4"
     else
@@ -1892,6 +1892,86 @@ if [ -z "$aa3_bad" ]; then
     ok "AA3"
 else
     fail "AA3" "a claim SPEC-083 corrected is back in the tree:$aa3_bad"
+fi
+
+# ===== Group AB — the reserved failure type (SPEC-085 / DEC-049) =====
+#
+# SPEC-085 adds ONE reserved value to a field that is otherwise free-form, and
+# pins it with a verb instead of a validator. Nothing in the binary stops a
+# second spelling: `brag add --type failure` is legal and always will be. So
+# the guard that matters is not "is the value valid" (it cannot be) but "do the
+# docs and the binary still name the SAME value" — because the moment a doc
+# teaches `--type failure`, the convention has forked exactly the way
+# `shipped`/`ship` (202/15) and `fixed`/`bugfix` (2/1) already did in the live
+# corpus, which is the evidence DEC-049 rests on.
+#
+# WHY THE NEEDLES ARE COMMAND FORMS, NOT BARE WORDS. Asserting that the word
+# "failure" is absent from BRAG.md would fail on BRAG.md's own guidance, which
+# names "failure" and "dead-end" as the spellings NOT to invent (BRAG.md:147)
+# and uses "failure" in ordinary prose (BRAG.md:153). Verified at design by
+# grepping the drafted prose for each needle before locking: the four `--type
+# <wrong>` forms return 0 hits while the bare words return 2. Scope the needle
+# to the invocation and the assertion stays true without muzzling the prose.
+
+# AB1 — the agent-facing capture guide teaches the verb AND the read-back. The
+# read-back half is the one that rots: BRAG.md documented capture for four
+# months while `brag memory` appeared nowhere in it.
+assert_contains_literal "AB1a" "BRAG.md" "brag learn"
+assert_contains_literal "AB1b" "BRAG.md" "brag list --type failed"
+
+# AB2 — ONE spelling, checked in both directions in the same group. The
+# positives are what make the negatives mean something: a NOT-contains alone
+# passes trivially on a file that never mentions the subject at all.
+# Ids are LITERAL, not loop-generated. scripts/inventory.sh derives the
+# doc-assertion count statically, by matching a quoted literal id in this
+# file, so an id built from a loop variable runs but is never counted — the
+# page would under-report by exactly the number of such ids (measured at
+# design: 198 emitted vs 195 counted). Distinct-ids is the number X3 pins.
+assert_contains_literal "AB2a" "BRAG.md" "--type failed"
+assert_contains_literal "AB2b" "README.md" "--type failed"
+assert_contains_literal "AB2c" "docs/api-contract.md" "--type failed"
+ab2_bad=""
+for ab2_f in "BRAG.md" "README.md" "docs/api-contract.md"; do
+    for ab2_n in "--type failure" "--type dead-end" "--type abandoned" "--type failed-work"; do
+        if grep -F -q -- "$ab2_n" "$ab2_f" 2>/dev/null; then
+            ab2_bad="$ab2_bad [$ab2_f teaches '$ab2_n']"
+        fi
+    done
+done
+if [ -z "$ab2_bad" ]; then
+    ok "AB2-neg"
+else
+    fail "AB2-neg" "a second spelling of the reserved type has entered the docs:$ab2_bad"
+fi
+
+# AB3 — the three deliberate OMISSIONS stay documented. Each is a thing a
+# later contributor would plausibly "fix" by adding it back; each is recorded
+# in DEC-049 as a choice. Naming them in the contract means restoring one has
+# to edit this file too, rather than looking like an oversight being tidied.
+assert_contains_literal "AB3a" "docs/api-contract.md" "There is no \`--type\` flag, and no \`-k\` shorthand."
+assert_contains_literal "AB3b" "docs/api-contract.md" "**No \`--json\` mode.**"
+assert_contains_literal "AB3c" "docs/api-contract.md" "**No milestone line.**"
+
+# AB4 — STAGE-023 owed guidance/questions.yaml an answer on
+# memory-slice-fusion-constants IN BOTH DIRECTIONS. The failure mode named at
+# framing was silence, so this asserts the non-answer is RECORDED: the entry is
+# still open (SPEC-085 did not resolve it) and its notes say SPEC-085 looked.
+# An entry that is merely still open is indistinguishable from one nobody read.
+ab4_bad=""
+ab4_status=$(awk -v want="  - id: memory-slice-fusion-constants" '
+    $0 == want { f=1; next }
+    f && /^  - id: / { exit }
+    f && /^    status: / { print; exit }
+' guidance/questions.yaml)
+[ "$ab4_status" = "    status: open" ] || ab4_bad="$ab4_bad [fusion-constants is no longer open: '$ab4_status']"
+grep -F -q "EXAMINED AND LEFT OPEN at SPEC-085 design" guidance/questions.yaml \
+    || ab4_bad="$ab4_bad [the register does not record that SPEC-085 examined it]"
+grep -F -q "  - id: memory-pool-composition-excludes-older-entries" guidance/questions.yaml \
+    || ab4_bad="$ab4_bad [the pool-composition question was not filed]"
+if [ -z "$ab4_bad" ]; then
+    ok "AB4"
+else
+    fail "AB4" "the fusion-constants answer-in-both-directions is not recorded:$ab4_bad"
 fi
 
 # ===== finalise =====

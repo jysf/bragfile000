@@ -123,6 +123,36 @@ as a brag?" is always better than posting noise.
 
 ---
 
+## When it didn't work — `brag learn`
+
+Not every session produces a win, and a corpus of only wins is a worse input
+to a retro, a review, and to you-in-a-future-session than an honest one. When
+the session burned real time on something that did not pan out — a dead end, an
+abandoned approach, a wrong call — propose a `brag learn` instead of stretching
+it into a `brag add`.
+
+```bash
+brag learn \
+  -t "Shared-worker pool did not cut cold starts" \
+  -p "project-name" \
+  -T "tag1,tag2" \
+  -i "Cost two days and produced nothing reusable; ruled the approach out." \
+  -d 'What was tried, and why it did not work.'
+```
+
+Same approval loop as `brag add` — propose, wait for the user, then run it.
+
+Every entry `brag learn` writes is typed `failed`. That value is reserved and
+pinned by the verb: there is no `--type` flag on `brag learn`, and you should
+not invent a spelling like `failure` or `dead-end` for it. Read them back with:
+
+```bash
+brag list --type failed
+```
+
+The `impact` field is still worth filling in — for a failure it answers *what
+did this cost, or what did it rule out?* rather than *what did this unlock?*
+
 ## The command
 
 ```bash

@@ -130,6 +130,51 @@ resolved or matches no registered project, the entry is saved with an
 empty project, exactly as before. An explicit project always wins over
 the cwd. See `brag project here` (SPEC-031) for the shared resolver.
 
+### `brag learn` — capture work that did not work (STAGE-023)
+
+```
+brag learn [-t title] [-d description] [-T tags] [-p project] [-i impact]
+```
+
+`brag add` with `entries.type` pinned to the reserved value `failed`
+(DEC-049). Two modes, mirroring `add`'s:
+
+- **flag mode** — any of the five entry-field flags set; `--title` is
+  required and must be non-empty, else `UserError` (exit 1).
+- **editor mode** — no entry-field flag set; opens `$EDITOR` on
+  `editor.FailureTemplate()`, which is `EmptyTemplate()` **minus the `Type:`
+  header**. Save unchanged to abort cleanly (`Aborted.` on stderr, exit 0).
+
+**There is no `--type` flag, and no `-k` shorthand.** The value is pinned, not
+chosen — that is the whole reason the verb exists rather than a documented
+`brag add --type failed` convention. `entries.type` remains free-form
+everywhere else; this is the one reserved value, and `brag add --type` can
+still write anything.
+
+A `Type:` header that a user adds back to the editor buffer is **overwritten**,
+not honoured — a header you can fill in that is then silently ignored is worse
+than no header, which is why the template omits it.
+
+**No `--json` mode.** `brag add --json` with `"type":"failed"` already covers
+programmatic capture; a second JSON ingress would be a second place to police
+the pinned value.
+
+**No milestone line.** `brag add` prints a congratulatory nudge to stderr on a
+TTY (`🎉 N brags and counting — nice work!`). `brag learn` prints nothing to
+stderr on success — congratulating someone for recording a failure is the
+flattery this verb exists to remove. stdout is the new entry's id alone, as
+with `add`.
+
+Retrieval needs no new flag: `--type` is exact-match inclusion on five other
+read surfaces plus `export` and `coverage`, so
+
+```
+brag list --type failed
+brag list --type failed --since 90d
+```
+
+already answer *"what has not worked?"*.
+
 ### `brag list` — list entries
 
 ```

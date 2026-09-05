@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`brag learn` — the corpus can hold work that did not work.** A capture
+  verb that writes the reserved entry type `failed`
+  ([DEC-049](decisions/DEC-049-a-failure-is-a-reserved-type-value-pinned-by-a-verb.md)).
+  Flag mode and editor mode, mirroring `brag add`; no `--type` flag, because
+  the value is pinned rather than chosen — the live corpus already shows what
+  happens to an unpinned convention (`shipped` 202 / `ship` 15, `fixed` 2 /
+  `bugfix` 1). `entries.type` stays free-form everywhere else; this adds one
+  reserved value, not validation. Retrieval needs no new flag:
+  `brag list --type failed`. The `brag_add` MCP tool's `type` parameter now
+  names the reserved value so an agent uses it verbatim.
+- `brag learn` prints **no milestone line**. `brag add`'s congratulatory
+  stderr nudge (`🎉 N brags and counting — nice work!`) is suppressed here;
+  congratulating someone for recording a failure is exactly the flattery the
+  verb exists to remove.
+
 ### Changed
 
 - **`brag memory`'s headline count is now `Candidates: <N>`, not

@@ -73,7 +73,7 @@ type addIn struct {
 	Description string `json:"description,omitempty"`
 	Tags        string `json:"tags,omitempty" jsonschema:"comma-joined tag list (DEC-004); evidence links go here — see the tool description"`
 	Project     string `json:"project,omitempty"`
-	Type        string `json:"type,omitempty"`
+	Type        string `json:"type,omitempty" jsonschema:"free-form category (shipped, learned, ...). One value is reserved: \"failed\" marks work that did not work — the MCP counterpart of the brag learn verb (DEC-049). Use it verbatim; do not invent a spelling."`
 	Impact      string `json:"impact,omitempty"`
 	Agent       string `json:"agent,omitempty" jsonschema:"caller agent name; stamped as agent:<name> (falls back to the MCP client's clientInfo.Name when omitted)"`
 	Model       string `json:"model,omitempty" jsonschema:"caller model id; stamped as model:<id> (no transport fallback)"`
