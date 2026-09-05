@@ -1596,6 +1596,16 @@ fi
 # value-grep found Y3 where a concept-grep ("what pins the decision count?")
 # found only X3 — SPEC-083 recorded the same miss in this comment. Grep for
 # the value, not the idea.
+#
+# RE-PINNED 47 -> 48 at SPEC-085, which adds DEC-049. Deliberate corpus
+# change, not drift. The NOTE is the part SPEC-085 verify had to add: the
+# spec's `## Failing Tests` asked for a re-pin note in the SPEC-082/SPEC-083
+# style, and its embedded literal diff under `## Notes for the Implementer`
+# changed only the two value lines. Build transcribed the literal faithfully,
+# so the pin moved to 48 while its history still stopped at 47. A pin whose
+# comment stops one spec short is how the NEXT re-pin starts from a wrong
+# baseline — which is the same failure this comment already warns about,
+# one level up.
 if [ ! -x scripts/inventory.sh ]; then
     fail "Y3" "scripts/inventory.sh is missing or not executable"
 else
@@ -1622,13 +1632,20 @@ fi
 #
 # RE-PINNED AGAIN 19/7 -> 19/6 at SPEC-083, which ANSWERS that same question
 # (DEC-047). The total does not move: the entry is closed, not removed.
+#
+# RE-PINNED AGAIN 19/6 -> 20/7 at SPEC-085 design, which FILES
+# memory-pool-composition-excludes-older-entries, and 20/7 -> 21/8 at
+# SPEC-085 verify, which files mutation-probe-class-vs-literal. Both halves
+# move together on each of those because a newly filed question is filed
+# open. Same omission as Y3 above: design asked for this note and its
+# embedded literal changed only the values.
 if [ ! -x scripts/inventory.sh ]; then
     fail "Y4" "scripts/inventory.sh is missing or not executable"
 else
     y4_out=$(./scripts/inventory.sh)
     y4_bad=""
-    printf '%s\n' "$y4_out" | grep -F -q 'Questions tracked in guidance/questions.yaml | 20 |' || y4_bad="$y4_bad questions-total!=20"
-    printf '%s\n' "$y4_out" | grep -F -q 'of those, still open | 7 |' || y4_bad="$y4_bad questions-open!=7"
+    printf '%s\n' "$y4_out" | grep -F -q 'Questions tracked in guidance/questions.yaml | 21 |' || y4_bad="$y4_bad questions-total!=21"
+    printf '%s\n' "$y4_out" | grep -F -q 'of those, still open | 8 |' || y4_bad="$y4_bad questions-open!=8"
     if [ -z "$y4_bad" ]; then
         ok "Y4"
     else

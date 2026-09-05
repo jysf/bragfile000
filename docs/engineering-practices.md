@@ -42,8 +42,8 @@ The section that says the most about how this repository is run is
 | Go test functions | 820 | `func Test*` in `*_test.go` |
 | Documentation assertions (distinct ids) | 198 | `scripts/test-docs.sh`, run by `just test-docs` |
 | …of those, replacing a manual release-checklist item | 6 | the `W`-series in `scripts/test-docs.sh` |
-| Questions tracked in guidance/questions.yaml | 20 | `guidance/questions.yaml` |
-| …of those, still open | 7 | `status: open` in the same file |
+| Questions tracked in guidance/questions.yaml | 21 | `guidance/questions.yaml` |
+| …of those, still open | 8 | `status: open` in the same file |
 | Benchmarks | 0 | none exist — see "What this does not measure" |
 <!-- inventory:end -->
 
