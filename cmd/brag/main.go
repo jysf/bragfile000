@@ -37,6 +37,7 @@ func main() {
 
 	root := cli.NewRootCmd(version)
 	root.AddCommand(cli.NewAddCmd())
+	root.AddCommand(cli.NewLearnCmd())
 	root.AddCommand(cli.NewListCmd())
 	root.AddCommand(cli.NewShowCmd())
 	root.AddCommand(cli.NewDeleteCmd())

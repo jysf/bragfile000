@@ -631,6 +631,15 @@ questions:
       (Above §14's 0.7 hard threshold; filed proactively per DEC-031's
       precedent of recording the softest sub-choice.)
 
+      EXAMINED AND LEFT OPEN at SPEC-085 design (2026-09-05). STAGE-023 owed
+      this register an answer in both directions, so: SPEC-085 does NOT answer
+      it and does NOT touch it. k stays 60, the three weights stay 1.0, no
+      fourth fusion term is added. The gap SPEC-085 measured on the read path
+      is in Gather's POOL, not in Slice's fusion — see
+      memory-pool-composition-excludes-older-entries, filed alongside this
+      note. Recording the non-answer explicitly because silence here is
+      indistinguishable from having forgotten to look.
+
   - id: capture-caps-were-inherited-not-derived
     question: "The capture.Validate field caps (title 200, tags 64, impact 256) were inherited from the add --json schema and never derived from real use — which of them are load-bearing, which are arbitrary, and what shape should they take?"
     priority: medium
@@ -964,3 +973,48 @@ questions:
       opened list_test.go, could not write a true comment without an answer,
       and the user decided the scope question directly. DEC-047 records it and
       names the revisit triggers for the cost that resolution (A) accepts.
+
+  - id: memory-pool-composition-excludes-older-entries
+    question: "brag memory's candidate pool is the 200 most recent entries (Gather's List{Limit: PoolLimit}) plus the query/project reads — so on a corpus of 398 growing ~20/week, half the corpus is not a candidate at ALL for a bare `brag memory`. Should pool composition be type-aware, and if so how many slots?"
+    priority: medium
+    status: open
+    raised_by: claude-opus-5
+    raised_at: 2026-09-05
+    assigned_to: null
+    notes: |
+      Filed at SPEC-085 design, from a measurement framing did not take.
+      Framing's Fork 3 said a failure "competes on recency alone" and is
+      "crowded out". Measured on the live corpus 2026-09-05, it is stronger
+      and different: it is not out-RANKED, it is not a CANDIDATE.
+
+        - corpus 398; a bare `brag memory` reports `Candidates: 200`
+        - the 200th most recent entry is id 207, 2026-07-06 — a 61-day horizon
+        - 198 of 398 entries (49.7%) cannot be returned by a bare
+          `brag memory` at any budget
+        - 5 of the 8 existing `type: learned` entries are already outside it
+          (ids 18/56/61/75/80 at ranks 383/349/344/330/325)
+
+      WHY THIS IS NOT memory-slice-fusion-constants. That question is about
+      Slice's FUSION — k=60 and the three unit weights (DEC-043 sub-decision
+      2). This one is about Gather's POOL. They are different functions and
+      different decisions, and the distinction is load-bearing because it
+      kills the option that looks cleanest: a fourth ordinal list CANNOT fix
+      this. buildMatchRank skips ids not in the pool (`if !inPool[id] {
+      continue }`) and buildProjectRank iterates the pool, so no ranking term
+      can introduce an entry Gather did not fetch. The only fix that reaches
+      an out-of-pool entry is a fourth READ.
+
+      WHY IT IS NOT ANSWERED HERE: a pool-composition rule has to choose how
+      many slots to spend, and there are ZERO failure-typed entries to
+      calibrate against. That is the same mistake STAGE-023's own ordering
+      call rejected for the impact classifier — a rule tuned on a population
+      that excludes the case it exists to judge. SPEC-085 ships the capture
+      verb and deliberately leaves the read path alone.
+
+      RESOLVE WHEN: the corpus holds enough `type: failed` entries that a
+      slot count can be argued from data rather than picked, or the first
+      time a user reports a failure they know they recorded and `brag memory`
+      will not return. Note the blast radius: Gather is shared VERBATIM by
+      the CLI and the three brag:// MCP resources (SPEC-074 LD9), so any
+      change moves `Candidates:` on all four surfaces and their byte-exact
+      goldens.

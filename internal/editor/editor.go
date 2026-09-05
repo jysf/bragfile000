@@ -67,6 +67,13 @@ func EmptyTemplate() []byte {
 	return []byte("Title: \nTags: \nProject: \nType: \nImpact: \n\n")
 }
 
+// FailureTemplate returns the `brag learn` buffer: EmptyTemplate's headers
+// MINUS Type, because `brag learn` pins that value (DEC-049) and a header the
+// user can fill in but that is then overwritten is a silent-ignore trap.
+func FailureTemplate() []byte {
+	return []byte("Title: \nTags: \nProject: \nImpact: \n\n")
+}
+
 // Parse reads the header block and body out of buf and returns the
 // populated Fields. Header keys are case-insensitive (canonicalized by
 // net/textproto). Unknown headers are silently ignored. A missing or

@@ -7,7 +7,7 @@
 task:
   id: SPEC-085
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -2174,9 +2174,136 @@ Seven rows should move, and only these seven:
 
 ## Build Completion
 
-*Filled at build.*
+Build ran from `origin/main` at `2913c80` (design PR #196 had already merged;
+the scaffold-dirs fix PR #195 was also already in). Every number below was
+re-derived on the build tree, not copied from design.
+
+- **Deviations from the spec:** **none.** All three new-file literals
+  (`internal/cli/learn.go`, `internal/cli/learn_test.go`, `decisions/DEC-049-*.md`)
+  and all applied diffs (`AGENTS.md`, `BRAG.md`, `CHANGELOG.md`, `README.md`,
+  `docs/api-contract.md`, `guidance/questions.yaml`, `scripts/test-docs.sh`)
+  were transcribed byte-for-byte and applied without modification. Confirmed,
+  not assumed: `learn.go` and `milestone.go`'s pre-mutation `shasum -a 256`
+  matched the spec's recorded design-time baselines exactly
+  (`4ac076c1e792…` / `a02b53479d37…`), which is only possible if the
+  transcription introduced zero drift.
+- **New DEC-\* files created:** `DEC-049` only — the one this spec creates.
+  Front-matter carries `  type: decision` (`Z7` requires it; confirmed by
+  inspection and by `Z7` passing in `just test-docs`).
+- **Constraints checked:** `one-spec-per-pr` (this PR carries SPEC-085 only;
+  SPEC-086 is untouched, still `cycle: frame`); `no-sql-in-cli-layer`
+  (`learn.go` imports no SQL driver — `storage.Open` + `s.Add`, exactly as
+  `add.go`; `just lint`'s depguard reports 0 issues on the new file).
+- **Gates, all five green:**
+  - `go test ./...` — **1070 passed in 15 packages** (`storagetest` carries no
+    test files, as on `main`).
+  - `gofmt -l .` — empty.
+  - `go vet ./...` — clean.
+  - `just lint` — **0 issues**.
+  - `just test-docs` — **ALL OK**, **199 `OK:` lines / 198 distinct ids**
+    (188 → 198; the +1 gap is the pre-existing S3 double-emit, unchanged from
+    `main`). Group `AB` confirmed running, not merely present:
+    `grep -n '===== finalise =====\|===== Group AB' scripts/test-docs.sh`
+    reports Group AB at line 1897, `finalise` at line 1977 (AB strictly
+    lower), and `./scripts/test-docs.sh | grep -c 'OK:   AB'` returns **10**.
+- **Inventory: regenerated, diffed against a saved pre-build baseline, not
+  predicted.** `./scripts/inventory.sh` run once on the branch point (before
+  any artifact existed) and once after every artifact was staged; `diff`
+  between the two shows **exactly the seven predicted rows** moved and
+  nothing else: Decision records 47→48, Go source files 69→70, Go test files
+  78→79, Go test functions 815→820, Documentation assertions 188→198,
+  Questions 19→20, open questions 6→7. `Stages` held at 22 and `Specs carried
+  to ship and archived` held at 81, as predicted. `X3` verified directly
+  (not just by the harness): `diff <(./scripts/inventory.sh) <(awk
+  '/inventory:begin/{f=1;next}/inventory:end/{f=0}f'
+  docs/engineering-practices.md)` is empty.
+- **`guidance/questions.yaml` parses as YAML:** 20 entries, 7 open (via
+  `uv run --with pyyaml python3` — no system PyYAML was installed; used `uv`
+  to avoid touching the externally-managed Python env). Matches AC-10 exactly.
+- **Mutation checks M-A…M-H: all eight fired, each mutant confirmed present by
+  `shasum -a 256` before the test ran and confirmed reverted to the exact
+  pre-mutation hash afterward — never by `git diff`.** Full protocol (backup
+  to a session scratchpad, not bare `/tmp`, before each probe; restore from
+  that backup, never `git checkout`, since the working tree carries the
+  spec's own uncommitted artifacts throughout):
+  - **M-A** `FailureType` `"failed"` → `"failure"`. Hash `4ac076c1` →
+    `ec934a84` (matches design's recorded hash exactly).
+    `TestLearnCmd_PinsFailedType` red: `FailureType = "failure", want
+    "failed"`. Restored to `4ac076c1`.
+  - **M-B** added `--type`/`-k` to `learn`. Hash `4ac076c1` → `35739f1f`
+    (design recorded `227e785e` — same mutation class, different literal
+    flag description text, so a different hash; the assertion behavior is
+    what's being probed, and it matched). `TestLearnCmd_NoTypeFlag` red on
+    **both** sub-checks (`--type` present, `-k` present). Restored to
+    `4ac076c1`.
+  - **M-C** added `emitMilestone` to `insertLearned`. Hash `4ac076c1` →
+    `09ae64c8` (matches design's recorded hash exactly).
+    `…MilestoneSuppressed…` red: `stderr = "🎉 10 brags and counting — nice
+    work!\n"`. Restored to `4ac076c1`.
+  - **M-D** editor mode used `parsed.Type` instead of `FailureType`. Hash
+    `4ac076c1` → `0b658c58` (matches design's recorded hash exactly).
+    `…EditorModeOverwritesUserType` red: `Type = "shipped", want "failed"`.
+    Restored to `4ac076c1`.
+  - **M-E** changed `add`'s milestone **wording** in `milestone.go`
+    (`"…nice work!"` → `"…banked — nice work!"`, a wording-only edit so `t`
+    stays referenced and the package still compiles). Hash `a02b5347` →
+    `50ab5591` (design's own literal wording differed, hence a different
+    hash than design's recorded `e7212bea`; the mechanism is what's probed).
+    Fired: `control failed: add should still fire the milestone, got "🎉 10
+    brags banked — nice work!\n"` — **the positive control is live.**
+    Restored to `a02b5347`.
+  - **M-F** `BRAG.md` line 150 changed `brag list --type failed` →
+    `brag list --type failure`. Hash `d0b4618e` → `e23c38c6` (matches
+    design's recorded hash exactly). **Three** assertions fired at once, as
+    predicted: `AB1b` (`brag list --type failed` no longer present), `AB2a`
+    (`--type failed` no longer present in `BRAG.md`), `AB2-neg`
+    (`--type failure` now present). Restored to `d0b4618e`.
+  - **M-G** dropped the `EXAMINED AND LEFT OPEN at SPEC-085 design` note from
+    `guidance/questions.yaml`. Hash `7287299e` → `cb0e398f` (design's own
+    note text differed slightly in whitespace, hence a different hash than
+    design's recorded `b7736cfc`; message is what's probed). Fired: `AB4:
+    … [the register does not record that SPEC-085 examined it]`. Restored to
+    `7287299e`.
+  - **M-H** removed the `**No milestone line.**` sentence from
+    `docs/api-contract.md`. Hash `1fc45113` → `d1f853cd` (matches design's
+    recorded pre-mutation hash exactly; post-mutation hash not independently
+    recorded by design). Fired: `AB3c: docs/api-contract.md missing literal:
+    **No milestone line.**`. Restored to `1fc45113`.
+
+  Every one of the five files touched by a mutation (`learn.go`,
+  `milestone.go`, `BRAG.md`, `guidance/questions.yaml`,
+  `docs/api-contract.md`) was re-hashed after the full mutation sweep and
+  confirmed identical to its pre-mutation value — no probe left residue.
+- **End-to-end verification, temp DB (`--db`), not the live corpus:**
+  `brag learn -t "shared-worker pool did not cut cold starts" -p bragfile -i
+  "cost two days and produced nothing reusable"` → stdout `1`; `brag memory`
+  renders `- 1 2026-09-05 [bragfile/failed] shared-worker pool did not cut
+  cold starts — cost two days and produced nothing reusable`, byte-identical
+  to the design-time trace; `brag list --type failed` returns the row;
+  `brag learn --type shipped -t x` exits **1** with `unknown flag: --type`;
+  `brag learn --help`'s flag table is exactly `-d -h -i -p -T -t` (no
+  `--type`, no `-k`).
 
 ### Build-phase reflection (3 questions, short answers)
+
+- **What was unclear in the spec?** Nothing. Every literal was pre-flighted
+  at design and the recorded hashes let build *verify* the transcription
+  instead of trusting it — the learn.go/milestone.go baseline hashes matching
+  design's recorded values byte-for-byte is a stronger check than a visual
+  diff would have been.
+- **What was missing that you had to decide yourself?** The exact wording of
+  the mutation text for M-B, M-E, and M-G (the spec names the mutation class
+  — "add a `--type`/`-k` flag", "change the wording", "drop the note" — but
+  not the literal replacement string, since the assertion being probed is
+  behavioral, not textual). Picked minimal, obviously-wrong text in each case
+  and confirmed the resulting hash differs from design's recorded value
+  (expected, since the literal text differs) while the *fired assertion* is
+  identical to what design recorded.
+- **What would you do differently?** Nothing on this spec. The one place
+  build had to exercise judgment (M-B/M-E/M-G mutation text) is exactly the
+  place the spec deliberately left underspecified, because pinning the exact
+  mutation string would be design prescribing an implementation detail of a
+  throwaway probe.
 
 ## Reflection (Ship)
 
