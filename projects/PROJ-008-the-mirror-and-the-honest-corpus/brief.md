@@ -140,27 +140,31 @@ lands."* It landed in v0.6.0.
 
 ## Stage Plan
 
-*Proposed, not framed. Sequence/split at framing.*
+*Framed 2026-09-05. The ordering below reverses the proposal above; the call
+and its rejected option are recorded in `stages/STAGE-023-*.md` under
+**The ordering call**.*
 
-- [ ] (not yet defined) — **impact quality**: the classifier and its consumers.
-      Almost certainly first — it unblocks the other two.
+- [x] **STAGE-023 — `brag learn`: the corpus learns to hold failures.** ACTIVE.
+      Framed 2026-09-05 with SPEC-085 at `frame`, GO, complexity M.
+- [ ] **STAGE-024 — impact quality**: the classifier and its consumers.
+      **No longer first.** Framing measured the classifier and found it is not
+      the small primitive this brief assumed — candidate rules select between
+      11 and 230 of 397 entries, 141 of the 230 digit-bearing impacts carry an
+      *identifier* digit rather than a measurement, and 27 quantified impacts
+      use spelled-out numerals invisible to any digit rule.
+- [ ] **STAGE-025 — the mirror**: observations over the corpus.
+- [ ] **STAGE-026 — story-surface v2**: the arc.
 
 > **USER PRIORITY, stated 2026-08-23 at activation: `brag learn` matters most.**
-> Recorded here as a framing input, not as a settled ordering. It sits against
-> the brief's own argument two sections up — *one classifier, three surfaces* —
-> which puts impact quality first because the other pillars consume it. Framing
-> owes an explicit call, with the rejected option written down. Two things
-> weigh for `brag learn` beyond the preference: its promotion condition from the
-> PROJ-005 synthesis (*"promote if the memory work lands"*) **already fired**
-> when v0.6.0 shipped, and it is the only pillar that changes what the corpus
-> can *hold* rather than how it is read — a wins-only corpus flatters every
-> surface built on it, including the classifier. If framing still puts impact
-> quality first, it must say why the flattery problem can wait.
-- [ ] (not yet defined) — **`brag learn`**: the corpus learns to hold failures.
-- [ ] (not yet defined) — **the mirror**: observations over the corpus.
-- [ ] (not yet defined) — **story-surface v2**: the arc.
+> **Framing agreed, 2026-09-05 — but not merely on preference.** The deciding
+> argument is that *the classifier's calibration data is the corpus itself*: an
+> impact rule designed against 397 wins is tuned on a population that excludes
+> the case it will most need to judge. The rejected option — this brief's own
+> *one classifier, three surfaces* ordering — is written up in full in the stage
+> file, including what the rejection costs (one stage of delay on `wrapped`'s
+> highlight-reel problem, true since v0.4.0 and not degrading).
 
-**Count:** 0 shipped / 0 active / 4 pending
+**Count:** 0 shipped / 1 active / 3 pending
 
 ## Dependencies
 
