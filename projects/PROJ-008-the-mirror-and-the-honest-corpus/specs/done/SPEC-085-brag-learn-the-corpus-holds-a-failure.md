@@ -7,7 +7,7 @@
 task:
   id: SPEC-085
   type: story                      # epic | story | task | bug | chore
-  cycle: verify
+  cycle: ship
   blocked: false
   priority: high
   complexity: M                    # S | M | L  (L means split it)
@@ -2667,7 +2667,7 @@ $ cp <backup> guidance/questions.yaml     # hash 6860b32c restored ✔
 
 | # | Item | Status |
 |---|---|---|
-| F1 | `Y3`/`Y4` re-pin notes missing (spec self-contradiction) | **fixed in this PR** |
+| F1 | `Y3`/`Y4` re-pin notes missing | **fixed in verify's PR.** Diagnosis **corrected at ship**: only `Y4` is a spec self-contradiction (its `## Failing Tests` asks for the note, its embedded literal omits it). `Y3`'s entry never asks for a note at all — a plain omission of an uncodified convention, not a contradiction. Both comments now name their own cause. |
 | F2 | mutation-class hash reproducibility | **filed** as `mutation-probe-class-vs-literal`; not codified, with reasons |
 | F3 | `Z7`'s *"silently under-reports"* is false | **corrected in place** under *Outputs* |
 | F4 | SPEC-086 Fork B calls `story`/`summary` neutral; measured, they are not | **routed to SPEC-086** — no SPEC-085 change |
@@ -2676,5 +2676,87 @@ $ cp <backup> guidance/questions.yaml     # hash 6860b32c restored ✔
 
 ## Reflection (Ship)
 
-- **What can a user do now that they couldn't before?** — one sentence,
-  before → after. Capture this before closing the cycle.
+*Appended during the **ship** cycle. Outcome-focused reflection, distinct
+from the process-focused build reflection above.*
+
+1. **What would I do differently next time?**
+   — **Make `## Failing Tests` and the embedded literal say the same thing,
+   because nothing cross-checks them.** This spec's one real defect was `Y4`:
+   its `## Failing Tests` entry asked in prose for *"a re-pin note in the style
+   of the existing SPEC-082/SPEC-083 notes"*, while its own embedded diff under
+   `## Notes for the Implementer` §9 changed only the two value lines. Under
+   the literal-artifact contract the literal wins, so the instruction was
+   unreachable — build transcribed faithfully and reported *"Deviations:
+   none"*, and both of those were correct.
+   — **Corrected at ship: verify diagnosed `Y3` as the same defect, and it is
+   not.** Read line by line, `Y3`'s entry asks only to move the value and the
+   `!=` string; **nothing in this spec asks for a `Y3` note at all.** Same
+   missing sentence, two different causes — `Y4` is a self-contradiction a
+   design review could catch by reading the spec against itself, `Y3` is a
+   plain omission no review could catch, because **the re-pin-note convention
+   is not a requirement anywhere.** It exists only in the comments it has
+   already produced, so it survives exactly as long as the next author happens
+   to read one. Both comments in `scripts/test-docs.sh` now name their own
+   cause, so the next re-pin inherits the right lesson rather than the
+   averaged one. The conclusion verify drew is unchanged and still exonerates
+   build; only the diagnosis per pin moved.
+
+2. **Does any template, constraint, or decision need updating?**
+   — **No new AGENTS.md §9 clause and no template note, on this repo's own
+   codification meta-rule** (N=2 paired-opposing, N=3 same-outcome). The
+   prose-vs-literal contradiction is **N=1**, and verify already declined to
+   codify the adjacent mutation-hash finding on the same grounds, filing
+   `mutation-probe-class-vs-literal` instead. Two N=1 findings do not add up
+   to a rule just because they arrived in one cycle.
+   — **The §9 half-(b) rule that WAS codified earned its keep here, and this
+   is the first spec in five where it did.** `Y3` has now been re-pinned by
+   hand at SPEC-081, 082, 083, 084 and 085. At the first four the value-grep
+   found it *late* — STAGE-022's close says so in as many words. At SPEC-085 it
+   was found **at design**: the §12(b) pre-flight ran the harness before
+   locking the spec and watched `Y3` fail with `decision-records!=47`, so the
+   re-pin was a planned Output rather than a build-time surprise. Grepping for
+   the value and not the idea is now a demonstrated save, not a maxim.
+   — **What did not fire is the routing.** STAGE-022's close promoted *"`Y3`
+   and `X3` pin the same numbers by different means, and one of them should
+   derive rather than cache"* to a stage-level lesson, then **held** it with
+   the trigger *"routed to the next spec that opens that file."* SPEC-085 is
+   exactly that spec — it opened `scripts/test-docs.sh` to insert 80 lines of
+   Group `AB` — and it hand-re-pinned `Y3` anyway, making it five consecutive
+   specs. That is the same shape STAGE-022 recorded one line earlier about
+   `archive-spec`: *"Routing it as a candidate after the first hit did not
+   prevent the second; the guard did."* **Recorded, not codified — N=2
+   same-outcome, one short.** Re-routed onto STAGE-023 with a concrete owner
+   (SPEC-086) instead of an anonymous "next spec", since that is the half that
+   demonstrably failed.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — **No new spec.** SPEC-086 already exists at `cycle: frame`, blocked on
+   this one, and is where the remaining work is owed. Verify routed two
+   *measured* corrections to its premise onto the stage page rather than into
+   its file — `story --audience exec` and `summary`'s `## Highlights` are not
+   the "neutral" surfaces Fork B assumes — and this session adds the `Y3`/`X3`
+   de-duplication to the same place. All three are on STAGE-023, so SPEC-086's
+   framing inherits them without SPEC-085 having edited a spec it does not own.
+   — **One thing SPEC-086 must not inherit as settled:** `--type` negation is
+   inexpressible today and fails *silently*. Re-confirmed at ship on the same
+   two-row corpus: `--type '!failed'`, `--type '-failed'` and
+   `--type 'shipped,failed'` each return **exit 0 with zero rows**; only
+   `--type ''` errors. Fork A needs exactly that negation, so it is a
+   dependency, not a footnote.
+
+4. **What can a user do now that they couldn't before?**
+   — A user can **record work that did not work, and get it back labelled as a
+   failure** — in one command, without contorting it into a win. Before:
+   **399 entries in the live corpus and 0 of type `failed`** (re-derived at
+   ship from a read-only copy; 397 at framing, 398 at design and verify), an
+   absence that was structural rather than a discipline problem — no verb, no
+   field value, no documented convention. After: `brag learn -t "…" -i "…"`
+   writes the reserved value `failed` (DEC-049) with **zero bytes on stderr**,
+   because every milestone line is a congratulation; `brag list --type failed`
+   reads it back; and `brag memory` renders
+   `- 1 2026-09-05 [demo/failed] shared-worker pool did not cut cold starts —
+   cost two days and produced nothing reusable`, so an agent reading the corpus
+   cold — including over `brag://memory/recent`, which loads with no tool call
+   at all — sees a failure marked as one for free. The corpus is now *capable*
+   of honesty; what the celebratory digests do with a failure is SPEC-086.
+   Evidence ref: `pr:199`.

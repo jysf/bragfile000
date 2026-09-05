@@ -1598,14 +1598,19 @@ fi
 # the value, not the idea.
 #
 # RE-PINNED 47 -> 48 at SPEC-085, which adds DEC-049. Deliberate corpus
-# change, not drift. The NOTE is the part SPEC-085 verify had to add: the
-# spec's `## Failing Tests` asked for a re-pin note in the SPEC-082/SPEC-083
-# style, and its embedded literal diff under `## Notes for the Implementer`
-# changed only the two value lines. Build transcribed the literal faithfully,
-# so the pin moved to 48 while its history still stopped at 47. A pin whose
-# comment stops one spec short is how the NEXT re-pin starts from a wrong
-# baseline — which is the same failure this comment already warns about,
-# one level up.
+# change, not drift. The NOTE is the part SPEC-085 verify had to add, and
+# CORRECTED AT SHIP, because verify diagnosed it as the same defect as Y4's
+# and it is not: Y4's spec entry DOES ask for a note its embedded literal
+# then omits (a self-contradiction), while THIS pin's entry asks only to move
+# the value and the `!=` string. Nothing in SPEC-085 asks for a Y3 note at
+# all. Build transcribed both literals faithfully; the pin moved to 48 while
+# its history still stopped at 47 because no artifact ever required the
+# sentence. So the gap here is not a contradiction to catch at design review
+# — it is that the re-pin-note convention is nowhere a requirement. It lives
+# only in the comments it has already produced, which means it survives
+# exactly as long as the next author happens to read one. A pin whose comment
+# stops one spec short is how the NEXT re-pin starts from a wrong baseline —
+# the same failure this comment already warns about, one level up.
 if [ ! -x scripts/inventory.sh ]; then
     fail "Y3" "scripts/inventory.sh is missing or not executable"
 else
@@ -1637,8 +1642,15 @@ fi
 # memory-pool-composition-excludes-older-entries, and 20/7 -> 21/8 at
 # SPEC-085 verify, which files mutation-probe-class-vs-literal. Both halves
 # move together on each of those because a newly filed question is filed
-# open. Same omission as Y3 above: design asked for this note and its
-# embedded literal changed only the values.
+# open. This note was missing until verify, for a reason that is THIS pin's
+# alone: SPEC-085's `## Failing Tests` entry for Y4 asked in prose for "a
+# re-pin note in the style of the existing SPEC-082/SPEC-083 notes", and the
+# spec's own embedded literal diff changed only the two value lines. Prose
+# and embedded literal disagreed, and under the literal-artifact contract the
+# literal wins — so the instruction was unreachable. Y3's identical-looking
+# gap has a different cause; see its comment. Lesson for a spec that embeds
+# a literal diff: whatever `## Failing Tests` asks for in prose must be
+# present IN the literal, because nothing cross-checks the two.
 if [ ! -x scripts/inventory.sh ]; then
     fail "Y4" "scripts/inventory.sh is missing or not executable"
 else
