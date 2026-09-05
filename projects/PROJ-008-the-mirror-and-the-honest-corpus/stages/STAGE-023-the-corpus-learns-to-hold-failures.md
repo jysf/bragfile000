@@ -161,13 +161,35 @@ STAGE-024's framing, recorded here because it is what settled the ordering.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-085 (frame) — the capture verb, its schema home, and its behaviour
-      in `brag memory`; five forks, all evidenced.
-- [ ] (not yet written) — digest posture: what `wrapped` / `impact` /
-      `summary` / `story` do with a failure. **Only if SPEC-085's Fork 4 turns
-      out to need more than a documented default.**
+- [ ] SPEC-085 (design) — the capture verb, its schema home, and its behaviour
+      in `brag memory`; five forks, all settled. Complexity **M**, re-affirmed
+      after the split below.
+- [ ] SPEC-086 (frame) — digest posture: the `## What didn't work` section on
+      `wrapped` and `impact`, and the two DEC-048 count renames it forces.
+      **Blocked on SPEC-085.**
 
-**Count:** 0 shipped / 1 active / 1 pending
+**Count:** 0 shipped / 1 design / 1 framed
+
+### The conditional spec fired (2026-09-05, at SPEC-085 design)
+
+This backlog's second slot was written *"only if SPEC-085's Fork 4 turns out to
+need more than a documented default."* It did. Put to the user at design with
+the December reading spelled out, Fork 4 resolved to a **named
+`## What didn't work` section** on both celebratory digests — rejecting both
+exclude-by-default and include-silently.
+
+That is a renderer change on two surfaces **plus two DEC-048 count renames**
+(once *Impact moments* stops carrying every with-impact entry, its headline
+count no longer means what it says). A second M of work on different files with
+its own decision record, so it was split rather than absorbed — which is what
+kept SPEC-085 at M.
+
+The measurement that made "include silently" unacceptable, and that framing did
+not have: **neither `impact` nor `wrapped` renders `type`, in either format.**
+`ToImpactMarkdown` emits `- <id>: <title>` + the impact text, and
+`impactEntry` is a deliberately narrow 4-key JSON projection (DEC-028 choice
+4). A failure there is not merely unflagged — it is *unrepresentable as a
+failure* without a renderer change.
 
 ## Design Notes
 
@@ -220,6 +242,58 @@ Two further constraints, inherited rather than discovered:
   or tag-aware signal.** A failure entry competes on recency alone and is
   crowded out by volume; if failures should surface reliably, that needs an
   argued answer, not an assumption that they will.
+
+### Corrections from SPEC-085 design (2026-09-05)
+
+Four of this page's measured facts moved or were wrong when re-derived at
+design against `main` at `81e639d`. Recorded here so a later stage does not
+re-inherit them; none changes a conclusion this stage reached.
+
+| This page says | Measured at design |
+|---|---|
+| corpus **397** | **398** (framing's own brag landed) |
+| *"**19** distinct values"* | **18** distinct non-empty values. The 19th was the empty bucket — the same 113 entries this page separately reports as *"with no type at all"*, counted twice in two units. |
+| *"eight entries carry `type: learned`, and reading them, they are **lessons framed as wins**… Not one records something that failed"* | The eight are **not uniform.** id 18 is a PROJ-001 smoke-test artifact, not a lesson. ids 80/361/383 take a **failure as their subject** and frame it as a win recovered. `learned` is closer to *post-mortems with a recovery* than to *wins*. **The conclusion holds and gets stronger** — redefining it would make `brag list --type learned` return a mix, failing Success Criterion 2. |
+| Fork 1's table: `--type` on **5** of 8 commands | **7** — `list`, `export`, `summary`, `impact`, `wrapped`, `story`, `coverage`. The denominator omitted four commands. Retrieval is *more* free than claimed. |
+
+**And one correction to a routing rationale on this page.** *Read-path
+discoverability* is routed to STAGE-024 on the premise that `BRAG.md` *"has 22
+headings and **none** is a read-the-corpus section."* Measured on the live tree:
+**26** markdown headings (16 at `##`), and `## Reading entries back` (line 382)
+is exactly such a section — 31 lines listing eight read commands. The literal
+string `brag memory` appears **zero** times in the file, not twice.
+
+The gap is real but differently shaped, and smaller: **the read section exists
+and omits the one command written for agents.** STAGE-024 should frame it
+against that, not against "BRAG.md is write-only."
+
+### The Fork 3 finding, which belongs to the stage rather than to one spec
+
+This page's *Design Notes* item 4 and its ranker paragraph say a failure
+*"competes on recency alone and is crowded out by volume."* Measured, it is
+stronger and structurally different: **it is not out-ranked, it is not a
+candidate.**
+
+`Gather` reads `List{Limit: PoolLimit}` with `PoolLimit = 200`, so a bare
+`brag memory` sees only the 200 most recent entries. On the live corpus the
+horizon is entry 207, dated 2026-07-06 — **61 days** — and **198 of 398
+entries (49.7%)** cannot be returned at any budget. Five of the eight
+`type: learned` entries are already outside it.
+
+This kills the option that reads cleanest: **a fourth ordinal list cannot fix
+it.** `buildMatchRank` drops ids not in the pool (`memory.go:191`) and
+`buildProjectRank` iterates the pool, so no ranking term can introduce an entry
+`Gather` did not fetch. Only a fourth *read* reaches an out-of-pool entry — and
+that is pool composition, not fusion, which is why SPEC-085 could answer
+`memory-slice-fusion-constants` cleanly in the negative.
+
+**Consequence for this stage:** Success Criterion 3 (*"`brag memory` returns
+failures to an agent reading the corpus cold"*) is **half met** by SPEC-085 —
+the line shape labels a failure `[project/failed]`, but durability past the
+61-day horizon is not addressed. Filed as
+`memory-pool-composition-excludes-older-entries` with the measurement, and
+deliberately not answered while there are zero failure entries to calibrate a
+slot count against.
 
 ## Dependencies
 
