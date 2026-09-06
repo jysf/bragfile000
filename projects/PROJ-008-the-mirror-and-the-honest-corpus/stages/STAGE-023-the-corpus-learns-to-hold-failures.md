@@ -161,14 +161,22 @@ STAGE-024's framing, recorded here because it is what settled the ordering.
 
 Format: `- [status] SPEC-ID (cycle) — one-line summary`
 
-- [ ] SPEC-085 (verify) — the capture verb, its schema home, and its behaviour
-      in `brag memory`; five forks, all settled. Complexity **M**, re-affirmed
-      after the split below.
+- [x] SPEC-085 (shipped on 2026-09-05) — the capture verb, its schema home,
+      and its behaviour in `brag memory`; five forks, all settled. Complexity
+      **M**, re-affirmed after the split below. Shipped as `brag learn` +
+      **DEC-049**; `pr:199`.
 - [ ] SPEC-086 (frame) — digest posture: the `## What didn't work` section on
       `wrapped` and `impact`, and the two DEC-048 count renames it forces.
-      **Blocked on SPEC-085.**
+      **No longer blocked** — SPEC-085 shipped. Read the two premise
+      corrections below (*Correction from SPEC-085 verify*) and the carried
+      item in *Carried into SPEC-086* before framing.
 
-**Count:** 0 shipped / 1 verify / 1 framed
+**Count:** 1 shipped / 0 verify / 1 framed
+
+**The stage does NOT close here.** Success Criteria 1, 2 and the DEC-014/
+DEC-048 envelope line are met by SPEC-085; Criterion 4 (*the celebratory
+digests do not silently absorb failures*) is what SPEC-086 owes, and
+Criterion 3 is **half met** — see *The Fork 3 finding* below.
 
 ### The conditional spec fired (2026-09-05, at SPEC-085 design)
 
@@ -303,6 +311,38 @@ written."* True, but `BRAG.md`'s new section tells the agent *"The `impact`
 field is still worth filling in"* and shows `-i` in its example — so the
 leaking shape is the **documented default path**. The risk is still acceptable;
 what bounds it is the empty corpus, not user restraint.
+
+### Carried into SPEC-086 (added at SPEC-085 ship, 2026-09-05)
+
+Two items with a **named owner**, because the last time one of them was routed
+without one it did not fire.
+
+**1. `--type` negation is inexpressible, and it fails silently.** SPEC-086's
+Fork A needs *"everything except failures"*; `internal/storage/store.go:388` is
+exact-match inclusion on a single string. Re-confirmed at ship on a two-row
+corpus: `--type '!failed'`, `--type '-failed'` and `--type 'shipped,failed'`
+each return **exit 0 with zero rows** — no error, no diagnostic. Only
+`--type ''` errors. A user filtering failures out of a review gets an empty
+document rather than a message. This is a **dependency of Fork A**, not a
+footnote.
+
+**2. `Y3` and `X3` pin the same numbers by different means, and one of them
+should derive rather than cache.** STAGE-022's close promoted this to a
+stage-level lesson and then **held** it with the trigger *"routed to the next
+spec that opens that file."* SPEC-085 **was** that spec — it inserted 80 lines
+of Group `AB` into `scripts/test-docs.sh` — and hand-re-pinned `Y3` anyway,
+making it **five consecutive specs** (SPEC-081, 082, 083, 084, 085). The
+routing failed for the reason STAGE-022 recorded one line earlier about
+`archive-spec`: *"Routing it as a candidate after the first hit did not prevent
+the second; the guard did."* An anonymous "next spec" is not an owner. Named
+here: **SPEC-086**, which will open the same file. Not codified as a rule —
+that is N=2 same-outcome and this repo wants N=3.
+
+Worth pairing with what *did* work, so the lesson is not read as "greps do not
+help": AGENTS.md §9 half-(b) (grep for the **value**, not the idea) caught `Y3`
+**at design** on SPEC-085, the first time in those five specs that it was found
+early rather than late. The rule works; the duplication it keeps finding is the
+thing to remove.
 
 ### The Fork 3 finding, which belongs to the stage rather than to one spec
 
