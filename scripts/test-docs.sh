@@ -126,6 +126,24 @@ assert_not_contains_iregex() {
     fi
 }
 
+# Pull the Value cell out of one `scripts/inventory.sh` table row, addressed by
+# its exact What-column label. Used by Y3 and Z7 to check inventory.sh's OWN
+# EMITTED numbers against an independent oracle, rather than re-deriving those
+# numbers with a copy of inventory.sh's filters — a copy agrees with the
+# original by construction, and so cannot catch the original going wrong
+# (measured: SPEC-087 mutation M-1, recorded in Z7's comment).
+#
+# Prints nothing when the label is absent. Callers MUST reject an empty or
+# non-numeric result, or a renamed row would make the assertion vacuously true.
+inv_row() {
+    awk -F'|' -v want="$2" '
+        {
+            lab = $2; gsub(/^[ \t]+|[ \t]+$/, "", lab)
+            if (lab == want) { v = $3; gsub(/^[ \t]+|[ \t]+$/, "", v); print v; exit }
+        }
+    ' <<<"$1"
+}
+
 # Resolve $1 against $2 (source file's dir) and check existence.
 # Strips #anchor, skips http/https/mailto and bare anchors.
 check_link_target() {
@@ -1583,45 +1601,45 @@ else
     fail "Y2" "$y2_file exists but is missing '  type: reservation' in its front-matter"
 fi
 
-# Y3 — the tombstone does not inflate the Decision records count, and its
-# own reservation is counted separately. Pins the SEMANTIC values, not just
-# X3-style script-vs-page self-consistency, which would happily pass even if
-# both sides agreed on a wrong number (the failure mode this pin exists to
-# catch: someone edits the type filter in inventory.sh and it silently starts
-# counting the tombstone as a decision — script and page would still agree,
-# just agree on 48).
+# Y3 — the reservation tombstone is not counted as a decision. DERIVED, not
+# pinned: until SPEC-087 this assertion hard-coded `Decision records | 48 |`
+# and `Decision numbers reserved, not yet decided | 1 |`, so every spec that
+# added a DEC-*.md had to hand-edit a number here. SPEC-081, 082, 083, 084 and
+# 085 each did exactly that — five consecutive re-pins. The literal is gone.
 #
-# RE-PINNED 46 -> 47 at SPEC-084, which adds DEC-048. Deliberate corpus
-# change, not drift. This is the THIRD consecutive spec whose §9 half-(b)
-# value-grep found Y3 where a concept-grep ("what pins the decision count?")
-# found only X3 — SPEC-083 recorded the same miss in this comment. Grep for
-# the value, not the idea.
+# WHAT IT ASSERTS NOW: the reserved count inventory.sh EMITS must equal the
+# number of tombstone files on disk, counted by a marker in the file BODY
+# (`## This is not a decision`) rather than by the front-matter `insight.type`
+# filter inventory.sh itself uses. That is the independence that makes this
+# non-vacuous: an edit to inventory.sh's front-matter filters cannot move a
+# body heading, so the two counts fail differently. Z7 owns the complementary
+# half — that the two emitted rows account for every file on disk.
 #
-# RE-PINNED 47 -> 48 at SPEC-085, which adds DEC-049. Deliberate corpus
-# change, not drift. The NOTE is the part SPEC-085 verify had to add, and
-# CORRECTED AT SHIP, because verify diagnosed it as the same defect as Y4's
-# and it is not: Y4's spec entry DOES ask for a note its embedded literal
-# then omits (a self-contradiction), while THIS pin's entry asks only to move
-# the value and the `!=` string. Nothing in SPEC-085 asks for a Y3 note at
-# all. Build transcribed both literals faithfully; the pin moved to 48 while
-# its history still stopped at 47 because no artifact ever required the
-# sentence. So the gap here is not a contradiction to catch at design review
-# — it is that the re-pin-note convention is nowhere a requirement. It lives
-# only in the comments it has already produced, which means it survives
-# exactly as long as the next author happens to read one. A pin whose comment
-# stops one spec short is how the NEXT re-pin starts from a wrong baseline —
-# the same failure this comment already warns about, one level up.
+# WHY NOT RE-RUN INVENTORY.SH'S OWN FILTER HERE: a copy of the filter agrees
+# with the original by construction. Z7 did precisely that until SPEC-087 and
+# was measured blind; see mutation M-1 in Z7's comment.
+#
+# WHY THE FILENAME IS NOT THE ORACLE: `decisions/DEC-*-reserved-*.md` matches
+# THREE files (DEC-027, DEC-041, DEC-049), because two ordinary decisions carry
+# "reserved" in their slug. Measured at SPEC-087 design and rejected — a
+# grep-shaped heuristic that reads as authoritative is the AGENTS.md §9 trap.
+#
+# WHAT THIS COSTS A FUTURE SPEC: nothing at all when it adds a decision. A spec
+# that adds a new TOMBSTONE must give it the `## This is not a decision`
+# heading — copy `decisions/DEC-041-*.md`, the only one today. The failure
+# message below says so, which is where the convention is discoverable.
 if [ ! -x scripts/inventory.sh ]; then
     fail "Y3" "scripts/inventory.sh is missing or not executable"
 else
     y3_out=$(./scripts/inventory.sh)
-    y3_bad=""
-    printf '%s\n' "$y3_out" | grep -F -q 'Decision records | 48 |' || y3_bad="$y3_bad decision-records!=48"
-    printf '%s\n' "$y3_out" | grep -F -q 'Decision numbers reserved, not yet decided | 1 |' || y3_bad="$y3_bad reserved-decisions!=1"
-    if [ -z "$y3_bad" ]; then
+    y3_reserved=$(inv_row "$y3_out" 'Decision numbers reserved, not yet decided')
+    y3_tombstones=$(grep -l '^## This is not a decision' decisions/DEC-*.md 2>/dev/null | wc -l | tr -d ' ')
+    if ! printf '%s' "$y3_reserved" | grep -qE '^[0-9]+$'; then
+        fail "Y3" "inventory.sh emitted no numeric value for the 'Decision numbers reserved, not yet decided' row (got: '$y3_reserved'). The row was renamed or removed — an absent row must not pass silently."
+    elif [ "$y3_reserved" -eq "$y3_tombstones" ]; then
         ok "Y3"
     else
-        fail "Y3" "inventory.sh row value(s) wrong:$y3_bad"
+        fail "Y3" "inventory.sh reports $y3_reserved reserved decision number(s), but $y3_tombstones decisions/DEC-*.md file(s) carry the tombstone marker '## This is not a decision'. Either inventory.sh's 'insight.type: reservation' filter is wrong, or a tombstone is missing that heading (copy decisions/DEC-041-*.md)."
     fi
 fi
 
@@ -1800,16 +1818,36 @@ fi
 # the page under-reports. This harness has no warning tier, so the failure
 # message names both remedies instead of inventing one.
 #
+# CHANGED AT SPEC-087 — THE NUMBERS NOW COME FROM INVENTORY.SH'S OUTPUT.
+# Until SPEC-087 this assertion re-ran inventory.sh's two greps here, as a
+# byte-identical copy of them. A copy agrees with the original by construction,
+# so the sum stayed 49 no matter what inventory.sh did. MEASURED, mutation M-1:
+# broadening inventory.sh's decision filter to `^  type: ` made it report 49
+# decisions and 1 reservation over 49 files — the exact failure Y3 exists to
+# catch — and this assertion stayed GREEN while X3 and Y3 both fired. Reading
+# the EMITTED values makes the same arithmetic catch it: 49 + 1 != 49.
+#
+# The `-lt 1` floor is the non-vacuity guard: if the glob ever matched nothing,
+# 0 + 0 == 0 would pass while asserting nothing at all.
+#
 # decisions/_template.md is deliberately outside every count (it does not match
 # DEC-*.md) and stays outside this one.
-z7_files=$(ls decisions/DEC-*.md 2>/dev/null | wc -l | tr -d ' ')
-z7_decisions=$(grep -l '^  type: decision' decisions/DEC-*.md 2>/dev/null | wc -l | tr -d ' ')
-z7_reserved=$(grep -l '^  type: reservation' decisions/DEC-*.md 2>/dev/null | wc -l | tr -d ' ')
-z7_sum=$((z7_decisions + z7_reserved))
-if [ "$z7_sum" -eq "$z7_files" ]; then
-    ok "Z7"
+if [ ! -x scripts/inventory.sh ]; then
+    fail "Z7" "scripts/inventory.sh is missing or not executable"
 else
-    fail "Z7" "the inventory covers $z7_sum of $z7_files decisions/DEC-*.md files ($z7_decisions decision + $z7_reserved reservation). A DEC-*.md with a missing or unknown 'insight.type' is counted by neither row: fix its front-matter, or teach scripts/inventory.sh a row for the new type."
+    z7_files=$(ls decisions/DEC-*.md 2>/dev/null | wc -l | tr -d ' ')
+    z7_out=$(./scripts/inventory.sh)
+    z7_decisions=$(inv_row "$z7_out" 'Decision records')
+    z7_reserved=$(inv_row "$z7_out" 'Decision numbers reserved, not yet decided')
+    if ! printf '%s' "$z7_decisions" | grep -qE '^[0-9]+$' || ! printf '%s' "$z7_reserved" | grep -qE '^[0-9]+$'; then
+        fail "Z7" "inventory.sh emitted no numeric value for 'Decision records' (got: '$z7_decisions') and/or for 'Decision numbers reserved, not yet decided' (got: '$z7_reserved'). A renamed or removed row must not pass silently."
+    elif [ "$z7_files" -lt 1 ]; then
+        fail "Z7" "no decisions/DEC-*.md files matched — the glob found nothing, which would make the sum check vacuously true"
+    elif [ $((z7_decisions + z7_reserved)) -eq "$z7_files" ]; then
+        ok "Z7"
+    else
+        fail "Z7" "the inventory covers $((z7_decisions + z7_reserved)) of $z7_files decisions/DEC-*.md files ($z7_decisions decision + $z7_reserved reservation). A DEC-*.md with a missing or unknown 'insight.type' is counted by neither row: fix its front-matter, or teach scripts/inventory.sh a row for the new type."
+    fi
 fi
 
 # ===== Group AA — the constraint amendment (SPEC-083 / DEC-047) =====
