@@ -166,17 +166,43 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       **M**, re-affirmed after the split below. Shipped as `brag learn` +
       **DEC-049**; `pr:199`.
 - [ ] SPEC-086 (frame) — digest posture: the `## What didn't work` section on
-      `wrapped` and `impact`, and the two DEC-048 count renames it forces.
-      **No longer blocked** — SPEC-085 shipped. Read the two premise
-      corrections below (*Correction from SPEC-085 verify*) and the carried
-      item in *Carried into SPEC-086* before framing.
+      `wrapped` and `impact`. **Re-framed 2026-09-06: UNBLOCKED** (SPEC-085
+      shipped at `df369e9`), **GO at M after splitting**, and it authors
+      **DEC-050**, which states the posture for **all seven** `--type` surfaces
+      so the scope guard below is satisfied by the decision even though the
+      renderer work lands in two PRs. Framing also shrank the DEC-048
+      obligation from *"two count renames"* to *at most one* — see
+      *Re-framing corrections* below.
+- [ ] SPEC-087 (frame) — **`Y3` derives instead of caching.** Split out of
+      SPEC-086's re-framing rather than absorbed. Complexity **S**. **Sequence
+      it BEFORE SPEC-086 design**, which creates DEC-050 and would otherwise be
+      the sixth consecutive hand re-pin. See *Carried into SPEC-086*, item 2.
+- [ ] (not yet written) — **`summary` + `story` markdown honesty.** The other
+      half of SPEC-086's Fork B, split on defect shape: on these two the data is
+      already present (`story --format json` carries `"type": "failed"`;
+      `summary`'s `## Summary → By type` prints `failed: 1`) and only the
+      per-entry markdown drops it. **Unconditional** — DEC-050 will have stated
+      their posture, so this implements a decision rather than making one. Its
+      `story` half additionally has to turn `Candor` from LLM-facing metadata
+      into a body rule (`internal/story/profile.go:24`), which is a
+      DEC-029-adjacent decision of its own.
+- [ ] (not yet written, `bug`) — **`--type` negation is inexpressible and fails
+      silently.** `--type '!failed'`, `'-failed'`, `'shipped,failed'`,
+      `'!=failed'` and `'NOT failed'` each return **exit 0 with zero rows, no
+      diagnostic**; only `--type ''` errors. `internal/storage/store.go:389` is
+      exact-match inclusion. Blast radius is all seven `--type` surfaces.
+      Routed here, **not** to `guidance/questions.yaml`: the behaviour, the
+      line and the fix shape are all measured, so it is a bug and not a
+      question — and filing it as a question would move `Y4`'s pinned counts
+      and force an inventory regeneration for zero information gain.
 
-**Count:** 1 shipped / 0 verify / 1 framed
+**Count:** 1 shipped / 0 verify / 2 framed / 2 not yet written
 
 **The stage does NOT close here.** Success Criteria 1, 2 and the DEC-014/
 DEC-048 envelope line are met by SPEC-085; Criterion 4 (*the celebratory
-digests do not silently absorb failures*) is what SPEC-086 owes, and
-Criterion 3 is **half met** — see *The Fork 3 finding* below.
+digests do not silently absorb failures*) is owed by SPEC-086 **and** the
+`summary`/`story` successor, and Criterion 3 is **half met** — see *The Fork 3
+finding* below.
 
 ### The conditional spec fired (2026-09-05, at SPEC-085 design)
 
@@ -343,6 +369,73 @@ help": AGENTS.md §9 half-(b) (grep for the **value**, not the idea) caught `Y3`
 **at design** on SPEC-085, the first time in those five specs that it was found
 early rather than late. The rule works; the duplication it keeps finding is the
 thing to remove.
+
+**Both items discharged at SPEC-086 re-framing, 2026-09-06:**
+
+- **Item 1 (`--type` negation) — DESIGNED AROUND, not fixed and not blocking.**
+  Re-confirmed independently (all five negation spellings: exit 0, zero rows,
+  no diagnostic). But it is **not** a dependency of Fork A, which is what it was
+  filed as. Mutation **M-1** — `aggregate.WithImpact` changed to
+  `if e.Impact != "" && e.Type != "failed"`, confirmed by content hash —
+  showed a **one-line in-memory predicate does the entire selection job**;
+  `impact` and `wrapped` read all in-window rows once and partition in Go, the
+  same shape `brag coverage` already uses because it needs both classes. No
+  query in SPEC-086 wants `--type '!failed'`. The bug is real and is now a
+  named `bug` entry in the backlog above.
+- **Item 2 (`Y3`/`X3`) — SPLIT to SPEC-087, with a file.** Not absorbed:
+  SPEC-086 was already splitting on Fork B, and taking this on would have
+  pushed it back to L. Not re-routed anonymously either — the file exists,
+  which matters mechanically as well as socially: `scripts/_lib.sh:107-119`
+  computes `next_id` by scanning **filenames**, so an id reserved only in
+  backlog prose gets handed to the next `just new-spec`. **SPEC-087 should
+  land before SPEC-086 design**, which authors DEC-050 and would otherwise be
+  the sixth consecutive hand re-pin. One correction to this page's framing of
+  the item: `X3` and `Y3` are **not** redundant — `X3` catches a stale page,
+  `Y3` catches `inventory.sh` itself going wrong, and `Y3`'s own comment names
+  that failure mode (*"script and page would still agree, just agree on 48"*).
+  The defect is that `Y3`'s **expected value** is a hand-maintained literal,
+  not that the assertion exists.
+
+### Re-framing corrections (SPEC-086, 2026-09-06, `main` at `df369e9`)
+
+Six of this page's and SPEC-086's measured facts moved when re-derived. Recorded
+so a later stage does not re-inherit them.
+
+**The one that changes a conclusion: the interim risk is REALISED.** SPEC-085
+accepted it as bounded because *"the corpus holds zero such entries."* Measured
+2026-09-06: **one `type: failed` row exists** — id **420**, project
+`contextcore-pilot-harness`, created `2026-09-06T00:44:44Z`, agent-authored,
+**carrying a full impact statement**. It renders as an unmarked win on four
+surfaces today. This is *not* the drafted `brag learn` entry the orchestrator is
+deliberately holding; that one is still held. **The zero was a choice for
+exactly one day**, and the argument for SPEC-086's priority is no longer *"this
+will happen"* but *"this is happening, and it compounds as the corpus grows."*
+
+| This page / SPEC-086 says | Measured 2026-09-06 |
+|---|---|
+| corpus **397** / **398**; `impact` `324/398`; `wrapped` `398` | corpus **420**; `Entries: 346/420 with impact`; `Entries: 420` |
+| **0** `type: failed` rows | **1** (id 420) |
+| *"**18** distinct non-empty type values"* | **19** — `failed` joined the set, as DEC-049 intended |
+| `--type` inclusion at `store.go:**388**` | **`:389`**. `:388` is the `if f.Type != ""` guard. The negation precedent at `:404` is cited correctly. |
+| Fork B: the `story` leak is an **`exec`** problem | **All four bundled profiles** render `- ★ 420:` with no `type`. **Two** are `candor: promotional` (`exec` **and `skip`**), two are `candid`. The renderer defect is profile-independent; only the *harm* is profile-dependent, because the promotional directives instruct a model to promote the unlabelled beat. |
+| Fork B: `summary` renders a failure with no `type` | **Split, not total.** `## Summary → By type` **does** print `failed: 1` (and JSON `counts_by_type` carries it). Only `## Highlights` is lossy — and its JSON highlight is a **2-key** `{id,title}`. `wrapped` has no equivalent honest counterpart: its `Top types` is a **top-3** (`shipped 211`, `milestone 29`, `ship 15`), so `failed: 1` will never appear there. |
+| Fork D: *"DEC-014 part 4 has a precedent — `wrapped` omits body sections on an empty period"* | **The precedent covers the wrong case.** DEC-014 part 4 governs the empty **document** (confirmed: `wrapped 2024` ends after `Entries: 0`). For an empty **section** in a non-empty document the two surfaces already **disagree**: `wrapped` renders a bare `## Impact moments` heading, `impact` omits its whole body. Fork D is a live fork, not an application of a settled rule. |
+| Fork E: *"five files in `internal/export/` carry the affected strings"* | Grep-shaped. Measured by mutation: the section heading fires **4 tests in 2 files**; a headline rename fires **9 tests in 3 files across 2 packages**, one of them **`internal/cli`**. `memory_test.go:247` (the byte-length assertion §9 cites) **does not move**. |
+
+**And one methodological correction worth keeping.** The claim that
+`story --audience exec` renders a failure with *"zero occurrences of `failed`
+anywhere in the markdown"* is **false as literally stated** — the string appears
+on 3 lines, all incidental prose inside *other* entries' impact text. The
+accurate claim is stronger: *the renderer emits no `type` field at all*, so a
+grep for `failed` returns hits that have nothing to do with the failure row.
+A count from grep is a hypothesis.
+
+**The survived mutant, which is the most useful single result.** Mutation
+**M-1** (drop `failed` from `aggregate.WithImpact`) fired **zero** of the
+suite's 1070 tests. The repo has **no existing coverage of a `failed` entry
+flowing through `WithImpact`, `impact` or `wrapped`.** Every test proving the
+new behaviour must be written from scratch; none can be adapted, and a green
+suite is not evidence.
 
 ### The Fork 3 finding, which belongs to the stage rather than to one spec
 
