@@ -1627,15 +1627,38 @@ fi
 # WHAT THIS COSTS A FUTURE SPEC: nothing at all when it adds a decision. A spec
 # that adds a new TOMBSTONE must give it the `## This is not a decision`
 # heading — copy `decisions/DEC-041-*.md`, the only one today. The failure
-# message below says so, which is where the convention is discoverable.
+# message below says so, which is where the convention is discoverable, and
+# `decisions/_template.md` says so at the moment `type: reservation` is chosen.
+#
+# THE FLOOR, ADDED AT SPEC-087 VERIFY. Y3 shipped from build without one, and
+# at the floor `0 reserved == 0 tombstones` is a true statement about nothing:
+# measured with `decisions/` emptied in a throwaway worktree, Y3 reported OK
+# while only Z7's `-lt 1` fired. Y3's non-vacuity therefore rested on three
+# lines inside a DIFFERENT assertion 200 lines below, whose comment did not
+# say anything depended on it — and deleting those three lines was measured to
+# turn the whole decisions-row surface green (both Y3 and Z7 OK on an empty
+# corpus). A comment cannot guard that; only a floor can. So Y3 floors the
+# same quantity Z7 does, and the two assertions are independent again.
+#
+# WHY THE FLOOR IS ON THE FILE SET AND NOT ON THE TOMBSTONES: `y3_tombstones
+# -lt 1` would assert that a tombstone must exist, which is a fact about
+# today's corpus (DEC-041) and not an invariant — a repo may legitimately hold
+# zero tombstones, and there `0 == 0` is a real check, not a vacuous one. The
+# only genuinely vacuous state is an empty DEC-*.md glob, which is what this
+# floor names. It also catches inventory.sh being run against the wrong tree:
+# scripts/inventory.sh has no `cd` of its own and emits all-zero rows from the
+# wrong directory.
 if [ ! -x scripts/inventory.sh ]; then
     fail "Y3" "scripts/inventory.sh is missing or not executable"
 else
     y3_out=$(./scripts/inventory.sh)
     y3_reserved=$(inv_row "$y3_out" 'Decision numbers reserved, not yet decided')
     y3_tombstones=$(grep -l '^## This is not a decision' decisions/DEC-*.md 2>/dev/null | wc -l | tr -d ' ')
+    y3_files=$(ls decisions/DEC-*.md 2>/dev/null | wc -l | tr -d ' ')
     if ! printf '%s' "$y3_reserved" | grep -qE '^[0-9]+$'; then
         fail "Y3" "inventory.sh emitted no numeric value for the 'Decision numbers reserved, not yet decided' row (got: '$y3_reserved'). The row was renamed or removed — an absent row must not pass silently."
+    elif [ "$y3_files" -lt 1 ]; then
+        fail "Y3" "no decisions/DEC-*.md files matched — the glob found nothing, so '0 reserved == 0 tombstones' would pass while asserting nothing at all. Y3 does not borrow Z7's floor."
     elif [ "$y3_reserved" -eq "$y3_tombstones" ]; then
         ok "Y3"
     else
