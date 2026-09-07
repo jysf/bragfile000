@@ -7,7 +7,7 @@
 task:
   id: SPEC-087
   type: chore                      # epic | story | task | bug | chore
-  cycle: verify                    # frame | design | build | verify | ship
+  cycle: ship
   blocked: false
   priority: high                   # sequencing, not size: it should land
                                    # BEFORE SPEC-086 design, which creates
@@ -1472,5 +1472,145 @@ this cycle's; it is left alone for the eighth consecutive cycle.
 
 ## Reflection (Ship)
 
-- **What can a user do now that they couldn't before?** — one sentence,
-  before → after. Capture this before closing the cycle.
+*Appended during the **ship** cycle. Outcome-focused reflection, distinct
+from the process-focused build reflection above.*
+
+**Shipped 2026-09-07.** Design `pr:201`, build `pr:202`, verify `pr:203`,
+ship `pr:SHIPPR`. Gates re-run on the ship branch, not inherited — see
+*Ship-cycle gates* below.
+
+1. **What would I do differently next time?**
+   — **Reserve an id by creating the file, at the moment the routing sentence
+   is written.** This spec argued, correctly and in writing, that
+   `scripts/_lib.sh:107-119` derives `next_id` from **filenames** — that is
+   LD7's whole justification for not authoring `DEC-050` here, and it is why
+   SPEC-087 itself got a file rather than a routing note at framing. Having
+   established the mechanism, all three cycles then reserved `SPEC-088` in
+   **prose**: LD6 at design (*"id verified free"*), V-F3 at verify
+   (*"already verified free"*), and nine more references across this spec, the
+   stage page and `decisions/_template.md`. Eleven pointers, zero files. The
+   next `just new-spec` would have handed 088 to unrelated work and silently
+   redirected every one of them — the exact failure the spec knew about,
+   applied to the id class it was not thinking about. **Fixed at ship:**
+   `just new-spec "Y4 derives and the decision-type vocabulary" STAGE-023
+   PROJ-008` created `SPEC-088` at `cycle: frame` with the routed evidence
+   transcribed and no decisions taken. *"Verified free"* is a statement about
+   the past; a file is a statement about the future.
+   — **The second thing is the spec's own subject, turned on itself.**
+   Build shipped `Y3` with a non-vacuity argument that rested on three lines
+   living inside `Z7`, and everything was green. Verify deleted `Z7`'s floor,
+   emptied `decisions/`, and both guards stayed **OK** — vacuously. A green
+   guard is not evidence its claim is true; that is the sentence this spec
+   exists to enforce, and this spec was an instance of it for one cycle. The
+   general form: **when an assertion's non-vacuity depends on state another
+   assertion establishes, the dependency is invisible in a passing run and
+   must be probed, not reasoned about.** Verify's fix was a floor of `Y3`'s
+   own (+3 code lines, +21 comment) rather than a comment pointing at `Z7`'s,
+   on the measured ground that a comment cannot guard a deletion.
+
+2. **Does any template, constraint, or decision need updating?**
+   — **Two AGENTS.md §12 codifications, written here at the strength verify
+   argued for and no higher.** Verify supplied the evidence and named ship as
+   the owner rather than writing them itself; both landed in this PR.
+   **(a) *"A mutation pinned by a hash must also pin its diff"*** — a new §12
+   paragraph, **N=2 paired-opposing**: `M-6` recorded `2eebe0e644ee` with no
+   edit text and build had to hash-search plausible renames to recover it,
+   against five mutations whose text *was* stated and reproduced first try
+   (verify then reproduced `M-3`'s `7d37e1ad73d4` and `M-1`'s `6e28f6585f0f`
+   exactly from their stated edits). A hash is a checksum of a reproduction,
+   not a reproduction. **(b) *"A no-op mutant produces no evidence, and the
+   check comes BEFORE the record"*** — deliberately **not** a new clause. §12
+   clause (1) already requires `shasum -a 256` before and after, and it caught
+   both of build's near-misses; two same-outcome confirming cases for a
+   promoted rule are one short of this repo's N=3 bar. What was missing was
+   never the `shasum` but a sentence of *consequence and order*: a target whose
+   hash did not move tested nothing, so the probe's whole result is discarded —
+   **including the half that came out green**, which is precisely where a
+   no-op hides, because an unchanged file passing a check looks exactly like a
+   working guard. Landed as a labelled refinement of clause (1), the shape the
+   existing *"§12(b) refinement"* has.
+   — **`decisions/_template.md` was already updated at verify** (V-F2, 7
+   comment lines) and needs nothing further: it now documents the tombstone
+   marker `Y3` derives from and warns that a third `insight.type` value
+   hard-fails `Z7`. That warning is a stopgap; the decision is SPEC-088's.
+   — **Held at N=1, not codified: `scripts/test-docs.sh` is itself an input to
+   two inventory rows.** Build's reflection Q2 named this and asked for a
+   constraint. It is real — a harness spec is always one assertion id away from
+   moving the table it promises not to touch, and LD5's *"keep both ids"*
+   holds `Documentation assertions (distinct ids)` at **198** as a side effect
+   of a coverage argument rather than by intent. But it is one occurrence, and
+   this repo's meta-rule wants N=3 for same-outcome. **Routed to SPEC-088**,
+   which opens the same two files and now exists as a file itself — so the
+   routing that failed here cannot fail the same way.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — **Yes, and it is written: `SPEC-088`.** Not new work discovered at ship —
+   it is the work three cycles routed to an id nobody had claimed. It owns
+   both items: `Y4`'s two literal pins (LD6) and the
+   five-values-in-the-template / two-rows-in-the-inventory gap (V-F3, measured
+   on `main` at `f4658b0` and therefore **not** a SPEC-087 regression — it
+   arrived with `Z7` at SPEC-082). The file is `cycle: frame` and genuinely
+   unframed: it carries transcribed evidence and an explicit fork for item 2
+   (teach `inventory.sh` three rows / narrow the template's vocabulary /
+   something framing measures), and takes no decision. Ship claims ids; it does
+   not frame specs.
+   — **Nothing else.** `SPEC-086` is unblocked and already framed; the
+   `summary`/`story` markdown-honesty successor and the `--type`-negation bug
+   are on the STAGE-023 backlog. `inv_row`'s four latent limits stay recorded
+   with **no owner**, deliberately: hardening a helper against inputs its only
+   producer cannot emit is speculative work.
+
+4. **What can a user do now that they couldn't before?**
+   — **A spec author who adds a decision record now pays zero hand-edits to the
+   harness, and the two guards that watch the inventory can finally catch
+   `scripts/inventory.sh` going wrong.** Before: adding a `DEC-*.md` meant
+   hand-editing a numeric literal inside `scripts/test-docs.sh` — done five
+   consecutive times, at **SPEC-081, 082, 083, 084 and 085**, and found late at
+   four of the five; and `Z7`, the assertion that was supposed to notice the
+   inventory losing a file, re-implemented `inventory.sh`'s two greps
+   byte-for-byte, so it agreed with the original by construction and was
+   measured **blind** (mutation `M-1`: broadening the decision filter made the
+   script report 49 decisions + 1 reservation over 49 files, `X3` and `Y3` both
+   fired, `Z7` stayed **green**). After, measured as simulation **S-1**:
+   dropping a `DEC-050` stub into `decisions/` leaves `Y3` and `Z7` green,
+   fires only `X3`, and `scripts/test-docs.sh`'s content hash is **unchanged at
+   `bf94233efe68`** — zero assertion edits, remedied by the mechanical step the
+   harness already prescribes (`just inventory`, paste one row). The same `M-1`
+   mutant now fails `Z7` with `covers 50 of 49`. The sixth consecutive re-pin
+   did not happen; `DEC-050` will be the first decision in six that costs the
+   harness nothing. Evidence ref: `pr:SHIPPR`.
+
+### Ship-cycle gates
+
+Re-run on the ship branch after this cycle's edits, not inherited from verify:
+
+```
+go test ./...        14 pkgs ok + storagetest (no test files) = 15 lines
+just test-docs       ALL OK — 199 OK: lines / 198 distinct ids
+just lint            0 issues
+gofmt -l .           empty
+go vet ./...         clean
+```
+
+Two numbers re-derived rather than inherited, one of which moved:
+
+- **`go test` is 14 packages `ok`, not 15.** Design, build and verify each
+  recorded *"15 pkgs ok (+ storagetest, no test files)"*; `go test ./... |
+  grep -c '^ok'` returns **14**, and `grep -c 'no test files'` returns **1**,
+  for 15 output *lines*. A line count read as a package count. Nothing depends
+  on it — no assertion pins either number — so this is a record correction, not
+  a defect, and it is written here rather than into the sections that state it,
+  which are those cycles' own accounts.
+- **The gates were re-run on this branch after this cycle's edits, on top of
+  `4d55a9d`** — which includes `pr:204`, a Dependabot bump of
+  `modernc.org/sqlite` 1.57.0 → 1.58.0 that landed on `main` after `pr:203`.
+  The bump is not this spec's and the Go suite is green under it.
+
+The two inventory rows this cycle moved were **regenerated, not predicted**:
+`Specs carried to ship and archived` 82 → **83** and *…of those, also carrying
+a build-phase reflection* 76 → **77**, both from archiving this spec. No other
+row moved, and `X3` is green against a byte-for-byte re-paste. Both values were
+then grepped **by value** across `scripts/test-docs.sh` and the docs tree: the
+only hit is an unrelated README word-budget comment
+(`scripts/test-docs.sh:185`, *"is 82 words"*), so no assertion cached either
+number.

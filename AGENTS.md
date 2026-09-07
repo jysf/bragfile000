@@ -361,6 +361,42 @@ also moved an unrelated derived row, turning a second assertion red for the
 wrong reason, which in a build log is indistinguishable from the right one.
 Promoted at STAGE-022 close at **N=2**.
 
+**§12(b) refinement of clause (1) — a no-op mutant produces no evidence, and
+the check comes BEFORE the record.** Clause (1) says to confirm the hash moved.
+It does not say what a *stalled* hash means, and that omission is the hole the
+near-misses actually lived in: run the gate, see the expected verdict, record
+it, then check the hash. **A probe whose target did not change tested nothing,
+so its whole result is discarded — including the half that came out green.**
+That half is where a no-op hides: an unchanged file passing a check is exactly
+what a working guard looks like, so a mutation that silently applied nothing
+reads as a clean *expected-green* control. The order is therefore load-bearing:
+confirm the hash moved, and only then run the gate and record the verdict.
+SPEC-087's build hit this twice — an `M-5` `sed` targeting a line number off by
+one, and a second mis-targeted edit — and both went all-green; only the content
+hash contradicted them. SPEC-087's verify then implemented the ordering as a
+helper that **refuses to run the gate until the hash has moved**, rather than
+leaving it to discipline, and it never had to fire. Recorded at SPEC-087 ship
+(2026-09-07) as a **refinement of the existing clause (1)**, not a new clause:
+the two near-misses are same-outcome confirming cases for a promoted rule
+(N=2, one short of the meta-rule's N=3 bar), and what was missing was never the
+`shasum` but the sentence about consequence and order.
+
+**A mutation pinned by a hash must also pin its diff.** A hash is a checksum of
+a reproduction, not a reproduction. When a spec records a mutant by content
+hash so a later cycle can re-run the probe, it must also state the **edit** that
+produces the hash — the line changed and its replacement text — because a
+one-line description like *"rename a row label"* has many forms that all fire
+the guard and all hash differently. Earned **N=2 paired-opposing** on the same
+mechanical surface. NEGATIVE: SPEC-087's `M-6` recorded `2eebe0e644ee` with no
+edit text, and build had to hash-search plausible renames to recover design's
+mutant. POSITIVE: in the same spec, *"the five mutations whose text was stated
+reproduced first try"* — and verify reproduced `M-3`'s `7d37e1ad73d4` and
+`M-1`'s `6e28f6585f0f` exactly from their stated edits, a third independent
+arrival at a stated hash. Verify independently re-paid the negative's cost,
+producing a differently-hashed rename (`353b013924bc`) that fires the same two
+guards identically — which is the point: the hash does not identify the edit.
+Codified at SPEC-087 ship (2026-09-07).
+
 **NOT-contains assertions need a self-audit grep against load-bearing prose.**
 When a Failing Test asserts output DOES NOT contain `"X"`, grep the spec's
 load-bearing text (the Long / help-rendering / doc-rendering prose that the
