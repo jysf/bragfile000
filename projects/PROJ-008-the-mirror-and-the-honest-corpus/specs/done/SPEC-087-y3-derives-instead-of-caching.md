@@ -1476,7 +1476,7 @@ this cycle's; it is left alone for the eighth consecutive cycle.
 from the process-focused build reflection above.*
 
 **Shipped 2026-09-07.** Design `pr:201`, build `pr:202`, verify `pr:203`,
-ship `pr:SHIPPR`. Gates re-run on the ship branch, not inherited — see
+ship `pr:205`. Gates re-run on the ship branch, not inherited — see
 *Ship-cycle gates* below.
 
 1. **What would I do differently next time?**
@@ -1578,7 +1578,7 @@ ship `pr:SHIPPR`. Gates re-run on the ship branch, not inherited — see
    harness already prescribes (`just inventory`, paste one row). The same `M-1`
    mutant now fails `Z7` with `covers 50 of 49`. The sixth consecutive re-pin
    did not happen; `DEC-050` will be the first decision in six that costs the
-   harness nothing. Evidence ref: `pr:SHIPPR`.
+   harness nothing. Evidence ref: `pr:205`.
 
 ### Ship-cycle gates
 

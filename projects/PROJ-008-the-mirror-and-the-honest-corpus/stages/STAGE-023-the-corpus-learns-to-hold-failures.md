@@ -188,7 +188,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       non-vacuity floor and went vacuously green when that floor was deleted —
       and gave `Y3` a floor of its own. `Y4`'s pin stays, routed to
       **SPEC-088**, which now exists as a file. `pr:202` (build), `pr:203`
-      (verify), `pr:SHIPPR` (ship).
+      (verify), `pr:205` (ship).
 - [ ] SPEC-088 (frame) — **`Y4` derives, and the decision-type vocabulary.**
       **Created at SPEC-087 ship (2026-09-07) so the id is claimed by a file
       rather than reserved in prose** — eleven prose references pointed at
