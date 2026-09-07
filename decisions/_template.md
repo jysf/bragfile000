@@ -4,6 +4,13 @@
 insight:
   id: DEC-XXX                        # stable, never reused
   type: decision                     # decision | analysis | recommendation | observation | reservation
+                                     # `reservation` = a TOMBSTONE: a number claimed, not yet decided.
+                                     # A tombstone MUST carry a `## This is not a decision` heading in
+                                     # its body — scripts/test-docs.sh assertion Y3 counts tombstones by
+                                     # that heading, deliberately NOT by this front-matter field, so the
+                                     # two counts fail differently. Copy decisions/DEC-041-*.md.
+                                     # Any OTHER value here is counted by no inventory row and hard-fails
+                                     # assertion Z7 — see the STAGE-023 note routed to SPEC-088.
   confidence: 0.00                   # 0.0 - 1.0, honest assessment
   audience:                          # who needs to know?
     - developer                      # executive | developer | agent | operator
