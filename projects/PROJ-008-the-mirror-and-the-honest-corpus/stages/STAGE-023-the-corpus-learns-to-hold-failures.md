@@ -475,6 +475,66 @@ the line shape labels a failure `[project/failed]`, but durability past the
 deliberately not answered while there are zero failure entries to calibrate a
 slot count against.
 
+### Findings routed out of SPEC-087 verify (2026-09-06)
+
+Three items that SPEC-087 surfaced and deliberately did not decide. Each has a
+named owner, because *"the next spec that touches it"* is the routing failure
+this stage already named once.
+
+**1. The decision template advertises five `insight.type` values; the inventory
+tolerates two. → SPEC-088.** `decisions/_template.md` offers `decision |
+analysis | recommendation | observation | reservation`; `scripts/inventory.sh`
+has a row for `decision` and for `reservation` only. A `DEC-*.md` carrying any
+of the other three is counted by neither row and hard-fails `Z7`, which is the
+correct behaviour — but the template is where an author picks the value, and it
+currently invites three that break the harness. Measured on `main` at
+`f4658b0`, so this **predates SPEC-087** and arrived with `Z7` at SPEC-082:
+
+```
+FAIL: Z7: the inventory covers 49 of 50 decisions/DEC-*.md files (48 decision + 1 reservation).
+```
+
+The choice — teach `inventory.sh` three more rows, or narrow the template's
+vocabulary — moves a user-facing table on one side and a template on the other,
+so it is a design call, not a verify fix. SPEC-088 already owns `Y4` per
+SPEC-087 LD6 and reads the same two files. SPEC-087 verify added a template
+line naming the consequence in the meantime; that line is a warning, not the
+decision.
+
+**2. Two AGENTS.md §12 candidates from SPEC-087's mutation work. → SPEC-087
+ship.** Codification in this repo lands at ship or stage close, never at
+verify, so both are carried rather than written:
+
+- **"A mutation pinned by a hash must also pin its diff." Clears the bar at
+  N=2 paired-opposing.** NEGATIVE: SPEC-087's M-6 recorded `2eebe0e644ee` with
+  no edit text, and build had to hash-search plausible renames to recover
+  design's mutant. POSITIVE: the five mutations whose text *was* stated
+  reproduced first try. Verify independently re-paid the same cost, producing a
+  different-hashed rename (`353b013924bc`) that fires both guards identically —
+  a third occurrence of the negative, not a third case. A hash is a checksum of
+  a reproduction, not a reproduction.
+- **"A no-op mutant voids the probe." Does NOT clear as a new rule.** §12
+  clause (1) already requires `shasum -a 256` before and after, and it caught
+  both of build's near-misses. Two same-outcome confirming cases for an existing
+  promoted clause are not evidence for a new one, and the meta-rule wants N=3.
+  What is missing is one sentence of *consequence and order*: clause (1) says to
+  confirm, never that a target whose hash did not move produces **no evidence**,
+  so the probe's result — including any *expected-green* half, which is where a
+  no-op is invisible — must be discarded rather than recorded. Recommended as a
+  refinement of clause (1), the shape the existing *"§12(b) refinement"* has.
+
+**3. `inv_row`'s four latent limits, recorded not fixed.** The helper silently
+takes the first of duplicate labels; truncates at a `|` inside a cell (and if
+the truncated prefix is digits, the callers' `^[0-9]+$` guard passes a *wrong*
+number); cannot address a label containing `|`; and inherits `awk -v`'s escape
+processing, so a label containing `\t` addresses a different row. All four
+require a `|` or a backslash inside a table cell, and `scripts/inventory.sh`
+emits neither — every Value is `n "$(… wc -l)"` or `awk '{print $2+0}'`, every
+label is literal prose in one heredoc. No owner assigned deliberately: hardening
+a helper against inputs its only producer cannot emit is speculative work. This
+note exists so that a future spec which teaches `inventory.sh` a computed or
+quoted label knows it is the change that makes them reachable.
+
 ## Dependencies
 
 ### Depends on

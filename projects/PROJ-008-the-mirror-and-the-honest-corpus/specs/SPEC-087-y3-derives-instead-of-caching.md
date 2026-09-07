@@ -7,7 +7,7 @@
 task:
   id: SPEC-087
   type: chore                      # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: verify                    # frame | design | build | verify | ship
   blocked: false
   priority: high                   # sequencing, not size: it should land
                                    # BEFORE SPEC-086 design, which creates
@@ -1120,6 +1120,355 @@ over.
    detached worktree made it safe and cheap, and the result turned out to
    *strengthen* the design argument (`Y3` goes vacuous exactly there). "Too
    destructive to test" is often "tested in the wrong place."
+
+## Verification
+
+> **Cycle: verify.** From build's branch tip `5f09930`, harness
+> `scripts/test-docs.sh` at **2055** lines / `bf94233efe68` on entry — matching
+> design's pre-flight and build's claim exactly. Build's checklist was **not**
+> re-run as a checklist; the orchestrator had already reproduced its decisive
+> results (S-1, M-1 to hash `6e28f6585f0f`, the LD4 floor probe, byte-identical
+> inventory). Ten attacks were chosen for what a passing build cannot see.
+> **Verdict: ⚠ PUNCH LIST, applied here** — two fixes landed in this cycle, two
+> findings routed with named owners, two corrections to the spec's own record.
+
+### Where the stacked PR stood
+
+PR #201 (design) **merged** while build's PR was open, as squash commit
+`f4658b0`. PR #202 was therefore left targeting a base branch whose content was
+already on `main`, and CodeQL — GitHub default setup, which only runs on PRs
+against the default branch — was still not triggered: `gh pr checks 202` showed
+**4 passing, 0 failing**, against **7** on `main` (`ci` × 4 + CodeQL). #202 was
+retargeted to `main` in this cycle.
+
+One consequence build could not have named, recorded because it changes how
+#202 must be read: `f4658b0` is a *squash* of `16dd38d`, so the design commit
+itself is not an ancestor of `main` even though its tree is identical
+(`git diff 16dd38d f4658b0` → empty). The merge-base of `main` and
+`build/spec-087-y3-derives` is still `516dd28`, so GitHub's three-dot diff for
+#202 shows **1143 insertions across 3 files** — design's changes replayed —
+while the cycle's actual deliverable is the two-dot diff, **+77/−39 in one
+file**. Squash-merging #202 still produces the correct tree; only the review
+view is inflated. Review #202 with `git diff main..build/spec-087-y3-derives`,
+not the PR's Files-changed tab.
+
+### The attack list
+
+| # | Attack | Outcome |
+|---|---|---|
+| A | `inv_row` vs. duplicate labels, prefix labels, `\|` in a cell, CRLF, escapes | **held where it counts**; four latent limits recorded (V-F6) |
+| B | Can `Z7`'s new failure message lie the way the old one did? | **cannot** — and the old one's lie was constructed and measured (V-F5) |
+| C | Numeric-guard and floor branches, where emitted values are absent | **honest** — V-1/V-2/F-1 below |
+| D | Does `Y3` stand up at the non-vacuity floor without `Z7`? | **NO** — V-F1, fixed here |
+| E | Is the tombstone convention discoverable outside the harness? | **NO** — V-F2, fixed here |
+| F | Does the decision template agree with what the inventory tolerates? | **NO** — V-F3, routed |
+| G | Re-run M-1/M-2/M-3/M-4/M-6 against the *modified* tree | all reproduce; no guard blunted |
+| H | Every acceptance criterion, independently | 12 of 12 hold |
+| I | Five gates + inventory byte-identity after the fix | green, identical |
+| J | Is the no-op-mutant hole worth an AGENTS.md clause? | **one candidate clears the bar, one does not** — V-F7, routed |
+
+### V-F1 — `Y3` had no floor of its own, and its non-vacuity rested on three lines inside `Z7`. FIXED HERE
+
+Design disclosed LD4's floor as *"stated, not tested"*; build closed it and
+reported the honest consequence — *"`Y3` goes vacuous exactly there."* Both are
+right. Neither asked the next question: **what holds `Y3` up at the floor?**
+Nothing in `Y3` does. `Z7`'s `-lt 1` does, from 200 lines below, in an
+assertion whose comment said nothing about `Y3` depending on it.
+
+Measured, in a detached worktree with `decisions/` emptied inside the throwaway
+copy only (`/tmp` backup, restored, `git status` clean, 49 files re-counted):
+
+```
+### C-1  Z7's three floor lines deleted, decisions/ emptied   (pre-fix harness)
+mutant: bf94233efe68 -> c1e76e939e8d          # hash moved: probe is valid
+OK:   Y3
+OK:   Z7
+```
+
+**The entire decisions-row guard surface goes green on an empty corpus** the
+moment someone "simplifies" `Z7`. That is not a coupling worth documenting —
+a comment cannot guard a deletion. It is a missing floor.
+
+**Argued, not just noted.** The floor `Y3` needs is on the **DEC file set**,
+not on the tombstones. `y3_tombstones -lt 1` would assert that a tombstone must
+exist, which is a fact about today's corpus (`DEC-041`) and not an invariant:
+a repo may legitimately hold zero tombstones, and there `0 == 0` is a real
+check that would still catch `inventory.sh` emitting `1`. That floor is the
+*"reads as authoritative"* heuristic this spec's own rejected-alternatives
+table refuses for `reserved < decs`. The only genuinely vacuous state is an
+empty `DEC-*.md` glob — the same quantity `Z7` already floors. So `Y3` floors
+that, and the two assertions are independent again.
+
+```
+### F-1  both floors present, decisions/ emptied              (fixed harness 39f8dce93263)
+FAIL: Y3: no decisions/DEC-*.md files matched — … Y3 does not borrow Z7's floor.
+FAIL: Z7: no decisions/DEC-*.md files matched — …
+
+### F-2  Z7's floor deleted again, decisions/ emptied         (the C-1 conditions)
+FAIL: Y3: no decisions/DEC-*.md files matched — … Y3 does not borrow Z7's floor.
+OK:   Z7
+```
+
+C-1 → F-2 is the paired result: same mutation, same corpus state, silent before
+and loud after.
+
+**Cost: +3 executable lines.** `Documentation assertions (distinct ids)` stays
+**198** — `scripts/inventory.sh:67` pipes through `sort -u`, so a second
+`fail "Y3"` adds no id — and the inventory table stays byte-identical, so LD8
+holds and this cycle still pastes nothing. A second, unlooked-for property of
+the floor: `scripts/inventory.sh` has no `cd` of its own, so run from the wrong
+directory it emits all-zero rows; both floors now catch that too.
+
+### V-F2 — the tombstone convention was documented only in the harness. FIXED HERE
+
+The spec's central bet trades a **per-decision** hand edit (5 of 5 recent
+specs) for a **per-tombstone** convention. The bet fails if the next tombstone
+author never learns the convention exists. It was reachable in exactly two
+places outside this spec:
+
+```
+$ grep -rn 'This is not a decision' --include='*.md' --include='*.sh' \
+    --include='*.yaml' . | grep -v '/specs/done/'
+decisions/DEC-041-…-primary-policy.md:29:## This is not a decision
+scripts/test-docs.sh:1612  1628  1636  1642            (comment ×2, oracle, message)
+$ grep -rn 'This is not a decision' AGENTS.md docs/ guidance/ \
+    decisions/_template.md projects/_templates/
+(no hits)
+```
+
+`decisions/_template.md` is the specific gap: its `type:` line already offers
+`reservation` as a valid value, so it is the exact moment an author chooses to
+write a tombstone — and it said nothing about the heading the harness now
+requires. The failure message is a real feedback loop (it gates CI), but it
+fires *after* the file is written. **In scope and fixed here**, because the
+whole spec is the bet and the fix is six comment lines in an unasserted file
+that matches no inventory glob (`decisions/_template.md` does not match
+`DEC-*.md`; `just test-docs` and the table are unmoved — re-confirmed below).
+
+The marker is written into the template as prose inside a YAML comment, never
+as a literal `^## ` heading, because a heading there would be a false tombstone
+in any file the glob did reach.
+
+### V-F3 — the template advertises five type values; the inventory tolerates two. ROUTED → SPEC-088
+
+`decisions/_template.md` names `decision | analysis | recommendation |
+observation | reservation`. `scripts/inventory.sh` has a row for two of them.
+A `DEC-*.md` carrying any of the other three is counted by neither row and
+hard-fails `Z7`:
+
+```
+### S-3 on MAIN (f4658b0, pre-SPEC-087 Z7) — a DEC with type: analysis
+FAIL: Z7: the inventory covers 49 of 50 decisions/DEC-*.md files (48 decision + 1 reservation).
+```
+
+**Dated deliberately: this predates SPEC-087.** It arrived with `Z7` at
+SPEC-082 and fires identically on `main`. It is not this spec's regression and
+not this spec's to decide — the choice between teaching `inventory.sh` three
+more rows and narrowing the template's vocabulary is a design call with a
+user-facing table on one side of it. **Routed to SPEC-088** (already named by
+LD6 as the `Y4` owner, and already verified free), recorded on the STAGE-023
+page so it survives this cycle. The template line added under V-F2 names the
+consequence in the meantime.
+
+**Why the stage page and not `guidance/questions.yaml`:** filing a question
+moves `Questions tracked … | 21 |` → `22` and `… still open | 8 |` → `9`, which
+are two rows of the inventory table — forcing a `Y4` re-pin, a regeneration of
+`docs/engineering-practices.md`, and the loss of this spec's byte-identical
+claim. A routed work item with a named owner is what a stage page carries;
+SPEC-085's verify used it for exactly this. The cost is not a reason to drop
+the finding, but it is a real reason to prefer the durable home that costs
+nothing — and it is a live demonstration of why LD6 routed `Y4` to its own spec.
+
+### V-F4 — a load-bearing claim in the spec is false. The decision it justifies is still right
+
+The *Rejected alternatives (build-time)* table justifies `awk -F'|'` over
+`grep`/`cut` with: *"`Decision records` is a prefix of nothing here today, but
+`…of those, …` rows and a future row could collide."*
+
+It is a prefix of a row three lines below it, in the live table:
+
+```
+$ ./scripts/inventory.sh | grep -c '| Decision records'
+2
+| Decision records | 48 | `decisions/DEC-*.md` (`insight.type: decision`) |
+| Decision records claiming confidence 1.0 | 0 | `insight.confidence` in the front-matter |
+```
+
+A `grep`-shaped `inv_row` would have matched two rows **today**, not
+hypothetically. `inv_row`'s exact-trimmed-cell compare returns `48` and `0`
+correctly for the two labels, and it is a string compare rather than a regex —
+`Go.source.files` addresses only a literal-dot row, never `Go source files`.
+**No code change: the rejected alternative was rejected for the right reason
+and the shipped helper is correct.** The record is corrected because the spec
+understates the risk it avoided, and a later reader deciding whether the
+exact-cell match is over-engineering would be reading a false premise.
+
+### V-F5 — the old `Z7` message could report numbers the inventory never emitted. It can no longer
+
+Design proved `Z7` was **blind** (M-1′: green when it should be red). There is
+a second, complementary failure of the same root cause that no probe in the
+matrix covers: a *red* `Z7` whose message attributes numbers to the inventory
+that the inventory did not print. Constructed on `main` — break
+`inventory.sh`'s reservation filter (so the emitted numbers move) **and** add a
+third-type `DEC` (so the sum check has something to fail on):
+
+```
+### L-1  OLD Z7 (main f4658b0)          inventory.sh mutant c820a68e4387 + one type:analysis file
+inventory.sh actually emits:  | Decision records | 48 |    | … reserved … | 0 |
+files on disk: 50
+FAIL: Z7: the inventory covers 49 of 50 … (48 decision + 1 reservation).
+                              ^^                          ^^^^^^^^^^^^^
+       the inventory covered 48, and emitted 0 reservations. Both numbers are the harness's own.
+
+### L-2  NEW Z7 (5f09930)               same mutant, same corpus
+FAIL: Z7: the inventory covers 48 of 50 … (48 decision + 0 reservation).
+       every number is one inventory.sh printed.
+```
+
+The other two branches were exercised separately and neither can make a
+covers-claim at all, because neither reaches the arithmetic:
+
+```
+### V-1  rename ONLY the 'Decision records' row   (mutant bba4ec45c056)
+FAIL: Z7: inventory.sh emitted no numeric value for 'Decision records' (got: '')
+          and/or for 'Decision numbers reserved, not yet decided' (got: '1'). …
+      — the "and/or" is disambiguated by the printed got-values: one empty, one present.
+
+### V-2  = M-6, rename the reserved row          (mutant 353b013924bc)
+FAIL: Y3: … (got: ''). The row was renamed or removed …
+FAIL: Z7: … for 'Decision records' (got: '48') and/or … (got: ''). …
+
+### F-1  floor branch
+FAIL: Z7: no decisions/DEC-*.md files matched — the glob found nothing …
+      — makes no claim about the inventory at all.
+```
+
+**Note on V-2 vs M-6.** Design pinned M-6 by hash (`2eebe0e644ee`) but not by
+diff. Build reported having to hash-search plausible renames to recover it;
+this cycle independently produced a different-hashed rename
+(`Decision numbers held in reserve` → `353b013924bc`) that fires both guards
+identically. Two sessions, same cost — evidence for V-F7's first candidate.
+
+### V-F6 — what `inv_row` does wrong, and why none of it is reachable today
+
+Attacked by extracting the shipped function out of `scripts/test-docs.sh` with
+`sed` — never a retyped copy — and driving it with adversarial tables.
+
+| Probe | Input | Result | Verdict |
+|---|---|---|---|
+| prefix label | live table, `Decision records` | `48` | **correct**, and live-relevant (V-F4) |
+| regex metachar | `Go.source.files` vs `Go source files` | `11` / `70` | **correct** — string compare, not regex |
+| label only in column 3 | `\| x \| 5 \| Decision records \|` | `` | **correct** — column 2 is the address |
+| absent label | — | `` | **correct** — callers reject empty |
+| empty value cell | `\| Decision records \|  \| x \|` | `` | **correct** — numeric guard fires |
+| non-numeric value | `n/a`, `4 8`, `-3`, `0.65` | rejected | **correct** |
+| CRLF | value mid-line / value last field | `48` / `48\r` rejected | **correct**, fails loudly |
+| **duplicate label** | two `Decision records` rows | first (`48`) | silently ignores the second |
+| **`\|` inside the value cell** | `4\|8` | `4`, **passes the numeric guard** | wrong-not-empty |
+| **`\|` inside the label cell** | `A \\\| B` | unaddressable; `A \\` returns `B` | wrong-not-empty (rejected by the guard) |
+| **`awk -v` escape processing** | `want='a\tb'` | matched the literal-TAB row, not the literal-backslash-t row | addresses a different row |
+
+The last four are the honest answer to *"the numeric guard covers empty; it
+does not obviously cover wrong."* It does not. **All four require a `|` or a
+backslash inside a table cell, and none is reachable from
+`scripts/inventory.sh`:** every Value cell is `${var}` from
+`n "$(… wc -l)"` or `awk '{print $2+0}'` (`inventory.sh:40,44,47-76`), and every
+label is literal prose in one heredoc with no `|` and no backslash
+(`inventory.sh:79-99`). Recorded rather than fixed — hardening a helper against
+inputs its only producer cannot emit would be speculative, and the callers'
+`^[0-9]+$` guard converts three of the four into loud failures anyway. The one
+that would pass silently (`4|8`) needs someone to put a pipe in the Value
+column, which is a change to `inventory.sh`'s literal table.
+
+### V-F7 — the no-op-mutant hole: one AGENTS.md candidate clears the bar, one does not. ROUTED → SPEC-087 ship
+
+Build disclosed two near-misses where a `sed` targeted the wrong line, applied
+nothing, and the harness went all-green — *"would have been reported as a
+passing probe if the content hash had not contradicted it."* Read against the
+§12 text, this cycle's call:
+
+**Candidate 1 — "a mutation pinned by a hash must also pin its diff." CLEARS,
+N=2 paired-opposing.** NEGATIVE: M-6 recorded `2eebe0e644ee` with no edit
+text, and build had to hash-search plausible renames to recover it. POSITIVE:
+*"the five mutations whose text was stated reproduced first try."* Same
+mechanical surface, opposing outcomes — the §12(b) shape that cleared the bar
+at N=2. Independently re-paid this cycle (V-2, above), which is a third
+occurrence rather than a third case.
+
+**Candidate 2 — "a no-op mutant voids the probe." DOES NOT clear as a new
+rule.** The mechanism is already there: §12 clause (1) says *"confirm the
+mutant actually mutated, with `shasum -a 256` before and after."* It fired in
+both near-misses and caught both. Two same-outcome confirming cases for an
+**existing** promoted clause are not evidence for a new one, and the repo's
+meta-rule wants N=3 for same-outcome. What is genuinely missing is one
+sentence of *consequence and order* — clause (1) says to confirm, but never
+says that a target whose hash did not move produces **no evidence**, so its
+result, including any *expected-green* half, must be discarded rather than
+recorded. That is the gap the near-miss actually lived in: run the gate, see
+green, record, then check. Recommended as a **refinement of clause (1)**, not
+a new clause — the same shape as the existing *"§12(b) refinement — target the
+behavioral surface"*.
+
+**Why verify does not write either one.** Every AGENTS.md codification in this
+repo lands at **ship** or at stage close (*"Codified at SPEC-021 ship"*,
+*"Promoted at STAGE-022 close"*, *"Codified at STAGE-007 close"*); SPEC-085's
+verify did not touch AGENTS.md. Verify supplies the evidence and names the
+owner. Both candidates are recorded on the STAGE-023 page so ship cannot
+inherit them silently.
+
+### Gates and acceptance criteria, after this cycle's changes
+
+```
+go test ./...        15 pkgs ok (+ storagetest, no test files)
+just test-docs       ALL OK — 199 OK: lines / 198 distinct ids   (unchanged)
+just lint            0 issues
+gofmt -l .           empty
+go vet ./...         clean
+diff <(./scripts/inventory.sh) <(main worktree ./scripts/inventory.sh)   IDENTICAL
+git diff --stat main -- docs/engineering-practices.md                    empty
+```
+
+All twelve acceptance criteria were re-derived independently and hold. AC-7 as
+build shipped it: `git diff --numstat` → `77  39  scripts/test-docs.sh`, one
+file, **2055** lines. AC-1's only hits for `Decision records | 48` are in the
+comment recording the pin's *history*; the assertion body (lines 1631–1645 at
+`5f09930`) has **zero**. AC-3: `inv_row()` at line 138, first use at 1635 —
+defined before use, once. AC-12: `Y4`'s block is byte-identical to `main`
+(`diff` empty), and this cycle deliberately kept it that way (see V-F3).
+
+The mutation matrix was re-run against the **modified** tree to prove the floor
+blunts nothing. M-3 reproduced design's recorded mutant hash `7d37e1ad73d4`
+exactly; M-1 reproduced `6e28f6585f0f`, a third independent arrival at that
+hash:
+
+| # | Mutant | `X3` | `Y3` | `Z7` |
+|---|---|---|---|---|
+| M-1 `6e28f6585f0f` | broaden the decision filter | FAIL | ok | **FAIL** `covers 50 of 49` |
+| M-2 `c820a68e4387` | break the reservation filter | FAIL | **FAIL** | **FAIL** |
+| M-3 `7d37e1ad73d4` | swap the two filters | FAIL | **FAIL** | ok — **LD5 holds** |
+| M-4 `437643a8a967`… | break `Y3`'s own oracle | ok | **FAIL** | ok |
+| M-6 / V-2 `353b013924bc` | rename the reserved row | FAIL | **FAIL** | **FAIL** |
+
+Every probe was run through a helper that **refuses to run the gate until the
+content hash has moved** — build's own recommendation from reflection Q3(a),
+implemented rather than left as discipline. It never had to fire: all mutants
+applied first try. Every target was restored from a `/tmp` backup, never
+`git checkout`, and every restore was confirmed by hash
+(`scripts/inventory.sh` → `e2db95583a9b`, `scripts/test-docs.sh` →
+`39f8dce93263`). The two probe worktrees ended `git status` clean with 49
+`decisions/DEC-*.md` files each and were removed.
+
+### What this cycle changed
+
+| File | Change | Moves an inventory row? |
+|---|---|---|
+| `scripts/test-docs.sh` | `Y3` gains the file-set floor (V-F1) + the comment that explains why it is not `Z7`'s | **no** — 198 distinct ids, `sort -u` |
+| `decisions/_template.md` | the tombstone convention, at the moment `type: reservation` is chosen (V-F2) | **no** — outside every glob |
+| the STAGE-023 page | V-F3 → SPEC-088; V-F7's two candidates → ship | no |
+| this spec | this section | no |
+
+`NEXT-SESSION-PROMPT.md` was modified and uncommitted on entry and is **not**
+this cycle's; it is left alone for the eighth consecutive cycle.
 
 ## Reflection (Ship)
 
