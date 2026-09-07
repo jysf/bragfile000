@@ -173,10 +173,19 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       renderer work lands in two PRs. Framing also shrank the DEC-048
       obligation from *"two count renames"* to *at most one* — see
       *Re-framing corrections* below.
-- [ ] SPEC-087 (frame) — **`Y3` derives instead of caching.** Split out of
-      SPEC-086's re-framing rather than absorbed. Complexity **S**. **Sequence
-      it BEFORE SPEC-086 design**, which creates DEC-050 and would otherwise be
-      the sixth consecutive hand re-pin. See *Carried into SPEC-086*, item 2.
+- [ ] SPEC-087 (design) — **`Y3` derives instead of caching.** Split out of
+      SPEC-086's re-framing rather than absorbed. **Designed 2026-09-06, all
+      three forks settled, complexity S held.** Still **sequence it BEFORE
+      SPEC-086 design**, which creates DEC-050 and would otherwise be the
+      sixth consecutive hand re-pin. See *Carried into SPEC-086*, item 2.
+      Design's headline correction to this page's item 2: the second
+      derivation did not have to be invented — **`Z7` already computed it**
+      (SPEC-082 LD10) and was measured **blind**, because it re-implements
+      `inventory.sh`'s two greps verbatim instead of reading what the script
+      emits. Fork 1 is a repair, not an invention. Fork 2 rejected (Fork 1
+      gets its benefit without touching a user-facing doc); Fork 3 retired as
+      moot. `Y4`'s pin stays and is routed to **SPEC-088** with an id, not to
+      an anonymous next spec.
 - [ ] (not yet written) — **`summary` + `story` markdown honesty.** The other
       half of SPEC-086's Fork B, split on defect shape: on these two the data is
       already present (`story --format json` carries `"type": "failed"`;
@@ -196,7 +205,8 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       question — and filing it as a question would move `Y4`'s pinned counts
       and force an inventory regeneration for zero information gain.
 
-**Count:** 1 shipped / 0 verify / 2 framed / 2 not yet written
+**Count:** 1 shipped / 0 verify / 1 designed / 1 framed / 2 not yet written
+(SPEC-088 is reserved-by-routing for `Y4`, not yet written — see SPEC-087 LD6.)
 
 **The stage does NOT close here.** Success Criteria 1, 2 and the DEC-014/
 DEC-048 envelope line are met by SPEC-085; Criterion 4 (*the celebratory
