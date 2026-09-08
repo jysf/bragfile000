@@ -166,6 +166,48 @@ and its rejected option are recorded in `stages/STAGE-023-*.md` under
 
 **Count:** 0 shipped / 1 active / 3 pending
 
+### Field-feedback backlog (round 2, 2026-09-08)
+
+A second heavy-agent audit (`~/ContextCore`, 450-entry corpus) produced items
+that route onto the stages above — recorded here so they are not re-derived, and
+because the routing is itself evidence the stage plan is pointed right. Two round-1
+bugs already shipped in **SPEC-089** (the `edit` applied/no-op stdout signal, and
+the editor's duplicate-header reject); **SPEC-090** (in frame) extends that reject
+to the `--json` ingress. So the reporter's §2.1 / §2.3 / §3.7 need no new work —
+they land on upgrade.
+
+- **→ STAGE-025 (the mirror).** A `brag lint` over the corpus is the concrete
+  first observation set: blank / near-miss `type` values (`ship`/`shipped`,
+  `bugfix`/`fixed`; ~25% blank corpus-wide), untagged entries, **unregistered
+  project labels** (6 corpus-wide — DEC-017 keeps `entries.project` free-text, so
+  this is an *observation*, not a hard block; §2.2), and **likely-duplicate
+  entries** (§3.1's read side — two sessions bragging the same work). Plus a
+  **staleness** signal: a `verified_at` field + `brag verify <id>`, surfaced by
+  `memory`/`show` as "last verified N days ago" — the corpus is read back cold, so
+  a confidently stale entry is worse than a missing one (§3.3).
+- **→ STAGE-026 (story-surface v2).** The sharpest case yet for a relationship
+  primitive: `story` threads by project, so a correction pair (a "Correction to
+  #427" entry) renders as two equal beats with no link and no ordering beyond
+  timestamps — the one command whose job is coalescing entries into a story cannot
+  state the one relationship the corpus most needs. `brag link <id>
+  corrects|supersedes|part-of <id>`, surfaced in `show`, included in `export`, and
+  — the point — used by `story` to collapse or mark a superseded beat (§3.2). The
+  `export` framing from round 1 was secondary; this is the primitive's strongest
+  argument.
+- **→ STAGE-023 (active) + SPEC-091.** `failed` is 0.4% of the corpus though the
+  honesty is present (filed inside `shipped`/`fixed` bodies) — a discoverability /
+  prompting gap, not a schema one (§3.6). Partly addressed by the help-grouping
+  quick win (**SPEC-091**, filed), which gives `learn` a prominent home in the
+  Write group. SPEC-091 also closes the round-2 discoverability finding (§6: the
+  read/digest family is undiscoverable in a flat `--help`) and three `--help`
+  truth-gaps (§4.1/§4.2/§4.3). §6 is a **third instance** of the class named in
+  Scope item 5 and `docs/framework-feedback/process-feedback.md` §6.
+- **Smaller / unscheduled.** `edit` flag or `--json` partial-update mode for
+  parity with `add` (§3.4); a write-time `brag add --check` similarity warning
+  (§3.1's write side, pairs with the mirror's read side); and CLI
+  `--agent`/`--model`/`--session` flags for MCP parity (§4.3 option B) — a
+  capture/provenance question, larger than the doc fix SPEC-091 makes.
+
 ## Dependencies
 
 ### Depends on
