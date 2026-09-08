@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -238,6 +239,80 @@ func TestParse_DuplicateUnknownHeaderStillIgnored(t *testing.T) {
 	}
 	if f.Title != "x" {
 		t.Errorf("Title = %q, want %q", f.Title, "x")
+	}
+}
+
+// TestParse_DuplicateGuardCoversEveryHeaderRenderEmits gives the duplicate
+// guard a floor of its own. canonicalHeaders is a hand-typed slice; the four
+// tests above only exercise two of its five entries, so deleting "Tags",
+// "Project" or "Type" from it leaves the whole repo's suite green — and the
+// silent-drop bug this spec exists to fix comes back on that field. This
+// derives the set to test from Render's ACTUAL output rather than re-typing
+// the list, so a sixth field added to Render but forgotten in
+// canonicalHeaders turns this red instead of shipping unguarded.
+func TestParse_DuplicateGuardCoversEveryHeaderRenderEmits(t *testing.T) {
+	full := Fields{
+		Title:   "t",
+		Tags:    "g",
+		Project: "p",
+		Type:    "y",
+		Impact:  "i",
+	}
+	var names []string
+	for _, ln := range strings.Split(string(Render(full)), "\n") {
+		if ln == "" {
+			break // end of the header block
+		}
+		k, _, ok := strings.Cut(ln, ": ")
+		if !ok {
+			t.Fatalf("Render emitted a non-header line %q in the header block", ln)
+		}
+		names = append(names, k)
+	}
+
+	// Non-vacuity floor: Fields is (headers + Description), so the header
+	// count is derivable from the struct. Without this, a Render that stopped
+	// emitting headers would make the loop below iterate zero times and pass.
+	if want := reflect.TypeOf(Fields{}).NumField() - 1; len(names) != want {
+		t.Fatalf("Render emitted %d headers %v, want %d (every Fields member except Description)", len(names), names, want)
+	}
+
+	for _, name := range names {
+		t.Run(name, func(t *testing.T) {
+			buf := []byte("Title: t\n" + name + ": one\n" + name + ": two\n\nbody\n")
+			if _, err := Parse(buf); err == nil {
+				t.Fatalf("Parse tolerated a duplicate %q header — canonicalHeaders is missing it, so that field is still silently droppable", name)
+			}
+		})
+	}
+}
+
+// TestTemplates_CannotEmitADuplicateHeader pins the other half of the
+// duplicate guard's blast radius. Before this spec a repeated header in a
+// shipped template was harmless (first-wins); now it hard-fails every
+// invocation of the command that uses it, and nothing else in the suite
+// notices: a second "Title:" line in EmptyTemplate, or a second "Impact:" in
+// FailureTemplate, both leave `go test ./...` green while breaking
+// `brag add` and `brag learn` outright.
+func TestTemplates_CannotEmitADuplicateHeader(t *testing.T) {
+	for name, tpl := range map[string][]byte{
+		"EmptyTemplate":   EmptyTemplate(),
+		"FailureTemplate": FailureTemplate(),
+	} {
+		t.Run(name, func(t *testing.T) {
+			// The templates carry empty values, so Parse fails on the
+			// required-Title rule. That is expected; what must never appear
+			// is the duplicate-header rejection.
+			_, err := Parse(tpl)
+			if err != nil && strings.Contains(err.Error(), "duplicate") {
+				t.Fatalf("%s emits a duplicate header — every %s-backed command fails on an ordinary edit: %v", name, name, err)
+			}
+			// And it must still be parseable once a Title is supplied.
+			filled := []byte(strings.Replace(string(tpl), "Title: \n", "Title: x\n", 1))
+			if _, err := Parse(filled); err != nil {
+				t.Fatalf("%s with a filled-in Title must parse; got %v", name, err)
+			}
+		})
 	}
 }
 

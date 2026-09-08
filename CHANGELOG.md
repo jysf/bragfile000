@@ -43,6 +43,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `brag summary` and `brag wrapped`. Update any `jq .entries` to
   `jq .candidates`.
 
+### Fixed
+
+- **The editor buffer no longer discards a repeated field silently**
+  ([DEC-051](decisions/DEC-051-the-editor-buffer-rejects-a-repeated-canonical-header.md)).
+  `editor.Parse` read each header with `net/textproto`'s `Get`, which returns
+  only the *first* value of a repeated key and drops the rest with no error —
+  so a buffer that ended up with two `Impact:` lines (a scripted `$EDITOR`
+  that inserts rather than replaces a header is the reported cause) kept one
+  and silently lost the other. A repeat of any of the five canonical headers
+  (`Title`, `Tags`, `Project`, `Type`, `Impact`, case-insensitively) is now a
+  user error (exit 1) with nothing written; the rejection is atomic. Repeating
+  an *unknown* header is still ignored, as before. Reaches all three editor
+  ingresses: `brag edit`, `brag add` (editor mode) and `brag learn`. The
+  `brag add --json` ingress is a separate decoder and is unchanged.
+- **`brag edit` now prints the edited entry's id to stdout on a write**
+  ([DEC-052](decisions/DEC-052-brag-edit-emits-the-mutated-id-on-stdout.md)),
+  and still prints nothing on a no-op. Both outcomes previously produced empty
+  stdout and exit 0, so a batch script could not tell *applied* from *no-op*
+  on either the data channel or the exit code — a 13-entry batch reported
+  `0 updated, 13 failed` while applying all 13, then double-applied on retry.
+  The id is data and belongs on stdout, exactly as `brag add` already does;
+  `Updated.` / `No changes.` stay human prose on stderr.
+
 ## [0.6.1] - 2026-08-13
 
 A correctness-and-edges release. **No schema change, no migration, no new

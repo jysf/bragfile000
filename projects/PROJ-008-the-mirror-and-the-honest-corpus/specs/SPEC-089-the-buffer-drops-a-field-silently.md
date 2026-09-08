@@ -404,6 +404,318 @@ single-header buffer and a buffer with unknown headers both still parse.
 
 ---
 
+## Verification
+
+*Filled in at the end of the **verify** cycle. Build's gates passed and both
+fixes were independently reproduced end to end before this cycle started;
+none of that is re-litigated here. This section records only what a passing
+build could not see.*
+
+- **Branch:** `verify/spec-089-editor-integrity`, off `main` at `59b230d`
+  (PR #208 merged 2026-09-08T07:39:05Z as a squash; no stacking).
+- **Verdict:** ⚠ **PUNCH LIST — all items fixed in this cycle.** Both defects
+  are genuinely fixed and reach every path they claim to. Four findings, three
+  fixed here, one routed.
+
+### The attack list
+
+| # | Attack | Result |
+|---|---|---|
+| A | Does Bug A's fix reach **every** `Parse` caller, not just `edit`? | **HOLDS** |
+| B | Is the fix a breaking change for a **legitimate** buffer a template can emit? | **V-F2 — two of three generators unguarded. FIXED HERE** |
+| C | Is the five-key `canonicalHeaders` slice complete, and is its completeness *enforced*? | **V-F1 — complete, but three of five keys unenforced. FIXED HERE** |
+| D | Does Bug B's signal survive `edit`'s other output modes / a post-write error? | **HOLDS** |
+| E | Does the reporter's 13-entry batch now report correctly? | **HOLDS** |
+| F | Are the two DEC records' own claims true? | **V-F4 — DEC-051's `## Validation` overclaimed. CORRECTED HERE** |
+| G | Do the docs still describe the old contract? | **V-F3 — `api-contract.md` + CHANGELOG stale. FIXED HERE** |
+| H | Does the same defect exist on the ingress the spec scoped out? | **V-F5 — yes, and it is now the *only* silent one. ROUTED → STAGE-023** |
+
+### A — Bug A's blast radius. HOLDS on all three editor ingresses
+
+`editor.Parse` has exactly three non-test callers repo-wide
+(`grep -rn 'editor\.Parse' --include='*.go' .`, excluding the unrelated
+pre-existing `.claude/worktrees/` checkout): `internal/cli/edit.go:94`,
+`internal/cli/add.go:198`, `internal/cli/learn.go:117`. All three wrap
+identically as `UserErrorf("invalid buffer: %v", err)` and return **before**
+any `storage.Open`/insert, so the rejection is atomic by construction, not by
+assertion. The spec's acceptance criteria exercise only `edit`; the other two
+were driven end to end here against a `t.TempDir()`-equivalent scratch DB:
+
+```
+$ EDITOR=<shim writing two Impact: lines> brag --db "$DB" add
+exit=1
+stdout=[]
+stderr=[brag: user error: invalid buffer: parse buffer: duplicate "impact" header (a field may only appear once)]
+row count before = 1 ; after = 1
+
+$ EDITOR=<same shim> brag --db "$DB" learn
+exit=1
+stdout=[]
+stderr=[brag: user error: invalid buffer: parse buffer: duplicate "impact" header (a field may only appear once)]
+row count before = 1 ; after = 1
+```
+
+`brag learn` also rejects a duplicated `Type:` — a header its own
+`FailureTemplate` deliberately omits and whose value it overwrites anyway.
+Over-strict in the narrow sense, but correct: the reject runs in `Parse`,
+which cannot know the caller will discard the field, and a buffer the user
+typed twice is not a buffer to guess about.
+
+### C — V-F1: the canonical-key slice is complete, but its completeness was not enforced. FIXED
+
+`canonicalHeaders` matches the five `hdr.Get` calls in `Parse` exactly, and
+the five headers `Render` emits. That was verified by inspection **and** it
+was not the question. The question is whether anything *keeps* it matching —
+and nothing did. Only `Title` and `Impact` had tests. Mutation, §12 protocol,
+hash confirmed to move before the gate ran (`shasum -a 256`, restore from
+`/tmp` backup, hash confirmed to return):
+
+| mutant | `internal/editor/editor.go` after | `go test -count=1 ./...` (pre-fix) |
+|---|---|---|
+| drop `"Title"` | `7276e3f0…`* | RED (2 tests) |
+| drop `"Tags"` | `fd8b48d3…`* | **GREEN — all 14 packages ok** |
+| drop `"Project"` | `69c91dcc…`* | **GREEN** |
+| drop `"Type"` | `bbaca034…`* | **GREEN** |
+| drop `"Impact"` | `1df5a621…`* | RED (2 tests) |
+
+Edit, stated so the hash is reproducible: replace the line
+`var canonicalHeaders = []string{"Title", "Tags", "Project", "Type", "Impact"}`
+with the same line minus the named key. Baseline
+`928bf2324912d421c26dd028d36187eaecc941bdf5c8145148cc003cd27c5a4b`.
+
+> \*A first pass used `perl -0pi -e 's/"Tags", //'`, which also matched
+> `write("Tags", f.Tags)` inside `Render` and produced a compile error — the
+> right verdict for the wrong reason. Those five results were **discarded**
+> under §12's third clause (*confirm the mutant changed only what you
+> intended*) and re-run against the slice line alone; the hashes above are the
+> re-run. A second pass mis-exported the mutator as a shell function and
+> applied nothing at all; the hash-gated helper refused to run the gate and
+> discarded the result, which is §12(b) working exactly as SPEC-087's verify
+> built it. Both are recorded because a discarded probe that is not recorded
+> looks like a probe that was never run.
+
+Consequence: a sixth editable field added to `Render`/`Parse` and forgotten in
+`canonicalHeaders` reintroduces this exact bug on that field, with a fully
+green suite — the "green guard proves nothing" shape.
+
+**Fixed by `TestParse_DuplicateGuardCoversEveryHeaderRenderEmits`**
+(`internal/editor/editor_test.go`), which *derives* the set to test from
+`Render`'s actual output instead of re-typing the list, and carries a
+non-vacuity floor: the header count must equal
+`reflect.TypeOf(Fields{}).NumField() - 1`, so a `Render` that stopped emitting
+headers cannot make the loop iterate zero times and pass. All three previously-
+green mutants now name the right key:
+
+```
+--- FAIL: TestParse_DuplicateGuardCoversEveryHeaderRenderEmits/Tags
+    Parse tolerated a duplicate "Tags" header — canonicalHeaders is missing it,
+    so that field is still silently droppable
+```
+
+and the floor fires on its own (delete `write("Tags", f.Tags)` from `Render`):
+`Render emitted 4 headers [Title Project Type Impact], want 5`.
+
+Honest limit: the derivation is anchored on `Render`. A field added to `Parse`
+but never to `Render` is not covered — but such a field is already dead code
+under `TestRoundTrip_AllFields`, which locks the two together.
+
+### B — V-F2: the "no generator can emit a duplicate" property was two-thirds unguarded. FIXED
+
+The fix converts a previously-harmless condition into a hard failure, so the
+three buffer generators must be *incapable* of emitting a duplicate. Proved by
+construction, not assertion — mutate each, then build a real binary and run the
+real command:
+
+| generator | mutant | pre-fix suite | user-facing effect |
+|---|---|---|---|
+| `Render` | write `Impact` twice | RED (`TestRoundTrip_AllFields`) | guarded already |
+| `EmptyTemplate` | second `Impact:` line | RED (`TestEmptyTemplate_ParsesToMissingTitleError`) | guarded **by accident** |
+| `EmptyTemplate` | second **`Title:`** line | **GREEN** | `brag add` broken for everyone |
+| `FailureTemplate` | second `Impact:` line | **GREEN** | `brag learn` broken for everyone |
+
+`EmptyTemplate`'s existing guard is coincidental: the test asserts the parse
+error *contains* `"title"`, and a duplicate-**Impact** error preempts the
+title error so the assertion fails — but a duplicate-**Title** error also
+contains `"title"`, so it passes for the wrong reason. Driven for real from
+binaries built from each mutant, with an ordinary user edit (fill in the
+`Title:` line the template ships with, change nothing else):
+
+```
+$ EDITOR=<sed 's/^Title: $/Title: a real failure/'> brag-m4 --db "$DB" learn
+exit=1
+stderr=[brag: user error: invalid buffer: parse buffer: duplicate "impact" header (a field may only appear once)]
+   # FailureTemplate mutant d153ec7d1a87… — 100% of `brag learn` invocations fail, suite green
+
+$ EDITOR=<same> brag-m3 --db "$DB" add
+exit=1
+stderr=[brag: user error: invalid buffer: parse buffer: duplicate "title" header (a field may only appear once)]
+   # EmptyTemplate mutant 83e9983e5b8e… — 100% of `brag add` editor-mode invocations fail, suite green
+```
+
+**Fixed by `TestTemplates_CannotEmitADuplicateHeader`**, which round-trips both
+templates through `Parse` and fails on a `duplicate` error specifically (not on
+the expected missing-`Title` error), then re-parses each with a filled-in
+`Title:` to prove the template is still usable. Both mutants now RED.
+
+### D — Bug B under the other output modes. HOLDS
+
+- **No other output mode exists.** `brag edit --help` shows exactly two flags:
+  `-h/--help` and the persistent `--db`. `brag edit 1 --format json` →
+  `brag: user error: unknown flag: --format`, exit 1. DEC-052's Option-B
+  rejection ("`edit` has no `--json`/`--format` flag and no other output mode")
+  is factually correct.
+- **No path writes and skips the ID.** After `s.Update` succeeds, `runEdit` has
+  only the two `Fprintln`s and `return nil` — no error branch between them.
+- **Broken pipe** is the one case where a write happens and no ID lands
+  (`brag edit 1 | true` → exit **141**, empty stdout, empty stderr, row
+  updated). `brag add` behaves identically under the same test, so this is
+  `add`'s pre-existing contract inherited verbatim, not new unreliability —
+  and exit 141 ≠ 0 is itself a distinguishable signal.
+- **The signal is honest about what it means.** "ID on stdout" tracks *a row
+  was written*, not *a field value differed*: an edit that changes only an
+  unknown header (`X-Note:`) still prints the ID and still bumps `updated_at`
+  (`07:47:43Z` → `07:47:45Z` measured), because `Launch`'s `changed` is a
+  SHA-256 over the buffer. That is the right semantics for a batch driver.
+
+### E — the reporter's 13-entry batch, replayed
+
+The acceptance test the spec's criteria imply but never state: the reported
+*symptom*, not its diagnosis. Driver = the reporter's own decision rule
+(*success iff stdout is non-empty*); the scripted edit appends `" [reviewed]"`
+to the title, so a double-apply is visible in the data.
+
+**Pre-fix** (binary built from `b84636b`, the commit before #208):
+
+```
+--- pass 1 ---   0 updated, 13 failed        (all 13 had in fact applied)
+--- pass 2 ---   0 updated, 13 failed        (the script retries the "failures")
+1 entry 1 [reviewed] [reviewed]              ... all 13 double-applied
+```
+
+**Post-fix** (`59b230d`):
+
+```
+--- pass 1 ---  13 updated, 0 failed
+1 entry 1 [reviewed]                          ... applied exactly once, no retry
+```
+
+Residual, reported as an observation rather than a defect: a *no-op* batch
+still reports `0 updated, 13 failed` under that naive rule, because DEC-052
+is deliberately silent on no-op. The retry is now harmless (a no-op retried is
+a no-op), so the dangerous direction is closed. The full three-state space is
+observable — applied `(id, exit 0)` / no-op `(empty, exit 0)` / error
+`(empty, exit 1)` — but only from stdout **and** the exit code together;
+stdout alone separates applied from not-applied, which is what the spec
+claimed and delivered. Now stated explicitly in `docs/api-contract.md`.
+
+### F — V-F4: DEC-051's `## Validation` claimed something its tests did not prove. CORRECTED
+
+It read: `TestParse_DuplicateUnknownHeaderStillIgnored` "proves the guard's
+scope is **exactly** the five canonical keys." It proves the *upper* bound
+only. The lower bound was unpinned — that is V-F1, measured above. The
+decision itself is right; the sentence was not. Corrected in place (no
+`## Amendment` heading, so the inventory's amendment row does not move), citing
+the two new tests that make the claim true.
+
+### G — V-F3: the CLI contract document still described the old behaviour. FIXED
+
+The spec's `## Outputs` enumerates two Go files, two test files and two DEC
+files, and no documentation. AGENTS.md §9's premise audit (*status change →
+planned doc references update*) was not run: `grep -rn 'brag edit' docs/
+README.md CHANGELOG.md` reaches `docs/api-contract.md:233`, the repo's CLI
+contract, which said —
+
+> `- Saving a successful edit prints `Updated.` to stderr, exit 0.`
+
+— with no mention of stdout, and listed exactly one user-error case for the
+buffer (missing/empty `Title:`). Both of this spec's changes were invisible
+there. Updated the `brag edit` and `brag add` (editor mode) contract blocks
+for the stdout ID and the new duplicate-header rejection, and added a
+`### Fixed` pair to `CHANGELOG.md`'s `[Unreleased]` — matching the precedent
+of the two immediately preceding specs on this stage (SPEC-084 and SPEC-085
+both updated the CHANGELOG at **build**, `d17bc0a` / `d8c69d7`).
+
+### H — V-F5: the fourth ingress has the same defect, and is now the only silent one. ROUTED
+
+The spec's `## Inputs` says the `--json` ingress "does NOT go through
+`editor.Parse` (it decodes JSON), so Bug A does not touch it." True about the
+code path — and it treats Bug A as a `Parse` defect rather than an *ingress*
+defect. `internal/cli/add_json.go:24` uses `encoding/json`, whose behaviour for
+a repeated object key is **last-wins, silently**:
+
+```
+$ echo '{"title":"json dup test","impact":"REAL VALUE","impact":"CLOBBERED"}' | brag --db "$DB" add --json
+exit=0
+stdout=[2]
+stderr=[]
+$ brag --db "$DB" list --format json
+2 'json dup test' 'CLOBBERED'
+```
+
+So the corpus's two write ingresses now *disagree* about what a repeated field
+means — the editor rejects, the scripted path silently takes the last — and the
+silent one is the path an agent drives. This is the defect PROJ-008 is named
+for, on the surface the field report was generated from. Not pulled in: it
+needs a decision (reject vs. warn) and a `json.Decoder`-token pre-pass, since
+`encoding/json` has no duplicate-key hook. Routed to STAGE-023's backlog as a
+`bug`, with the reproduction.
+
+### Gates — all five green on this branch
+
+| gate | result |
+|---|---|
+| `go test -count=1 ./...` | ok, all 14 packages · **1086** `=== RUN` lines |
+| `just test-docs` | `ALL OK` · **199** `OK:` lines / **198** distinct ids (S3 double-emits) |
+| `just lint` | `0 issues.` |
+| `gofmt -l .` | empty |
+| `go vet ./...` | exit 0 |
+
+Build's `1070 → 1077` claim was re-derived independently rather than taken on
+trust, by counting `=== RUN` lines in a detached worktree at each commit:
+`b84636b` → **1070**, `59b230d` → **1077**. This cycle's two new test functions
+carry five and two subtests, so `1077 + 9 = 1086`. ✓
+
+`just inventory` regenerated and pasted wholesale; **exactly one row moved**,
+and it was not predicted in advance: `Go test functions 827 → 829`. The
+`Decision records` row stays 50 and the amendment row stays 1 — the DEC-051
+correction deliberately avoids an `## Amendment` heading.
+
+### Corpus discipline
+
+Live corpus re-derived read-only from a copy (never opened by a `brag` binary,
+since `storage.Open` runs migrations): **454 entries, `max(id)` 466**. Entry
+466 is `contextcore-pilot-harness` / `learned` — another project's write, not
+this cycle's. Every reproduction above ran against an explicit `--db` under the
+session scratchpad. `~/.bragfile/db.sqlite` is byte-identical to its state at
+the start of this session:
+`87d7e01f11e7d9badaf033a1af7e08f00fac92d1e095a49179555f537bc19676`.
+
+### What this cycle changed
+
+- `internal/editor/editor_test.go` — two new tests (+9 run cases). No
+  production code changed: both fixes were correct as built.
+- `decisions/DEC-051-…md` — corrected a false claim in `## Validation`.
+- `docs/api-contract.md` — the `brag edit` and `brag add` editor-mode contract
+  blocks, for both of this spec's behaviour changes.
+- `CHANGELOG.md` — a `### Fixed` pair under `[Unreleased]`.
+- `docs/engineering-practices.md` — regenerated inventory block.
+- `projects/…/stages/STAGE-023-…md` — V-F5 routed onto the backlog.
+
+### Not findings, checked and clean
+
+- Build's two disclosed deviations are both correct. `root.go:37` does set
+  `SilenceErrors: true`, so asserting on `err.Error()` rather than `errBuf` is
+  the right call and matches the sibling
+  `TestEditCmd_ChangedImpactOverCapIsUserErrorNoWrite`.
+- `scripts/test-docs.sh` untouched; X3/Y3/Z7 green. SPEC-087's fix absorbed two
+  new decision records with zero hand-edits on its first real exercise.
+- `DEC-051`/`DEC-052` both carry `type: decision`; `decisions/DEC-050*` still
+  matches nothing, so SPEC-086's reservation is intact.
+- `NEXT-SESSION-PROMPT.md` was modified and uncommitted at session start and is
+  left untouched — twelve consecutive cycles now.
+
+---
+
 ## Reflection (Ship)
 
 *Appended during the **ship** cycle.*

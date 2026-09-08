@@ -218,7 +218,27 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       question — and filing it as a question would move `Y4`'s pinned counts
       and force an inventory regeneration for zero information gain.
 
-**Count:** 2 shipped / 0 verify / 0 designed / 2 framed / 2 not yet written
+- [ ] (not yet written, `bug`) — **`brag add --json` drops a repeated key
+      silently, the way the editor buffer used to.** Routed out of SPEC-089
+      verify (2026-09-08). SPEC-089 fixed the silent field drop in
+      `editor.Parse`, which reaches all three editor ingresses (`edit`, `add`
+      editor mode, `learn`). The fourth ingress does not go through `Parse`:
+      `internal/cli/add_json.go:24` uses `encoding/json`, whose documented
+      behaviour for a repeated object key is **last-wins, silently**.
+      Measured: `echo '{"title":"t","impact":"REAL","impact":"CLOBBERED"}' |
+      brag add --json` exits 0 and stores `CLOBBERED`. So the two write
+      ingresses to the same corpus now *disagree* about what a repeated field
+      means — one rejects first-wins, the other silently takes last — and the
+      silent one is the scripted path an agent uses. SPEC-089 scoped this out
+      correctly (it framed Bug A as a `Parse` defect), but the framing that
+      justifies the fix — *the corpus must not quietly hold something other
+      than what the author wrote* — does not stop at `Parse`. Needs a decision
+      (reject vs. warn) because `encoding/json` has no duplicate-key hook;
+      rejecting means a `json.Decoder`-token pre-pass over the object.
+      Same shape on the MCP `brag_add` ingress, which the SDK decodes with the
+      same package.
+
+**Count:** 2 shipped / 0 verify / 0 designed / 2 framed / 3 not yet written
 (SPEC-088 now has a file — created at SPEC-087 ship to claim the id, per
 SPEC-087 LD6 and V-F3. It is `cycle: frame` and genuinely unframed; the file
 carries the routed evidence, not a decision.)

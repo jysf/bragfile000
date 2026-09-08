@@ -79,8 +79,10 @@ file, and spawns the editor against it. On save:
 - Saving byte-identical content (SHA-256 comparison — i.e. the
   template was not modified) aborts cleanly: stderr prints
   `Aborted.`, exit 0, DB untouched.
-- Saving a buffer that fails parse (missing or empty `Title:` header)
-  exits 1 (user error); the DB is unchanged.
+- Saving a buffer that fails parse — a missing or empty `Title:`
+  header, or a repeat of any of the five canonical headers (DEC-051) —
+  exits 1 (user error); the DB is unchanged. `brag learn`'s editor mode
+  parses the same buffer and rejects the same way.
 - Editor exec failure (e.g. `:cq` in vim with a modified buffer)
   exits 2 (internal error); the DB is unchanged.
 
@@ -248,10 +250,18 @@ bumps `updated_at`, and writes the new field values via
 `Store.Update`.
 
 - Saving byte-identical content (SHA-256 comparison) aborts cleanly:
-  stderr prints `No changes.`, exit 0, DB untouched.
-- Saving a successful edit prints `Updated.` to stderr, exit 0.
+  stderr prints `No changes.`, **stdout is empty**, exit 0, DB untouched.
+- Saving a successful edit prints the edited entry's **id to stdout**
+  (DEC-052, mirroring `add`'s contract) and `Updated.` to stderr; exit 0.
+  The id's presence on stdout *is* the applied signal: a batch script
+  distinguishes applied (id, exit 0) from no-op (empty, exit 0) from
+  error (empty, exit 1) without parsing stderr prose.
 - If the saved buffer is missing or has an empty `Title:` header, the
   command exits 1 (user error); the DB is unchanged.
+- If the saved buffer repeats any of the five canonical headers
+  (`Title`, `Tags`, `Project`, `Type`, `Impact` — case-insensitively),
+  the command exits 1 (user error) and the DB is unchanged (DEC-051).
+  Repeating an *unknown* header is still ignored.
 - If the editor exits non-zero (e.g. `:cq` in vim) the command exits
   2 (internal error); the DB is unchanged.
 - Missing/non-numeric/non-positive `<id>` or a no-longer-existent

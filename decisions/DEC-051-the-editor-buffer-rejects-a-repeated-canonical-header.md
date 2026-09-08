@@ -95,8 +95,28 @@ both `brag add` (editor mode) and `brag edit`.
 Covered by `TestParse_DuplicateTitleHeaderIsError`,
 `TestParse_DuplicateImpactHeaderIsError`,
 `TestParse_DuplicateHeaderIsCaseInsensitive`, and the boundary guard
-`TestParse_DuplicateUnknownHeaderStillIgnored` (proves the guard's scope is
-exactly the five canonical keys). Revisit if a future buffer format change
+`TestParse_DuplicateUnknownHeaderStillIgnored`.
+
+**Corrected at SPEC-089 verify (2026-09-08).** That list was first written
+here as proving "the guard's scope is **exactly** the five canonical keys."
+It does not. `TestParse_DuplicateUnknownHeaderStillIgnored` pins only the
+*upper* bound — that an unknown header may still repeat. Nothing pinned the
+*lower* bound: the three named tests cover `Title` and `Impact` only, so
+deleting `"Tags"`, `"Project"` or `"Type"` from `canonicalHeaders` left
+`go test -count=1 ./...` green across all fourteen packages while
+reintroducing this exact silent-drop bug on that field. Verify measured all
+three and closed the gap with
+`TestParse_DuplicateGuardCoversEveryHeaderRenderEmits`, which derives the
+set to test from `Render`'s actual output (with a non-vacuity floor tied to
+`Fields`' member count) rather than re-typing the list — so the "exactly"
+claim is true now, by that test rather than by the boundary guard.
+`TestTemplates_CannotEmitADuplicateHeader` covers the other side this
+decision's Negative consequence created: a duplicated header in
+`EmptyTemplate` or `FailureTemplate` is no longer harmless first-wins but a
+hard failure of every invocation, and both templates were previously
+unguarded against it.
+
+Revisit if a future buffer format change
 (e.g. a repeatable header, such as multiple `Tags:` lines meant to
 accumulate) needs a header to legitimately repeat — none does today.
 

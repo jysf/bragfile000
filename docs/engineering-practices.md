@@ -39,7 +39,7 @@ The section that says the most about how this repository is run is
 | …of those, also carrying a build-phase reflection | 77 | `### Build-phase reflection` in those files |
 | Go source files | 70 | `internal/`, `cmd/` |
 | Go test files | 79 | `internal/`, `cmd/` |
-| Go test functions | 827 | `func Test*` in `*_test.go` |
+| Go test functions | 829 | `func Test*` in `*_test.go` |
 | Documentation assertions (distinct ids) | 198 | `scripts/test-docs.sh`, run by `just test-docs` |
 | …of those, replacing a manual release-checklist item | 6 | the `W`-series in `scripts/test-docs.sh` |
 | Questions tracked in guidance/questions.yaml | 21 | `guidance/questions.yaml` |
