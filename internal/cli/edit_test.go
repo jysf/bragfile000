@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -88,8 +89,11 @@ func TestEditCmd_HappyPath(t *testing.T) {
 	if err := root.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if outBuf.Len() != 0 {
-		t.Errorf("expected stdout empty, got %q", outBuf.String())
+	// Bug B / DEC-052: a write now prints the mutated ID to stdout as the
+	// applied signal. TestEditCmd_PrintsIDToStdoutOnUpdate covers that
+	// contract directly; here just confirm this happy path carries it too.
+	if got := strings.TrimSpace(outBuf.String()); got != strconv.FormatInt(inserted.ID, 10) {
+		t.Errorf("outBuf = %q, want %q (the mutated ID)", got, strconv.FormatInt(inserted.ID, 10))
 	}
 	if !strings.Contains(errBuf.String(), "Updated.") {
 		t.Errorf("expected stderr to contain %q, got %q", "Updated.", errBuf.String())
@@ -354,6 +358,93 @@ func TestEditCmd_ChangedImpactOverCapIsUserErrorNoWrite(t *testing.T) {
 	got := getEntry(t, dbPath, inserted.ID)
 	if got.Impact != "short impact" {
 		t.Errorf("Impact should be unchanged after rejected edit, got %q", got.Impact)
+	}
+}
+
+// TestEditCmd_PrintsIDToStdoutOnUpdate ▲ Bug B / DEC-052: the applied/no-op
+// signal must be observable on stdout alone (stderr stays human prose).
+func TestEditCmd_PrintsIDToStdoutOnUpdate(t *testing.T) {
+	editFn := func(path string) error {
+		return os.WriteFile(path, []byte("Title: NEW TITLE\n\nbody\n"), 0o600)
+	}
+	root, dbPath := newRootWithEdit(t, editFn)
+	inserted := seedEditEntry(t, dbPath, storage.Entry{Title: "orig"})
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "edit", "1"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := strconv.FormatInt(inserted.ID, 10)
+	if got := strings.TrimSpace(outBuf.String()); got != want {
+		t.Errorf("outBuf = %q, want %q (only the ID)", got, want)
+	}
+	if !strings.Contains(errBuf.String(), "Updated.") {
+		t.Errorf("expected stderr to contain %q, got %q", "Updated.", errBuf.String())
+	}
+	got := getEntry(t, dbPath, inserted.ID)
+	if got.Title != "NEW TITLE" {
+		t.Errorf("Title after edit = %q, want %q", got.Title, "NEW TITLE")
+	}
+}
+
+// TestEditCmd_NoChangesEmitsNoStdout is a boundary guard: it pins that the
+// new stdout write on the apply path does NOT leak onto the no-op path.
+// Passes today; must keep passing after Bug B's fix.
+func TestEditCmd_NoChangesEmitsNoStdout(t *testing.T) {
+	editFn := func(path string) error { return nil }
+	root, dbPath := newRootWithEdit(t, editFn)
+	seedEditEntry(t, dbPath, storage.Entry{Title: "keep me"})
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "edit", "1"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if outBuf.Len() != 0 {
+		t.Errorf("expected stdout empty on no-op, got %q", outBuf.String())
+	}
+	if !strings.Contains(errBuf.String(), "No changes.") {
+		t.Errorf("expected stderr to contain %q, got %q", "No changes.", errBuf.String())
+	}
+}
+
+// TestEditCmd_DuplicateHeaderIsUserErrorNoWrite ▲ Bug A reaching the edit
+// path: a buffer with a duplicated canonical header is rejected as a user
+// error, and the rejection is atomic — the stored row is byte-for-byte
+// unchanged, not merely "an error came back."
+func TestEditCmd_DuplicateHeaderIsUserErrorNoWrite(t *testing.T) {
+	editFn := func(path string) error {
+		body := "Title: orig\nImpact: first\nImpact: second\n\nbody\n"
+		return os.WriteFile(path, []byte(body), 0o600)
+	}
+	root, dbPath := newRootWithEdit(t, editFn)
+	inserted := seedEditEntry(t, dbPath, storage.Entry{Title: "orig", Impact: "original impact"})
+
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"--db", dbPath, "edit", "1"})
+
+	err := root.Execute()
+	if !errors.Is(err, ErrUser) {
+		t.Fatalf("expected errors.Is(err, ErrUser); got %v", err)
+	}
+	if outBuf.Len() != 0 {
+		t.Errorf("expected stdout empty, got %q", outBuf.String())
+	}
+	if !strings.Contains(err.Error(), "invalid buffer") {
+		t.Errorf("expected error to mention %q, got %v", "invalid buffer", err)
+	}
+	got := getEntry(t, dbPath, inserted.ID)
+	if got != inserted {
+		t.Errorf("stored row must be byte-for-byte unchanged after rejected edit:\n got  %+v\nwant %+v", got, inserted)
 	}
 }
 

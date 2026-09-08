@@ -185,6 +185,62 @@ func TestEmptyTemplate_ParsesToMissingTitleError(t *testing.T) {
 	}
 }
 
+func TestParse_DuplicateTitleHeaderIsError(t *testing.T) {
+	buf := []byte("Title: a\nTitle: b\n\nbody\n")
+	f, err := Parse(buf)
+	if err == nil {
+		t.Fatal("Parse on buffer with duplicate Title: expected error, got nil")
+	}
+	msg := strings.ToLower(err.Error())
+	if !strings.Contains(msg, "title") {
+		t.Errorf("error must mention %q; got %q", "title", err.Error())
+	}
+	if !strings.Contains(msg, "duplicate") {
+		t.Errorf("error must mention %q; got %q", "duplicate", err.Error())
+	}
+	if f != (Fields{}) {
+		t.Errorf("Fields must be the zero value on error, got %+v", f)
+	}
+}
+
+func TestParse_DuplicateImpactHeaderIsError(t *testing.T) {
+	buf := []byte("Title: x\nImpact: cut latency 50%\nImpact: shipped nothing\n\nbody\n")
+	_, err := Parse(buf)
+	if err == nil {
+		t.Fatal("Parse on buffer with duplicate Impact: expected error, got nil")
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "impact") {
+		t.Errorf("error must mention %q; got %q", "impact", err.Error())
+	}
+}
+
+func TestParse_DuplicateHeaderIsCaseInsensitive(t *testing.T) {
+	// textproto canonicalizes Title: and title: to the same key, so the
+	// two values collide and must be caught as a duplicate.
+	buf := []byte("Title: a\ntitle: b\n\nbody\n")
+	_, err := Parse(buf)
+	if err == nil {
+		t.Fatal("Parse on buffer with case-varied duplicate Title: expected error, got nil")
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "title") {
+		t.Errorf("error must mention %q; got %q", "title", err.Error())
+	}
+}
+
+func TestParse_DuplicateUnknownHeaderStillIgnored(t *testing.T) {
+	// Pins the duplicate-header guard's scope to the five canonical keys —
+	// an unknown header repeated twice must not trip it, preserving the
+	// existing "unknown headers silently ignored" contract.
+	buf := []byte("Title: x\nX-Note: one\nX-Note: two\n\nbody\n")
+	f, err := Parse(buf)
+	if err != nil {
+		t.Fatalf("Parse: %v (duplicate unknown headers should be ignored, not rejected)", err)
+	}
+	if f.Title != "x" {
+		t.Errorf("Title = %q, want %q", f.Title, "x")
+	}
+}
+
 func TestRoundTrip_AllFields(t *testing.T) {
 	f := Fields{
 		Title:       "shipped auth refactor",

@@ -121,19 +121,21 @@ func runEdit(cmd *cobra.Command, args []string) error {
 		return UserErrorf("%v", err)
 	}
 
-	if _, err := s.Update(id, storage.Entry{
+	inserted, err := s.Update(id, storage.Entry{
 		Title:       parsed.Title,
 		Description: parsed.Description,
 		Tags:        parsed.Tags,
 		Project:     parsed.Project,
 		Type:        parsed.Type,
 		Impact:      parsed.Impact,
-	}); err != nil {
+	})
+	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return UserErrorf("no entry with id %d", id)
 		}
 		return fmt.Errorf("update entry: %w", err)
 	}
+	fmt.Fprintln(cmd.OutOrStdout(), inserted.ID)
 	fmt.Fprintln(cmd.ErrOrStderr(), "Updated.")
 	return nil
 }
