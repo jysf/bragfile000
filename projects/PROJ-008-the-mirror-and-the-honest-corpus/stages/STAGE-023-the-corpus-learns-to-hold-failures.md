@@ -173,19 +173,32 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       renderer work lands in two PRs. Framing also shrank the DEC-048
       obligation from *"two count renames"* to *at most one* — see
       *Re-framing corrections* below.
-- [ ] SPEC-087 (design) — **`Y3` derives instead of caching.** Split out of
-      SPEC-086's re-framing rather than absorbed. **Designed 2026-09-06, all
-      three forks settled, complexity S held.** Still **sequence it BEFORE
-      SPEC-086 design**, which creates DEC-050 and would otherwise be the
-      sixth consecutive hand re-pin. See *Carried into SPEC-086*, item 2.
-      Design's headline correction to this page's item 2: the second
-      derivation did not have to be invented — **`Z7` already computed it**
-      (SPEC-082 LD10) and was measured **blind**, because it re-implements
-      `inventory.sh`'s two greps verbatim instead of reading what the script
-      emits. Fork 1 is a repair, not an invention. Fork 2 rejected (Fork 1
-      gets its benefit without touching a user-facing doc); Fork 3 retired as
-      moot. `Y4`'s pin stays and is routed to **SPEC-088** with an id, not to
-      an anonymous next spec.
+- [x] SPEC-087 (shipped on 2026-09-07) — **`Y3` derives instead of caching.**
+      Split out of SPEC-086's re-framing rather than absorbed; sequenced
+      BEFORE SPEC-086 design and landed there, so DEC-050 will be the **first**
+      decision in six that costs no hand re-pin. Complexity **S** held: one
+      file, `+77/-39`, no Go, no DEC, no user-facing doc, inventory table
+      byte-identical. Design's headline correction to this page's item 2: the
+      second derivation did not have to be invented — **`Z7` already computed
+      it** (SPEC-082 LD10) and was measured **blind**, because it
+      re-implemented `inventory.sh`'s two greps verbatim instead of reading
+      what the script emits. Fork 1 was a repair, not an invention; Fork 2
+      rejected; Fork 3 retired as moot. Verify then overturned build's own
+      floor argument by measurement — `Y3` had been borrowing `Z7`'s
+      non-vacuity floor and went vacuously green when that floor was deleted —
+      and gave `Y3` a floor of its own. `Y4`'s pin stays, routed to
+      **SPEC-088**, which now exists as a file. `pr:202` (build), `pr:203`
+      (verify), `pr:205` (ship).
+- [ ] SPEC-088 (frame) — **`Y4` derives, and the decision-type vocabulary.**
+      **Created at SPEC-087 ship (2026-09-07) so the id is claimed by a file
+      rather than reserved in prose** — eleven prose references pointed at
+      SPEC-088 while `scripts/_lib.sh:107-119` derives `next_id` from
+      filenames, so the next `just new-spec` would have handed 088 to
+      unrelated work and silently redirected all of them. Owns the two items
+      routed out of SPEC-087: `Y4`'s two literal pins (LD6) and the
+      five-values-in-the-template / two-rows-in-the-inventory gap (V-F3).
+      **Not framed** — the file carries transcribed evidence and an explicit
+      fork, no decisions.
 - [ ] (not yet written) — **`summary` + `story` markdown honesty.** The other
       half of SPEC-086's Fork B, split on defect shape: on these two the data is
       already present (`story --format json` carries `"type": "failed"`;
@@ -205,8 +218,10 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       question — and filing it as a question would move `Y4`'s pinned counts
       and force an inventory regeneration for zero information gain.
 
-**Count:** 1 shipped / 0 verify / 1 designed / 1 framed / 2 not yet written
-(SPEC-088 is reserved-by-routing for `Y4`, not yet written — see SPEC-087 LD6.)
+**Count:** 2 shipped / 0 verify / 0 designed / 2 framed / 2 not yet written
+(SPEC-088 now has a file — created at SPEC-087 ship to claim the id, per
+SPEC-087 LD6 and V-F3. It is `cycle: frame` and genuinely unframed; the file
+carries the routed evidence, not a decision.)
 
 **The stage does NOT close here.** Success Criteria 1, 2 and the DEC-014/
 DEC-048 envelope line are met by SPEC-085; Criterion 4 (*the celebratory
@@ -481,6 +496,13 @@ Three items that SPEC-087 surfaced and deliberately did not decide. Each has a
 named owner, because *"the next spec that touches it"* is the routing failure
 this stage already named once.
 
+> **Status at SPEC-087 ship (2026-09-07):** item 1 **discharged** — SPEC-088
+> now exists as a file (`specs/SPEC-088-y4-derives-and-the-decision-type-vocabulary.md`),
+> so the id is claimed rather than reserved in prose, and this note's evidence
+> is transcribed into it. Item 2 **discharged** — both candidates were written
+> into `AGENTS.md` §12; see the closing note under item 2. Item 3 stays open by
+> design, with no owner.
+
 **1. The decision template advertises five `insight.type` values; the inventory
 tolerates two. → SPEC-088.** `decisions/_template.md` offers `decision |
 analysis | recommendation | observation | reservation`; `scripts/inventory.sh`
@@ -522,6 +544,18 @@ verify, so both are carried rather than written:
   so the probe's result — including any *expected-green* half, which is where a
   no-op is invisible — must be discarded rather than recorded. Recommended as a
   refinement of clause (1), the shape the existing *"§12(b) refinement"* has.
+
+**Both were written at SPEC-087 ship (2026-09-07), each at the strength verify
+argued for and no higher.** The hash-must-pin-its-diff candidate landed as its
+own §12 paragraph, *"A mutation pinned by a hash must also pin its diff,"*
+labelled **N=2 paired-opposing**. The no-op candidate landed as
+*"§12(b) refinement of clause (1) — a no-op mutant produces no evidence, and
+the check comes BEFORE the record,"* explicitly **not** a new clause and
+explicitly recording that its two cases are same-outcome and one short of N=3;
+what it adds is the consequence-and-order sentence clause (1) never had. Verify
+declining to write them itself was the right call for a different reason than
+the one it gave: codification lands at ship *and* a rule written by the cycle
+that discovered its evidence has no second reader.
 
 **3. `inv_row`'s four latent limits, recorded not fixed.** The helper silently
 takes the first of duplicate labels; truncates at a `|` inside a cell (and if
