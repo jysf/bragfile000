@@ -199,6 +199,37 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       five-values-in-the-template / two-rows-in-the-inventory gap (V-F3).
       **Not framed** — the file carries transcribed evidence and an explicit
       fork, no decisions.
+      **A third candidate routed here at SPEC-089 ship (2026-09-08):** a
+      test-docs assertion that no tracked markdown file contains stray
+      tool-call XML. SPEC-089's own spec file carried a `</content>` /
+      `</invoke>` pair as its last two lines from the design write at `55d8925`
+      (#206) through #207, #208 and a full verify cycle — four PRs, five gates,
+      none of which look. A repo-wide sweep found one other, `DEC-046`, in since
+      `ebdc271` (#144). Both stripped at SPEC-089 ship; **the guard is not
+      built**, and this stage's own lesson is that the guard is what catches it,
+      not the note. Named to SPEC-088 because it is already the spec that opens
+      `scripts/test-docs.sh` — framing may reject it as out of scope, which is a
+      decision, unlike silence. Note the cost: a new assertion id moves the
+      inventory's `Documentation assertions` row, which is exactly the coupling
+      item 1 exists to remove.
+- [x] SPEC-089 (shipped on 2026-09-08) — **the buffer drops a field silently,
+      and `edit` gives no applied/no-op signal.** Two capture-integrity defects
+      from a field report, one PR. Attached to this stage **without gating it**:
+      it advances no Success Criterion, it arrived from heavy agent use of
+      `brag` rather than from the stage plan, and it was taken here because the
+      defect shape — *the corpus quietly holding something other than what the
+      author wrote* — is the one this project is named for. `editor.Parse` now
+      rejects a repeated canonical header (**DEC-051**) across all three editor
+      ingresses; `brag edit` prints the mutated id on stdout on a write and
+      nothing on a no-op (**DEC-052**). Complexity **S** held. Verify returned a
+      punch list of four findings, three fixed in-cycle: the duplicate guard
+      covered only two of five keys with a fully green suite, two of three
+      buffer templates could have broken `brag add` and `brag learn` for every
+      user without a test firing, and `docs/api-contract.md` had gone stale
+      because AGENTS.md §9's premise audit was not run at build. The fourth was
+      routed — see SPEC-090 below. `pr:206` (design), `pr:207` (DEC renumber),
+      `pr:208` (build), `pr:209` (verify), `pr:210` (ship).
+
 - [ ] (not yet written) — **`summary` + `story` markdown honesty.** The other
       half of SPEC-086's Fork B, split on defect shape: on these two the data is
       already present (`story --format json` carries `"type": "failed"`;
@@ -218,9 +249,14 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       question — and filing it as a question would move `Y4`'s pinned counts
       and force an inventory regeneration for zero information gain.
 
-- [ ] (not yet written, `bug`) — **`brag add --json` drops a repeated key
-      silently, the way the editor buffer used to.** Routed out of SPEC-089
-      verify (2026-09-08). SPEC-089 fixed the silent field drop in
+- [ ] SPEC-090 (frame) — **`brag add --json` drops a repeated key silently,
+      the way the editor buffer used to.** Routed out of SPEC-089 verify
+      (2026-09-08); **given a file at SPEC-089 ship (2026-09-08) so the id is
+      claimed and the item has a named owner**, per SPEC-087 LD6 and this
+      spec's own DEC-050→DEC-051/052 renumbering — the third instance of an id
+      reserved in prose. The file carries the transcribed evidence, a re-measured
+      reproduction, and an explicit fork; it is `cycle: frame` and genuinely
+      unframed. SPEC-089 fixed the silent field drop in
       `editor.Parse`, which reaches all three editor ingresses (`edit`, `add`
       editor mode, `learn`). The fourth ingress does not go through `Parse`:
       `internal/cli/add_json.go:24` uses `encoding/json`, whose documented
@@ -238,10 +274,29 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       Same shape on the MCP `brag_add` ingress, which the SDK decodes with the
       same package.
 
-**Count:** 2 shipped / 0 verify / 0 designed / 2 framed / 3 not yet written
-(SPEC-088 now has a file — created at SPEC-087 ship to claim the id, per
-SPEC-087 LD6 and V-F3. It is `cycle: frame` and genuinely unframed; the file
-carries the routed evidence, not a decision.)
+- [ ] (not yet written, `bug`) — **`brag delete` has Bug B's defect, unfixed.**
+      Identified at SPEC-089 build as follow-up ("own spec if wanted") and
+      recorded only inside that spec, which is now archived — routed here at
+      ship so it does not die in `specs/done/`. Measured, not assumed:
+      `internal/cli/delete.go:75` prints `Aborted.` and `:86` prints `Deleted.`,
+      both to **stderr**, and both paths `return nil`. So a batch driver cannot
+      tell a completed delete from a declined confirmation on stdout *or* on the
+      exit code — the exact three-state ambiguity DEC-052 just closed for
+      `edit`. **No owner assigned**, deliberately: it is a near-mechanical
+      application of an existing decision, and the honest question at framing is
+      whether it is a spec at all or a line in whichever spec next opens
+      `delete.go`. Cheaper to leave unowned and visible than to invent a spec id
+      for it now.
+
+**Count:** 3 shipped / 0 verify / 0 designed / 3 framed / 3 not yet written
+(Re-derived at SPEC-089 ship from each file's own `cycle:` field, not
+incremented: shipped = SPEC-085, SPEC-087, SPEC-089 in `specs/done/`; framed =
+SPEC-086, SPEC-088, SPEC-090, all three `cycle: frame` files in `specs/`. Two of
+the three "framed" are id-claiming files rather than framed specs — SPEC-088
+created at SPEC-087 ship, SPEC-090 at SPEC-089 ship, both per SPEC-087 LD6 and
+V-F3, and both carrying routed evidence rather than a decision. `not yet
+written` = the `summary`/`story` successor, `--type` negation, and `brag
+delete`.)
 
 **The stage does NOT close here.** Success Criteria 1, 2 and the DEC-014/
 DEC-048 envelope line are met by SPEC-085; Criterion 4 (*the celebratory

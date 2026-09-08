@@ -419,4 +419,3 @@ reader re-deriving from a false number.
   stripped, byte counts via `LENGTH(CAST(x AS BLOB))`; worst-case and yield
   figures verified against the built binary (`brag memory`), not computed only in
   SQL.
-</content>

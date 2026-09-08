@@ -7,7 +7,7 @@
 task:
   id: SPEC-089
   type: bug                        # epic | story | task | bug | chore
-  cycle: verify                    # frame | design | build | verify | ship
+  cycle: ship                      # frame | design | build | verify | ship
   blocked: false
   priority: high
   complexity: S                    # S | M | L  (L means split it)
@@ -721,15 +721,84 @@ the start of this session:
 *Appended during the **ship** cycle.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Test the *derivation* of a list, not two of its members. Design wrote
+   acceptance criteria for `Title` and `Impact` and left `Tags`, `Project` and
+   `Type` unpinned; verify measured what that cost — deleting `"Tags"` from
+   `canonicalHeaders` at the build commit left **all 14 packages green**, which
+   means the bug this spec exists to fix was silently reintroducible on three of
+   the five fields it claimed to protect. The spec's own `## Failing Tests`
+   enumerated members of the set because the acceptance criteria did; nothing in
+   the design asked *what keeps this list matching `Render`*. The one-line
+   habit: when a spec adds a fixed-shape collection to production code, the
+   failing test derives the collection from its producer and carries a
+   non-vacuity floor, and the enumerated cases are the *examples*, not the
+   coverage.
+
+   Second, smaller: run AGENTS.md §9's premise audit as **build step one**, not
+   as an optional sweep. It was not run here, so `docs/api-contract.md:233` —
+   the repo's CLI contract — still described `brag edit` as stderr-only with a
+   single buffer error case, invisible to both of this spec's changes, and
+   verify had to fix it. §9 already specifies this (*status change → planned doc
+   references update*, plus the design-enumerates/build-re-verifies cross-check);
+   the failure was compliance, not specification.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — **No new rule.** Every miss this cycle is a same-outcome instance of a rule
+   AGENTS.md already carries, and the repo wants N=3 of a *new* shape before
+   codifying:
+   - the `SilenceErrors: true` channel literal (build deviation 2) is §12(b)'s
+     "design-time pre-flight covers the test's own expected-value literals",
+     one layer up — the literal was a *channel*, not a value;
+   - the stale `api-contract.md` is §9's premise audit, unrun;
+   - `TestEditCmd_HappyPath`'s inverted premise (build deviation 1) is §9's
+     "inversion/removal → planned test deletion", caught at build rather than
+     enumerated at design.
+
+   One decision was corrected rather than updated: `DEC-051`'s `## Validation`
+   claimed `TestParse_DuplicateUnknownHeaderStillIgnored` proved the guard's
+   scope was *exactly* the five canonical keys. It proved the upper bound only.
+   Verify corrected the sentence in place — deliberately with no `## Amendment`
+   heading, so the inventory's amendment row stays at 1 — and cited the two new
+   tests that make the claim true. The decision was right; its evidence was
+   overstated.
+
+   One new defect class, recorded rather than codified: **committed tool-call
+   XML**. This spec file carried a stray `</content>` / `</invoke>` pair as its
+   last two lines, introduced by the design session's own write at `55d8925`
+   (#206) and carried untouched through #207, #208 and a full verify cycle —
+   four PRs and five gates, none of which look at markdown for it. A repo-wide
+   sweep found one other instance, `decisions/DEC-046` (since `ebdc271`/#144,
+   ~three weeks), which is a **decision record** and one this spec cites. Both
+   stripped here. Not codified as a rule; **routed to SPEC-088** as a candidate
+   assertion, because SPEC-088 is already the spec that opens
+   `scripts/test-docs.sh` — a named owner rather than "the next spec that
+   touches it", which is the routing failure this stage has named twice.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — **Yes, and it now exists as a file: `SPEC-090`,** owning verify's V-F5.
+   `brag add --json` has the same silent field drop this spec just fixed:
+   `internal/cli/add_json.go:24` uses `encoding/json`, whose repeated-key
+   behaviour is last-wins and silent, so
+   `echo '{"title":"x","impact":"REAL","impact":"CLOBBERED"}' | brag add --json`
+   exits 0 and stores `CLOBBERED`. The two write ingresses to one corpus now
+   *disagree* — `Parse` rejects, `--json` silently takes the last — and the
+   silent one is the scripted path an agent drives. It needs a decision (reject
+   vs. warn) and a `json.Decoder`-token pre-pass, which is why it was scoped out
+   here rather than absorbed. Claimed with a file rather than reserved in prose,
+   per this spec's own DEC renumbering lesson and SPEC-087's: an id reserved in a
+   sentence gets reallocated, because `scripts/_lib.sh` derives `next_id` from
+   filenames.
+
+   Also routed onto STAGE-023, unowned and cheap: **`brag delete` has Bug B's
+   defect.** Measured, not guessed — `internal/cli/delete.go:75,86` print
+   `Aborted.` and `Deleted.` to stderr and both `return nil`, so a batch driver
+   cannot tell a delete from a declined confirmation on stdout *or* the exit
+   code. It is the exact shape DEC-052 just fixed for `edit`. Recorded on the
+   stage page because build identified it and the only other place it was
+   written down is this file, which is being archived.
 
 4. **What can a user do now that they couldn't before?** — one sentence.
-   — <answer>
-</content>
-</invoke>
+   — A script driving `brag` in a batch can now tell an applied edit from a
+   no-op by reading stdout alone, and an editor buffer that repeats a field
+   fails loudly with nothing written instead of silently dropping the second
+   value into the corpus.
