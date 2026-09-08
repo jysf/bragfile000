@@ -74,15 +74,30 @@ func FailureTemplate() []byte {
 	return []byte("Title: \nTags: \nProject: \nImpact: \n\n")
 }
 
+// canonicalHeaders lists the five editable headers in the canonical form
+// net/textproto.ReadMIMEHeader stores them under. Iterated as a fixed slice
+// (not by ranging hdr) so the duplicate-header guard in Parse is exhaustive
+// over exactly these five and does not also catch unknown headers, which
+// stay silently ignored per the existing contract.
+var canonicalHeaders = []string{"Title", "Tags", "Project", "Type", "Impact"}
+
 // Parse reads the header block and body out of buf and returns the
 // populated Fields. Header keys are case-insensitive (canonicalized by
 // net/textproto). Unknown headers are silently ignored. A missing or
-// whitespace-only Title returns an error mentioning "title".
+// whitespace-only Title returns an error mentioning "title". A repeated
+// canonical header (e.g. two Impact: lines) returns an error mentioning
+// "duplicate" and the header name — net/textproto.Get would otherwise keep
+// the first value and silently drop the rest.
 func Parse(buf []byte) (Fields, error) {
 	tp := textproto.NewReader(bufio.NewReader(bytes.NewReader(buf)))
 	hdr, err := tp.ReadMIMEHeader()
 	if err != nil && !errors.Is(err, io.EOF) {
 		return Fields{}, fmt.Errorf("parse buffer headers: %w", err)
+	}
+	for _, key := range canonicalHeaders {
+		if len(hdr[key]) > 1 {
+			return Fields{}, fmt.Errorf("parse buffer: duplicate %q header (a field may only appear once)", strings.ToLower(key))
+		}
 	}
 	f := Fields{
 		Title:   strings.TrimSpace(hdr.Get("Title")),

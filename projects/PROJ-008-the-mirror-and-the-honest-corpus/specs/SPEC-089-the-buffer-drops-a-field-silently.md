@@ -7,7 +7,7 @@
 task:
   id: SPEC-089
   type: bug                        # epic | story | task | bug | chore
-  cycle: build                     # frame | design | build | verify | ship
+  cycle: verify                    # frame | design | build | verify | ship
   blocked: false
   priority: high
   complexity: S                    # S | M | L  (L means split it)
@@ -144,26 +144,26 @@ script can distinguish applied from no-op on the data channel.
 
 ## Acceptance Criteria
 
-- [ ] A buffer with two `Title:` headers (differing values) makes `Parse`
+- [x] A buffer with two `Title:` headers (differing values) makes `Parse`
       return a non-nil error that names `title`; the first value is NOT
       silently returned.
-- [ ] Same for a repeated `Impact:` (the data-loss case): differing values →
+- [x] Same for a repeated `Impact:` (the data-loss case): differing values →
       error, not first-wins.
-- [ ] Duplicate detection is case-insensitive per `net/textproto`
+- [x] Duplicate detection is case-insensitive per `net/textproto`
       canonicalization: `Title:` + `title:` counts as a duplicate.
-- [ ] A repeated **unknown** header (e.g. two `X-Note:`) is still silently
+- [x] A repeated **unknown** header (e.g. two `X-Note:`) is still silently
       ignored — the guard covers only the five canonical keys, preserving the
       existing "unknown headers ignored" contract.
-- [ ] `brag edit <id>` that changes a field prints exactly `<id>\n` to stdout
+- [x] `brag edit <id>` that changes a field prints exactly `<id>\n` to stdout
       and `Updated.` to stderr; stdout carries only the ID.
-- [ ] `brag edit <id>` with an unchanged buffer prints nothing to stdout and
+- [x] `brag edit <id>` with an unchanged buffer prints nothing to stdout and
       `No changes.` to stderr (the applied/no-op distinction is observable on
       stdout alone).
-- [ ] `brag edit <id>` on a buffer with a duplicated header returns a UserError
+- [x] `brag edit <id>` on a buffer with a duplicated header returns a UserError
       (exit 1), writes nothing to stdout, and leaves the stored row unchanged
       (no partial write) — Bug A's fix reaches the edit path for free through
       the existing `UserErrorf("invalid buffer: %v", err)` wrap.
-- [ ] `just test` and `just lint` pass; no existing add/edit/JSON test regresses.
+- [x] `just test` and `just lint` pass; no existing add/edit/JSON test regresses.
 
 ## Failing Tests
 
@@ -302,26 +302,105 @@ Create a new spec rather than pulling any of these in:
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
 - **Branch:** `fix/spec-089-editor-integrity`
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
+- **PR (if applicable):** opened, not merged — see PR description for number.
+- **All acceptance criteria met?** yes
 - **New decisions emitted:**
   - `DEC-051` — editor buffer rejects a repeated canonical header
   - `DEC-052` — `brag edit` emits the mutated entry ID on stdout
 - **Deviations from spec:**
-  - [list]
+  - `TestEditCmd_HappyPath`'s pre-existing assertion (`outBuf.Len() != 0` is
+    an error) was invalidated by DEC-052 — a real write now legitimately
+    prints the ID to stdout. Updated the assertion to expect the mutated ID
+    rather than emptiness, per the AGENTS.md §9 premise-audit convention
+    (an inverted/changed behavior gets its existing-test consequences
+    enumerated, not discovered as a build-time surprise). Not listed under
+    the spec's `## Outputs`/`## Files modified` — a design-time gap, not a
+    build-time deviation from what was designed, but flagged here because it
+    is the one place build touched a test whose premise (not just its
+    presence) the spec didn't anticipate.
+  - `TestEditCmd_DuplicateHeaderIsUserErrorNoWrite`'s spec text says
+    "`errBuf` mentions `invalid buffer`." The root command sets
+    `SilenceErrors: true` (`root.go:37`), so `UserErrorf`'s message surfaces
+    on the returned `error`, not on `errBuf` — cobra's `Execute()` never
+    writes it to stderr itself; that's `main.go`'s job in production, which
+    the test harness doesn't invoke. Wrote the assertion against
+    `err.Error()` instead, matching the existing sibling pattern in
+    `TestEditCmd_ChangedImpactOverCapIsUserErrorNoWrite`. Same defect class
+    as the AGENTS.md §12(b) "design-time pre-flight covers the test's own
+    expected-value literals" rule, one layer up: the literal here was which
+    *channel* carries a `UserErrorf` message, not a value, and it wasn't
+    checked against `root.go`'s actual `SilenceErrors` config at design.
+  - Fail-first sequencing: wrote the seven new tests against the
+    pre-mutation baseline first (stashed the two implementation edits),
+    confirmed the expected 5 load-bearing failures + 2 already-passing
+    boundary guards, then restored the implementation. See reflection Q3.
 - **Follow-up work identified:**
   - `brag delete` ID-on-stdout (mirror of Bug B) — own spec if wanted.
+
+### Mutation protocol (§12)
+
+Two mutants, both against the fixed (post-build) code, backed up to
+`/tmp` before mutating and restored from that backup (never `git checkout`,
+since both files carried uncommitted work) after confirming the gate caught
+each one. Hash confirmed to move before running the gate, and confirmed to
+return to its pre-mutation value after restore, per §12's clauses (1) and
+its refinement.
+
+- **M-1** (`internal/editor/editor.go`) — changed the duplicate-header
+  threshold `len(hdr[key]) > 1` → `len(hdr[key]) > 2` (only 3+ repeats would
+  trigger the guard, letting the spec's 2-line duplicate cases through
+  silently). Pre-mutation hash
+  `928bf2324912d421c26dd028d36187eaecc941bdf5c8145148cc003cd27c5a4b` →
+  post-mutation `f785cdcdf758c5b22298c21e85d444f2da5cee99a02111e7fda4f79ec546a925`
+  (confirmed different). Gate: `TestParse_DuplicateTitleHeaderIsError`,
+  `TestParse_DuplicateImpactHeaderIsError`, and
+  `TestParse_DuplicateHeaderIsCaseInsensitive` all turned red (`expected
+  error, got nil`); `TestParse_DuplicateUnknownHeaderStillIgnored` (unaffected
+  by this key) stayed green. Restored; hash returned to
+  `928bf232…`; the four tests passed again.
+- **M-2** (`internal/cli/edit.go`) — changed the ID print's destination on
+  the write path from `cmd.OutOrStdout()` to `cmd.ErrOrStderr()` (the ID
+  would land on the wrong channel). Pre-mutation hash
+  `448f717b418cd46d525cf0b246b3ed2441d926da2399932821ffc70d720ff15f` →
+  post-mutation `59495d687bb8f5a088baa41b466b4ac263ab02de4e90630c0ecd66adef6b5347`
+  (confirmed different). Gate: `TestEditCmd_HappyPath` and
+  `TestEditCmd_PrintsIDToStdoutOnUpdate` both turned red; the boundary guard
+  `TestEditCmd_NoChangesEmitsNoStdout` (no-op path, untouched by this
+  mutation) stayed green, proving the new stdout write is correctly scoped
+  to the write path only. Restored; hash returned to `448f717b…`; all 15
+  `TestEditCmd_*` tests passed again.
+
+Positive controls run alongside (per the "a green guard is not evidence"
+trap): `TestParse_HappyPath`, `TestRoundTrip_AllFields`, and
+`TestParse_UnknownHeadersIgnored` all stayed green throughout — a valid
+single-header buffer and a buffer with unknown headers both still parse.
 
 ### Build-phase reflection (3 questions, short answers)
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing structurally unclear; the two Deviations above are places
+   where a spec-stated literal (a test assertion's target channel) didn't
+   match the actual codebase mechanism (`SilenceErrors: true`). Both were
+   cheap once found — five minutes each, caught by the fail-first run
+   itself rather than by a later gate.
 
-2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+2. **Was there a constraint or decision that should have been listed but
+   wasn't?**
+   — Not a constraint, but `root.go:37`'s `SilenceErrors: true` is exactly
+   the kind of "test's own expected-value literal" AGENTS.md §12(b)'s
+   extension already names — a design-time pre-flight that grepped
+   `root.go` for `SilenceErrors` before writing "errBuf mentions..." would
+   have caught it before build. Not proposing a new rule; this is a same-
+   outcome instance of the existing one.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Nothing on sequencing — writing the tests first, confirming the
+   fail-first run in one shot (stash implementation, run new tests, restore
+   implementation), then applying the fix was clean and gave the pinned
+   before/after evidence in `## Failing Tests`'s own terms. The two
+   deviations above are the only things I'd fix earlier: run the test file
+   itself, not just the artifact under test, against `root.go` before
+   locking the exact assertion target.
 
 ---
 
