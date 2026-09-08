@@ -120,11 +120,27 @@ script can distinguish applied from no-op on the data channel.
   unchanged).
 - **Database changes:** none.
 - **New decisions (emit at build):**
-  - `DEC-050` — the editor buffer rejects a repeated canonical header rather
+  - `DEC-051` — the editor buffer rejects a repeated canonical header rather
     than silently keeping the first (refines DEC-009's parse contract).
-  - `DEC-051` — `brag edit` emits the mutated entry ID on stdout as the
+  - `DEC-052` — `brag edit` emits the mutated entry ID on stdout as the
     applied/no-op signal, silent on no-op (extends the DEC-007/`add` stdout
     contract to `edit`).
+
+  > **Renumbered 2026-09-07, from `DEC-050`/`DEC-051`. Do not renumber back.**
+  > This spec and **SPEC-086** both claimed `DEC-050` in prose while neither had
+  > built, so whichever built first would have taken it and left the other
+  > pointing at the wrong record. SPEC-086's claim is load-bearing and far more
+  > entangled — it is cited in SPEC-086's Fork A, four times on STAGE-023, and
+  > about fourteen times in the **shipped** SPEC-087, including `LD7`, `AC-11`
+  > and simulation `S-1`, whose whole justification was *"`DEC-050` stays free
+  > for SPEC-086."* This spec's claim was five lines in one unbuilt document, so
+  > it is the one that moves. `DEC-050` remains reserved for SPEC-086.
+  >
+  > This is the **third** instance of an id reserved in prose rather than by a
+  > file — after the `SPEC-088` near-miss and corpus entry 433, which recorded
+  > the same mechanism for the SPEC id class. `scripts/_lib.sh` derives
+  > `next_id` from **filenames**, and no equivalent guard exists for `DEC-*`
+  > ids at all. Routed to **SPEC-088**, which owns the harness-id family.
 
 ## Acceptance Criteria
 
@@ -195,7 +211,7 @@ cycle.*
 - `DEC-009` — pins the editor buffer format (`net/textproto` headers, blank
   line, markdown body). Bug A refines its *parse* contract: a repeated
   canonical header was undefined behavior that resolved to first-wins; it is
-  now a hard reject. DEC-050 records this.
+  now a hard reject. DEC-051 records this.
 - `DEC-007` — inline positional-arg validation returns the `ErrUser` sentinel
   for user-facing exit codes; `edit` already wraps a parse failure as
   `UserErrorf("invalid buffer: %v", err)`, so Bug A surfaces correctly on the
@@ -269,7 +285,7 @@ Create a new spec rather than pulling any of these in:
   existing `Fprintln(cmd.ErrOrStderr(), "Updated.")`. `runEdit` currently
   discards the `Update` return with `_`; bind it. Leave the `!changed` branch
   untouched.
-- **DEC-050 / DEC-051** each need at least one paired failing test above
+- **DEC-051 / DEC-052** each need at least one paired failing test above
   (AGENTS.md §9: a locked decision without a paired test is aspirational) —
   they do (`TestParse_Duplicate*` and `TestEditCmd_PrintsIDToStdoutOnUpdate`
   respectively). Write the DEC files during build with honest confidence
@@ -289,8 +305,8 @@ Create a new spec rather than pulling any of these in:
 - **PR (if applicable):**
 - **All acceptance criteria met?** yes/no
 - **New decisions emitted:**
-  - `DEC-050` — editor buffer rejects a repeated canonical header
-  - `DEC-051` — `brag edit` emits the mutated entry ID on stdout
+  - `DEC-051` — editor buffer rejects a repeated canonical header
+  - `DEC-052` — `brag edit` emits the mutated entry ID on stdout
 - **Deviations from spec:**
   - [list]
 - **Follow-up work identified:**
