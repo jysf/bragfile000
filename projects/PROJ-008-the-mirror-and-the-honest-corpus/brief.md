@@ -127,6 +127,12 @@ lands."* It landed in v0.6.0.
    the artifact that would cause it to be used does not mention it. That one
    was about the spec template's work-log hook; this one is about `BRAG.md`'s
    read path. Two instances now — worth noticing as a class.
+6. **The corpus is correctable** — *added 2026-09-14 (DEC-053).* Low-friction
+   agent capture (no per-brag pre-approval) means entries land wrong; the corpus
+   stays honest only if fixing an entry **in place** is a first-class, scriptable
+   operation over both the CLI (non-interactive `--set`/`--json`) and MCP
+   (`brag_edit`). This is the everyday **fixup** path — distinct from a
+   superseding correction (item 4 / §3.2), which narrates a *retraction*. STAGE-027.
 
 ### Explicitly out of scope
 - **Any LLM inside the binary.** Rule-based core, prose via pipe — the same
@@ -154,6 +160,16 @@ and its rejected option are recorded in `stages/STAGE-023-*.md` under
       use spelled-out numerals invisible to any digit rule.
 - [ ] **STAGE-025 — the mirror**: observations over the corpus.
 - [ ] **STAGE-026 — story-surface v2**: the arc.
+- [ ] **STAGE-027 — the correctable corpus**: in-place edit, non-interactively.
+      Framed 2026-09-14 (DEC-053). Low-friction agent capture means brags land
+      *wrong* — mis-framed impact, wrong project, bad tags — and the honest fix is
+      to correct the entry, not append a "correction" beside it. Delivers a
+      non-interactive CLI edit (`--set`/`--json`, partial update) and a `brag_edit`
+      MCP tool, so the surface an agent writes through can also fix what it wrote.
+      Distinct from STAGE-026's supersede/link (that is for *retractions*, not
+      fixups). **Ordering TBD at activation, but a strong pull-forward candidate:**
+      the friction is live now (a maintainer and an agent both hit it in one week),
+      and it is what makes STAGE-023's unapproved auto-capture safe to lean on.
 
 > **USER PRIORITY, stated 2026-08-23 at activation: `brag learn` matters most.**
 > **Framing agreed, 2026-09-05 — but not merely on preference.** The deciding
@@ -164,9 +180,9 @@ and its rejected option are recorded in `stages/STAGE-023-*.md` under
 > file, including what the rejection costs (one stage of delay on `wrapped`'s
 > highlight-reel problem, true since v0.4.0 and not degrading).
 
-**Count:** 0 shipped / 1 active / 3 pending
+**Count:** 0 shipped / 1 active / 4 pending
 
-### Field-feedback backlog (round 2, 2026-09-08)
+### Field-feedback backlog (round 2, 2026-09-08; edit posture added 2026-09-14)
 
 A second heavy-agent audit (`~/ContextCore`, 450-entry corpus) produced items
 that route onto the stages above — recorded here so they are not re-derived, and
@@ -193,7 +209,10 @@ they land on upgrade.
   corrects|supersedes|part-of <id>`, surfaced in `show`, included in `export`, and
   — the point — used by `story` to collapse or mark a superseded beat (§3.2). The
   `export` framing from round 1 was secondary; this is the primitive's strongest
-  argument.
+  argument. **Scope note (revised 2026-09-14, DEC-053):** this is the
+  *retraction / narratable-correction* mechanism, **not** the everyday fixup path
+  — a typo or a mis-framed impact is corrected **in place** (STAGE-027), not
+  preserved-plus-linked. The two are complementary; do not route fixups here.
 - **→ STAGE-023 (active) + SPEC-091.** `failed` is 0.4% of the corpus though the
   honesty is present (filed inside `shipped`/`fixed` bodies) — a discoverability /
   prompting gap, not a schema one (§3.6). Partly addressed by the help-grouping
@@ -202,8 +221,12 @@ they land on upgrade.
   read/digest family is undiscoverable in a flat `--help`) and three `--help`
   truth-gaps (§4.1/§4.2/§4.3). §6 is a **third instance** of the class named in
   Scope item 5 and `docs/framework-feedback/process-feedback.md` §6.
-- **Smaller / unscheduled.** `edit` flag or `--json` partial-update mode for
-  parity with `add` (§3.4); a write-time `brag add --check` similarity warning
+- **→ STAGE-027 (framed 2026-09-14, DEC-053).** `edit` flag / `--json`
+  partial-update mode (§3.4) **and** a `brag_edit` MCP tool — in-place,
+  non-interactive edit on both surfaces, the fixup path. **Recurred twice** (the
+  reporter, then an agent that could not find how to edit a brag at all), which is
+  what promoted it from "unscheduled" to a framed stage with a recorded posture.
+- **Smaller / unscheduled.** A write-time `brag add --check` similarity warning
   (§3.1's write side, pairs with the mirror's read side); and CLI
   `--agent`/`--model`/`--session` flags for MCP parity (§4.3 option B) — a
   capture/provenance question, larger than the doc fix SPEC-091 makes.
