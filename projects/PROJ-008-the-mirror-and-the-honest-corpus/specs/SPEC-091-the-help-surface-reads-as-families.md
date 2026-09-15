@@ -221,4 +221,3 @@ what changes is the section headers and ordering.)
 
 4. **What can a user do now that they couldn't before?** — one sentence.
    — <answer>
-</content>
