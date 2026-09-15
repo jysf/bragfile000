@@ -21,8 +21,10 @@ shipped_at: null
 # STAGE-027: the correctable corpus
 
 > **Cycle: frame. GO.** Framed 2026-09-14 from two rounds of `~/ContextCore` field
-> feedback plus maintainer direction. Decision recorded in **DEC-053**. Not yet
-> ordered against STAGE-024/025/026 — see *Why Now* for the pull-forward argument.
+> feedback plus maintainer direction. Decision recorded in **DEC-053**.
+> **Targets v0.8.0** (maintainer, 2026-09-14) — v0.7.0 ships STAGE-023's
+> honest-corpus work first. Not yet ordered against STAGE-024/025/026 — see
+> *Why Now* for the pull-forward argument.
 
 ## What This Stage Is
 
@@ -149,4 +151,3 @@ to it and collides on the next `new-*`.
   - <one-line items>
 - **What can a user do now that they couldn't before, at STAGE scope?**
   - <answer | none>
-</content>

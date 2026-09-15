@@ -125,4 +125,3 @@ own-entries-only via the `agent:` tag. Both are additive and do not block the MV
 - Related decisions: DEC-046 (ValidateChanged — the partial-update engine), DEC-024 (MCP surface framed as write/read — this extends "write" from create to create+update), DEC-052 (`brag edit` emits the mutated id on stdout), DEC-009 (editor buffer format), DEC-017 (`entries.project` free-text)
 - Related specs: SPEC-089 (in-place editor edit + dup-header reject), SPEC-091 (documents the two correction mechanisms in `--help`)
 - Discussions: round-1/round-2 `~/ContextCore` field feedback (§3.2 supersede, §3.4 edit flag mode, §4.3 CLI/MCP asymmetry); maintainer direction 2026-09-14 ("sometimes you need to edit and a link is not the right mechanism … an agent often gets the brag wrong")
-</content>

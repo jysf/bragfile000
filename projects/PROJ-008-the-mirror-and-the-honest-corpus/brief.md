@@ -167,9 +167,11 @@ and its rejected option are recorded in `stages/STAGE-023-*.md` under
       non-interactive CLI edit (`--set`/`--json`, partial update) and a `brag_edit`
       MCP tool, so the surface an agent writes through can also fix what it wrote.
       Distinct from STAGE-026's supersede/link (that is for *retractions*, not
-      fixups). **Ordering TBD at activation, but a strong pull-forward candidate:**
-      the friction is live now (a maintainer and an agent both hit it in one week),
-      and it is what makes STAGE-023's unapproved auto-capture safe to lean on.
+      fixups). **Targets v0.8.0** (maintainer, 2026-09-14) — v0.7.0 ships
+      STAGE-023's honest-corpus work first. Ordering against STAGE-024/025/026 is
+      still open; the case for going early is that the friction is live now (a
+      maintainer and an agent both hit it in one week), and it is what makes
+      STAGE-023's unapproved auto-capture safe to lean on.
 
 > **USER PRIORITY, stated 2026-08-23 at activation: `brag learn` matters most.**
 > **Framing agreed, 2026-09-05 — but not merely on preference.** The deciding
@@ -187,10 +189,12 @@ and its rejected option are recorded in `stages/STAGE-023-*.md` under
 A second heavy-agent audit (`~/ContextCore`, 450-entry corpus) produced items
 that route onto the stages above — recorded here so they are not re-derived, and
 because the routing is itself evidence the stage plan is pointed right. Two round-1
-bugs already shipped in **SPEC-089** (the `edit` applied/no-op stdout signal, and
-the editor's duplicate-header reject); **SPEC-090** (in frame) extends that reject
-to the `--json` ingress. So the reporter's §2.1 / §2.3 / §3.7 need no new work —
-they land on upgrade.
+bugs are fixed on `main` by **SPEC-089** (the `edit` applied/no-op stdout signal,
+and the editor's duplicate-header reject) but are **not yet released** — v0.6.1
+predates SPEC-089, so they reach users in **v0.7.0**. **SPEC-090** (in frame)
+extends that reject to the `--json` ingress. §3.7 (`delete --yes`) is already in
+v0.6.1. So the reporter's §2.1 / §2.3 / §3.7 need no new work: §3.7 is available
+now, and §2.1 / §2.3 arrive with v0.7.0.
 
 - **→ STAGE-025 (the mirror).** A `brag lint` over the corpus is the concrete
   first observation set: blank / near-miss `type` values (`ship`/`shipped`,
