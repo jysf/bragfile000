@@ -140,8 +140,9 @@ and breaks the build on first use. That is the finding that decides the fork.
 
 A session writing a file has left a closing tool-call tag as the last line of
 it. **M-1 — measured over the full history of every tracked path, both tag
-forms, on every branch:** 8 additions of a whole-line closing tag, across 5
-commits and **6 distinct files** — and **0** additions outside `*.md`.
+forms, on every branch:** 8 additions of a whole-line closing tag, across 4
+commits and **6 distinct files** — and **0** additions outside `*.md`. (The
+table below has five rows because `ebdc271` added two of the files.)
 
 ```
 $ git log --all -p --no-color -- '*.md' \
@@ -167,9 +168,9 @@ not five.** Both name `SPEC-089`, `DEC-046`, `DEC-053`, `STAGE-027` and
 as `DEC-046` (`ebdc271`, #144) and stripped them one PR later at its own ship —
 recorded in that spec's own reflection, and never counted in the running total.
 The pattern is therefore older and broader than "five files since #206": it has
-recurred across **two projects** and **13 months of commits**, and the only
-reason `main` is clean today is that three humans-in-the-loop caught it by eye
-in the last eight days.
+recurred across **two projects** over **35 days** (`ebdc271`, 2026-08-10 →
+`6208eeb`, 2026-09-14), and the only reason `main` is clean today is that it was
+caught by reading rather than by a check — twice in the last eight days.
 
 **M-2 — `main` has zero today.** 0 of 437 tracked files match the whole-line
 anchored form; the grep exits 1.

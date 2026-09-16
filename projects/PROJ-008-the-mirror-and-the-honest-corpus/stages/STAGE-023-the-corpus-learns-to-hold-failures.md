@@ -207,9 +207,9 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
         **CORRECTION to the note this replaces: six files, not five.** The
         sixth is `SPEC-075`, which took both tags in the same commit as
         `DEC-046` (`ebdc271`, #144) and stripped them at its own ship one PR
-        later — so the pattern spans two projects and 13 months, not eight days.
-        Measured over the full history of every tracked path: 8 additions, 5
-        commits, 6 files, **0 outside `*.md`**. A whole-line anchor was **probed
+        later — so the pattern spans two projects and 35 days (2026-08-10 →
+        2026-09-14). Measured over the full history of every tracked path: 8
+        additions, 4 commits, 6 files, **0 outside `*.md`**. A whole-line anchor was **probed
         under the §12 mutation protocol** (P-1, hashes and edit recorded in the
         spec) and fires on a real stray tag while staying silent on all four
         files that mention the tags in prose.
@@ -287,6 +287,20 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       rejecting means a `json.Decoder`-token pre-pass over the object.
       Same shape on the MCP `brag_add` ingress, which the SDK decodes with the
       same package.
+
+- [ ] SPEC-091 (build) — **the help surface reads as families and tells the
+      truth.** Groups `brag --help` into Write / Read / Digest / Admin (moving
+      `cmd/brag/main.go`'s `AddCommand` block into a testable
+      `cli.AssembleRoot`) and closes three per-command `--help` truth-gaps: the
+      enforced `impact` cap, the `$EDITOR` buffer format, and the CLI-vs-MCP
+      provenance asymmetry. Gives `brag learn` a visible home in the Write
+      group, which partly answers round-2 feedback §3.6 (`failed` is
+      under-used largely because it is hard to find). Attached to this stage
+      **without gating it**, like SPEC-089. Frame and design were collapsed by
+      user direction; complexity **M**. `pr:211` (design). **Entry added by the
+      orchestrator in SPEC-088's framing PR:** the file has existed since #211
+      but had no entry here, which is why the previous count carried a `0` for
+      it.
 
 - [ ] SPEC-092 (frame) — **`Y4` derives against a parsed register.** Split out
       of SPEC-088 at framing (2026-09-15) and **given a file in the same edit as
