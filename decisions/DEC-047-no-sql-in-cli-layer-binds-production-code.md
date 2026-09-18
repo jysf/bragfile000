@@ -3,7 +3,7 @@
 
 insight:
   id: DEC-047                        # stable, never reused
-  type: decision                     # decision | analysis | recommendation | observation
+  type: decision                     # decision | reservation
   confidence: 0.92                   # 0.0 - 1.0, honest assessment
   audience:                          # who needs to know?
     - developer

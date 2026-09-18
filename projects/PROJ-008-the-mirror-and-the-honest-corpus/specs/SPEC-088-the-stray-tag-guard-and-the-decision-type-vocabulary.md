@@ -7,7 +7,7 @@
 task:
   id: SPEC-088
   type: chore                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify                    # frame | design | build | verify | ship
                                    # FRAMED 2026-09-15 — GO at S. The file was
                                    # created at SPEC-087 ship to CLAIM the id;
                                    # framing kept two of the four items routed
@@ -535,7 +535,7 @@ Locked here so build does not re-open them.
 
 ## Outputs
 
-### Modified files (3)
+### Modified files (11 — design planned 3; 8 added at build by maintainer direction)
 
 - **`scripts/test-docs.sh`** — `+136 / -0`. One new `# ===== Group AC — the
   harness guards (SPEC-088) =====` block, inserted immediately before
@@ -547,6 +547,18 @@ Locked here so build does not re-open them.
   **regenerated** with `just inventory` and pasted whole between the markers,
   never hand-edited. Exactly one row moves; if a second row moves, the
   regeneration is right and this spec is stale (AGENTS.md §9 part (a)).
+- **Eight `decisions/DEC-*.md` files**, `+8 / -8` in total, one line each:
+  `DEC-031`, `DEC-037`, `DEC-046`, `DEC-047`, `DEC-048`, `DEC-049`, `DEC-051`
+  and `DEC-052`. **This is a maintainer-directed scope addition
+  (2026-09-18), not part of design's plan.** Design found these files in the
+  premise audit below and routed them out. Only the comment on each file's
+  line 6 changes, and the line becomes byte-identical to the template's new
+  line 6, `  type: decision                     # decision | reservation`.
+  Every `type:` value stays `decision`. No decision's substance changes, and
+  none is amended, so this is not a decision record emitted. There is
+  deliberately **no** new test-docs assertion for it, because one would move
+  the distinct-id count past the 200 this spec pins, which would be a design
+  change. Acceptance criterion 8 checks the fold with a grep instead.
 
 ### Created files (0) · Decision records (0) · Go (none) · Database (none)
 
@@ -610,6 +622,21 @@ value. **25** hits outside `specs/done/`, every one classified:
   is a second change in one PR under `one-spec-per-pr`. **Routed to STAGE-023's
   backlog as an unowned candidate**, the same treatment framing gave SPEC-090's
   front matter. Raised with the maintainer.
+
+  > **AMENDED at build, 2026-09-18. This is a maintainer-directed scope
+  > addition, not a build discovery.** The maintainer answered the question
+  > raised here by directing that the eight be folded into this build. In each
+  > file only the comment on line 6 changed, and each line is now byte-identical
+  > to the template's new line 6,
+  > `  type: decision                     # decision | reservation`.
+  > Every `type:` value stays `decision`, and the eight moved to `## Outputs`
+  > as modified files. Two corrections to this bullet, both measured at build
+  > on `main` = `7fa5cae`. First, the eight are hits of the **value** grep
+  > above, not of `git grep -n 'insight\.type'`: their line 6 reads `type:`,
+  > so this grep never matches them. Second, the STAGE-023 backlog entry named
+  > here was never written. The route existed in this file's prose only.
+  > The five other `decisions/` hits for these three words (DEC-011, 024, 027,
+  > 038, 045) are English prose, not the vocabulary, and are **not** touched.
 - `STAGE-023:652` — the routed finding this spec discharges. This stage's own
   convention for these three items is a `> **Status at … ship**` blockquote
   added at ship, not a rewrite of the finding. **No build edit.**
@@ -646,6 +673,15 @@ Numbers to diff against. Every one was measured at design against the real tree;
    `git ls-files -z | xargs -0 grep -nE '^[[:space:]]*</(content|invoke)>[[:space:]]*$' /dev/null`
 7. All five gates green: `just test`, `just test-docs`, `just lint`,
    `gofmt -l .`, `go vet ./...`.
+8. **Added at build (2026-09-18) with the maintainer-directed fold of the
+   eight stale `DEC-*.md` comments.** This value-grep prints nothing and exits
+   **1**:
+   `grep -lE '^[[:space:]]+type:.*#.*(analysis|recommendation|observation)' decisions/DEC-*.md`
+   Each of the eight changed lines is byte-equal to `decisions/_template.md`
+   line 6. No `type:` value moves: 51 `decision` + 1 `reservation`, as on
+   `main`. This criterion is checked by hand at build and verify. It is
+   deliberately **not** a test-docs assertion, because a new id would move
+   the distinct-id row past the 200 this spec pins.
 
 ## Failing Tests
 
@@ -700,8 +736,12 @@ The three standing traps framing named, now discharged rather than restated:
 
 - `one-spec-per-pr` — blocking. Items A and B ship in one PR under one spec id;
   C and D have their own ids for this reason. This is also why the eight
-  stale-comment `DEC-*.md` files found in the premise audit are routed, not
-  absorbed.
+  stale-comment `DEC-*.md` files found in the premise audit were routed, not
+  absorbed, **at design**. **AMENDED at build, 2026-09-18:** the maintainer
+  directed that they be folded into this build. The change still falls under
+  this spec's id. It is a comment-only edit to the vocabulary this spec
+  narrows, it adds no assertion id, and it moves no inventory row. See
+  `## Outputs` and `## Build Completion`.
 
 ### Prior related work
 
@@ -716,8 +756,13 @@ The three standing traps framing named, now discharged rather than restated:
 ### Out of scope (for this spec specifically)
 
 - `Y4` (SPEC-092), id reservation (SPEC-093).
-- **The eight `DEC-*.md` files carrying a stale copy of the vocabulary comment.**
-  Found at design, enumerated under `## Outputs`, routed to STAGE-023's backlog.
+- ~~**The eight `DEC-*.md` files carrying a stale copy of the vocabulary
+  comment.** Found at design, enumerated under `## Outputs`, routed to
+  STAGE-023's backlog.~~ **Back in scope. The maintainer directed on
+  2026-09-18 that they be folded into this build**, so they are now modified
+  files under `## Outputs`. The STAGE-023 backlog entry this line routed them
+  to was never written. STAGE-023 has no entry for them, so nothing there
+  needed removing.
 - Front-matter well-formedness. **Found at framing, not fixed:** `SPEC-090`'s
   front matter is unterminated on `main`. Different defect class, another spec's
   file, and folding it in would put two specs in one PR.
@@ -955,28 +1000,131 @@ fi
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
-- **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
+*Built 2026-09-18 in a fresh session, from `main` = `7fa5cae`.*
+
+- **Branch:** `build/spec-088-harness-guards`
+- **PR (if applicable):** none opened by build. The orchestrator opens it.
+- **All acceptance criteria met?** **No: 7 of 8 in full, and AC5 in part.**
+  AC5 holds for every verdict and every restore, but for only **9 of the 10**
+  post-hashes: M-A0's stated hash does not reproduce from its stated edit
+  (see Deviations). AC1–4 and AC6–8 hold as written.
+- **New decisions emitted:** none. The eight `DEC-*.md` edits change a comment
+  and no decision.
 - **Deviations from spec:**
-  - [list]
+  - **Maintainer-directed scope addition (2026-09-18), not a build
+    discovery: the eight stale `DEC-*.md` comments.** Design found these
+    files in its premise audit and routed them out. The maintainer then
+    directed that they be folded into this build. `DEC-031`, `037`, `046`,
+    `047`, `048`, `049`, `051` and `052` each changed on line 6 only, and each
+    line is byte-equal to the template's new line 6.
+    `git diff --shortstat main -- 'decisions/DEC-*.md'` → 8 files, +8/−8. The
+    value-grep in AC8 prints nothing (exit 1). Every `type:` value stays
+    `decision`: 51 `decision` + 1 `reservation`, the same as on `main`. The
+    five English-prose hits for these three words (DEC-011, 024, 027, 038,
+    045) were not touched. The regenerated inventory is byte-identical before
+    and after the fold. No test-docs id was added, so the count stays at 200.
+    `## Outputs`, the premise audit, *Constraints that apply* and
+    *Out of scope* are amended to match. Each amendment is marked, and the
+    design text it replaces is still visible.
+  - **AC5 — M-A0's post-hash did not reproduce; reported, not resolved.** I
+    ran the stated edit, *"restore the pre-SPEC-088 line 6"*, as
+    `sed -i '' '6s/# decision | reservation$/# decision | analysis | recommendation | observation | reservation/' decisions/_template.md`.
+    The mutant diff was exactly one line, `6c6`, reading
+    `# decision | analysis | recommendation | observation | reservation`.
+    Post-hash **`accb16924cb6`**, stated **`89a999aee134`**. The verdict
+    reproduced: `FAIL: AC1` naming `analysis`, `observation` and
+    `recommendation`, with nothing else red. The restore returned
+    `4b99dc8ca8b7`. Per the §12 rule that *the hash does not identify the
+    edit*, I did **not** search for an edit that produces the stated hash.
+    Whether design's M-A0 changed more than line 6 is for verify to settle.
+  - **Cycle bookkeeping.** `main` carried `cycle: design`, because the design
+    commit left the advance to build. Build ran one
+    `just advance-cycle SPEC-088 verify`, as directed, which strips the inline
+    enum comment. The comment was restored by hand.
+- **What build measured, for verify to diff against:**
+  - **Fail-first, step 2** (Literal 2 installed, Literal 1 not):
+    `FAIL: AC1: decisions/_template.md and scripts/inventory.sh disagree about the insight.type vocabulary: [decisions/_template.md offers 'analysis'; scripts/inventory.sh emits no row for it] [decisions/_template.md offers 'observation'; scripts/inventory.sh emits no row for it] [decisions/_template.md offers 'recommendation'; scripts/inventory.sh emits no row for it]. …`
+    and `OK:   AC2`. `X3` was also red, which is FT-14's state: the distinct-id
+    count moves the moment Literal 2 lands. Totals: 198 `OK:`, 2 `FAIL:`.
+    Step 3 (both literals installed): `AC1` and `AC2` green, `X3` red, 199
+    `OK:`, 1 `FAIL:`.
+  - **Literal fidelity.** Both literals were extracted from this file with
+    `awk` (the first fenced block under each `### Literal` heading) and
+    written in by `head`/`cat`/`tail`, not retyped. Afterwards, the installed
+    `Group AC` block (from its heading down to the blank line before
+    `# ===== finalise =====`) diffs **byte-identical** against Literal 2, all
+    135 lines. `test-docs.sh` with that block deleted diffs identical to
+    `main`'s, with one hunk, `@@ -2066,0 +2067,136 @@`. Template lines 5–22
+    diff **byte-identical** against Literal 1, all 18 lines, and every `#`
+    sits at column 38. Numstat: `136/0`, `12/3`, `1/1`, as design's
+    simulation predicted.
+  - **Inventory.** `just inventory` was regenerated and pasted whole, with no
+    blank lines inside the markers. Diffed against `main`'s block, exactly one
+    row changed, `17c17`: `Documentation assertions (distinct ids)` went from
+    198 to 200. It was regenerated again after the DEC fold, and nothing
+    else moved.
+  - **Mutation matrix.** Each target was backed up to `/tmp` and hashed.
+    **The gate was refused unless the hash had moved.** Each run printed the
+    mutant's own `diff`, and the target was restored with `cp -p` and
+    re-hashed. `git status --porcelain` was also compared before and after
+    each probe, to confirm nothing else changed.
+
+    | id | stated post | reproduced post | verdict | restored |
+    |---|---|---|---|---|
+    | M-A0 | `89a999aee134` | **`accb16924cb6`** ✗ | `FAIL: AC1`, names the 3 values | `4b99dc8ca8b7` = pre |
+    | M-A1 | `0cd64abdbe46` | `0cd64abdbe46` | `FAIL: AC1`, offers `'analysis'`, no row | = pre |
+    | M-A2 | `5e626d725525` | `5e626d725525` | `FAIL: AC1`, row for `'reservation'`, never offered | = pre |
+    | M-A3 | `e98cbf8dccad` | `e98cbf8dccad` | `FAIL: AC1`, vocabulary floor | = pre |
+    | M-A4 | `e98af3fd7306` | `e98af3fd7306` | `FAIL: AC1`, rows floor, plus `X3` | `e2db95583a9b` = pre |
+    | M-A5 | `386b6e5a5883` | `386b6e5a5883` | `FAIL: AC1`, offers `'reservation'`, no row, plus `X3`. Line 50 still carried the string during the probe. | = pre |
+    | M-A6 | `7b564199a0e1` | `7b564199a0e1` | `FAIL: AC1`, names `'frobnicate'` | = pre |
+    | M-B1 | `7ba747a741fb` | `7ba747a741fb` | `FAIL: AC2`, one hit, `NEXT-SESSION-PROMPT.md:203` | `c9f625f17b05` = pre |
+    | M-B3 | `1537fe6df1d8` | `1537fe6df1d8` | `FAIL: AC2`, one hit, `docs/engineering-practices.md:309` | `78d5e4fb4c82` = pre |
+    | M-B4 | `c161a037cb53` | `c161a037cb53` | `FAIL: AC2`, the message reads **440** tracked files | absent again, 439 tracked |
+    | M-B6 | exists → absent | exists → absent | `FAIL: AC2`, carrying grep's `No such file or directory` | `e3b0c44298fc` = pre |
+    | M-B2 | n/a | n/a | `FAIL: AC2`, *"listed no tracked files"*, plus `AC1` (no `inventory.sh`) | throwaway dir removed |
+
+    Each single-assertion probe went red with only its target assertion: 199
+    `OK:` / 1 `FAIL:`. M-A4 and M-A5 went 198 / 2, and their second failure is
+    `X3`, as the matrix states. M-B2 ran the installed `Group AC` block, with
+    the harness's `ok`/`fail` helpers, inside a fresh `git init` directory.
+  - **Negative control FT-8, re-counted.** `git grep -cE` for the two
+    closing-tag forms at `7fa5cae` finds **4 files and 9 lines**, not the 8
+    lines design measured at `9f03680`. The design commit added a fourth line
+    to this file. `AC2` stays green with every one of them present.
+  - **Gates.** `just test` exit 0 (14 packages `ok`); `just test-docs` exit 0
+    with **201 `OK:`, 0 `FAIL:`, 0 `SKIP:`, 200 distinct ids** (the `claude`
+    CLI is installed); `just lint` 0 issues; `gofmt -l .` empty;
+    `go vet ./...` clean. The anchored sweep of AC6 exits 1.
 - **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+  - None new for the backlog. Verify owns M-A0: decide what its stated edit
+    means, then re-pin either the edit or the hash.
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — M-A0 was the only unclear part. It is the one matrix row whose edit is
+   prose (*"restore the pre-SPEC-088 line 6"*) rather than a runnable command,
+   and it is the one row whose hash did not reproduce. The verdict held, so
+   the cost was one hash and no delay. Separately, step 2 of *The order to work
+   in* lists only `AC1` and `AC2` as expected, while `X3` is also red at that
+   point. FT-14 covers that, so it was not a defect, but it is a sentence
+   short.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No constraint was missing. One route existed only in prose: the eight
+   `DEC-*.md` files were "routed to STAGE-023's backlog", but no STAGE-023
+   entry was ever written. That is the failure mode SPEC-093 exists to
+   mechanise. It became moot when the maintainer folded the files in.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — I would have the probe helper print the mutant's own `diff` from the
+   start, as it did here, and I would ask design for the same: pin a runnable
+   command, or better the diff itself, in every matrix row. The recorded diff
+   is what made M-A0's mismatch reportable without hunting, because it shows
+   exactly what the stated edit produced.
 
 ---
 
