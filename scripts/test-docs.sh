@@ -2064,6 +2064,142 @@ else
     fail "AB4" "the fusion-constants answer-in-both-directions is not recorded:$ab4_bad"
 fi
 
+# ===== Group AC — the harness guards (SPEC-088) =====
+#
+# Two ways a session can quietly corrupt this repo's OWN documents, each
+# measured before it was guarded. Neither is reachable from CI: `just
+# test-docs` is local-only (.github/workflows/ci.yml runs test, lint and
+# coverage and has no test-docs job), so both assertions gate what a human or
+# an agent runs locally. That is the honest scope, and it is why both failure
+# messages name the remedy instead of pointing at a build log.
+
+# AC1 — the `insight.type` vocabulary decisions/_template.md advertises must be
+# exactly the set scripts/inventory.sh emits a row for. DERIVED on both sides,
+# and deliberately NOT `assert_contains_literal ... "decision | reservation"`:
+# a literal pin is the anti-pattern SPEC-087 spent a whole cycle removing from
+# Y3, and it would need a hand-edit the first time a legitimate value is added.
+#
+# WHAT IT CATCHES. Until SPEC-088 the template offered five values and
+# inventory.sh emitted rows for two. A DEC-*.md carrying one of the other three
+# is counted by NEITHER row, vanishes from docs/engineering-practices.md, and
+# hard-fails Z7 — measured at SPEC-087 with a `type: analysis` stub, simulation
+# S-3: "the inventory covers 49 of 50". The template is where an author picks
+# the value, so the template is where the trap had to close. M-4 at SPEC-088
+# framing, re-derived at design: those three values have 0 instances in 52
+# records and 0 in 65 historical `type:` additions across every branch.
+#
+# IT FAILS IN BOTH DIRECTIONS, which is what makes it a vocabulary check rather
+# than a spell-check: a template value with no row fails, and a row for a type
+# the template never offers fails. A future spec that legitimately adds a third
+# type pays one edit to each file in the same commit and pays this assertion
+# nothing — no number here moves.
+#
+# THE TWO FLOORS. Y3 shipped without one and went green against an emptied
+# decisions/ while silently borrowing Z7's, so both vacuous states are named
+# here explicitly and checked BEFORE the comparison. (a) An unparsed template
+# yields the empty vocabulary, and the empty set is trivially covered by any
+# set of rows. (b) An inventory emitting no `insight.type:` row at all yields
+# the empty row set, for the same reason. Neither floor can be satisfied by the
+# other's absence.
+if [ ! -x scripts/inventory.sh ]; then
+    fail "AC1" "scripts/inventory.sh is missing or not executable"
+elif [ ! -f decisions/_template.md ]; then
+    fail "AC1" "decisions/_template.md does not exist — the vocabulary an author picks from has no source"
+else
+    ac1_out=$(./scripts/inventory.sh)
+    ac1_vocab=$(awk '
+        /^  type: / {
+            if (sub(/^[^#]*#[[:space:]]*/, "") == 0) exit
+            n = split($0, parts, "|")
+            for (i = 1; i <= n; i++) {
+                v = parts[i]
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+                if (v != "") print v
+            }
+            exit
+        }
+    ' decisions/_template.md | sort -u)
+    ac1_rows=$(printf '%s\n' "$ac1_out" \
+        | grep -oE 'insight\.type: [A-Za-z][A-Za-z0-9_-]*' \
+        | sed 's/^insight\.type: //' | sort -u)
+    if [ -z "$ac1_vocab" ]; then
+        fail "AC1" "no insight.type vocabulary parsed out of decisions/_template.md: either there is no '  type: ' line, or that line carries no '# a | b' comment. An unparsed template must not pass — the empty set is covered by any set of rows, so the comparison below would assert nothing at all."
+    elif [ -z "$ac1_rows" ]; then
+        fail "AC1" "scripts/inventory.sh emitted no row naming an 'insight.type: <value>'. The decisions rows were renamed or removed, and an absent row must not pass silently (same reason Y3 and Z7 reject a non-numeric inv_row result)."
+    else
+        ac1_bad=""
+        while IFS= read -r ac1_v; do
+            [ -n "$ac1_v" ] || continue
+            printf '%s\n' "$ac1_rows" | grep -qxF -- "$ac1_v" \
+                || ac1_bad="$ac1_bad [decisions/_template.md offers '$ac1_v'; scripts/inventory.sh emits no row for it]"
+        done <<<"$ac1_vocab"
+        while IFS= read -r ac1_r; do
+            [ -n "$ac1_r" ] || continue
+            printf '%s\n' "$ac1_vocab" | grep -qxF -- "$ac1_r" \
+                || ac1_bad="$ac1_bad [scripts/inventory.sh emits a row for '$ac1_r'; decisions/_template.md never offers it]"
+        done <<<"$ac1_rows"
+        if [ -z "$ac1_bad" ]; then
+            ok "AC1"
+        else
+            fail "AC1" "decisions/_template.md and scripts/inventory.sh disagree about the insight.type vocabulary:$ac1_bad. A value with no row is invisible on docs/engineering-practices.md and hard-fails Z7 on first use; a row with no value counts a type no author is offered. Add both halves in one edit, or narrow the template."
+        fi
+    fi
+fi
+
+# AC2 — no tracked file carries a closing tool-call tag ALONE ON A LINE. A
+# session writing a file has left its own syntax inside the artifact six times
+# across two projects and 35 days (SPEC-088 M-1: 8 additions, 4 commits, 6
+# files, 0 outside *.md, and only two tag names in the whole history —
+# `content` and `invoke`). One instance sat in DEC-046 for ~66 PRs, inside a
+# record four later specs cite. Every one was caught by a human reading the
+# file; five gates and ~200 assertions never looked.
+#
+# THE SCOPE IS DERIVED — `git ls-files`, not a list. An assertion that
+# enumerates its own scope by hand is the same defect one level up: SPEC-089's
+# duplicate-header guard named two of five keys with all 14 packages green.
+#
+# THE ANCHOR IS THE WHOLE POINT. Four tracked files legitimately NAME these
+# tags in prose, 8 lines between them, and the membership of that set turned
+# over inside a single day during framing — so a file allow-list would have
+# gone stale in one PR. Every legitimate mention writes the tag inline, in
+# backticks or mid-sentence; every leaked one is alone on a line. The
+# `^[[:space:]]*...[[:space:]]*$` anchor separates the two, measured rather
+# than argued: silent on a clean tree WITH all four prose files present, and
+# red on one appended line (framing's P-1, reproduced at design from its
+# stated edit as M-B1, plus an indented `invoke` variant as M-B3).
+#
+# WHY THE TWO NAMES AND NOT `</[A-Za-z_:.-]+>`. The general form also has zero
+# hits today, but no tracked file is XML, HTML or SVG — 234 .md, 149 .go, 17
+# .sh, and no markup among them. Add one and a legitimately indented closing
+# tag trips a guard that has nothing to say about it; a guard that fires on a
+# correct file gets disarmed by habit. Widen this when a third tag name is
+# actually observed — M-1 says there have only ever been two.
+#
+# STDERR IS CAPTURED DELIBERATELY. The assertion is "the sweep produces no
+# output", not "grep found no match": a tracked path grep cannot read turns
+# the gate red instead of passing quietly on an empty result.
+#
+# THE FLOOR: `git ls-files` returning nothing — outside a work tree, or in a
+# repo with nothing tracked. Silence over zero files is not evidence. Cost of
+# the sweep, measured at framing: 0.15s over the whole tree.
+ac2_pat='^[[:space:]]*</(content|invoke)>[[:space:]]*$'
+if ! command -v git >/dev/null 2>&1; then
+    fail "AC2" "git is not installed — the sweep's scope is 'git ls-files' and cannot be derived without it"
+else
+    ac2_files=$(git ls-files | wc -l | tr -d ' ')
+    if [ "$ac2_files" -lt 1 ]; then
+        fail "AC2" "git ls-files listed no tracked files — the sweep would report clean while reading nothing at all"
+    else
+        ac2_hits=$(git ls-files -z | xargs -0 grep -nE "$ac2_pat" /dev/null 2>&1 || true)
+        if [ -z "$ac2_hits" ]; then
+            ok "AC2"
+        else
+            fail "AC2" "the anchored sweep over $ac2_files tracked files is not silent. Either a closing tool-call tag is alone on a line — session syntax that leaked into the artifact, so delete the line; a document that needs to NAME the tag writes it inline in backticks, which this assertion allows — or the sweep itself could not read a tracked path, which is also not a pass. Output:
+$ac2_hits"
+        fi
+    fi
+fi
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

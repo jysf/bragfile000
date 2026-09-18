@@ -3,7 +3,7 @@
 
 insight:
   id: DEC-051                        # stable, never reused
-  type: decision                     # decision | analysis | recommendation | observation | reservation
+  type: decision                     # decision | reservation
   confidence: 0.9                    # small, well-precedented contract tightening —
                                      # the defect and the fix are both mechanical
                                      # and fully covered by the paired tests.

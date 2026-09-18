@@ -3,7 +3,7 @@
 
 insight:
   id: DEC-052                        # stable, never reused
-  type: decision                     # decision | analysis | recommendation | observation | reservation
+  type: decision                     # decision | reservation
   confidence: 0.9                    # small, well-precedented contract tightening —
                                      # mirrors the existing `add` stdout-ID
                                      # contract verbatim, fully covered by

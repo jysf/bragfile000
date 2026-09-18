@@ -3,7 +3,7 @@
 
 insight:
   id: DEC-049                        # stable, never reused
-  type: decision                     # decision | analysis | recommendation | observation
+  type: decision                     # decision | reservation
   confidence: 0.88                   # honest: the schema home is measured and
                                      # near-certain; the choice of the literal
                                      # value "failed" over "abandoned" is the
