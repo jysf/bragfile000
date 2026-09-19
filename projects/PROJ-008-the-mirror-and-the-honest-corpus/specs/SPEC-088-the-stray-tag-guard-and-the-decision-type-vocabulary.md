@@ -140,6 +140,23 @@ $ git log --all -p -- 'decisions/*.md' | grep -E '^\+  type:' | sed 's/#.*//' | 
   64 +  type: decision      1 +  type: reservation
 ```
 
+> **CORRECTION at verify (2026-09-18):** the numbers hold, but the first
+> command does not print that output. Run literally at `9f03680`, it prints
+> **three** lines: `43   type: decision`, `8   type: decision` followed by the
+> spaces the `sed` left behind, and `1   type: reservation`. The `51` above is
+> those two buckets added together by hand. The bucket of 8 is exactly the
+> eight `DEC-*.md` files whose line 6 carried the stale vocabulary comment, the
+> files design later found by grep and build folded in. So framing's own output
+> pointed at them, and hand-cleaning the output hid them. To get the two-line
+> form, strip the trailing spaces too:
+> `grep -h '^  type:' decisions/DEC-*.md | sed 's/#.*//;s/[[:space:]]*$//' | sort | uniq -c`.
+> The third command has the same split, and a second problem: `--all` is a
+> moving population. Its result changes as branches are created and deleted,
+> so `65` cannot be reproduced. At verify it reads **82 + 1 = 83** additions
+> across `--all`, and **54 + 1 = 55** across the history reachable from
+> `9f03680`. The conclusion holds on every population measured: zero
+> `analysis`, `recommendation` or `observation`, ever.
+
 So the template advertises a vocabulary three-fifths of which has no instance
 and breaks the build on first use. That is the finding that decides the fork.
 
@@ -285,7 +302,7 @@ risk was the branch framing rejected.**
 |---|---|
 | Go code | **none** |
 | Decision records emitted | **none** |
-| Files modified | **3** — `scripts/test-docs.sh`, `decisions/_template.md`, `docs/engineering-practices.md` (regenerated, not hand-edited) |
+| Files modified | **3** — `scripts/test-docs.sh`, `decisions/_template.md`, `docs/engineering-practices.md` (regenerated, not hand-edited). **11 after build**: the maintainer-directed fold added eight `DEC-*.md` comment lines (see `## Outputs`) |
 | New assertion ids | **2** (198 → 200 distinct) |
 | User-facing table rows added | **0** — the branch that added 3 was rejected |
 | Precedent at the same size | **SPEC-087** held S on one file, `+77/-39`, no Go, no DEC, table byte-identical |
@@ -367,6 +384,14 @@ mentions**. The distinction framing drew between tracked and untracked no longer
 applies, and this spec's assertion reads `git ls-files`, which is the tracked
 set only.
 
+> **AMENDED at verify (2026-09-18).** The distinction stopped mattering for
+> the *measurement*, because both files became tracked. It still matters for
+> the *guard*. A session writes a new file and runs the gates before
+> `git add`, so an index-only sweep cannot see that file. Five of the six
+> historical leaks were in exactly such a file. Framing's own M-3 command read
+> `git ls-files --others --exclude-standard` as well, and that was the right
+> scope. See `## Verification`, V-F1.
+
 **M-1 is sharper than framing stated it.** Framing ran the general form
 `</[A-Za-z_:.-]+>` over the full history and reported the two names it found.
 Re-run at design, the general form returns *exactly* those 8 additions and
@@ -438,7 +463,7 @@ to its pre value. Hashes are `shasum -a 256`, first 12 hex digits.
 
 | id | Target | The exact edit | pre → post | Verdict | Collateral |
 |---|---|---|---|---|---|
-| **M-A0** | `decisions/_template.md` | restore the pre-SPEC-088 line 6: `# decision \| analysis \| recommendation \| observation \| reservation` | `4b99dc8ca8b7` → `89a999aee134` | **FAIL AC1**, naming `analysis`, `observation`, `recommendation` | none |
+| **M-A0** | `decisions/_template.md` | restore the pre-SPEC-088 line 6: `# decision \| analysis \| recommendation \| observation \| reservation`. **RE-PINNED AT VERIFY:** `sed -i '' '6s/# decision \| reservation$/# decision \| analysis \| recommendation \| observation \| reservation/' decisions/_template.md` | `4b99dc8ca8b7` → ~~`89a999aee134`~~ **`accb16924cb6`** | **FAIL AC1**, naming `analysis`, `observation`, `recommendation` | none |
 | **M-A1** | `decisions/_template.md` | `sed -i '' '6s/# decision \| reservation/# decision \| analysis \| reservation/'` | `4b99dc8ca8b7` → `0cd64abdbe46` | **FAIL AC1** — direction 1 | none |
 | **M-A2** | `decisions/_template.md` | `sed -i '' '6s/# decision \| reservation/# decision/'` | `4b99dc8ca8b7` → `5e626d725525` | **FAIL AC1** — direction 2 | none |
 | **M-A3** | `decisions/_template.md` | `sed -i '' '6s/.*/  type: decision/'` — strip the comment entirely | `4b99dc8ca8b7` → `e98cbf8dccad` | **FAIL AC1** — vocabulary floor | none |
@@ -446,10 +471,10 @@ to its pre value. Hashes are `shasum -a 256`, first 12 hex digits.
 | **M-A5** | `scripts/inventory.sh` | `sed -i '' '84s/insight\.type: reservation/the tombstone type/'` | `e2db95583a9b` → `386b6e5a5883` | **FAIL AC1** — `reservation` offered, no row | **X3 also fires** |
 | **M-A6** | `decisions/_template.md` | `sed -i '' '6s/# decision \| reservation/# decision \| frobnicate \| reservation/'` | `4b99dc8ca8b7` → `7b564199a0e1` | **FAIL AC1**, naming `frobnicate` | none |
 | **M-B1** | `NEXT-SESSION-PROMPT.md` | append one line whose entire content is the closing `content` tag: `printf '</content>\n' >> NEXT-SESSION-PROMPT.md` | `c9f625f17b05` → `7ba747a741fb` | **FAIL AC2**, one hit at `NEXT-SESSION-PROMPT.md:203` | none |
-| **M-B3** | `docs/engineering-practices.md` | append one line: two spaces, then the closing `invoke` tag | `78d5e4fb4c82` → `1537fe6df1d8` | **FAIL AC2**, hit at `docs/engineering-practices.md:309` | none |
-| **M-B4** | new file `docs/spec088-probe.md` | write two lines — `draft notes`, then the closing `content` tag alone — and `git add` it | absent → `c161a037cb53` | **FAIL AC2**; the message's file count moves **439 → 440** | none |
-| **M-B6** | `projects/PROJ-004-story-surface/specs/.gitkeep` | `rm` it, leaving the deletion unstaged | *not a content mutation* — see below | **FAIL AC2**, with grep's own `No such file or directory` in the message | none |
-| **M-B2** | a throwaway `git init` directory | run AC2's body where `git ls-files` is empty | *n/a* | **FAIL AC2** — *"listed no tracked files"* | `AC1` also fails (no `scripts/inventory.sh` there) |
+| **M-B3** | `docs/engineering-practices.md` | append one line: two spaces, then the closing `invoke` tag. **Command added at verify:** `printf '  </invoke>\n' >> docs/engineering-practices.md` | `78d5e4fb4c82` → `1537fe6df1d8` | **FAIL AC2**, hit at `docs/engineering-practices.md:309` | none |
+| **M-B4** | new file `docs/spec088-probe.md` | write two lines — `draft notes`, then the closing `content` tag alone — and `git add` it. **Command added at verify:** `printf 'draft notes\n</content>\n' > docs/spec088-probe.md && git add docs/spec088-probe.md` | absent → `c161a037cb53` | **FAIL AC2**; the message's file count moves **439 → 440** | none |
+| **M-B6** | `projects/PROJ-004-story-surface/specs/.gitkeep` | `rm projects/PROJ-004-story-surface/specs/.gitkeep`, leaving the deletion unstaged | *not a content mutation* — see below | **FAIL AC2**, with grep's own `No such file or directory` in the message | none |
+| **M-B2** | a throwaway `git init` directory | run AC2's body where `git ls-files` is empty. **Command added at verify:** `d=$(mktemp -d) && git -C "$d" init -q`, then run the installed `Group AC` block, with the harness's `ok`/`fail` helpers, from `$d` | *n/a* | **FAIL AC2** — *"listed no tracked files"* | `AC1` also fails (no `scripts/inventory.sh` there) |
 
 Three notes the matrix cannot carry in a cell:
 
@@ -472,6 +497,40 @@ Three notes the matrix cannot carry in a cell:
   lines**. A red gate with no failing assertion is exactly the shape that reads
   like an environment problem. Do not use `chmod` to probe this harness.
 
+**Added at verify (2026-09-18):**
+
+- **M-A0 was recorded as one edit and measured as another.** Its stated
+  post-hash `89a999aee134` is the hash of the entire pre-SPEC-088 template:
+  `git show 7fa5cae:decisions/_template.md > decisions/_template.md` reproduces
+  it byte-exact, and so does the same file at `9f03680`. That whole-file revert
+  changes line 6 **and** replaces lines 12–22 with the old two-line warning. The
+  stated edit changes line 6 only and hashes to `accb16924cb6`. Both give the
+  same `AC1` verdict, and both were re-run at verify. **The row keeps the line-6
+  edit and is re-pinned to its hash.** The line-6 mutant is the stronger probe
+  because only a guard that reads the vocabulary can kill it. The whole-file
+  revert can also be killed by a guard that never reads line 6, such as a
+  literal pin on the new comment text *"THESE TWO, AND THE LIST IS NOT
+  FREE-FORM"*. So its going red doesn't tell a vocabulary check from a comment
+  pin. The whole-file state is not lost: it is FT-1's "fails today" leg, which
+  build's step-2 fail-first already exercised on exactly that file. The
+  command, without the table's escaping:
+
+  ```
+  sed -i '' '6s/# decision | reservation$/# decision | analysis | recommendation | observation | reservation/' decisions/_template.md
+  ```
+
+- **The commands in this table are BSD `sed` (macOS).** In the markdown source
+  every pipe inside a cell is written `\|`, which is GFM table escaping. The
+  rendered `|` is the command. On macOS the raw form reproduces the same hash
+  too, because BSD `sed` reads `\|` as a literal pipe (verified for M-A1 and
+  M-A2). **Neither form reproduces on GNU `sed`**, as measured in an
+  `ubuntu:24.04` container. There, `-i ''` makes `''` the script and the
+  expression a filename, so it exits 2 and edits nothing. The hash-moved check
+  then refuses the gate, which is the protocol working. And GNU `sed` reads
+  `\|` as alternation, so the raw M-A1 writes
+  `# decision | analysis | reservation| reservation`. On Linux, use `sed -i`
+  with the rendered form.
+
 ## Locked design decisions
 
 Each one names the Failing Test that fails without it (AGENTS.md §9). Every
@@ -485,7 +544,7 @@ are rows of the matrix above.
 | **LD3** | The row set comes from **running** `scripts/inventory.sh` and parsing its **output** — never from its source text, never from a re-implementation of its filters. | FT-6 / **M-A5** |
 | **LD4** | `AC1` carries **two independent floors**, evaluated before the comparison: an empty parsed vocabulary fails, and an empty emitted row set fails. Neither is satisfied by the other's absence. | FT-4 / **M-A3**, FT-5 / **M-A4** |
 | **LD5** | The vocabulary is whatever the template's own `  type:` line advertises — split on `\|`, every non-empty token counts. **No allow-list of known values**, which would be LD1's literal pin wearing a loop. | FT-7 / **M-A6** (`frobnicate` appears on no list anywhere and is still named) |
-| **LD6** | `AC2`'s scope is **`git ls-files`**, not an enumerated list of files or directories. | FT-11 / **M-B4** (a brand-new tracked file fires it with zero harness edits; the message's count moves 439 → 440), FT-12 / **M-B2** |
+| **LD6** | `AC2`'s scope is **`git ls-files`**, not an enumerated list of files or directories. **AMENDED at verify:** it is `git ls-files --cached --others --exclude-standard`, which is still derived and still not a list, and it adds `grep -d skip`. See `## Verification`, V-F1. | FT-11 / **M-B4** (a brand-new tracked file fires it with zero harness edits; the message's count moves 439 → 440), FT-12 / **M-B2**; at verify, **V-B7** (a new *unstaged* file fires it) and **V-B8m** (without `-d skip`, an untracked nested repo turns it red) |
 | **LD7** | The pattern is **whole-line anchored**: `^[[:space:]]*</(content\|invoke)>[[:space:]]*$`. Inline mentions in backticks are permitted by construction, not by an exception list. | FT-8 (green **while** 4 tracked files carry 8 inline mentions), FT-9 / **M-B1**, FT-10 / **M-B3** |
 | **LD8** | The alternation names **exactly the two tag names M-1 found** — `content` and `invoke` — not a general closing-tag form. | FT-9 uses `content`, FT-10 uses `invoke`; dropping either name turns one probe green |
 | **LD9** | `AC2` captures **stderr** into the variable it tests for emptiness. The assertion is *"the sweep produces no output"*, not *"grep found no match"*. | FT-13 / **M-B6** |
@@ -541,6 +600,11 @@ Locked here so build does not re-open them.
   harness guards (SPEC-088) =====` block, inserted immediately before
   `# ===== finalise =====`. Ids `AC1` and `AC2`, each quoted literally. The
   literal is in `## Notes for the Implementer`; transcribe it verbatim.
+  **AMENDED at verify:** `AC2`'s sweep was widened to untracked, unignored
+  files, and grep gained `-d skip`. Its message and three comment paragraphs
+  changed with it. The installed block now differs from Literal 2 by exactly
+  the diff recorded in `## Verification`, V-F1. There are still two ids, and
+  no inventory row moves.
 - **`decisions/_template.md`** — `+12 / -3`. Lines 6–13 replaced. The literal is
   in `## Notes for the Implementer`.
 - **`docs/engineering-practices.md`** — `+1 / -1`. The inventory block
@@ -648,6 +712,19 @@ value. **25** hits outside `specs/done/`, every one classified:
   says so at the moment `type: reservation` is chosen"*) stays true: the
   tombstone paragraph is preserved verbatim in the new literal.
 
+> **CORRECTED at verify (2026-09-18): "every one classified" was not true.**
+> The bullets above name 17 of the 25 hits. The first bullet, the eight
+> `DEC-*.md` files, names none of them, as build's amendment says. Re-run as
+> `git grep -n 'insight\.type' 9f03680`, the 8 hits no bullet named are:
+> - `scripts/inventory.sh:50`, `:81` and `:84`: the producer's comment and its
+>   two row labels, which `AC1` parses (`:81` and `:84`). **No edits.**
+> - `docs/engineering-practices.md:29` and `:32`: the same two rows as emitted
+>   on the page, regenerated by `just inventory`. **No edits.**
+> - This file, lines 99, 264 and 339 at `9f03680`: its own prose.
+>
+> 17 + 8 = 25, and the eight `DEC-*.md` files contribute none of them. They
+> were found by the value grep, which is the one this section credits.
+
 **No existing test's premise is inverted by this spec**, and no existing
 assertion is deleted or rewritten. Both items are purely additive to
 `scripts/test-docs.sh`.
@@ -671,6 +748,8 @@ Numbers to diff against. Every one was measured at design against the real tree;
    from a `/tmp` backup. The hash is checked **before** the gate runs.
 6. The anchored sweep over the final tree exits **1**:
    `git ls-files -z | xargs -0 grep -nE '^[[:space:]]*</(content|invoke)>[[:space:]]*$' /dev/null`
+   **AMENDED at verify**, to match `AC2`'s widened scope:
+   `git ls-files -z --cached --others --exclude-standard | xargs -0 grep -d skip -nE '^[[:space:]]*</(content|invoke)>[[:space:]]*$' /dev/null`
 7. All five gates green: `just test`, `just test-docs`, `just lint`,
    `gofmt -l .`, `go vet ./...`.
 8. **Added at build (2026-09-18) with the maintainer-directed fold of the
@@ -703,7 +782,7 @@ restore from `/tmp`.
 | **FT-5** | `AC1` | **M-A4** | `FAIL: AC1: scripts/inventory.sh emitted no row naming an 'insight.type: <value>' …` (plus `X3`) |
 | **FT-6** | `AC1` | **M-A5** | `FAIL: AC1 … offers 'reservation'; … emits no row for it` — while `inventory.sh:50` still contains the string in a comment (plus `X3`) |
 | **FT-7** | `AC1` | **M-A6** | `FAIL: AC1 … offers 'frobnicate' …` |
-| **FT-8** | `AC2` | clean tree | `OK:   AC2`, **while 4 tracked files carry 8 inline mentions of the two tags**. This is the negative control and it is load-bearing: an unanchored pattern fails it. |
+| **FT-8** | `AC2` | clean tree | `OK:   AC2`, **while 4 tracked files carry 8 inline mentions of the two tags**. This is the negative control and it is load-bearing: an unanchored pattern fails it. *(8 at `9f03680`, 9 at build and at `8c58db2`. The count grows each time a document discusses this defect; the verify branch's count is in `## Verification`.)* |
 | **FT-9** | `AC2` | **M-B1** | `FAIL: AC2 …` with one hit, `NEXT-SESSION-PROMPT.md:203` |
 | **FT-10** | `AC2` | **M-B3** | `FAIL: AC2 …` with one hit, `docs/engineering-practices.md:309` — indented, and the other tag name |
 | **FT-11** | `AC2` | **M-B4** | `FAIL: AC2 …`, and the message's file count reads **440**, not 439, with no harness edit |
@@ -812,6 +891,11 @@ routed to SPEC-088"*; that route closes here, so the warning is replaced by the
 rule the new assertion enforces.
 
 ### Literal 2 — `scripts/test-docs.sh`, a new `Group AC`
+
+> **AMENDED at verify (2026-09-18).** Build transcribed this literal byte for
+> byte. Verify then changed `AC2`'s scope. The shipped block is this literal
+> plus the diff in `## Verification`, V-F1. The literal below is kept as design
+> wrote it.
 
 Insert **immediately before** `# ===== finalise =====` (line 2067 on `main` at
 `9f03680`), after `AB4`. Nothing else in the file changes.
@@ -1125,6 +1209,428 @@ Process-focused: how did the build go? What friction did the spec create?
    command, or better the diff itself, in every matrix row. The recorded diff
    is what made M-A0's mismatch reportable without hunting, because it shows
    exactly what the stated edit produced.
+
+---
+
+## Verification
+
+*Filled in at the end of the **verify** cycle. The orchestrator had already
+confirmed the gates, the Literal 2 transcription, the inventory move and the
+eight-DEC fold. Those were cheaply re-checked here, and all hold; see the last
+section. This record covers what a passing build could not see.*
+
+- **Branch:** `verify/spec-088-harness-guards`, off `main` at `8c58db2`
+  (PR #216, merged 2026-09-18T23:45:10Z as a squash; no stacking).
+- **Verdict:** ⚠ **PUNCH LIST — every item fixed in this cycle, and one
+  design lock amended.** Both guards do what the spec claims on every matrix
+  probe and on the 21 new probes below. But `AC2`'s scope could not see the
+  kind of file five of the six historical leaks were in, a file the session
+  has just created. The scope is widened here (V-F1). The other findings are
+  record corrections.
+
+### The attack list
+
+| # | Attack | Result |
+|---|---|---|
+| A | M-A0: which edit did design actually run? | **V-F2 — the whole file, recorded as line 6. RE-PINNED** |
+| B | Does every other matrix row state a command or a diff? | **V-F3 — no: four more rows were prose. COMMANDS ADDED** |
+| C | Twelve `AC2` mutants the matrix did not try | **V-F1 — an untracked new file passes. FIXED.** 11 others as predicted |
+| D | Nine `AC1` mutants the matrix did not try | **HOLDS.** All as predicted; three known limits recorded |
+| E | Is sweeping every file, not only `*.md`, the right scope? | **HOLDS.** Argued in the spec; one residual risk noted |
+| F | Portability: BSD vs GNU, `mawk` vs `gawk` | **HOLDS** on both. The *matrix's* `sed` commands are BSD-only (noted) |
+| G | Internal consistency after the fold and build's corrections | **V-F4 — four record errors. CORRECTED** |
+| H | Does anything claim these guards run in CI? | **HOLDS — no overclaim** |
+| I | Is the build reflection honest? | **HOLDS**, with one inaccurate sentence |
+
+### V-F1 — `AC2` could not see a file the session had just written. FIXED
+
+**The probe (V-B7).** Create a new file and do **not** `git add` it. This is
+the state a session is in when it runs the gates before committing:
+
+```
+printf 'draft notes\n</content>\n' > docs/spec088-untracked.md
+```
+
+The file went from absent to `c161a037cb53`, and `just test-docs` stayed
+green: 201 `OK:` and 0 `FAIL:`. The prediction, written before the run, was
+green, because `git ls-files` reads the index, and an unstaged file is not in
+it.
+
+**Why it matters.** Of the six files that historically leaked a tag, **five
+were created by the commit that leaked it**:
+
+```
+for c in ebdc271 55d8925 73dbf38 6208eeb; do
+  for f in $(git show --format= -p --no-color $c \
+      | awk '/^diff --git/{f=$4; sub(/^b\//,"",f)} /^\+[[:space:]]*<\/(content|invoke)>[[:space:]]*$/{print f}' \
+      | sort -u); do
+    git show --format= --name-status $c -- "$f"
+  done
+done
+→ ebdc271: A DEC-046, M SPEC-075 · 55d8925: A SPEC-089
+  73dbf38: A SPEC-091 · 6208eeb: A DEC-053, A STAGE-027
+```
+
+The gates run before `git add`, so on the commit that introduces the most
+common shape, the guard as built looks at everything except the new file. That
+file is not caught when it is written. It is caught at the next `test-docs`
+run after it is committed, which is the next session, on `main`. That is far
+better than ~66 PRs. But it undercuts this spec's own sequencing argument,
+which names SPEC-086's design session and **`DEC-050`, a new file**, as the
+reason to land first. Design's matrix already had the clue: M-B4, the one
+new-file probe, had to `git add` its file to make `AC2` fire. And framing's
+M-3 command had swept `git ls-files --others --exclude-standard` as well.
+Design's correction dropped that when both of its own files became tracked,
+but the distinction only stopped mattering for the measurement. It still
+matters for the guard.
+
+**The fix**, `scripts/test-docs.sh` `+23/−12`, pre `1006f99c7a20` → post
+`a1d50dd008fd`. These are the two functional lines. The rest of the diff is
+three comment paragraphs and the failure message:
+
+```diff
+-        ac2_hits=$(git ls-files -z | xargs -0 grep -nE "$ac2_pat" /dev/null 2>&1 || true)
++        ac2_hits=$(git ls-files -z --cached --others --exclude-standard \
++            | xargs -0 grep -d skip -nE "$ac2_pat" /dev/null 2>&1 || true)
+```
+
+- **`--exclude-standard`** keeps `.gitignore`d paths out. `.claude/`, which
+  holds a stray worktree checkout, `/brag` and `tmp/` are all ignored. V-B9 is
+  a leak inside ignored `tmp/`, and it stays green.
+- **`-d skip`** is needed once untracked paths are read. An untracked nested
+  repository is listed as `dir/`, and grep would report it as
+  `Is a directory`. V-B8 (the nested repo) is green with `-d skip`. V-B8m
+  removes it (`sed -i '' 's/xargs -0 grep -d skip -nE/xargs -0 grep -nE/' scripts/test-docs.sh`,
+  `a1d50dd008fd` → `5222e35d1bdf`) and `AC2` goes red with
+  `grep: spec088-nested/: Is a directory`. So `-d skip` is load-bearing, and
+  proven so.
+- **The floor is unchanged.** It still requires `git ls-files` (the index) to
+  be non-empty, so FT-12 and M-B2 are unaffected. The message's count is still
+  the tracked count, so FT-11 and M-B4 still read **440**.
+- **Cost:** 0.07s wall clock on this tree for the widened sweep (three runs)
+  and for the original (two runs). Nothing measurable.
+- **Ids:** still two. The inventory block is byte-identical, and `X3` is
+  green.
+
+**Every `AC2` probe was re-run against the widened assertion.** M-B1, M-B3,
+M-B4, M-B6 and V-B1 to V-B5a fire, each with the same hash and hit as before.
+V-B5b and V-B6 stay green. **V-B7 now fires**, as does V-B7b, the same file
+with a space in its name (`docs/spec088 untracked.md:2`). The
+`ubuntu:24.04` run below gives identical verdicts.
+
+### V-F2 — M-A0 re-pinned: the stronger mutant is the one the row describes
+
+Build was right. The stated edit hashes to `accb16924cb6`. Design's
+`89a999aee134` is the whole pre-SPEC-088 file:
+`git show 7fa5cae:decisions/_template.md > decisions/_template.md` reproduces
+it, and so does the same file at `9f03680`. Both mutants were run here, and
+both give the same `FAIL: AC1` naming `analysis`, `observation` and
+`recommendation`, with 199 `OK:` and 1 `FAIL:`.
+
+**The row keeps the line-6 edit and takes the hash that edit produces**, with
+a runnable command, in the matrix and in the note under it. The line-6 mutant
+is the stronger probe because only a guard that reads the vocabulary can kill
+it. The whole-file revert also rewrites lines 12–22, so a guard that never
+reads line 6, such as a literal pin on *"THESE TWO, AND THE LIST IS NOT
+FREE-FORM"*, would kill it too. Its going red cannot tell those two guards
+apart. The whole-file state was not lost: it is FT-1's "fails today" leg, and
+build's step-2 fail-first ran against exactly that file.
+
+**How M-A0 failed matters for codification.** The row did not fail because
+it was prose. *"Restore the pre-SPEC-088 line 6"* has one reading, and build
+followed it. It failed because the recorded edit and the executed edit were
+two different things. A command typed after the run can diverge the same way.
+
+### V-F3 — M-A0 was not the only prose row. COMMANDS ADDED
+
+Build's reflection calls M-A0 *"the one matrix row whose edit is prose"*.
+M-B3 (*"append one line: two spaces, then the closing `invoke` tag"*) and
+M-B4 (*"write two lines…and `git add` it"*) were prose as well, and M-B2 and
+M-B6 described their edits in words. The difference is that the M-B3 and M-B4
+prose was byte-exact. Rewritten as commands, both reproduce the stated hash on
+the first run: `printf '  </invoke>\n' >> docs/engineering-practices.md` gives
+`1537fe6df1d8`, and
+`printf 'draft notes\n</content>\n' > docs/spec088-probe.md && git add docs/spec088-probe.md`
+gives `c161a037cb53`. All four rows now carry a command. The matrix also
+gained a note that its `sed` commands are BSD-only (V-F4 and F below).
+
+### Novel mutants — 21, each predicted before it ran
+
+Every probe used the §12 helper, the same shape as build's. It backs up to
+`/tmp`, **refuses the gate unless the hash moved**, prints the mutant's own
+`diff`, runs the real `./scripts/test-docs.sh`, restores with `cp -p`, and
+checks both the restored hash and `git status --porcelain`. The refusal fired
+once, on V-A1b. My first attempt had a shell-quoting error, applied nothing,
+and was refused before the gate ran. It was re-run with the quoting fixed.
+**No outcome contradicted its prediction.** The findings are the predictions
+of blindness that came true (V-B7, V-A3b, V-A4c) and one misleading message
+(V-A4b).
+
+The exact edits, run from the repo root with macOS BSD tools:
+
+```
+V-B1   printf '</content>\r\n' >> NEXT-SESSION-PROMPT.md
+V-B2   printf '\t</invoke>\n' >> NEXT-SESSION-PROMPT.md
+V-B3   printf '</content>' >> docs/engineering-practices.md
+V-B4   printf '</invoke>\n' >> cmd/brag/version.go
+V-B5a  printf 'draft notes\n</content>\n' > 'docs/spec088 probe.md' && git add 'docs/spec088 probe.md'
+V-B5b  printf 'draft notes\n' > 'docs/spec088 probe.md' && git add 'docs/spec088 probe.md'
+V-B6   printf 'Last sentence of the page.</content>\n' >> docs/engineering-practices.md
+V-B7   printf 'draft notes\n</content>\n' > docs/spec088-untracked.md
+V-B7b  printf 'draft notes\n</content>\n' > 'docs/spec088 untracked.md'
+V-B8   mkdir spec088-nested && git -C spec088-nested init -q && printf 'x\n' > spec088-nested/x.md
+V-B8m  (V-B8 in place) sed -i '' 's/xargs -0 grep -d skip -nE/xargs -0 grep -nE/' scripts/test-docs.sh
+V-B9   mkdir -p tmp && printf 'draft\n</content>\n' > tmp/spec088-ignored.md   # check tmp/ is absent first
+V-A1   sed -i '' '6s/# decision | reservation$/# decision|reservation/' decisions/_template.md
+V-A1b  perl -i -pe 's/# decision \| reservation$/#   decision\t|\t reservation  / if $.==6' decisions/_template.md
+V-A2   sed -i '' '6s/# decision | reservation$/# Decision | reservation/' decisions/_template.md
+V-A3a  perl -i -pe 'if ($.==6) { s/# decision \| reservation$/# decision |/; $_ .= (" " x 37) . "#   reservation\n" }' decisions/_template.md
+V-A3b  perl -i -pe 'if ($.==6) { $_ .= (" " x 37) . "# | analysis\n" }' decisions/_template.md
+V-A5   perl -i -pe 's/\n$/\r\n/ if $.==6' decisions/_template.md
+V-A4a  perl -i -pe 's/in the front-matter \|$/in the front-matter (never on an insight.type: reservation record) |/ if $.==82' scripts/inventory.sh
+V-A4b  perl -i -pe 's/in the front-matter \|$/in the front-matter (insight.type: analysis was retired at SPEC-088) |/ if $.==82' scripts/inventory.sh
+V-A4c  perl -i -pe 'if ($.==81) { s/\) \|$/; tombstones are insight.type: reservation) |/ } $_ = "" if $.==84' scripts/inventory.sh
+```
+
+| id | What it tries | Predicted | Observed | pre → post |
+|---|---|---|---|---|
+| V-B1 | tag followed by `\r` (CRLF) | fire | **fire**, `NEXT-SESSION-PROMPT.md:203` (`[[:space:]]` includes `\r`) | `c9f625f17b05` → `92187ae49c54` |
+| V-B2 | tab-indented `invoke` | fire | **fire**, `:203` | `c9f625f17b05` → `93ddab7bb753` |
+| V-B3 | tag is the last line, no trailing newline | fire | **fire**, `docs/engineering-practices.md:309` | `78d5e4fb4c82` → `6cab79044218` |
+| V-B4 | tag in a tracked `.go` file | fire | **fire**, `cmd/brag/version.go:57` | `55b74e488109` → `701dd40c97c4` |
+| V-B5a | tracked filename with a space, leak | fire | **fire**, `docs/spec088 probe.md:2`, count 440 | absent → `c161a037cb53` |
+| V-B5b | tracked filename with a space, **clean** | green | **green** | absent → `a6b3ceb4bf01` |
+| V-B6 | tag at the end of a prose line | green (LD7, by design) | **green** — a known limit | `78d5e4fb4c82` → `434ca0e0e622` |
+| V-B7 | leak in a new, **unstaged** file | green (blind) | **green before V-F1; fire after** | absent → `c161a037cb53` |
+| V-B7b | V-B7, filename with a space | fire (after V-F1) | **fire** | absent → `c161a037cb53` |
+| V-B8 | untracked nested repo | green (after V-F1) | **green** | *not a content mutation* |
+| V-B8m | V-B8 with `-d skip` removed | fire | **fire**, `Is a directory` | `a1d50dd008fd` → `5222e35d1bdf` |
+| V-B9 | leak inside ignored `tmp/` | green | **green** | *not tracked, ignored* |
+| V-A1 | no spaces around `\|` | green | **green** | `4b99dc8ca8b7` → `64a9b615b0b5` |
+| V-A1b | wide spaces and tabs around `\|` | green | **green** | `4b99dc8ca8b7` → `38f11a6d034b` |
+| V-A2 | `Decision`, capitalised | fire, both directions | **fire**: offers `'Decision'` (no row) and a row for `'decision'` (not offered) | `4b99dc8ca8b7` → `81e4e207afe9` |
+| V-A3a | the two values split across two comment lines | fire, direction 2 | **fire**: a row for `'reservation'` that is never offered. False, but loud | `4b99dc8ca8b7` → `f68fbeb48eb0` |
+| V-A3b | a **third** value on a continuation line | green (blind) | **green** — a known limit | `4b99dc8ca8b7` → `9f6fd86fbfb2` |
+| V-A5 | line 6 ends in `\r` | green | **green** | `4b99dc8ca8b7` → `473fe26f4991` |
+| V-A4a | another row mentions `insight.type: reservation` | `AC1` green, `X3` fire | **as predicted** | `e2db95583a9b` → `2e3991f262a6` |
+| V-A4b | another row mentions `insight.type: analysis` | `AC1` fire with a false claim, `X3` fire | **as predicted**: *"emits a row for 'analysis'"*, and no such row exists | `e2db95583a9b` → `eafa970b56be` |
+| V-A4c | reservation row deleted, its phrase moved into the decisions row | `AC1` green; `X3`, `Y3` and `Z7` fire | **as predicted** | `e2db95583a9b` → `554f494db7de` |
+
+Every restore returned the pre-hash, with `git status --porcelain` unchanged.
+**Known limits, recorded rather than routed**, because each is low-severity or
+already backstopped:
+
+- **V-B6: a tag at the end of a prose line is not caught.** This is the
+  whole-line anchor (LD7) working as designed. All eight historical additions
+  were whole-line.
+- **Opening tags are not guarded at all.** M-1 found only closing tags in
+  the whole history, and LD8 names exactly what was observed.
+- **V-A3b: `AC1` reads only the `  type:` line.** A value advertised on a
+  continuation comment line is invisible to it. The realistic regression, a
+  value appended to line 6, is caught (M-A1). A record that uses the hidden
+  value still hard-fails `Z7`.
+- **`AC1` identifies a "row" by the text `insight.type: <v>` anywhere in the
+  emitted table**, not by row label. A mention in another row's Where-column
+  can produce a false *"emits a row"* message (V-A4b). That is loud, not
+  silent. It can also mask a deleted row (V-A4c). When it does, `Y3` and `Z7`
+  both catch the deletion by label, so the net holds.
+
+### E — scope: every file, not only `*.md`. HOLDS
+
+The all-files choice **is argued**: Rejected alternative 6 names 0
+additions outside `*.md` *"so far"*, the decorative `--exclude-dir`, and the
+0.15s cost. The markup risk is argued by alternative 4, but only for the
+*general* closing-tag form. For the two names actually chosen, `</invoke>`
+has no legitimate use outside tool-call syntax. **`</content>` does**: it is
+an element in Atom feeds (RFC 4287), and a pretty-printed Atom fixture puts
+it alone on a line. Nothing like that is tracked today. `git ls-files` shows
+no `.xml`, `.html`, `.svg` or `.atom` files, and no exporter emits a feed
+format. If one ever lands, `AC2` fails **loudly, naming the file**, rather
+than passing silently. The fix is cheap at that point, and the anchor already
+handles markdown. So this is a residual risk, not a gap. No route; the
+failure message is the mitigation. A second false positive to know about: a
+fenced code block that quotes a tool-call transcript puts the closing tag
+alone on a line. The spec's Traps already tell authors to write the tag
+inline, and the failure message says the same.
+
+### F — portability. HOLDS on both, and the evidence is from both
+
+- **macOS, checked by running.** The harness runs under
+  `#!/usr/bin/env bash`, which is `/bin/bash` 3.2.57. It resolves
+  `/usr/bin/grep` (BSD grep 2.6.0-FreeBSD), `/usr/bin/xargs`, `/usr/bin/sed`
+  and `/usr/bin/awk` (one-true-awk 20200816). All 21 probes above ran there.
+- **Linux, also checked by running** rather than reasoned about. The
+  installed `Group AC` block was extracted with the harness's `ok`/`fail`
+  helpers and run in `ubuntu:24.04`, on a throwaway copy of a read-only mount.
+  That image has bash 5.2.21, GNU grep 3.11, GNU findutils xargs 4.9.0 and
+  GNU sed 4.9, plus git 2.43.0. `AC1` ran under **both `mawk` 1.3.4**
+  (Debian/Ubuntu's default `awk`) **and `gawk` 5.2.1**. Clean tree, M-A0,
+  M-A2, M-A3, V-A1b and V-A5 all matched macOS under both awks, including the
+  `[[:space:]]` trimming of tabs and `\r`. `AC2` also matched macOS on every
+  probe run there:
+  - **Before V-F1:** clean, M-B1, M-B6, V-B1, V-B2, V-B3, V-B5a, V-B5b, the
+    M-B2 floor, and V-B7, which was green there too, so the gap reproduces on
+    Linux.
+  - **After V-F1:** clean, M-B1, M-B6, V-B5b, V-B7 and V-B7b (both now fire),
+    V-B8 and V-B9.
+- **What that settles.** `xargs -0`, `grep -nE`, `grep -oE`, `grep -qxF --`,
+  `grep -d skip`, the `/dev/null` sentinel, `sort -u`, and `<<<` here-strings
+  (bash 3.2 has them) behave the same on both. The sentinel keeps the filename
+  prefix on every batch, because `xargs` repeats the fixed arguments. `AC1`
+  compares the two sets by `grep -qxF` membership, not by sorted order, so
+  collation locale cannot matter.
+- **What is *not* portable is the matrix, not the guards.** The `sed -i ''`
+  in M-A1 to M-A6 is BSD-only, and so is the raw `\|`. See the note under the
+  matrix. **Reasoned only, not run:** BusyBox and Alpine, and Windows Git
+  Bash. Neither is a contributor platform this repo names.
+
+### V-F4 — internal consistency. CORRECTED
+
+- **`## Outputs`** lists 11 modified files ✓, and AC8, the value-grep, is
+  present ✓. *Out of scope* and the premise audit no longer route the eight
+  DEC files away ✓. **Corrected:** `## Complexity` still said *"Files
+  modified 3"* with no marker. It is now annotated with 11.
+- **The audit grep build flagged.** The value grep, re-run at `9f03680`, gives
+  **16** hits: 8 DEC files, the template, `STAGE-023`, this file, and 5 in
+  `specs/done/`. That matches, and it is the grep that found the eight. The
+  `insight\.type` grep gives **25** hits outside `specs/done/` and **0** in
+  `decisions/DEC-*`, as build said. But the section also claimed *"every one
+  classified"*, and its bullets name only 17. **Corrected:** the other 8,
+  `inventory.sh` ×3, `engineering-practices.md` ×2 and this file ×3, are now
+  classified in a marked note. Build's amendment already moved the credit for
+  the eight DEC files to the value grep. The `198` count (**12**) and the
+  `distinct id` count (**8**) re-derive exactly.
+- **M-4's printed output is not what its command prints.** It is a
+  hand-summed 51. Run literally, the command gives 43 + 8 + 1, and the bucket
+  of 8 is the eight stale DEC files. Framing's own output pointed at them.
+  Separately, `git log --all` is a moving population: 65 then, 83 now, 55
+  from `9f03680` alone. The conclusion, zero uses of the three retired values,
+  holds on every population. **Corrected** with a marked note beside M-4.
+- **Numbers vs the tree:** 201 `OK:` / 200 distinct ✓. 439 tracked files ✓.
+  The inline mentions (FT-8) are **4 files, 9 lines at `8c58db2`**, not the 8
+  that FT-8, LD7 and `AC2`'s own comment state. That count grows each time a
+  document discusses the defect, and this record adds to it. **Corrected** by
+  dating the 8, both in FT-8 and in the harness comment, rather than pinning a
+  new number that the next document would make stale. On this branch it is
+  **4 files, 25 lines** (`NEXT-SESSION-PROMPT.md` 2, `SPEC-075` 2, `SPEC-089`
+  1, this file 20), measured as
+  `git ls-files -z | xargs -0 /usr/bin/grep -cE '</(content|invoke)>' /dev/null | grep -v ':0$'`.
+  `AC2` is green with every one present.
+- **Also dated:** design's *"the distinction…no longer applies"* now carries
+  a marked note (V-F1). LD6, AC6, `## Outputs` and Literal 2 each have an
+  **AMENDED at verify** marker that points here, and design's text is kept
+  visible under each.
+
+### H — no CI overclaim. HOLDS
+
+`git diff --name-only 7fa5cae 8c58db2 | tr '\n' '\0' | xargs -0 /usr/bin/grep -niE '\bCI\b|ci\.yml|github actions|workflow|pipeline' /dev/null`
+was run over build's changed files, and again over this branch's. Every hit
+that concerns `test-docs` or these two guards is a **denial**:
+
+- the spec's front matter (*"neither guard gates CI"*);
+- *Out of scope*;
+- Literal 2's header and the installed comment (*"Neither is reachable from
+  CI"*);
+- the practices page (*"The documentation assertions are not run by CI"*).
+
+The remaining hits are true statements about other things: the `coverage`
+job, `.golangci.yml`, harness Group M's checks of `ci.yml`'s shape, and the
+word "workflow" in DEC prose. `.github/workflows/ci.yml` has no `test-docs`
+step. The Goal says
+*"caught by `just test-docs`"*, which is accurate, and V-F1 makes its *"on
+the commit that introduced it"* true for new files too.
+
+### I — the build reflection. HONEST, with one inaccurate sentence
+
+- **Q1** is accurate on `X3`'s missing mention in step 2. It is inaccurate in
+  calling M-A0 the only prose row (V-F3). It is also slightly misdiagnosed:
+  M-A0's failure was record ≠ execution, not prose ≠ command (V-F2).
+- **Q2** is accurate. `STAGE-023` never carried the route. `git show` of the
+  stage at `7fa5cae` and at `8c58db2` shows no mention of the eight files.
+- **Q3**, having the helper print the mutant's own `diff`, is the part worth
+  keeping. It is the mechanism, rather than the format, that would have
+  prevented M-A0, as the view below explains.
+- Build's *"AC5 holds for 9 of the 10 post-hashes"* re-counts correctly:
+  M-A0 to M-A6, M-B1, M-B3 and M-B4 are 10 content-hash rows.
+
+### Codification view, for ship (no AGENTS.md edit here)
+
+The candidate is *"every mutation row should record a runnable command or the
+actual diff."* **As worded, it does not clear the bar, because the evidence
+does not support its premise.** Consider the three rows at issue. M-B3 and
+M-B4 were prose and reproduced. M-A0 was prose with exactly one reading. What
+went wrong is that the **record was composed after the run instead of
+captured from it**, and a runnable command typed from memory fails the same
+way.
+
+The existing rule, *"a mutation pinned by a hash must also pin its diff"*,
+already asks for the edit. M-A0 met the letter of that rule and still
+diverged. So M-A0 is a **second negative case on the same mechanical
+surface** as SPEC-087's M-6, and it exposes a different hole. M-6 was an
+**omitted** edit; M-A0 is a **mis-recorded** one.
+
+**What I would take to ship** is a one-sentence refinement of the existing
+clause, not a new rule: *the edit recorded is the `diff` the probe helper
+printed, pasted, not a description written afterward.* Evidence for it:
+
+- **Negative (N=2):** M-6 and M-A0, both on this surface.
+- **Positive:** build's and verify's helpers printed each mutant's diff. That
+  made M-A0's mismatch reportable at once, and every hash in this record
+  comes from a printed diff.
+
+That is the §12(b) precedent: a refinement recorded at N=2 on a rule already
+codified. **I'd call it at the bar as a refinement, and short of it as a new
+rule.** "Runnable command" is worth keeping as advice, because commands are
+also what made the GNU/BSD `sed` divergence visible. It is not what prevents
+the defect.
+
+### Gates — all five green on this branch
+
+| gate | result |
+|---|---|
+| `just test` | exit 0, 14 packages `ok` |
+| `just test-docs` | exit 0 · **201** `OK:` / **200** distinct ids / **0** `SKIP:` / **0** `FAIL:` (the `claude` CLI is installed) |
+| `just lint` | `0 issues.` |
+| `gofmt -l .` | empty |
+| `go vet ./...` | exit 0 |
+
+`just inventory`, diffed against the page's block, is byte-identical. No
+number moved. The AC6 sweep, in its amended form, exits 1.
+
+### What this cycle changed
+
+- `scripts/test-docs.sh`: `AC2`'s scope and `-d skip` (V-F1), `+23/−12`,
+  with no id added or removed.
+- This spec: the M-A0 re-pin and the commands in four more matrix rows (V-F2,
+  V-F3), and a note on `sed` portability under the matrix. Also the
+  corrections in V-F4, the AMENDED markers on LD6, AC6, `## Outputs` and
+  Literal 2, and this section. `cycle:` stays `verify`, as SPEC-089's,
+  SPEC-087's and SPEC-085's verify commits all left it. Ship advances it.
+- **Orchestrator correction, made after this cycle reported.** `AC2`'s comment
+  said every leak was *"caught by a human reading the file"*. None was. Each was
+  caught by an agent session reading for it: SPEC-075's ship, SPEC-089's ship,
+  and the orchestration pass that tidied #211 and #212 before they merged. The
+  installed comment now says *"a session"*. Literal 2 keeps the design-time
+  wording as the record of what design wrote.
+
+### Not findings, checked and clean
+
+- **Literal 1** is byte-identical to template lines 5–22 (18 lines), with every
+  `#` at column 38. `main`'s `Group AC` was byte-identical to Literal 2 before
+  V-F1.
+- **The DEC fold.** 8 files, `+8/−8`. Each line 6 is byte-equal to the
+  template's line 6. AC8's grep exits 1. The values are 51 `decision` and 1
+  `reservation` (43 + 8 before trailing spaces are stripped).
+- **A known trap in the measuring environment, not the guards.** In a
+  Claude Code zsh session, bare `grep` is a shell function that wraps `ugrep`
+  (`type grep`), while the harness gets `/usr/bin/grep` from bash. Every count
+  in this record was taken with `/usr/bin/grep` or `git grep`. A pipe into
+  the zsh function also truncated one probe's output with SIGPIPE. Its restore
+  had still run, and that was confirmed by hash and by `git status` before
+  going on.
+- **Corpus:** no brag was captured, since the brag comes at ship. The only
+  `brag` invocation was the read-only `brag memory --project bragfile` that
+  §13.5 asks for.
 
 ---
 
