@@ -1640,7 +1640,7 @@ number moved. The AC6 sweep, in its amended form, exits 1.
 from the process-focused build reflection above.*
 
 **Shipped 2026-09-18.** Frame `pr:214`, design `pr:215`, build `pr:216`,
-verify `pr:217`, ship `pr:SHIPPR`. The gates were re-run on the ship branch,
+verify `pr:217`, ship `pr:218`. The gates were re-run on the ship branch,
 not inherited. See *Ship-cycle gates* below.
 
 1. **What would I do differently next time?**
@@ -1778,7 +1778,7 @@ not inherited. See *Ship-cycle gates* below.
    green while 4 files carry 25 inline mentions (FT-8). `AC1` fails in both
    directions (M-A1, M-A2). The honest limit is that `just test-docs` is
    local and not CI, so both guards gate what a session or the maintainer
-   runs. Evidence ref: `pr:SHIPPR`.
+   runs. Evidence ref: `pr:218`.
 
 ### Ship-cycle gates
 

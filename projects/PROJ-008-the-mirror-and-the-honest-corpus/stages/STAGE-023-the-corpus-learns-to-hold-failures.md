@@ -216,7 +216,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       CI job. SPEC-086's design was sequenced behind this spec at framing,
       and it now runs guarded. Two codification candidates are held, not
       written. See *Held codification candidates* below. `pr:214` (frame),
-      `pr:215` (design), `pr:216` (build), `pr:217` (verify), `pr:SHIPPR`
+      `pr:215` (design), `pr:216` (build), `pr:217` (verify), `pr:218`
       (ship).
 - [x] SPEC-089 (shipped on 2026-09-08) — **the buffer drops a field silently,
       and `edit` gives no applied/no-op signal.** Two capture-integrity defects
