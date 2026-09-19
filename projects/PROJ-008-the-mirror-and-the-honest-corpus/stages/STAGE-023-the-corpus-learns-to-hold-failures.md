@@ -165,14 +165,18 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       and its behaviour in `brag memory`; five forks, all settled. Complexity
       **M**, re-affirmed after the split below. Shipped as `brag learn` +
       **DEC-049**; `pr:199`.
-- [ ] SPEC-086 (frame) — digest posture: the `## What didn't work` section on
+- [ ] SPEC-086 (design) — digest posture: the `## What didn't work` section on
       `wrapped` and `impact`. **Re-framed 2026-09-06: UNBLOCKED** (SPEC-085
       shipped at `df369e9`), **GO at M after splitting**, and it authors
       **DEC-050**, which states the posture for **all seven** `--type` surfaces
       so the scope guard below is satisfied by the decision even though the
       renderer work lands in two PRs. Framing also shrank the DEC-048
       obligation from *"two count renames"* to *at most one* — see
-      *Re-framing corrections* below.
+      *Re-framing corrections* below. **Designed 2026-09-18:** measured on the
+      tree, the obligation is **zero** renames, because the with-impact subset
+      is split between two sections rather than narrowed. DEC-050 is written,
+      DEC-030 carries an `## Amendment`, and the `summary`/`story` half is
+      **SPEC-094**.
 - [x] SPEC-087 (shipped on 2026-09-07) — **`Y3` derives instead of caching.**
       Split out of SPEC-086's re-framing rather than absorbed; sequenced
       BEFORE SPEC-086 design and landed there, so DEC-050 will be the **first**
@@ -236,7 +240,9 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       routed — see SPEC-090 below. `pr:206` (design), `pr:207` (DEC renumber),
       `pr:208` (build), `pr:209` (verify), `pr:210` (ship).
 
-- [ ] (not yet written) — **`summary` + `story` markdown honesty.** The other
+- [ ] SPEC-094 (frame) — **`summary` + `story` markdown honesty.** Given a
+      file at SPEC-086 design (2026-09-18), in the same edit as this line, so
+      the id is claimed rather than reserved in prose. The other
       half of SPEC-086's Fork B, split on defect shape: on these two the data is
       already present (`story --format json` carries `"type": "failed"`;
       `summary`'s `## Summary → By type` prints `failed: 1`) and only the
@@ -376,26 +382,27 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `delete.go`. Cheaper to leave unowned and visible than to invent a spec id
       for it now.
 
-**Count:** 4 shipped / 0 verify / 1 in build / 4 framed / 3 not yet written
-(Re-derived at SPEC-088 ship, 2026-09-18, after `just archive-spec SPEC-088`.
-It comes from each file's own `cycle:` field, read with
+**Count:** 4 shipped / 0 verify / 1 in build / 1 in design / 4 framed / 2 not
+yet written
+(Re-derived at SPEC-086 design, 2026-09-18. It comes from each file's own
+`cycle:` field, read with
 `awk '/^---$/{f=!f; next} f && /^[[:space:]]+cycle:/{print $2; exit}'` over
 `projects/PROJ-008-*/specs/*.md` and `specs/done/*.md`, and is not
 incremented. Every file's `stage:` is STAGE-023. shipped = SPEC-085, SPEC-087,
 SPEC-088 and SPEC-089, the four `cycle: ship` files in `specs/done/`. in
-build = SPEC-091. framed = SPEC-086, SPEC-090, SPEC-092 and SPEC-093, the
-four `cycle: frame` files in `specs/`. Three of those four are id-claiming
-files rather than fully framed specs: SPEC-090, created at SPEC-089's ship,
-and SPEC-092 and SPEC-093, created at SPEC-088's framing. `not yet written`
-is the three `- [ ] (not yet written…` entries: the `summary`/`story`
-successor, `--type` negation and `brag delete`. The two recipe defects
-routed at this ship, `advance-cycle` and `archive-spec`, add no entry,
-because both have an owner, SPEC-093.)
+build = SPEC-091. in design = SPEC-086. framed = SPEC-090, SPEC-092, SPEC-093
+and SPEC-094, the four `cycle: frame` files in `specs/`. All four are
+id-claiming files rather than fully framed specs: SPEC-090 was created at
+SPEC-089's ship, SPEC-092 and SPEC-093 at SPEC-088's framing, and SPEC-094 at
+SPEC-086's design. `not yet written` is the two `- [ ] (not yet written…`
+entries: `--type` negation and `brag delete`. The two recipe defects routed at
+SPEC-088's ship, `advance-cycle` and `archive-spec`, add no entry, because both
+have an owner, SPEC-093.)
 
 **The stage does NOT close here.** Success Criteria 1, 2 and the DEC-014/
 DEC-048 envelope line are met by SPEC-085; Criterion 4 (*the celebratory
-digests do not silently absorb failures*) is owed by SPEC-086 **and** the
-`summary`/`story` successor, and Criterion 3 is **half met** — see *The Fork 3
+digests do not silently absorb failures*) is owed by SPEC-086 **and**
+SPEC-094, the `summary`/`story` successor, and Criterion 3 is **half met** — see *The Fork 3
 finding* below.
 
 ### The conditional spec fired (2026-09-05, at SPEC-085 design)
