@@ -2146,22 +2146,32 @@ else
     fi
 fi
 
-# AC2 — no tracked file carries a closing tool-call tag ALONE ON A LINE. A
-# session writing a file has left its own syntax inside the artifact six times
-# across two projects and 35 days (SPEC-088 M-1: 8 additions, 4 commits, 6
-# files, 0 outside *.md, and only two tag names in the whole history —
-# `content` and `invoke`). One instance sat in DEC-046 for ~66 PRs, inside a
-# record four later specs cite. Every one was caught by a human reading the
-# file; five gates and ~200 assertions never looked.
+# AC2 — no tracked (or untracked, unignored) file carries a closing tool-call
+# tag ALONE ON A LINE. A session writing a file has left its own syntax inside
+# the artifact six times across two projects and 35 days (SPEC-088 M-1: 8
+# additions, 4 commits, 6 files, 0 outside *.md, and only two tag names in the
+# whole history — `content` and `invoke`). One instance sat in DEC-046 for ~66
+# PRs, inside a record four later specs cite. Every one was caught by a human
+# reading the file; five gates and ~200 assertions never looked.
 #
 # THE SCOPE IS DERIVED — `git ls-files`, not a list. An assertion that
 # enumerates its own scope by hand is the same defect one level up: SPEC-089's
 # duplicate-header guard named two of five keys with all 14 packages green.
 #
+# AMENDED AT SPEC-088 VERIFY: the index PLUS the untracked files .gitignore
+# does not exclude (`--cached --others --exclude-standard`). Five of the six
+# historical leaks were in a file its own commit ADDED (DEC-046, SPEC-089,
+# SPEC-091, DEC-053, STAGE-027), and a session runs the gates before
+# `git add` — so an index-only sweep was blind to exactly that file (verify
+# probe V-B7: green over a new, unstaged file ending in the tag). `-d skip`
+# is the price of reading untracked paths: an untracked nested repository is
+# listed as `dir/`, which grep would otherwise report as "Is a directory".
+#
 # THE ANCHOR IS THE WHOLE POINT. Four tracked files legitimately NAME these
-# tags in prose, 8 lines between them, and the membership of that set turned
-# over inside a single day during framing — so a file allow-list would have
-# gone stale in one PR. Every legitimate mention writes the tag inline, in
+# tags in prose (8 lines between them at SPEC-088 design; the count moves
+# whenever a document discusses this defect), and the membership of that set
+# turned over inside a single day during framing — so a file allow-list would
+# have gone stale in one PR. Every legitimate mention writes the tag inline, in
 # backticks or mid-sentence; every leaked one is alone on a line. The
 # `^[[:space:]]*...[[:space:]]*$` anchor separates the two, measured rather
 # than argued: silent on a clean tree WITH all four prose files present, and
@@ -2190,11 +2200,12 @@ else
     if [ "$ac2_files" -lt 1 ]; then
         fail "AC2" "git ls-files listed no tracked files — the sweep would report clean while reading nothing at all"
     else
-        ac2_hits=$(git ls-files -z | xargs -0 grep -nE "$ac2_pat" /dev/null 2>&1 || true)
+        ac2_hits=$(git ls-files -z --cached --others --exclude-standard \
+            | xargs -0 grep -d skip -nE "$ac2_pat" /dev/null 2>&1 || true)
         if [ -z "$ac2_hits" ]; then
             ok "AC2"
         else
-            fail "AC2" "the anchored sweep over $ac2_files tracked files is not silent. Either a closing tool-call tag is alone on a line — session syntax that leaked into the artifact, so delete the line; a document that needs to NAME the tag writes it inline in backticks, which this assertion allows — or the sweep itself could not read a tracked path, which is also not a pass. Output:
+            fail "AC2" "the anchored sweep over $ac2_files tracked files, plus any untracked file .gitignore does not exclude, is not silent. Either a closing tool-call tag is alone on a line — session syntax that leaked into the artifact, so delete the line; a document that needs to NAME the tag writes it inline in backticks, which this assertion allows — or the sweep itself could not read a tracked path, which is also not a pass. Output:
 $ac2_hits"
         fi
     fi
