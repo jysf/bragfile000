@@ -7,7 +7,7 @@
 task:
   id: SPEC-088
   type: chore                      # epic | story | task | bug | chore
-  cycle: verify                    # frame | design | build | verify | ship
+  cycle: ship                      # frame | design | build | verify | ship
                                    # FRAMED 2026-09-15 — GO at S. The file was
                                    # created at SPEC-087 ship to CLAIM the id;
                                    # framing kept two of the four items routed
@@ -1639,25 +1639,191 @@ number moved. The AC6 sweep, in its amended form, exits 1.
 *Appended during the **ship** cycle. Outcome-focused reflection, distinct
 from the process-focused build reflection above.*
 
+**Shipped 2026-09-18.** Frame `pr:214`, design `pr:215`, build `pr:216`,
+verify `pr:217`, ship `pr:SHIPPR`. The gates were re-run on the ship branch,
+not inherited. See *Ship-cycle gates* below.
+
 1. **What would I do differently next time?**
-   — <answer>
+   — **Treat a probe's setup step as part of what it tests.** `M-B4` was the
+   matrix's one new-file probe, and it had to `git add` its file before `AC2`
+   would fire. Design recorded that as setup, but it was the gap. The gates
+   run before `git add`, and five of the six historical leaks were in a file
+   the leaking commit created (V-F1). So the guard as built could not see the
+   shape its own sequencing argument rested on: `DEC-050`, a new file in
+   SPEC-086's design. Framing's M-3 command had read `--others` as well.
+   Design dropped it when both of its own files became tracked, which was
+   right for the measurement and wrong for the guard. The habit to keep: when
+   a probe needs help before a guard fires, ask whether a real session would
+   be in the helped state. Here it would not. The same question points the
+   other way too. M-B6 built a tracked-but-deleted path by hand and called
+   it a state *"an agent produces routinely"*. Asking which session produces
+   it would have found `just archive-spec` at design rather than at this
+   ship (Q3).
+   — **A route written only into a spec's own reflection does not reach its
+   owner.** SPEC-087's ship held one codification candidate at N=1. It wrote
+   *"Routed to SPEC-088"* in its own reflection and nowhere else, and archived
+   that file in the same PR. None of SPEC-088's four cycles mentions the
+   candidate, and `git grep` outside `specs/done/` finds no trace of it. The
+   route named an owner that had a file, and it still failed, because the
+   sentence was not in a file the owner reads. This ship puts both held
+   candidates on the STAGE-023 page instead, where every framing session and
+   the stage close read (Q2).
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — **The template was this spec's own change and needs nothing more.**
+   `decisions/_template.md` offers two values, and `AC1` fails if the template
+   and the inventory's rows ever disagree. No decision record was emitted. The
+   eight `DEC-*.md` lines folded in at build changed a comment, not a
+   decision.
+   — **AGENTS.md §12: verify's refinement is HELD, not codified.** The
+   candidate is *record the diff the probe helper printed, not a description
+   written afterward*, as a refinement of *"A mutation pinned by a hash must
+   also pin its diff."* Verify cites the §12(b) precedent, a refinement of a
+   promoted clause recorded at N=2 same-outcome. The precedent's form fits
+   here, but its substance does not. **Both** of §12(b)'s cases were SPEC-087
+   build's mis-targeted edits, and each one exercised the exact gap its
+   sentence closes: a result recorded before the hash was checked. Here only
+   one case does. **M-A0** stated an edit that met the parent clause's letter
+   and was not the edit that ran. That is the new sentence's gap. **M-6**
+   stated no edit at all. The parent clause closes that on its own, and M-6 is
+   the NEGATIVE the parent was written from on 2026-09-07. Verify's own
+   diagnosis says M-A0 *"exposes a different hole"*, and two holes are not two
+   cases of one hole. Counting M-6 again reaches N=2 only by reusing the
+   parent's evidence. The positive side is detection, not prevention. Build's
+   printed diff made M-A0's mismatch reportable at once, but no later cycle
+   has yet reproduced a mutant from a pasted helper diff that a description
+   would have got wrong. **Held at N=1 (M-A0)**, on the STAGE-023 page. It
+   clears as a refinement when a second stated edit meets the parent clause
+   and fails to reproduce its hash. That is N=2 distinct, the §12(b)
+   precedent then applies, and verify's sentence is ready to paste. One
+   adjacent case is noted there but not counted. M-4's printed output was
+   hand-summed (V-F4), and the hand-cleaning hid the eight stale DEC files.
+   That is the same *composed, not captured* mechanism, applied to a
+   measurement rather than a mutation.
+   — **SPEC-087's held candidate reaches N=2 and is still held.** It reads
+   *"`scripts/test-docs.sh` is itself an input to two inventory rows"*: a
+   harness spec is always one assertion id away from moving the table it
+   reports on. SPEC-087 routed it here, and it never arrived (Q1). This spec
+   is its second case. AC8, the check on the eight-DEC fold, was left as a
+   hand-run grep because *"a new id would move the distinct-id row past the
+   200 this spec pins"*, so a guard went unbuilt to hold a derived number
+   steady. SPEC-087's LD5 was the same outcome: a coverage argument decided
+   the row's value, 198. Both are same-outcome, so this is N=2 against a bar
+   of 3. It is held on the STAGE-023 page beside the other candidate.
+   — **One claim stays open with the maintainer and is not changed here.**
+   `CLAUDE.md:24` says `just test-docs` *"also gates CI"*. Finding H measured
+   that `.github/workflows/ci.yml` has no `test-docs` job. So both guards this
+   spec adds are local gates, and this reflection says so rather than
+   repeating the claim.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — **No new spec. Two recipe defects are routed to an existing owner, and
+   one release call is recorded.**
+   - **`just advance-cycle` strips the inline enum comment. Routed to
+     SPEC-093, not fixed.** `update_frontmatter_scalar` (`scripts/_lib.sh:173`)
+     rewrites the line with `sub(/:[[:space:]]*.*$/, ": " val)`, which
+     replaces everything after the first colon, the `#` comment included. Its
+     only caller is `scripts/advance-cycle.sh:30`. It fired on this file at
+     design, at build and again at this ship, and each time the comment was
+     restored by hand. Across `specs/done/`, 80 of 84 archived specs carry a
+     bare `cycle:` line, while `projects/_templates/spec.md:10` carries the
+     comment. SPEC-093 owns it because that spec already opens
+     `scripts/_lib.sh`, for `next_id` at `:107`. The route is written onto
+     SPEC-093's STAGE-023 backlog entry, which its framing will read, and not
+     only here, for Q1's reason.
+   - **Found at this ship: `just archive-spec` turns `AC2` red on every
+     archive. Also routed to SPEC-093, not fixed.** `scripts/archive-spec.sh`
+     moves the spec with a plain `mv`, not `git mv`. The old path stays in
+     the index, deleted from the worktree with the deletion unstaged. That is
+     exactly M-B6's state, and LD9 makes it red by design: `AC2` failed
+     naming this file's old path, with grep's own `No such file or
+     directory`. Design's note on M-B6 called that state *"one an agent
+     produces routinely"*. What had not been measured is that the repo's own
+     archive recipe produces it, and this is the first archive since `AC2`
+     landed. Nothing leaked, and staging the move turned the gate green. See
+     *Ship-cycle gates*. There are two possible fixes. `git mv` in
+     `archive-spec.sh` keeps LD9 intact. Teaching `AC2` to skip
+     `git ls-files --deleted` would turn M-B6 green and overturn a locked
+     decision. Until one lands, a ship stages the move before running the
+     gates.
+   - **SPEC-092 and SPEC-093 do not gate v0.7.0.** This is the maintainer's
+     call of 2026-09-18: both are harness-only. It is recorded on both
+     backlog entries.
+   - Verify's known limits (V-B6, opening tags, V-A3b, V-A4b/c) stay recorded
+     in `## Verification` with no route, as verify argued. Each is either
+     backstopped or has never been observed.
 
-4. **What can a user do now that they couldn't before?** — one sentence,
-   before → after; quote the confirming number if one exists, name the outcome
-   if not. Write `none` if this spec has no user-visible outcome — that is a
-   real, greppable result, not a blank. This is the line a brag's `impact` field
-   is transcribed from, and both halves are already written above (## Context is
-   the before, ## Goal is the after): confirm the prediction, don't reconstruct
-   it from memory.
-   **If this answer is not `none`, capture it before closing the cycle** — the
-   sentence is the deliverable, and an uncaptured one decays into a
-   reconstruction. Evidence ref: under `one-spec-per-pr` this spec has exactly
-   one PR by construction, so tag `pr:<n>` rather than a commit hash (a
-   squash-merge destroys the branch commit you were looking at).
-   — <answer>
+4. **What can a user do now that they couldn't before?**
+   — **Audience first.** bragfile's **end users gain nothing**: there is no
+   Go change, no binary change, no corpus change and no new command, and the
+   Goal says as much. `none` is still not the true answer. The question's
+   *user* is whoever the outcome reaches. The Goal names that reach as *"this
+   repo's own documents"*, which agent sessions and the maintainer write.
+   SPEC-087, the other harness-only spec in this stage, answered for the
+   contributor on the same reasoning.
+   — **A session writing into this repo used to be able to leave its own
+   closing tool-call tag in a file with nothing to catch it but a reader, and
+   one sat in `DEC-046` for ~66 PRs. Now `just test-docs` fails on it in any
+   file the session wrote, staged or not. And an author picking a decision's
+   `insight.type` is offered only the two values the inventory counts, not
+   five of which three made the record invisible.** The before, from
+   `## Context`: six files leaked across two projects in 35 days (M-1). Five
+   of those files were created by the commit that leaked into them. Every one
+   was caught by a session reading for it, never by a gate. The retired
+   vocabulary had 0 uses in 52 records, and a record carrying it hard-failed
+   `Z7` on first use. The after, from `## Goal`, confirmed rather than
+   predicted: `AC2` fires on an appended line (M-B1), on an indented line with
+   the other tag name (M-B3), on a new staged file (M-B4) and on a new
+   **unstaged** file (V-B7), which is the shape of five of the six. It stays
+   green while 4 files carry 25 inline mentions (FT-8). `AC1` fails in both
+   directions (M-A1, M-A2). The honest limit is that `just test-docs` is
+   local and not CI, so both guards gate what a session or the maintainer
+   runs. Evidence ref: `pr:SHIPPR`.
+
+### Ship-cycle gates
+
+These were re-run on `ship/spec-088-harness-guards` after this cycle's edits,
+the archive and the regeneration. None was inherited from verify.
+
+```
+go test -count=1 ./...   exit 0 · 14 packages ok, 0 cached (+ storagetest, no test files)
+just test-docs           exit 0 · 201 OK: / 200 distinct ids / 0 SKIP: / 0 FAIL:
+just lint                0 issues.
+gofmt -l .               empty
+go vet ./...             exit 0
+```
+
+**The first `test-docs` run after the archive was red, and that is recorded
+rather than smoothed over.** It gave 199 `OK:` and 1 `FAIL:`. `AC2` failed
+on
+`grep: projects/PROJ-008-the-mirror-and-the-honest-corpus/specs/SPEC-088-the-stray-tag-guard-and-the-decision-type-vocabulary.md: No such file or directory`,
+and `F4`, the meta-assertion printed only on an all-green run, was absent.
+`git status` showed the old path as ` D` and the new one as `??`, which is
+M-B6's state produced by `archive-spec.sh`'s plain `mv` (Q3). Staging the
+move made git record it as a rename (`R`), and the re-run above is on that
+staged tree, the one this commit records. The widened self-check,
+`git ls-files -z --cached --others --exclude-standard | xargs -0 /usr/bin/grep -d skip -nE '^[[:space:]]*</(content|invoke)>[[:space:]]*$' /dev/null`,
+printed nothing on the final tree.
+
+**The two inventory rows this cycle moved were regenerated, not
+predicted.** `just inventory`, diffed against the page's block, moved
+`Specs carried to ship and archived` 84 → **85** and *…of those, also
+carrying a build-phase reflection* 78 → **79**. Both come from archiving
+this spec, which carries a `### Build-phase reflection`. No other row moved.
+The block was pasted whole, with 0 blank lines inside the markers, and `X3`
+is green. Both old and new values were grepped **by value** (`\b84\b`,
+`\b85\b`, `\b78\b`, `\b79\b`) across `scripts/`, `README.md`, `AGENTS.md`,
+`CLAUDE.md` and the practices page. The only hits are the two rows
+themselves and the unrelated `Go test files | 79` row, so no assertion
+cached either number, and `Y3` and `Z7` needed no edit.
+
+**`cycle:` line.** `just advance-cycle SPEC-088 ship` rewrote line 10 to a
+bare `  cycle: ship`, which is the defect routed in Q3. The comment was
+restored by hand to `  cycle: ship                      # frame | design | build | verify | ship`,
+with `#` at column 36 as before. The four continuation comment lines below
+it were untouched. `just archive-spec SPEC-088` was run once. The file is in
+`specs/done/`, and there is no `done/done`.
+
+**Corpus:** no brag was captured. It is drafted for the maintainer's
+approval. The only `brag` invocation was the read-only
+`brag memory --project bragfile` that §13.5 asks for.

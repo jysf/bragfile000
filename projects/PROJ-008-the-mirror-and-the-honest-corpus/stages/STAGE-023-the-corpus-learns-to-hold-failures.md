@@ -189,43 +189,35 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       and gave `Y3` a floor of its own. `Y4`'s pin stays, routed to
       **SPEC-088**, which now exists as a file. `pr:202` (build), `pr:203`
       (verify), `pr:205` (ship).
-- [ ] SPEC-088 (frame — **FRAMED 2026-09-15, GO at S**) — **the stray-tag guard
-      and the decision-type vocabulary.** Created at SPEC-087 ship (2026-09-07)
-      so the id was claimed by a file rather than reserved in prose. **Renamed
-      at framing** (was *"`Y4` derives and the decision-type vocabulary"*) —
-      same id, new filename, because `Y4` left; the file is now
-      `specs/SPEC-088-the-stray-tag-guard-and-the-decision-type-vocabulary.md`.
-      Four items were routed to this id; framing **kept two and split two out**,
-      under the standing keep-it-small instruction:
-      - **KEPT — the decision-type vocabulary (SPEC-087 V-F3).** Fork resolved
-        to **(b) narrow the template**, plus a *derived* guard rather than a
-        literal pin. The measurement that decided it: the three values being
-        removed have **zero** instances in 52 decision records and **zero** in
-        65 `type:` lines ever added on any branch, so option (a) would have
-        grown a 20-row user-facing table to 23 to count a population of nothing.
-      - **KEPT — the stray tool-call XML guard (routed at SPEC-089 ship).**
-        **CORRECTION to the note this replaces: six files, not five.** The
-        sixth is `SPEC-075`, which took both tags in the same commit as
-        `DEC-046` (`ebdc271`, #144) and stripped them at its own ship one PR
-        later — so the pattern spans two projects and 35 days (2026-08-10 →
-        2026-09-14). Measured over the full history of every tracked path: 8
-        additions, 4 commits, 6 files, **0 outside `*.md`**. A whole-line anchor was **probed
-        under the §12 mutation protocol** (P-1, hashes and edit recorded in the
-        spec) and fires on a real stray tag while staying silent on all four
-        files that mention the tags in prose.
-      - **OUT → SPEC-092** — `Y4` derives. GO at S. Split on *dependency*, not
-        size: its oracle is a real YAML parse, which is an external-tool
-        decision SPEC-088 has no other reason to make.
-      - **OUT → SPEC-093** — id reservation. GO at M provisional. Split because
-        one branch of it adds rows to the same user-facing table that got the
-        vocabulary fork's option (a) rejected.
-      Both kept items add one `scripts/test-docs.sh` assertion, so the
-      inventory's `Documentation assertions (distinct ids)` row moves **once**
-      (198 → 200) for the pair. **Must land before SPEC-086's design:** five of
-      the six historical instances came from a session writing a long spec or
-      decision file, and SPEC-086's design writes the longest document in this
-      stage *and* authors `DEC-050` — a second file of exactly the shape that
-      carried the defect for ~66 PRs in `DEC-046`.
+- [x] SPEC-088 (shipped on 2026-09-18) — **the stray-tag guard and the
+      decision-type vocabulary.** It added two `scripts/test-docs.sh`
+      assertions, changed one template line and regenerated one row:
+      `Documentation assertions (distinct ids)` moved 198 → 200, once for
+      the pair. Framing kept two of the four items routed here and split two
+      out, `Y4` to SPEC-092 and id reservation to SPEC-093. **`AC1`** reads
+      the `insight.type` vocabulary from `decisions/_template.md`'s own
+      comment, and the rows from what `scripts/inventory.sh` *emits*. It
+      fails in both directions. The template narrowed from five values to the
+      two the inventory counts, because the three it dropped had **0** uses
+      in 52 records. **`AC2`** fails when a closing `content` or `invoke` tag
+      sits alone on a line of any file. The whole-line anchor stays green
+      while 4 files mention those tags inline. At the maintainer's direction,
+      build also folded in the eight `DEC-*.md` line-6 comments that still
+      carried the old vocabulary. Complexity **S** held, with no Go and no
+      DEC. **Verify's punch list had one real gap, V-F1.** `AC2` swept
+      `git ls-files`, which reads the index, so it could not see a new file
+      the session had not yet `git add`-ed. Five of the six historical leaks
+      were in exactly such a file. So is `DEC-050`, the file the sequencing
+      argument named. Verify fixed it in-cycle by widening the sweep to
+      `--cached --others --exclude-standard` with `grep -d skip`, and the
+      unstaged-file probe V-B7 now fires. The other findings were record
+      corrections, including M-A0's re-pin: its stated edit was not the one
+      that ran. Both guards are local gates, because `just test-docs` has no
+      CI job. SPEC-086's design was sequenced behind this spec at framing,
+      and it now runs guarded. Two codification candidates are held, not
+      written. See *Held codification candidates* below. `pr:214` (frame),
+      `pr:215` (design), `pr:216` (build), `pr:217` (verify), `pr:SHIPPR`
+      (ship).
 - [x] SPEC-089 (shipped on 2026-09-08) — **the buffer drops a field silently,
       and `edit` gives no applied/no-op signal.** Two capture-integrity defects
       from a field report, one PR. Attached to this stage **without gating it**:
@@ -318,6 +310,8 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       move *unless its design files a question*; if that happens, pull this
       forward rather than paying a sixth hand re-pin. `Y4` keeps its id, so this
       spec leaves the inventory table byte-identical.
+      **Does not gate v0.7.0.** This is the maintainer's call of 2026-09-18,
+      recorded at SPEC-088 ship: the spec is harness-only.
 
 - [ ] SPEC-093 (frame) — **ids are claimed by files, not by prose.** Split out
       of SPEC-088 at framing (2026-09-15), file created in the same edit — which
@@ -337,6 +331,36 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       blocker for SPEC-086:** `next_id` never returns a hole, so SPEC-086
       authoring `DEC-050` is safe by construction, and the only spec in between
       is SPEC-088, which emits no decision record.
+      **Does not gate v0.7.0.** This is the maintainer's call of 2026-09-18,
+      recorded at SPEC-088 ship: the spec is harness-only.
+      **Also owned here, routed at SPEC-088 ship (2026-09-18): `just
+      advance-cycle` strips the inline comment from the line it rewrites.**
+      `update_frontmatter_scalar` (`scripts/_lib.sh:173`) runs
+      `sub(/:[[:space:]]*.*$/, ": " val)`, which replaces everything after the
+      first colon, the `# frame | design | build | verify | ship` comment
+      included. Its only caller is `scripts/advance-cycle.sh:30`. It fired on
+      SPEC-088 at design, at build and at ship, and each time the comment was
+      restored by hand. Across `specs/done/`, **80 of 84** archived specs carry
+      a bare `cycle:` line, while `projects/_templates/spec.md:10` carries the
+      comment. It belongs here because this spec already opens
+      `scripts/_lib.sh`, for `next_id` at `:107`. Framing decides whether it
+      is a line in this spec's build or a split of its own. Either way it has
+      a named owner. **Not fixed at SPEC-088 ship**, by instruction.
+      **Also owned here, found at SPEC-088 ship (2026-09-18): `just
+      archive-spec` turns `AC2` red on every archive.**
+      `scripts/archive-spec.sh` moves the spec with a plain `mv`, not
+      `git mv`, so the old path stays in the index with its deletion
+      unstaged. That is SPEC-088's M-B6 state, which LD9 makes red by design.
+      Measured on the first archive since `AC2` landed: `FAIL: AC2`, naming
+      the old path with grep's `No such file or directory`, and green once the
+      move was staged. Nothing leaked. `git mv` in `archive-spec.sh` is the
+      fix that keeps LD9 intact. Skipping `git ls-files --deleted` inside
+      `AC2` would overturn M-B6, a locked decision. It is routed here, beside
+      `advance-cycle`, because both are recipes in `scripts/` that leave the
+      tree in a state the repo then has to repair by hand, and this spec
+      already works on that recipe layer (`next_id`, a possible `new-dec`).
+      Framing may re-route or split it. **Until it lands, a ship stages the
+      move before it runs the gates.**
 
 - [ ] (not yet written, `bug`) — **`brag delete` has Bug B's defect, unfixed.**
       Identified at SPEC-089 build as follow-up ("own spec if wanted") and
@@ -352,21 +376,21 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `delete.go`. Cheaper to leave unowned and visible than to invent a spec id
       for it now.
 
-**Count:** 3 shipped / 0 verify / 1 in build / 5 framed / 3 not yet written
-(Re-derived at SPEC-088 framing, 2026-09-15, from each file's own `cycle:`
-field — `for f in projects/PROJ-008-*/specs/*.md projects/PROJ-008-*/specs/done/*.md;
-do grep -m1 '^  cycle:' "$f"; done` — not incremented. shipped = SPEC-085,
-SPEC-087, SPEC-089 in `specs/done/`. **in build = SPEC-091**, which the previous
-re-derivation could not see: it was created at #211, *after* SPEC-089's ship, so
-this line has been carrying a `0` for a spec that exists and is not listed in
-this backlog at all. framed = SPEC-086, SPEC-088, SPEC-090, SPEC-092, SPEC-093 —
-the five `cycle: frame` files in `specs/`. Three of those five are id-claiming
-files rather than fully framed specs: SPEC-090 (created at SPEC-089 ship),
-SPEC-092 and SPEC-093 (created at SPEC-088 framing). SPEC-092 and SPEC-093 carry
-SPEC-088's routing verdict — GO, a complexity estimate and the measurement
-behind it — and each still owes its own framing pass for the one fork named in
-it. SPEC-088 itself is now framed. `not yet written` = the `summary`/`story`
-successor, `--type` negation, and `brag delete`.)
+**Count:** 4 shipped / 0 verify / 1 in build / 4 framed / 3 not yet written
+(Re-derived at SPEC-088 ship, 2026-09-18, after `just archive-spec SPEC-088`.
+It comes from each file's own `cycle:` field, read with
+`awk '/^---$/{f=!f; next} f && /^[[:space:]]+cycle:/{print $2; exit}'` over
+`projects/PROJ-008-*/specs/*.md` and `specs/done/*.md`, and is not
+incremented. Every file's `stage:` is STAGE-023. shipped = SPEC-085, SPEC-087,
+SPEC-088 and SPEC-089, the four `cycle: ship` files in `specs/done/`. in
+build = SPEC-091. framed = SPEC-086, SPEC-090, SPEC-092 and SPEC-093, the
+four `cycle: frame` files in `specs/`. Three of those four are id-claiming
+files rather than fully framed specs: SPEC-090, created at SPEC-089's ship,
+and SPEC-092 and SPEC-093, created at SPEC-088's framing. `not yet written`
+is the three `- [ ] (not yet written…` entries: the `summary`/`story`
+successor, `--type` negation and `brag delete`. The two recipe defects
+routed at this ship, `advance-cycle` and `archive-spec`, add no entry,
+because both have an owner, SPEC-093.)
 
 **The stage does NOT close here.** Success Criteria 1, 2 and the DEC-014/
 DEC-048 envelope line are met by SPEC-085; Criterion 4 (*the celebratory
@@ -648,6 +672,13 @@ this stage already named once.
 > is transcribed into it. Item 2 **discharged** — both candidates were written
 > into `AGENTS.md` §12; see the closing note under item 2. Item 3 stays open by
 > design, with no owner.
+>
+> **Status at SPEC-088 ship (2026-09-18):** item 1 is **discharged**.
+> `decisions/_template.md` now offers `decision | reservation`, the fork's
+> option (b). `AC1` compares that line against the rows
+> `scripts/inventory.sh` emits, in both directions, so a value added on one
+> side without the other fails the gate. SPEC-087 verify's stopgap warning on
+> the template was replaced by the rule `AC1` enforces. Item 3 is unchanged.
 
 **1. The decision template advertises five `insight.type` values; the inventory
 tolerates two. → SPEC-088.** `decisions/_template.md` offers `decision |
@@ -714,6 +745,49 @@ label is literal prose in one heredoc. No owner assigned deliberately: hardening
 a helper against inputs its only producer cannot emit is speculative work. This
 note exists so that a future spec which teaches `inventory.sh` a computed or
 quoted label knows it is the change that makes them reachable.
+
+### Held codification candidates (SPEC-088 ship, 2026-09-18)
+
+Two `AGENTS.md` §12 candidates, each below the codification bar. They are
+listed here rather than in an archived spec because a candidate routed that
+way never arrived. SPEC-087's ship routed the second one to SPEC-088 in its
+own reflection only, and none of SPEC-088's four cycles saw it. **When a spec
+produces a matching case, add it here with its evidence and move the count.**
+The stage close reads this list for *Lessons that should update AGENTS.md*.
+
+1. **A refinement of *"A mutation pinned by a hash must also pin its diff"*:
+   record the diff the probe helper printed, not a description written
+   afterward.** Held at **N=1**.
+   - **The case: SPEC-088's M-A0.** Design stated *"restore the pre-SPEC-088
+     line 6"* with hash `89a999aee134`. That is the hash of a whole-file
+     revert to the pre-SPEC-088 template, which also rewrites lines 12–22.
+     The stated edit hashes to `accb16924cb6`. The parent clause's letter was met, because an
+     edit was stated, and the record still was not what ran.
+   - **Not counted: SPEC-087's M-6.** It stated no edit at all. The parent
+     clause closes that on its own, and M-6 is the NEGATIVE the parent was
+     written from. SPEC-088 verify counted it as the second case. Ship does
+     not, because M-A0 *"exposes a different hole"*, in verify's own words.
+   - **An adjacent surface, noted and not counted: SPEC-088 framing's M-4.**
+     Its printed output was hand-summed from three buckets into two, and the
+     hand-cleaning hid the eight stale DEC files (SPEC-088 V-F4).
+   - **It clears when** a second stated edit meets the parent clause and does
+     not reproduce its hash. That is N=2 distinct, and the §12(b)
+     refinement's precedent then applies. Verify's proposed sentence: *the
+     edit recorded is the `diff` the probe helper printed, pasted, not a
+     description written afterward.*
+2. **`scripts/test-docs.sh` is itself an input to the inventory table it
+   guards.** A harness spec is always one assertion id away from moving
+   `Documentation assertions (distinct ids)`. Held at **N=2 same-outcome**,
+   against a bar of 3.
+   - **SPEC-087's LD5.** *"Keep both ids"* held the row at 198 as a side
+     effect of a coverage argument. Held at N=1 at SPEC-087's ship.
+   - **SPEC-088's AC8.** The check on the eight-DEC fold was left as a
+     hand-run grep, because a new id *"would move the distinct-id row past
+     the 200 this spec pins."* A guard went unbuilt to hold a derived number
+     steady.
+   - **It clears at a third case.** The rule's shape is still open. SPEC-087's
+     build asked for a constraint, and the codifying session should choose
+     it.
 
 ## Dependencies
 
