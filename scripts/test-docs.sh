@@ -2151,7 +2151,7 @@ fi
 # the artifact six times across two projects and 35 days (SPEC-088 M-1: 8
 # additions, 4 commits, 6 files, 0 outside *.md, and only two tag names in the
 # whole history — `content` and `invoke`). One instance sat in DEC-046 for ~66
-# PRs, inside a record four later specs cite. Every one was caught by a human
+# PRs, inside a record four later specs cite. Every one was caught by a session
 # reading the file; five gates and ~200 assertions never looked.
 #
 # THE SCOPE IS DERIVED — `git ls-files`, not a list. An assertion that

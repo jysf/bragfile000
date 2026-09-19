@@ -1606,6 +1606,12 @@ number moved. The AC6 sweep, in its amended form, exits 1.
   corrections in V-F4, the AMENDED markers on LD6, AC6, `## Outputs` and
   Literal 2, and this section. `cycle:` stays `verify`, as SPEC-089's,
   SPEC-087's and SPEC-085's verify commits all left it. Ship advances it.
+- **Orchestrator correction, made after this cycle reported.** `AC2`'s comment
+  said every leak was *"caught by a human reading the file"*. None was. Each was
+  caught by an agent session reading for it: SPEC-075's ship, SPEC-089's ship,
+  and the orchestration pass that tidied #211 and #212 before they merged. The
+  installed comment now says *"a session"*. Literal 2 keeps the design-time
+  wording as the record of what design wrote.
 
 ### Not findings, checked and clean
 
