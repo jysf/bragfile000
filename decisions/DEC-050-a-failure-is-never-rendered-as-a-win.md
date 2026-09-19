@@ -4,14 +4,16 @@
 insight:
   id: DEC-050                        # stable, never reused
   type: decision                     # decision | reservation
-  confidence: 0.80                   # honest: the impact/wrapped posture is the
+  confidence: 0.85                   # honest: the impact/wrapped posture is the
                                      # user's call and measured on the live
-                                     # corpus (~0.92); the zero-rename accounting
-                                     # is measured, not argued (~0.88); the
-                                     # omit-when-empty rule has a defensible
-                                     # opposite (~0.78); and row 4 extends the
-                                     # user's reasoning to a surface they did not
-                                     # rule on directly (~0.70). See Validation.
+                                     # corpus (~0.92); row 4 is now the
+                                     # maintainer's own ruling too, narrower than
+                                     # the one this record first extrapolated
+                                     # (~0.90, 2026-09-19); the zero-rename
+                                     # accounting is measured, not argued
+                                     # (~0.88); and the omit-when-empty rule has
+                                     # a defensible opposite (~0.78), which is
+                                     # now the softest part. See Validation.
   audience:
     - developer
     - agent
@@ -75,10 +77,10 @@ The seven surfaces that take `--type` as a filter, each with its posture:
 
 | # | Surface | What it did with a failure, measured | Posture | Implemented by |
 |---|---|---|---|---|
-| 1 | `brag impact` | Listed under `## Impact` as `- <id>: <title>` plus its impact. No type in either format: the JSON entry is DEC-028's 4-key `{id, title, project, impact}`. | **Section.** The failures leave `## Impact` for `## What didn't work`; JSON `impact_by_project` loses them and `failures_by_project` carries them. `Entries: <shown>/<in-window> with impact`, `entries_with_impact` and `counts_by_project` all still count both sections. | SPEC-086 |
+| 1 | `brag impact` | Listed under `## Impact` as `- <id>: <title>` plus its impact. No type in either format: the JSON entry is DEC-028's 4-key `{id, title, project, impact}`. | **Section.** The failures leave `## Impact` for `## What didn't work`; JSON `impact_by_project` loses them and `failures_by_project` carries them. `Entries: <shown>/<in-window> with impact`, `entries_with_impact` and `counts_by_project` all still count both sections. | SPEC-086, plus the Amendment to DEC-028 |
 | 2 | `brag wrapped` | Identical rows under `## Impact moments`. `Top types` is a top-3, so `failed` never surfaced there. | **Section**, between Impact moments and Rhythm. JSON `impact_moments` loses them and `failures_by_project` carries them. `Entries: N` and `total_entries` are unchanged. | SPEC-086, plus the Amendment to DEC-030 |
 | 3 | `brag summary` | `By type` printed `failed: 4` and JSON `counts_by_type` carried it. `## Highlights` listed all four as `- <id>: <title>`, and its JSON highlight is a 2-key `{id, title}`. | **Section**, pulled out of `## Highlights`, with the same heading, the same omission rule and, because highlights group by project, the same `failures_by_project` key. `By type` is already honest and stays. | SPEC-094 |
-| 4 | `brag story` | All four bundled profiles rendered each failure as `- ★ <id>: <title>`, with no type in markdown. JSON beats carry `"type": "failed"`. Two profiles are `candor: promotional` (`exec`, `skip`), and their directives tell a model to promote the beats. | **Labelled on every profile, and never dropped.** The markdown must say what the JSON already says. A promotional profile may not remove failures from the bundle. How it presents them — inline-labelled in their thread, or in a separate block — and whether a failure still counts as an impact beat are left to SPEC-094. Both turn `Candor` from LLM-facing metadata into a body rule, and DEC-029 choice 2 makes profiles data. | SPEC-094 |
+| 4 | `brag story` | All four bundled profiles rendered each failure as `- ★ <id>: <title>`, with no type in markdown. JSON beats carry `"type": "failed"`. Two profiles are `candor: promotional` (`exec`, `skip`), and their directives tell a model to promote the beats. | **Never rendered as a win, and never silently dropped.** Those are the two invariants, and they are all this record locks. A **candid** profile (`manager`, `me`) labels its failures where it lists them. A **promotional** profile (`candor: promotional`, today `exec` and `skip`) **may omit them, but only with a visible note in its output** — a count of the omitted failures is the obvious form. **SPEC-094 designs the mechanism**: where the label goes, what the note says and where it sits, and whether a failure still counts as an impact beat. Each turns `Candor` from LLM-facing metadata into a body rule, and DEC-029 choice 2 makes profiles data. | SPEC-094 |
 | 5 | `brag export` | The per-entry table carried a `type` row reading `failed`, and `**By type**` listed `failed: 4`. JSON is the full 9-key entry. | **Nothing.** It already labels every entry. | — |
 | 6 | `brag coverage` | Provenance counts only. It never lists an entry. | **Nothing.** | — |
 | 7 | `brag list` | Plain output is `id`, `created_at`, `title`. `--format tsv` and `json` carry `type`. | **Nothing.** A raw index makes no claim about its rows, and `--type failed` is the sanctioned way to ask for failures. | — |
@@ -126,8 +128,10 @@ the precedent: written once, binding forward.
 
 - **Exclude failures by default, and reach them only behind a flag.**
   Rejected by the user: it re-creates, inside the digest people actually
-  read, the flattery PROJ-008 exists to remove. Row 4 applies the same
-  reasoning to a promotional `story` profile.
+  read, the flattery PROJ-008 exists to remove. On `story` the maintainer
+  ruled narrower (row 4, 2026-09-19): a promotional profile may omit its
+  failures, but not silently — the omission has to show in the output. What
+  is rejected there is the *unannounced* exclusion, not every exclusion.
 - **Include them silently.** This was the status quo and cost no code. The
   user rejected it, and STAGE-023's criterion that *"the celebratory digests
   do not silently absorb failures"* rules it out independently.
@@ -205,7 +209,13 @@ the precedent: written once, binding forward.
 - **Negative — a failure without an impact is listed on neither digest.**
   That is the same treatment an impact-less win gets. `BRAG.md` already tells
   an agent to fill in `impact` on a failure, and `brag list --type failed`
-  still returns all of them.
+  still returns all of them. **Accepted by the maintainer on 2026-09-19 for
+  v0.7.0**, on the symmetry: the digests are impact-first (DEC-028 choice 3),
+  and a failure is not made an exception to that in either direction. It is
+  still counted in the headline totals, exactly as an impact-less win is. The
+  cost is bounded by the corpus — **0 of the 4 recorded failures lack an
+  impact** — and T5 is what re-opens it. No code or test changes: the
+  behaviour is already pinned.
 - **Negative — until SPEC-094 ships, rows 3 and 4 still list a failure as a
   win.** This record decides their posture now, so SPEC-094 implements a
   decision rather than making one. The gap is real for as long as it is
@@ -244,27 +254,42 @@ the precedent: written once, binding forward.
   and re-cost the noise.
 - **T2** — a second reserved value arrives (say `abandoned`). Then
   `IsFailure` matches a set, and the drift guard's seeds grow with it.
-- **T3** — SPEC-094 finds a promotional `story` profile cannot honour row 4
-  without dropping failures. Then row 4 goes back to the user, because it
-  is the posture extended furthest past their own decision.
+- **T3** — a promotional `story` bundle's visible note does not survive the
+  model that consumes it, so the omission is silent again by the time anyone
+  reads it. A note that a downstream synthesizer drops satisfies row 4's
+  letter and not its point. Then the omission itself goes back to the
+  maintainer, with the measurement that showed it.
 - **T4** — an external consumer of either JSON envelope appears
   (DEC-048 T4).
+- **T5** — an impact-less `failed` entry appears in the corpus. 0 of 4 carry
+  that shape on 2026-09-19, which is why the acceptance above was cheap to
+  give. The first one is a row that is counted, invisible on both digests,
+  and reachable only by `brag list --type failed` — so re-cost listing every
+  failure in the section then, against the per-entry shape and the headline
+  that rejected it (see the *"List every failure in `wrapped`'s section"*
+  alternative).
 
-**Confidence: 0.80.** Rows 1 and 2 carry the user's own decision, measured
-on the live corpus (~0.92). Rule 3's zero-rename result was measured on the
-tree rather than argued (~0.88). Rule 4 has a defensible opposite (~0.78).
-Row 4 is the softest (~0.70): the user ruled on `impact` and `wrapped` and
-this record carries their reasoning to `story`'s promotional profiles. That
-is T3, and it is what the successor's design should put back in front of
-them if the mechanics fight it.
+**Confidence: 0.85**, raised from 0.80 on 2026-09-19. Rows 1 and 2 carry the
+user's own decision, measured on the live corpus (~0.92). Row 4 was the
+softest part of this record at ~0.70, because it extended their reasoning to
+a surface they had not ruled on. **They have now ruled on it** — narrower
+than this record first wrote it — so it is maintainer-ruled rather than
+extrapolated (~0.90). What is left there is not the posture but the
+mechanism, which belongs to SPEC-094, and T3 is now about whether a visible
+note actually stays visible. Rule 3's zero-rename result was measured on the
+tree rather than argued (~0.88). **Rule 4 is now the softest part (~0.78)**:
+omitting an empty heading has a defensible opposite, and T1 is its trigger.
 
 ## References
 
 - **DEC-014:** the envelope. Part 4's empty-state rule governs the empty
   *document*, and this record's rule 4 governs the empty *section*.
 - **DEC-028:** `impact`'s two-number headline, its 4-key projection, and
-  the impact-first body. All kept. The with-impact subset is now split
-  across two sections.
+  the impact-first body. All kept, and the record **amended** for the new
+  key — `## Amendment (2026-09-19, SPEC-086 design)`, added on the
+  maintainer's ruling. Its choice 5 key list predates `failures_by_project`,
+  and its choice 3 body is now two sections. The original text is untouched,
+  as it is on DEC-030.
 - **DEC-029:** story profiles are data. That is why row 4's mechanics
   belong to SPEC-094.
 - **DEC-030:** `wrapped`'s section arc, amended for the new section.

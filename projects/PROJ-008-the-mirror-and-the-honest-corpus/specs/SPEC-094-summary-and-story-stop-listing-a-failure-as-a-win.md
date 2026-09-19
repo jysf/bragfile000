@@ -73,7 +73,7 @@ implements it:
 | DEC-050 row | Surface | Posture |
 |---|---|---|
 | 3 | `brag summary` | A section, pulled out of `## Highlights`: `## What didn't work`, rendered only when it has an entry. JSON key `failures_by_project`, because highlights group by project. `By type` is already honest and stays. |
-| 4 | `brag story` | Labelled on every profile, and never dropped. A promotional profile may not remove failures from the bundle. |
+| 4 | `brag story` | Two invariants, and only those: a failure is **never rendered as a win**, and **never silently dropped**. A candid profile (`manager`, `me`) labels its failures where it lists them. A promotional profile (`candor: promotional`, today `exec` and `skip`) **may omit them, but only with a visible note in its output** — a count of the omitted failures is the obvious form. **The mechanism is this spec's to design.** |
 
 ## What was measured
 
@@ -103,9 +103,13 @@ metadata into a body rule. `internal/story/profile.go:24` documents `Candor`
 as *"metadata surfaced to the LLM, not a body rule,"* and DEC-029 choice 2
 makes profiles data rather than code.
 
-1. **How a promotional profile presents a labelled failure.** It can stay
-   inline in its thread, or move to a separate block in the bundle.
-   Dropping it is ruled out by DEC-050.
+1. **What a promotional profile does with its failures.** It can label them
+   inline in their thread, move them to a separate block, or omit them — and
+   if it omits them, DEC-050 requires a **visible note** in the output, of
+   which a count is the obvious form. What that note says, where it sits, and
+   whether a bundle that omits a failure can still be read as complete are
+   this spec's to settle. Only the two invariants are locked: not rendered as
+   a win, and not dropped in silence.
 2. **Whether a failure still counts as an impact beat.** `IsImpactBeat` is
    computed inline at `internal/story/thread.go:135` as `e.Impact != ""`.
    It does not call `aggregate.WithImpact`, despite what DEC-029's text
@@ -113,9 +117,13 @@ makes profiles data rather than code.
    throughline's impact-beat counts, and the JSON `is_impact_beat` field.
    That last one is a count-bearing field, so DEC-048 applies.
 
-If framing finds row 4 cannot be honoured without dropping failures from a
-promotional profile, that is DEC-050's revisit trigger T3, and it goes back
-to the user.
+Row 4 was narrowed by the maintainer on 2026-09-19, after this file was
+written: omitting a failure from a promotional profile is allowed, and only
+the silence is not. So *"it cannot be done without dropping them"* is no
+longer the hand-back. DEC-050's T3 is now the harder question underneath it
+— whether a visible note survives the model that consumes the bundle. If
+framing finds it does not, that goes back to the maintainer with the
+measurement that showed it.
 
 ## Reuse from SPEC-086
 

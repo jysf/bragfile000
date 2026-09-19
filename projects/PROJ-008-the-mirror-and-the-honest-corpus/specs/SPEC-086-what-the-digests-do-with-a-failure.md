@@ -87,9 +87,36 @@ references:
 | **Fork C**: where the predicate lives | `internal/aggregate` holds `FailureType` (moved from `internal/cli`), `IsFailure` and `SplitFailures`. **It does get a drift guard.** Framing said there was no SQL counterpart, and that was wrong: `brag list --type failed`, whose SQL is `e.type = ?`, is DEC-049's own retrieval definition of a failure. | `TestFailureClassifier_GoPredicateMatchesTypeFilter`; M-A, M-B, M-S |
 | **Fork D**: the empty section | `## What didn't work` renders **only when it has an entry**, on both surfaces. `impact` likewise drops a bare `## Impact` when every with-impact row is a failure. JSON always carries the key, as `[]` when empty. `wrapped`'s five DEC-030 sections are untouched. | `TestToImpactMarkdown_SectionsRenderOnlyWhenNonEmpty`, `TestToWrappedMarkdown_WhatDidntWorkRendersOnlyWhenNonEmpty`; M-E, M-F, M-G |
 | **Fork E**: goldens | Found by running the prototype. **Two existing goldens move, both JSON, both in `internal/export`,** by one line each. **No markdown golden moves and nothing in `internal/cli` moves**, because Fork D omits the empty section and Fork A renames nothing. `memory_test.go:247` does not move. | the full suite on the prototype |
-| **DEC-050** | Written as `decisions/DEC-050-a-failure-is-never-rendered-as-a-win.md`, with `insight.type: decision` and confidence **0.80**. It states the posture for all seven `--type` surfaces. | `Y3`, `Z7` and `AC1` green on this branch |
+| **DEC-050** | Written as `decisions/DEC-050-a-failure-is-never-rendered-as-a-win.md`, with `insight.type: decision` and confidence **0.85** (0.80 as first written; see *Maintainer rulings*). It states the posture for all seven `--type` surfaces. | `Y3`, `Z7` and `AC1` green on this branch |
 | **DEC-030** | Gains `## Amendment (2026-09-18, SPEC-086 design)`: the arc gets a sixth section, and it is the only conditional one. | `TestToWrappedMarkdown_FailureSectionGolden` |
+| **DEC-028** | Gains `## Amendment (2026-09-19, SPEC-086 design)`, on the maintainer's R3 ruling: `impact_by_project` excludes failures, `failures_by_project` is the new last key, `counts_by_project` still counts both sections, and the headline is unchanged. Design had filed this as **NO CHANGE**; that was overturned. | `TestToImpactJSON_DEC028ShapeGolden`, `TestToImpactJSON_CountsByProjectSpansBothSections` |
 | **Successor** | **SPEC-094**, claimed with a file at `cycle: frame`. STAGE-023's former *(not yet written)* entry now points at it, in the same edit. | — |
+
+---
+
+## Maintainer rulings (2026-09-19)
+
+Design asked four questions. **Three came back**, and each changed a document
+rather than the build. **No diff block below moved**: the embedded literals
+hashed the same before and after
+(`869e3b7f6acb9305…`, from the `awk` recipe that extracts every fenced
+`diff` block), and no Go, test or `test-docs.sh` literal changed. **The fourth question needed no
+ruling**: whether SPEC-094 gates v0.7.0 was already answered by the plan — it
+is the second half of the gate, which is what STAGE-023's backlog line and
+DEC-050's *"until SPEC-094 ships"* consequence already say.
+
+| | Question | Ruling | What it moved |
+|---|---|---|---|
+| **R1** | `story`'s promotional profiles — must a failure survive into every profile? | **Narrower than this design wrote it.** Two invariants only: never rendered as a win, never *silently* dropped. A promotional profile (`candor: promotional`; today `exec`, `skip`) **may omit failures, with a visible note** — a count is the obvious form. The mechanism is SPEC-094's to design. | DEC-050 row 4, its first Alternative, T3, and both confidence statements (0.80 → **0.85**, the row itself ~0.70 → ~0.90 and no longer the softest part). SPEC-094's row-4 input and the decision it still owes. |
+| **R2** | A failure with no impact is in neither section but still in the totals — is that right for v0.7.0? | **Accepted**, on the impact-first symmetry (DEC-028 choice 3). It was already a recorded negative consequence and already pinned by an embedded test: `impactFailureFixture`'s id 7, `retry-noimpact`, carries `Impact: ""`, and `TestToImpactMarkdown_FailureSectionGolden` asserts `Entries: 5/8` with that id in **neither** section. | DEC-050's Consequences (the acceptance, dated) and a new revisit trigger **T5**. **No code or test changes.** |
+| **R3** | DEC-028 is *refined* by DEC-050 rather than amended — is that enough? | **No. Amend it.** Its key list and its one-section body go stale the moment failures move out. | `decisions/DEC-028-…md` gains `## Amendment (2026-09-19, SPEC-086 design)`, original text untouched (LD6). The premise audit's `DEC-028 … NO CHANGE` row, the design-commit `## Outputs` list, the inventory prediction (`## Amendment` row 1 → **3**, not 2) and DEC-050's DEC-028 reference all move with it. |
+
+**Still open, and not touched here:** `guidance/questions.yaml`'s
+`dec-amendment-heading-convention`. Three records now carry a `## Amendment`
+heading, which is most of what that question asked for. Closing it would move
+`Y4`'s *still open* pin from **8**, and `Y4` is hand-pinned
+(`scripts/test-docs.sh:1700-1701`) — SPEC-092 has not made it derive yet. So
+the question stays open and the register is untouched.
 
 ---
 
@@ -873,7 +900,8 @@ loop-built id), reached through a different door. **LD11 pins the name.**
 **Finding 2: `docs/engineering-practices.md:230` stated a current-state
 count in prose, and this design falsifies it.** The sentence was *"as the
 inventory shows, only one decision record carries an explicit `## Amendment`
-section."* DEC-030's Amendment makes that two, in the design commit itself.
+section."* DEC-030's Amendment makes that two in the design commit itself,
+and DEC-028's (R3, 2026-09-19) makes it three.
 The page's own rule is that a current-state number belongs in the inventory
 table, not in prose. So the sentence is rewritten **without** a number, in
 this design commit, where the amendment lands. No assertion caught it:
@@ -979,7 +1007,7 @@ against the prototype carrying every artifact in this spec.
 | Row | `main` | this design commit | after build |
 |---|---:|---:|---:|
 | Decision records | 51 | **52** | 52 |
-| …of those, carrying an explicit `## Amendment` section | 1 | **2** | 2 |
+| …of those, carrying an explicit `## Amendment` section | 1 | **3** | 3 |
 | Go test files | 79 | 79 | **80** |
 | Go test functions | 829 | 829 | **843** |
 | Documentation assertions (distinct ids) | 200 | 200 | **205** |
@@ -997,6 +1025,12 @@ with comment lines excluded:
 ```
 $ for v in '| 51 |' '| 52 |' '| 829 |' '| 843 |' '| 79 |' '| 80 |' '| 200 |' '| 205 |' \
            'Amendment` section | 1' '!=51' '!=200' '!=829'; do
+    /usr/bin/grep -n -F -- "$v" scripts/test-docs.sh | /usr/bin/grep -v '^[0-9]*:[[:space:]]*#'
+  done
+(no hits for any value)
+
+$ # re-run 2026-09-19, for the two values R3 moved the `## Amendment` row through
+$ for v in '| 2 |' '| 3 |' 'Amendment` section | 2' 'Amendment` section | 3'; do
     /usr/bin/grep -n -F -- "$v" scripts/test-docs.sh | /usr/bin/grep -v '^[0-9]*:[[:space:]]*#'
   done
 (no hits for any value)
@@ -1045,9 +1079,13 @@ both surfaces, and `impact`'s `## Impact` follows the same rule.** `wrapped`'s
 five DEC-030 sections keep their existing behaviour, including a bare
 `## Impact moments`.
 
-**LD6 — DEC-030 is amended, not superseded.** The `## Amendment` places the
-section between Impact moments and Rhythm and records the conditional
-asymmetry. The original choice 4 is left as written.
+**LD6 — DEC-030 and DEC-028 are amended, not superseded.** DEC-030's
+`## Amendment (2026-09-18, SPEC-086 design)` places the section between Impact
+moments and Rhythm and records the conditional asymmetry. DEC-028's
+`## Amendment (2026-09-19, SPEC-086 design)`, added on the R3 ruling, records
+the two-key split, the always-present `failures_by_project`, the unnarrowed
+`counts_by_project` and the unchanged headline. **On both records the original
+text is left as written**, and each amendment is read against it.
 
 **LD7 — the drift guard is
 `TestFailureClassifier_GoPredicateMatchesTypeFilter`, in
@@ -1170,12 +1208,13 @@ inventory rows; the design commit's own sentence fix and 2 rows are excluded).
 
 | Path | Change |
 |---|---|
-| `decisions/DEC-050-a-failure-is-never-rendered-as-a-win.md` | **new**, 277 lines: the posture for all seven surfaces |
+| `decisions/DEC-050-a-failure-is-never-rendered-as-a-win.md` | **new**, **302** lines: the posture for all seven surfaces. 277 as first written; R1 rewrote row 4 and both confidence statements, R2 added the acceptance and `T5`, R3 rewrote its DEC-028 reference |
 | `decisions/DEC-030-…section-taxonomy.md` | `## Amendment (2026-09-18, SPEC-086 design)`, +38 lines |
-| `projects/PROJ-008-…/specs/SPEC-094-summary-and-story-stop-listing-a-failure-as-a-win.md` | **new**, 134 lines, via `just new-spec`: the id claimed, `cycle: frame` |
+| `decisions/DEC-028-…window-and-shape.md` | **R3**: `## Amendment (2026-09-19, SPEC-086 design)`, +40 lines, appended before `## References`. **Nothing above the heading is edited**, which is how DEC-030 is treated (LD6) |
+| `projects/PROJ-008-…/specs/SPEC-094-summary-and-story-stop-listing-a-failure-as-a-win.md` | **new**, **142** lines, via `just new-spec`: the id claimed, `cycle: frame`. 134 as first written; R1 rewrote its row-4 input, the decision it still owes, and the `T3` hand-back. **Nothing else of its framing is designed here** |
 | `projects/PROJ-008-…/stages/STAGE-023-…md` | the SPEC-086 entry now reads `(design)`, the *(not yet written)* entry now reads **SPEC-094**, and the count is re-derived |
-| `docs/engineering-practices.md` | the regenerated inventory block (2 rows), and the `:230` sentence (Finding 2) |
-| this file | `cycle: design` (the recipe's stripped comment restored), and the design sections |
+| `docs/engineering-practices.md` | the regenerated inventory block (still 2 rows: `Decision records` 51 → 52 and the `## Amendment` row, which R3 takes to **3** rather than 2), and the `:230` sentence (Finding 2) |
+| this file | `cycle: design` (the recipe's stripped comment restored), the design sections, and *Maintainer rulings (2026-09-19)* |
 
 ### The CHANGELOG entries
 
@@ -1217,8 +1256,8 @@ deleted.** What moves:
 | `TestWithImpact_*` (2) | `WithImpact` is unchanged | none |
 
 **Addition: tracked collections this spec adds to.** One DEC moves
-`Decision records` 51 → 52. The Amendment moves its row 1 → 2. Both happen in
-the design commit. At build, 14 test functions move `Go test functions`
+`Decision records` 51 → 52. **Two** Amendments move its row 1 → 3 — DEC-030's
+and, on the R3 ruling, DEC-028's. All of that happens in the design commit. At build, 14 test functions move `Go test functions`
 829 → 843, one new file moves `Go test files` 79 → 80, and five ids move
 `Documentation assertions` 200 → 205. All five were regenerated rather than
 predicted, and none is hand-pinned (§9(b) above).
@@ -1249,7 +1288,7 @@ plus: every subcommand's --help, swept with
 | `CHANGELOG.md` `[Unreleased]` | **EDIT**: two entries |
 | `internal/export/impact.go:30-37`, `wrapped.go:40-46` (doc comments) | **EDIT**, in the code diffs |
 | `docs/engineering-practices.md:230` (*"only one decision record carries an explicit `## Amendment`"*) | **EDIT at design**: Finding 2 |
-| `decisions/DEC-028-…:76, :100, :125, :145, :303` | **NO CHANGE.** DEC-050 refines them and names what it refines. This follows DEC-048's precedent of not editing the record it binds (DEC-014 was left readable). This is an open question for the user. |
+| `decisions/DEC-028-…:76, :100, :125, :145, :303` | ~~**NO CHANGE.** DEC-050 refines them and names what it refines. This follows DEC-048's precedent of not editing the record it binds (DEC-014 was left readable). This is an open question for the user.~~ **OVERTURNED by the maintainer, 2026-09-19 (R3): EDIT at design.** Refine-over-amend leaves DEC-028 stating a key list and a one-section body that go stale the moment failures move out, and DEC-048's precedent does not reach it — DEC-014 was left readable because nothing in it went false, whereas `:100` and `:125` do. The record gains `## Amendment (2026-09-19, SPEC-086 design)`; **those five lines of original text are still not edited** (LD6), which is how DEC-030 is treated. |
 | `decisions/DEC-030-…:80, :90, :119, :153, :199, :260` | **NO CHANGE** to the original text. The Amendment carries the change (LD6). |
 | `decisions/DEC-029-…:114, :254` | **NO CHANGE**: they concern `story`'s shape |
 | `decisions/DEC-048-…:72, :131` | **NO CHANGE**: the pair form is untouched, which is the point of Fork A |
@@ -1431,7 +1470,10 @@ cycle.*
 - **DEC-048** says a count must name what it counted. LD3 is its whole
   application here.
 - **DEC-028** covers `impact`'s two-number headline, its 4-key projection, and
-  the impact-first body. All three are kept.
+  the impact-first body. All three are kept. **Read its
+  `## Amendment (2026-09-19, SPEC-086 design)` too**: the choice 5 key list and
+  the one-section body above it predate `failures_by_project`, and the
+  amendment is what the envelope actually is.
 - **DEC-014** covers the envelope. Part 4's empty-state rule gives the new key
   its `[]` form.
 - **DEC-029**: profiles are data. It is why `story` is SPEC-094's and not

@@ -325,6 +325,46 @@ the first revisit trigger and is recorded as an open question in
 semantics sub-choice specifically). The current-vs-previous period
 sub-choice (choice 1, second half) is the second soft spot.
 
+## Amendment (2026-09-19, SPEC-086 design)
+
+**Choice 5's key list gains `failures_by_project`, and choice 3's grouped body
+is now two sections rather than one.** Everything above this heading is left as
+written, so the amendment can be read against it. Both skeletons above predate
+the new key and the new heading.
+
+- **`impact_by_project` excludes failures.** An entry whose `type` is the
+  reserved `failed` value (DEC-049) and that carries an impact moves to the new
+  key. Choice 3's *"only entries with a non-empty `impact` field appear in the
+  grouped body"* still holds, and `aggregate.WithImpact` is unchanged: the
+  with-impact subset is **split** between the two keys by
+  `aggregate.SplitFailures`, and neither key narrows it. Choice 4's 4-key
+  `{id, title, project, impact}` projection is reused verbatim by both.
+- **`failures_by_project` is the new last key of the envelope**, after
+  `impact_by_project`. It carries the same
+  `[{project, entries:[{id, title, project, impact}]}]` group shape, is
+  **always present**, and is `[]` when empty (DEC-014 part 4). In markdown it
+  renders as `## What didn't work`, after `## Impact`, and only when it has an
+  entry. Choice 5's omission rule is refined the same way for `## Impact`: it
+  is omitted when the non-failure part of the with-impact subset is empty,
+  which now includes a window whose with-impact entries are all failures. The
+  key split is a breaking change to the envelope, named in the CHANGELOG.
+- **`counts_by_project` still counts both sections.** Choice 5 defines it over
+  the with-impact subset, and that subset did not change. It still sums to
+  `entries_with_impact`, and each project's count still equals its rows across
+  the two sections. Narrowing it to `impact_by_project` would be the silent
+  redefinition DEC-048 forbids.
+- **The headline is unchanged.** `Entries: <shown>/<in-window> with impact`,
+  `entries_in_window` and `entries_with_impact` mean exactly what choice 3 made
+  them mean. Nothing is renamed and no count changes what it counts. A failure
+  **without** an impact is listed in neither section: it is counted and not
+  listed, which is choice 3's treatment of any impact-less entry.
+
+The rule for every `--type` surface, and the alternatives it rejected, are in
+[DEC-050](DEC-050-a-failure-is-never-rendered-as-a-win.md). The amended
+envelope is pinned by `TestToImpactJSON_DEC028ShapeGolden`,
+`TestToImpactJSON_CountsByProjectSpansBothSections` and
+`TestToImpactMarkdown_SectionsRenderOnlyWhenNonEmpty`.
+
 ## References
 
 - Related specs:
