@@ -7,7 +7,7 @@
 task:
   id: SPEC-086
   type: story                      # epic | story | task | bug | chore
-  cycle: verify                    # frame | design | build | verify | ship
+  cycle: ship                      # frame | design | build | verify | ship
   blocked: false                   # UNBLOCKED 2026-09-06: SPEC-085 shipped
                                    # (df369e9, PR #199). The reserved `failed`
                                    # value exists and the corpus now holds one.
@@ -3665,6 +3665,27 @@ matrix rows do not say which base they were taken against. Naming the base
 commit beside the baseline hash would close that, and it is ship's call, not
 this cycle's.
 
+**Ship addendum (2026-09-20): a third row was re-pinned, by this ship's own
+AGENTS.md edit, and the base commits are now named.** Ship codified a §12
+clause, which edits `AGENTS.md` — **M-D3's own target**. Its baseline was
+`acc844937b43` at both `152dbe9` (build) and `b9d9681` (the merged verify, this
+branch's base), and the new §12 clause moves it to **`520208b59f9b`**. M-D3 was
+re-run on that baseline rather than left stated against a dead one:
+**M-D3 `520208b59f9b` → `b3869cc4cfbb`**, still firing **`AD5` alone** with the
+identical message ``[missing: Impact moments → What didn't work]``, 204 `OK:` and
+1 `FAIL:` (the missing second is `F4`, which prints only on an all-green run).
+Restored from a scratchpad `cp` backup, and the pre-hash returned. So the four
+baselines this cycle's matrix now rests on, each named with its commit:
+`internal/cli/impact.go` and `docs/tutorial.md` unchanged since `152dbe9`;
+`docs/api-contract.md` **`68ae22d061da`** as of `b9d9681`; `AGENTS.md`
+**`520208b59f9b`** as of this ship commit. **This is deliberately *not* counted
+as a second case for the codification candidate.** The project's counting unit
+is the spec that paid the lesson, not the row that got invalidated — V-F0's two
+rows were counted as one case, and these are a third and fourth row inside the
+same spec. It stays at **N=1** on the STAGE-023 page. What it does establish is
+that the mechanism is not specific to a citation fix: any cycle that edits a
+document is one edit away from silently invalidating a probe it never read.
+
 **This is the §12 clause SPEC-088's M-A0 broke, and it did not break here.**
 The five rows reproduced because each had exactly one literal reading, which is
 the same thing M-B3 and M-B4 had at SPEC-088. **The codification candidate on
@@ -3808,5 +3829,288 @@ touches no file under `internal/story`, no `summary.go` and no `memory_test.go`
 
 ## Reflection (Ship)
 
-- **What can a user do now that they couldn't before?** One sentence,
-  before → after. Capture this before closing the cycle.
+*Appended during the **ship** cycle. Outcome-focused reflection, distinct
+from the process-focused build reflection above.*
+
+**Shipped 2026-09-20.** Design `pr:219`, build `pr:220`, verify `pr:221`, ship
+`pr:SHIPPR`. Framing has no PR of its own: it was folded into the design
+commit, as *What design settled* records. The gates were re-run on the ship
+branch after this cycle's edits, the archive and the regeneration — none is
+inherited from verify. See *Ship-cycle gates* below.
+
+**One record note before the answers.** This spec has no `## Context` and no
+`## Goal` heading. It replaced the template's two sections with framing's
+*Status change at re-framing* / *What was re-measured* pair and design's
+*What design settled* table, and never added them back. Q4's before is taken
+from *What was re-measured, and what moved* (2026-09-06, `df369e9`) and *The
+decision, and who made it*; its after is taken from `## Verification`'s *Real
+output, read as a user would* (2026-09-20). Neither half is from memory. The
+template's Q4 text points at `## Context` and `## Goal` by name, so a spec
+that drops those headings costs its own ship cycle the lookup — recorded here
+rather than fixed, because renaming sections in a shipped spec would rewrite
+framing's record.
+
+1. **What would I do differently next time?**
+   — **Grep the spec by *value* for a number a ruling just moved, in the same
+   edit as the ruling.** The R3 ruling (2026-09-19) amended DEC-028, which
+   moved the inventory's `## Amendment` row from **2** to **3**. Design
+   regenerated the block, and updated the *What design settled* table, the
+   `## Outputs` list and the *Inventory* section with it — but §9's prose kept
+   *"The two DEC rows (52 and 2)"*. Build reported the mismatch and left it
+   (correctly: its prompt said the regeneration and the run are right), and
+   verify corrected it as **V-F2**, naming DEC-025, DEC-028 and DEC-030 so the
+   3 can be re-derived instead of trusted. The discipline was already in this
+   spec, one section away: §9(b) is titled *the harness grepped by VALUE* and
+   swept `scripts/`, `README.md`, `AGENTS.md` and the practices page for every
+   number this spec moves. It did not sweep **the spec itself**. A spec is a
+   document with derived numbers in it, so it is inside the scope of its own
+   grep-by-value rule.
+   — **Pin a probe's baseline to a commit, not only to a hash.** The V-F1
+   citation fix moved `docs/api-contract.md` from `bde92cdba356` to
+   `68ae22d061da` inside this cycle, and `M-D1` and `M-D4` were instantly
+   stated against a base the branch no longer has. Verify re-ran both on the
+   new baseline so the next cycle is not sent hunting a hash that cannot
+   exist. Nothing in the matrix row said which commit its baseline came from,
+   so the invalidation was **silent** — a later cycle would have read a
+   reproduction failure as a defect in the mutant. This is codification
+   candidate (b) below, held at N=1.
+   — **When a new decision moves rows out from under an older one, read the
+   older record's literals, not its posture.** Design filed DEC-028 as
+   **NO CHANGE** on the reasoning that DEC-050 *refines* it: nothing DEC-028
+   decided became wrong. The maintainer overturned that at R3 — *"No. Amend
+   it."* — on the narrower and correct ground that DEC-028 **enumerates a key
+   list** and describes a one-section body, and both go stale the moment
+   failures move out of `impact_by_project`. The posture survived; the text did
+   not. Verify's finding F is the same check done right: it re-read
+   `DEC-028:100/:125/:270/:303` and `DEC-030:119/:260` line by line and
+   confirmed none goes false. That line-by-line read is what design owed and
+   the R3 ruling bought.
+
+2. **Does any template, constraint, or decision need updating?**
+   — **No decision record is emitted at ship, and no constraint changes.**
+   `DEC-050` was emitted at design. `DEC-028` and `DEC-030` carry
+   `## Amendment` headings with their original text untouched (LD6). The one
+   decision gap this spec knowingly leaves — `story`'s promotional profiles
+   still rendering a failure as `- ★ <id>:` in all four bundled profiles — is
+   named in DEC-050's own Consequences and is SPEC-094's, confirmed by running
+   it (verify's G, row 4: 29 invocations byte-identical across the two
+   binaries).
+   — **AGENTS.md §12 gains one clause. CLEARED at N=3 same-outcome:** *a "no
+   difference" is a measurement, not a default — validate the inputs before you
+   believe it.* The three cases are one mechanism: a **no difference** verdict
+   that was determined by something other than the content being compared.
+   **SPEC-082** paid it through `git diff --quiet` reporting *clean* for an
+   untracked `scripts/coverage.sh`, so a real mutant on disk read as a missing
+   one. **SPEC-086 build** paid it in this spec: a zsh snippet named a variable
+   `path`, which is tied to `PATH`, so every command in the loop failed and the
+   comparison reported *0 differences* from `""` against `""`. **SPEC-086
+   verify** paid it a third time, in the orchestrator's own check of this
+   cycle: `brag story` compared across two binaries with a `--profile` flag
+   that does not exist, so four identical
+   `brag: user error: unknown flag: --profile` lines compared **equal**.
+   — The third case is the one that shaped the sentence, and it is why the
+   clause does not say *non-empty*. Its inputs **were** non-empty, so an
+   emptiness assert would have passed it; only a plausibility check on the
+   output caught it. The guard is *the output is the shape you expected*, of
+   which non-emptiness is the weakest instance.
+   — **Why SPEC-082 counts here rather than being the parent's own evidence.**
+   SPEC-088's ship refused to count `M-6` twice because the parent clause
+   closed it outright. That test is passed here from the other side: clause (1)
+   of the mutation protocol is scoped to *mutation probes*, and **two of these
+   three cases are not mutation probes at all** — both are verification
+   equalities comparing two binaries' output. No promoted clause closes them.
+   SPEC-082's remedy was codified narrowly, as *use `shasum` inside the
+   mutation protocol*, and the narrow codification is precisely what failed to
+   transfer: the project then paid the general case twice in one cycle, in a
+   place the special case does not reach. That makes SPEC-082 the third
+   confirming case for the general rule rather than a reused case for the
+   specific one, and it is why this lands as a clause of its own with clause
+   (1) named as its special case, not as a refinement of clause (1). Verify
+   called it *"at the bar as a one-line refinement … and short of it as a new
+   rule"*, which was right on the evidence verify had, with two cases and no
+   third.
+   — **The zsh quirks themselves are not the lesson and are not in §12.** They
+   go where an implementer reads them: `projects/_templates/spec.md` gains a
+   `### Traps` subsection under *Notes for the Implementer*, carrying the three
+   shell facts this repo's counts already depend on — `path` is tied to `PATH`,
+   an unquoted `$var` is not word-split in zsh, and bare `grep` is a `ugrep`
+   wrapper that respects `.gitignore`. That closes the gap build's Q2 named
+   exactly: *"No constraint or decision was missing. The gap is in the Traps
+   list, which covers `ugrep` but not this shell's own quirks."* The template
+   had no `### Traps` subsection at all, which is why two consecutive specs
+   wrote their own from scratch.
+   — **Candidate (b) is HELD at N=1 and recorded on the STAGE-023 page:** *a
+   baseline hash must name the commit it was taken against.* One cycle, one
+   surface, self-caught. It is a refinement of the promoted *"A mutation pinned
+   by a hash must also pin its diff"*, and the §12(b) precedent lets a
+   refinement land at **N=2** same-outcome, so it is one case short of even the
+   refinement bar, not two short. It clears at a second cycle whose stated
+   baseline hash is invalidated by a later edit to the probe target.
+   — **The abbreviated-record candidate on the STAGE-023 page gains a second
+   positive and its proposed sentence narrows.** All five of this spec's
+   abbreviated or prose-described mutation edits reproduced their stated hash
+   first try at build, and verify re-derived all five independently from the
+   row's own description — without reading build's transcript — and then ran
+   each one verbatim against a pristine `152dbe9` checkout. That is now **2
+   positives / 0 negatives** against the hypothesis that *prose* is the defect,
+   so the candidate keeps SPEC-088 verify's diagnosis: the defect is a record
+   **composed after the run** rather than captured from it. Held at N=1, and
+   its sentence is corrected on the page from *paste the diff* to a form about
+   capture, because *paste the diff* would have failed all five of these rows
+   for a fault none of them has. Entry updated in place.
+   — **Two claims stay open with the maintainer and are untouched here.**
+   `guidance/questions.yaml`'s `dec-amendment-heading-convention` is now
+   answered in practice by three records, but closing it moves `Y4`'s
+   hand-pinned *still open* count of 8, and `Y4` does not derive until SPEC-092
+   — so the register is untouched, as design decided. And `CLAUDE.md:24` still
+   says `just test-docs` *"also gates CI"* while `.github/workflows/ci.yml` has
+   no `test-docs` job (SPEC-088 finding H); this spec's five `AD` assertions are
+   therefore local gates, and this reflection says so rather than repeating the
+   claim.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — **No new spec. One successor already has a file, and every other route
+   has a named owner.**
+   - **SPEC-094 is the next spec to frame, and it gates v0.7.0.** It was given
+     a file at this spec's design (`cycle: frame`, in the same edit as the
+     backlog line, so the id is claimed rather than reserved in prose) and it
+     is the **second half of the release gate**: Success Criterion 4 — *the
+     celebratory digests do not silently absorb failures* — is owed by SPEC-086
+     **and** SPEC-094 together, and DEC-050's *"until SPEC-094 ships"*
+     consequence is the gap this spec measured rather than guessed at. Verify's
+     G ran `story --quarter` in all four bundled profiles and found the
+     failures still rendering as `- ★ <id>:`, byte-identical across both
+     binaries. The gate note is written onto its backlog entry, not only here,
+     for SPEC-088 Q1's reason.
+   - **V-F0 has no spec, by design.** It is a codification candidate, not a
+     defect in an artifact: no code and no test is wrong, only a record's
+     completeness. It sits on the STAGE-023 page where framing and the stage
+     close read.
+   - **Both of SPEC-093's routed recipe defects fired again at this ship, and
+     neither is fixed here.** `just advance-cycle SPEC-086 ship` stripped the
+     inline `# frame | design | build | verify | ship` comment, restored by
+     hand; `just archive-spec SPEC-086` moved the file with a plain `mv` and
+     turned `AC2` red until the move was staged. That is the third consecutive
+     spec to pay the first and the second archive to pay the second. Both are
+     recorded on SPEC-093's entry already; this ship adds the second data
+     point to each rather than a new route.
+   - **Nothing new for the stage backlog.** The `--type` negation bug and
+     `brag delete`'s missing stdout signal stay as they were, and SPEC-090,
+     SPEC-091, SPEC-092 and SPEC-093 are untouched.
+
+4. **What can a user do now that they couldn't before?**
+   — **A user reading `brag impact` or `brag wrapped` can now see which of the
+   work in it did not work.** Before, the two digests rendered an entry's
+   `type` **nowhere, in either format** — `impactEntry` is the 4-key
+   `{id, title, project, impact}` projection (DEC-028 choice 4) and
+   `wrapped`'s `impact_moments` uses the same four — so a `failed` entry
+   carrying an impact was *unrepresentable as a failure* on these surfaces and
+   rendered inside `## Impact` / `## Impact moments` exactly like a win. That
+   was not hypothetical: framing measured **1** such row on the live corpus on
+   2026-09-06 (id 420, `contextcore-pilot-harness`, agent-authored, impact
+   opening *"Cost about an hour and produced a branch that was dropped."*), one
+   day after SPEC-085 shipped on the argument that the count was zero. After,
+   confirmed rather than predicted, on a `sqlite3 .backup` file copy hashing
+   `c4a7cc63a808` before and after every run: on **613** entries with **4**
+   `type: failed` rows, `brag impact --year` puts `## Impact` at line 8 and
+   `## What didn't work` at line **1126** with nothing after it, and
+   `brag wrapped` renders DEC-030's arc with a sixth section, *What didn't
+   work*, at line **1152**. **The confirming number is that no count moved:
+   `Entries: 538/613 with impact` is byte-identical on the `main` binary and
+   this branch's, and `entries_with_impact` 538 = `sum(counts_by_project)` 538
+   = 534 impact rows + 4 failure rows.** The four `failures_by_project` ids are
+   `[420, 433, 465, 473]` — exactly the impact-carrying rows
+   `brag list --type failed` returns, and disjoint from `impact_moments`.
+   — **The JSON change is breaking, and a scripted consumer is affected.**
+   `brag impact --format json` no longer lists failures in `impact_by_project`,
+   and `brag wrapped --format json` no longer lists them in `impact_moments`.
+   Both envelopes gain `failures_by_project` in the same
+   `{project, entries:[{id, title, project, impact}]}` shape, always present
+   and `[]` when empty (DEC-014 part 4), so one `jq .failures_by_project` works
+   on both. A consumer that read every with-impact entry from one key now reads
+   two. `counts_by_project` still spans both sections and still sums to
+   `entries_with_impact`, which is the invariant N-6 and M-D guard from both
+   directions.
+   — **The honest limits.** A `failed` entry with **no** impact is in neither
+   section while still inside the totals — accepted at R2 on the impact-first
+   symmetry, pinned by `impactFailureFixture`'s id 7 and revisit trigger T5.
+   Only the exact string `failed` reaches the new section: `Failed`,
+   `" failed"` and `failure` still render as wins, which is DEC-049 part 3 and
+   what keeps the digests in agreement with `brag list --type failed`. And
+   `brag summary` and `brag story` still render failures as wins in markdown —
+   that is SPEC-094's half, named in DEC-050. Evidence ref: `pr:221` (the
+   measurements above), `pr:SHIPPR`.
+
+### Ship-cycle gates
+
+Re-run on `ship/spec-086-digest-failures` after this cycle's edits, the archive
+and the inventory regeneration. None is inherited from verify.
+
+```
+go test -count=1 ./...   exit 0 · 1100 passing (incl. subtests) · 843 top-level
+                         `func Test*` · 0 failing · 14 packages ok
+                         (+ storagetest, no test files)
+just test                exit 0
+just test-docs           exit 0 · 206 OK: / 205 distinct ids / 5 AD ids
+                         / 0 SKIP: / 0 FAIL: · ALL OK
+just lint                0 issues.
+gofmt -l .               empty
+go vet ./...             exit 0
+```
+
+Every count was taken with `/usr/bin/grep` or `git grep`, never bare `grep`,
+which in this zsh is a `ugrep` wrapper that respects `.gitignore`.
+
+The widened stray-tag self-check,
+`git ls-files -z --cached --others --exclude-standard | xargs -0 /usr/bin/grep -d skip -nE '^[[:space:]]*</(content|invoke)>[[:space:]]*$' /dev/null`,
+printed nothing on the final tree, and `AC2` is green.
+
+**The two inventory rows this cycle moved were regenerated, not predicted.**
+`./scripts/inventory.sh`, diffed against the page's 21-line block, moved
+`Specs carried to ship and archived` 85 → **86** and *…of those, also carrying a
+build-phase reflection* 79 → **80**. Both come from archiving this spec, which
+carries a `### Build-phase reflection`. **No other row moved** — in particular
+`Documentation assertions (distinct ids)` stayed at 205 and the three DEC rows
+at 52 / 1 / 3, because this cycle adds no assertion and no decision record. The
+block was pasted whole with 0 blank lines inside the markers, and `X3` is green.
+
+**The grep-by-value sweep was run twice, because the first run was vacuous —
+the clause this cycle codified, firing on the cycle that codified it.** All four
+values (`85`, `86`, `79`, `80`) were first swept with
+`git grep -nE "\b<n>\b"`, which returned **no hits for any of them**. That read
+as a clean result and was not one: `\b` is not supported in this `git grep`'s
+ERE, so the pattern matched nothing at all. A control settled it —
+`git grep -cE "FLOOR" -- scripts/coverage.sh` gives `6` while
+`git grep -cE "\bFLOOR\b"` on the same file gives nothing, and `FLOOR` is
+certainly in that file. Re-run with `git grep -nw` over `scripts/`, `README.md`,
+`AGENTS.md`, `CLAUDE.md` and the practices page: **85** and **79** have zero
+hits anywhere, so nothing cached either old value; **86** and **80** hit only
+the two regenerated rows plus the unrelated `Go test files | 80` row and
+`scripts/coverage.sh`'s `80.0` coverage floor and its `86.2%` comment. Neither
+row is pinned by name outside `scripts/inventory.sh:90-91`, so `Y3` and `Z7`
+needed no edit. **This is a fourth instance of the new §12 clause's mechanism
+and it is not counted as a fourth case**, for the same reason V-F0's extra rows
+are not: the unit is the spec, and this is the same one. It is recorded because
+a rule whose first opportunity to fire is the cycle that writes it should say
+so.
+
+**The archive move was staged before the gates ran**, which is the workaround
+SPEC-088's ship recorded and this ship's prompt carries: `scripts/archive-spec.sh`
+uses a plain `mv`, so the old path stays in the index with its deletion
+unstaged — SPEC-088's `M-B6` state, which `LD9` makes red by design. `git add -A`
+before the first `just test-docs` run, so `AC2` never went red this time and
+`git` records the move as a rename. SPEC-093 owns the `git mv` fix.
+
+**`cycle:` line.** `just advance-cycle SPEC-086 ship` rewrote the front
+matter's `cycle:` to a bare `  cycle: ship`, stripping the inline
+`# frame | design | build | verify | ship` comment — `update_frontmatter_scalar`
+(`scripts/_lib.sh:173`), routed to SPEC-093. It was restored by hand at the
+original column, and the four continuation comment lines below it were
+untouched. `just archive-spec SPEC-086` was run **once**; the file is in
+`specs/done/` and there is no `done/done`.
+
+**Corpus:** no brag was captured. It is drafted for the maintainer's approval.
+The only `brag` invocations against `~/.bragfile/db.sqlite` were the read-only
+`brag memory --project bragfile` that §13.5 asks for and one
+`brag story --profile …` that errored on an unknown flag without opening the
+database — the third case in Q2's codification argument.
