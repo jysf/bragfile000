@@ -32,7 +32,7 @@ Output is markdown (default) or a single-object JSON envelope (--format json) pe
   --year      the current calendar year, up to now
   --since D   entries on or after D (YYYY-MM-DD or Nd/Nw/Nm), up to now
 
-Windows are CALENDAR periods, not rolling — this differs from brag summary on purpose (the story surface reports by quarter/month/year). Only entries with a non-empty impact appear in the body; the provenance line tallies how many in-window entries had one. Filter flags --tag/--project/--type compose with the window.
+Windows are CALENDAR periods, not rolling — this differs from brag summary on purpose (the story surface reports by quarter/month/year). Only entries with a non-empty impact appear in the body; the provenance line tallies how many in-window entries had one. Work recorded with brag learn is listed under its own "What didn't work" heading instead of among the impact, and that heading is left out when there is none. Filter flags --tag/--project/--type compose with the window.
 
 --previous shifts the selected window to the last-completed period (bounded on both ends): --quarter --previous is the whole previous calendar quarter, --month --previous the previous month, --year --previous the previous year. It requires a window flag (a modifier is not a window) and is incompatible with --since.
 

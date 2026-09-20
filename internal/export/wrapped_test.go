@@ -1,7 +1,9 @@
 package export
 
 import (
+	"bytes"
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -241,6 +243,7 @@ func TestToWrappedJSON_DEC030ShapeGolden(t *testing.T) {
       ]
     }
   ],
+  "failures_by_project": [],
   "longest_streak": 2,
   "top_tags": [
     {
@@ -504,6 +507,7 @@ Entries: 0`
 	assertRaw(t, env, "total_entries", "0")
 	assertRaw(t, env, "top_initiatives", "[]")
 	assertRaw(t, env, "impact_moments", "[]")
+	assertRaw(t, env, "failures_by_project", "[]")
 	assertRaw(t, env, "longest_streak", "0")
 	assertRaw(t, env, "top_tags", "[]")
 	assertRaw(t, env, "top_types", "[]")
@@ -654,5 +658,184 @@ func assertRaw(t *testing.T, env map[string]json.RawMessage, key, want string) {
 	}
 	if strings.TrimSpace(string(got)) != want {
 		t.Errorf("key %q: got %s, want %s", key, got, want)
+	}
+}
+
+// wrappedFailureFixture: a Q3 2026 period whose five entries exercise every
+// branch of the failure split. id 1 is a win with an impact (beta); id 2 is a
+// win without one (alpha); ids 3 and 5 are failures WITH an impact (alpha and
+// gamma — gamma appears only as a failure); id 4 is a failure with NO impact,
+// which lands in no per-entry section (DEC-028 choice 3) but is still counted
+// everywhere wrapped counts entries. Type is the literal "failed" DEC-049
+// persists, not aggregate.FailureType, so a drifted constant fails here too.
+var wrappedFailureFixture = []storage.Entry{
+	{ID: 1, Title: "launch", Project: "beta", Type: "shipped", Tags: "api",
+		Impact:    "onboarding time down to 1 day",
+		CreatedAt: time.Date(2026, 7, 4, 10, 0, 0, 0, time.UTC)},
+	{ID: 2, Title: "hotfix", Project: "alpha", Type: "fixed", Tags: "auth",
+		CreatedAt: time.Date(2026, 7, 5, 10, 0, 0, 0, time.UTC)},
+	{ID: 3, Title: "pool-dead-end", Project: "alpha", Type: "failed", Tags: "perf",
+		Impact:    "cost two days and produced nothing reusable",
+		CreatedAt: time.Date(2026, 8, 10, 10, 0, 0, 0, time.UTC)},
+	{ID: 4, Title: "retry-noimpact", Project: "alpha", Type: "failed", Tags: "perf",
+		CreatedAt: time.Date(2026, 8, 11, 10, 0, 0, 0, time.UTC)},
+	{ID: 5, Title: "vendor-sdk-dead-end", Project: "gamma", Type: "failed", Tags: "vendor",
+		Impact:    "ruled out the vendor SDK",
+		CreatedAt: time.Date(2026, 9, 1, 10, 0, 0, 0, time.UTC)},
+}
+
+var wrappedFailureOpts = WrappedOptions{
+	Scope:       "2026-Q3",
+	ScopeMonths: q3Months,
+	Filters:     "(none)",
+	Now:         time.Date(2026, 9, 30, 23, 59, 59, 0, time.UTC),
+}
+
+// TestToWrappedMarkdown_FailureSectionGolden (LOAD-BEARING, SPEC-086 LD2/LD6).
+// DEC-030's arc as amended: ## What didn't work sits between Impact moments
+// and Rhythm, carrying the with-impact failures in the impact rendering shape.
+// Nothing else in the document changes rule — Top types honestly reports
+// failed: 3, because it always counted every type.
+func TestToWrappedMarkdown_FailureSectionGolden(t *testing.T) {
+	got, err := ToWrappedMarkdown(wrappedFailureFixture, wrappedFailureOpts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := `# Bragfile Wrapped
+
+Generated: 2026-09-30T23:59:59Z
+Scope: 2026-Q3
+Filters: (none)
+Entries: 5
+
+## Cadence
+
+Busiest month: 2026-07 (2)
+
+- 2026-07: 2
+- 2026-08: 2
+- 2026-09: 1
+
+## Top initiatives
+
+- alpha: 3
+- beta: 1
+- gamma: 1
+
+## Impact moments
+
+### beta
+
+- 1: launch
+  onboarding time down to 1 day
+
+## What didn't work
+
+### alpha
+
+- 3: pool-dead-end
+  cost two days and produced nothing reusable
+
+### gamma
+
+- 5: vendor-sdk-dead-end
+  ruled out the vendor SDK
+
+## Rhythm
+
+Longest streak: 2 days
+
+**Top tags**
+- perf: 2
+- api: 1
+- auth: 1
+- vendor: 1
+
+**Top types**
+- failed: 3
+- fixed: 1
+- shipped: 1
+
+## Span
+
+- First entry: 2026-07-04
+- Last entry: 2026-09-01
+- Active days: 60`
+	if string(got) != want {
+		t.Errorf("markdown golden mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestToWrappedJSON_FailuresLeaveImpactMoments pins SPEC-086 LD4 on wrapped:
+// impact_moments no longer carries a failure, and failures_by_project carries
+// exactly the with-impact failures, in impact's group shape. Key ORDER is
+// pinned by TestToWrappedJSON_DEC030ShapeGolden.
+func TestToWrappedJSON_FailuresLeaveImpactMoments(t *testing.T) {
+	jsonBytes, err := ToWrappedJSON(wrappedFailureFixture, wrappedFailureOpts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var env map[string]json.RawMessage
+	if err := json.Unmarshal(jsonBytes, &env); err != nil {
+		t.Fatalf("json unmarshal: %v", err)
+	}
+	compact := func(key string) string {
+		raw, ok := env[key]
+		if !ok {
+			return "<missing key>"
+		}
+		var b bytes.Buffer
+		if err := json.Compact(&b, raw); err != nil {
+			t.Fatalf("compact %s: %v", key, err)
+		}
+		return b.String()
+	}
+	wantMoments := `[{"project":"beta","entries":[{"id":1,"title":"launch","project":"beta","impact":"onboarding time down to 1 day"}]}]`
+	wantFailures := `[{"project":"alpha","entries":[{"id":3,"title":"pool-dead-end","project":"alpha","impact":"cost two days and produced nothing reusable"}]},` +
+		`{"project":"gamma","entries":[{"id":5,"title":"vendor-sdk-dead-end","project":"gamma","impact":"ruled out the vendor SDK"}]}]`
+	if got := compact("impact_moments"); got != wantMoments {
+		t.Errorf("impact_moments:\n got %s\nwant %s", got, wantMoments)
+	}
+	if got := compact("failures_by_project"); got != wantFailures {
+		t.Errorf("failures_by_project:\n got %s\nwant %s", got, wantFailures)
+	}
+	if got := string(env["total_entries"]); got != "5" {
+		t.Errorf("total_entries = %s, want 5 (the headline counts every entry, failures included)", got)
+	}
+}
+
+// TestToWrappedMarkdown_WhatDidntWorkRendersOnlyWhenNonEmpty pins SPEC-086 LD5
+// (Fork D) on wrapped: the section is omitted from a period with no recorded
+// failure — no empty heading on a clean quarter — while DEC-030's five arc
+// sections all still render; with a failure it appears between Impact moments
+// and Rhythm. Line equality, not substring.
+func TestToWrappedMarkdown_WhatDidntWorkRendersOnlyWhenNonEmpty(t *testing.T) {
+	headings := func(md []byte) []string {
+		var out []string
+		for _, ln := range strings.Split(string(md), "\n") {
+			if strings.HasPrefix(ln, "## ") {
+				out = append(out, ln)
+			}
+		}
+		return out
+	}
+	clean, err := ToWrappedMarkdown(wrappedYearFixture, WrappedOptions{
+		Scope: "2026", ScopeMonths: yearMonths, Filters: "(none)", Now: wrappedYearNow,
+	})
+	if err != nil {
+		t.Fatalf("clean: unexpected error: %v", err)
+	}
+	wantClean := []string{"## Cadence", "## Top initiatives", "## Impact moments", "## Rhythm", "## Span"}
+	if got := headings(clean); !reflect.DeepEqual(got, wantClean) {
+		t.Errorf("no failures: ## headings = %q, want %q", got, wantClean)
+	}
+
+	withFailures, err := ToWrappedMarkdown(wrappedFailureFixture, wrappedFailureOpts)
+	if err != nil {
+		t.Fatalf("with failures: unexpected error: %v", err)
+	}
+	wantFailures := []string{"## Cadence", "## Top initiatives", "## Impact moments", "## What didn't work", "## Rhythm", "## Span"}
+	if got := headings(withFailures); !reflect.DeepEqual(got, wantFailures) {
+		t.Errorf("with failures: ## headings = %q, want %q", got, wantFailures)
 	}
 }

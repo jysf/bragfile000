@@ -510,6 +510,15 @@ Document structure:
   `## Impact`, per-project `### <project>` groups (alpha-ASC,
   `(no project)` last; chrono-ASC + ID-tiebreak within group), each
   entry as `- <id>: <title>` followed by an indented `  <impact>` line.
+- **`## What didn't work`** (markdown): the with-impact entries whose
+  `type` is the reserved `failed` that `brag learn` writes, pulled out of
+  `## Impact` and rendered after it in the same grouped shape. Each of the
+  two sections appears only when it has an entry: a window with no
+  recorded failure has no `## What didn't work` heading, and a window
+  holding only failures has no `## Impact` heading. The `Entries:` tally
+  counts both sections. A failure with no impact statement appears in
+  neither, like any other impact-less entry. Locked by
+  [DEC-050](../decisions/DEC-050-a-failure-is-never-rendered-as-a-win.md).
 
 Flags:
 
@@ -545,9 +554,11 @@ Flags:
   [DEC-014](../decisions/DEC-014-rule-based-output-shape.md). Top-level
   keys: `generated_at`, `scope`, `filters`, `entries_in_window`,
   `entries_with_impact`, `counts_by_project` (a `map[string]int` over
-  the with-impact subset, alpha-ASC by key under `encoding/json`), and
+  the with-impact subset, alpha-ASC by key under `encoding/json`; it
+  counts both sections, so it sums to `entries_with_impact`),
   `impact_by_project` (an array of `{project, entries:[...]}` groups in
-  group order). Each entry inside `impact_by_project[].entries` is a
+  group order, failures excluded), and `failures_by_project` (the same
+  shape, holding only the failures). Each entry inside either array is a
   deliberately NARROW 4-key projection `{id, title, project, impact}` —
   NOT DEC-011's 9-key shape — locked by
   [DEC-028](../decisions/DEC-028-impact-digest-window-and-shape.md).
@@ -559,7 +570,7 @@ Flags:
 Empty-window / no-impact: provenance always renders (both tally counts
 `0`); the `## Impact` body is omitted from markdown; JSON renders
 `entries_in_window`/`entries_with_impact` as `0`, `counts_by_project` as
-`{}`, `impact_by_project` as `[]`.
+`{}`, `impact_by_project` and `failures_by_project` as `[]`.
 
 Unknown or missing window flags, or an unknown `--format` value, exit 1
 (user error).
@@ -596,7 +607,14 @@ Document structure:
     excluding `(no project)`.
   - `## Impact moments` — with-impact entries grouped by initiative
     (`### <project>`), each as `- <id>: <title>` plus an indented
-    `  <impact>` line, impact text in full.
+    `  <impact>` line, impact text in full. Failures are excluded.
+  - `## What didn't work` — the with-impact entries typed `failed` (what
+    `brag learn` writes), in the same shape. This is the one section
+    rendered **only when it has an entry**, so a period with no recorded
+    failure has no such heading. Locked by
+    [DEC-050](../decisions/DEC-050-a-failure-is-never-rendered-as-a-win.md)
+    and the Amendment to
+    [DEC-030](../decisions/DEC-030-wrapped-period-selection-and-section-taxonomy.md).
   - `## Rhythm` — `Longest streak: N days`, then `**Top tags**` (top-5)
     and `**Top types**` (top-3) count lists.
   - `## Span` — `- First entry:` / `- Last entry:` (`YYYY-MM-DD`) and
@@ -634,8 +652,10 @@ Flags:
   single-object envelope. Top-level keys: `generated_at`, `scope`,
   `filters`, `total_entries`, `cadence` (`{busiest_month, series:[{period,
   count}]}`), `top_initiatives` (`[{project, count}]`), `impact_moments`
-  (`[{project, entries:[{id, title, project, impact}]}]`),
-  `longest_streak`, `top_tags` (`[{name, count}]`), `top_types`
+  (`[{project, entries:[{id, title, project, impact}]}]`, failures
+  excluded), `failures_by_project` (the same shape, holding only the
+  failures — the key `brag impact` uses too), `longest_streak`,
+  `top_tags` (`[{name, count}]`), `top_types`
   (`[{name, count}]`), `span` (`{first_entry_date, last_entry_date,
   active_days}`). On an empty period arrays are `[]`,
   `busiest_month`/date fields are `null`, numbers `0` — but

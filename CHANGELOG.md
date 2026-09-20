@@ -26,6 +26,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`brag impact` and `brag wrapped` list work that did not work under its
+  own `## What didn't work` heading**
+  ([DEC-050](decisions/DEC-050-a-failure-is-never-rendered-as-a-win.md)).
+  An entry recorded with `brag learn` that carries an impact used to render
+  in `## Impact` and `## Impact moments` exactly like a win. Neither digest
+  shows an entry's type, so a two-day dead end read as an accomplishment in
+  the document built to be shared. It now renders in the new section, after
+  the impact, in the same shape. The section appears only when there is at
+  least one such entry, so a clean quarter has no empty heading. No headline
+  count changes: `impact`'s `Entries: <shown>/<in-window> with impact` still
+  counts both sections.
+- **Breaking: `brag impact --format json` no longer lists failures in
+  `impact_by_project`, and `brag wrapped --format json` no longer lists them
+  in `impact_moments`.** Both envelopes gain a `failures_by_project` key in
+  the same `{project, entries:[{id, title, project, impact}]}` shape. It is
+  always present and `[]` when empty, so one `jq .failures_by_project` works
+  on both. `impact`'s `counts_by_project` still counts both sections and
+  still sums to `entries_with_impact`. A consumer that read every
+  with-impact entry from `impact_by_project` or `impact_moments` now reads
+  both keys.
 - **`brag memory`'s headline count is now `Candidates: <N>`, not
   `Entries: <N>`** ([DEC-048](decisions/DEC-048-provenance-count-names-what-it-counted.md)).
   The number was never the corpus size and never a cap: it is the deduped

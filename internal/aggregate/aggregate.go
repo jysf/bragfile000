@@ -301,6 +301,45 @@ func WithImpact(entries []storage.Entry) []storage.Entry {
 	return out
 }
 
+// FailureType is the reserved entries.type value marking work that did not
+// work (DEC-049) — the ONE type value bragfile pins; `brag add --type` stays
+// free-form. It lives here rather than in internal/cli because it has a
+// writer and readers: `brag learn` writes it, and the digests that section
+// failures (brag impact, brag wrapped — DEC-050) read it through IsFailure.
+// One constant, so the verb and the digests cannot name two values. The
+// literal is persisted in every user's corpus, so renaming it would orphan
+// every stored row while the writer and the readers still agreed.
+const FailureType = "failed"
+
+// IsFailure reports whether e is a recorded failure: its Type is exactly
+// FailureType. Exact and case-sensitive on purpose — the comparison storage's
+// --type filter makes (`e.type = ?` on a BINARY-collated column), so a
+// digest's "What didn't work" section and `brag list --type failed` (DEC-049's
+// retrieval path) select the same rows. Kept in agreement by
+// TestFailureClassifier_GoPredicateMatchesTypeFilter.
+func IsFailure(e storage.Entry) bool {
+	return e.Type == FailureType
+}
+
+// SplitFailures partitions entries into those that are not failures and those
+// that are (IsFailure), preserving input order within each. Both results are
+// non-nil so JSON callers never see null. The digests call it on the
+// with-impact subset, never in place of WithImpact: WithImpact keeps meaning
+// "non-empty impact", and this decides only which section a row renders in
+// (DEC-050).
+func SplitFailures(entries []storage.Entry) (others, failures []storage.Entry) {
+	others = make([]storage.Entry, 0, len(entries))
+	failures = make([]storage.Entry, 0)
+	for _, e := range entries {
+		if IsFailure(e) {
+			failures = append(failures, e)
+		} else {
+			others = append(others, e)
+		}
+	}
+	return others, failures
+}
+
 // CadenceBucket is one month's entry count in a cadence series: Period
 // is the "YYYY-MM" label, Count the number of entries whose created_at
 // falls in that month. SPEC-051. SPEC-052 renders series[].Count as a

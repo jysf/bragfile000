@@ -2211,6 +2211,77 @@ $ac2_hits"
     fi
 fi
 
+# ===== Group AD — the digests section failures (SPEC-086 / DEC-050) =====
+#
+# SPEC-086 changes what `brag impact` and `brag wrapped` PRINT: a recorded
+# failure leaves the impact section for its own `## What didn't work`, and
+# both JSON envelopes gain `failures_by_project`. That is visible in every doc
+# that describes the two outputs and invisible to the Go suite, which never
+# reads a doc — the shape SPEC-089 verify found `docs/api-contract.md` stale
+# in. So each place that documents an output shape is asserted to name the
+# change, SCOPED to the right section of its file: an unscoped needle would
+# pass with one of the two commands documented and the other stale.
+#
+# The heading needle carries an apostrophe, so it lives in a double-quoted
+# variable rather than inside a single-quoted literal.
+ad_heading="## What didn't work"
+ad_label="What didn't work"
+
+# ad_section FILE START STOP — FILE's lines from the first line that STARTS
+# with START up to, not including, the next line that starts with STOP.
+# Prefix match via index()==1, so a `####` line never ends a `### ` section.
+ad_section() {
+    awk -v start="$2" -v stop="$3" '
+        !f && index($0, start) == 1 { f = 1; print; next }
+        f && index($0, stop) == 1 { exit }
+        f { print }
+    ' "$1"
+}
+
+# assert_section_names ID TEXT WHERE NEEDLE... — ok when TEXT is non-empty and contains
+# every NEEDLE; otherwise one fail naming each missing needle. An empty TEXT
+# is its own failure: a heading that moved would otherwise make every needle
+# "missing" for the wrong reason, or — for a negative — pass on nothing.
+assert_section_names() {
+    ad_id="$1"; ad_text="$2"; ad_where="$3"; shift 3
+    if [ -z "$ad_text" ]; then
+        fail "$ad_id" "$ad_where: section not found"
+        return 0
+    fi
+    ad_bad=""
+    for ad_needle in "$@"; do
+        printf '%s\n' "$ad_text" | grep -F -q -- "$ad_needle" \
+            || ad_bad="$ad_bad [missing: $ad_needle]"
+    done
+    if [ -z "$ad_bad" ]; then
+        ok "$ad_id"
+    else
+        fail "$ad_id" "$ad_where:$ad_bad"
+    fi
+}
+
+# AD1 / AD2 — the contract documents the section AND the key on BOTH
+# commands. One id per command, two needles each: either alone leaves a
+# reader of the other format wrong.
+assert_section_names "AD1" "$(ad_section docs/api-contract.md '### `brag impact' '### ')" \
+    "docs/api-contract.md, the brag impact section" "$ad_heading" '`failures_by_project`'
+assert_section_names "AD2" "$(ad_section docs/api-contract.md '### `brag wrapped' '### ')" \
+    "docs/api-contract.md, the brag wrapped section" "$ad_heading" '`failures_by_project`'
+
+# AD3 / AD4 — the tutorial tells a user where their failures went, on both
+# commands. It names the section, not the key: the tutorial documents no JSON
+# keys for either command.
+assert_section_names "AD3" "$(ad_section docs/tutorial.md '### Impact by initiative' '### ')" \
+    "docs/tutorial.md, the brag impact section" "$ad_label"
+assert_section_names "AD4" "$(ad_section docs/tutorial.md '### Your year in brags' '### ')" \
+    "docs/tutorial.md, the brag wrapped section" "$ad_label"
+
+# AD5 — the agent-facing glossary states the amended arc, in order. AGENTS.md
+# is what a fresh session reads first, and its `wrapped` entry spells the arc
+# out section by section.
+assert_section_names "AD5" "$(grep -F -- '- **wrapped** —' AGENTS.md)" \
+    "AGENTS.md, the wrapped glossary entry" "Impact moments → $ad_label"
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

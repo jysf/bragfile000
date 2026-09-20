@@ -643,6 +643,21 @@ func TestImpactCmd_HelpShowsPrevious(t *testing.T) {
 	}
 }
 
+// TestImpactCmd_HelpNamesTheFailureSection ▲ SPEC-086 LD9: impact's --help
+// says where a brag learn entry goes, since it is no longer among the impact.
+// "What didn't work" is a token no cobra-generated line can produce.
+func TestImpactCmd_HelpNamesTheFailureSection(t *testing.T) {
+	root, outBuf, _ := newImpactTestRoot(t)
+	root.SetArgs([]string{"impact", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := `Work recorded with brag learn is listed under its own "What didn't work" heading instead of among the impact, and that heading is left out when there is none.`
+	if !bytes.Contains(outBuf.Bytes(), []byte(want)) {
+		t.Errorf("expected the failure-section sentence in help:\n%s", outBuf.String())
+	}
+}
+
 // TestImpactCmd_StdoutStderrSeparation_Previous: a successful --previous run
 // writes only stdout; the --since --previous combo writes only the returned
 // UserError (main.go routes it to stderr) with empty stdout.
