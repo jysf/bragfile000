@@ -1351,8 +1351,15 @@ frozen copy before it was written here.
     **5**.
 12. **The inventory block is regenerated,** and exactly three rows move at
     build: 79 → 80, 829 → 843, 200 → 205.
-13. **No count is renamed:** `grep -n 'Entries:' internal/export/impact.go
-    internal/export/wrapped.go` shows the same two format strings as `main`.
+13. **No count is renamed:** the two headline format strings are byte-identical
+    to `main`'s. **AMENDED at verify** — the criterion always meant the two
+    format strings, but its literal command,
+    `grep -n 'Entries:' internal/export/impact.go internal/export/wrapped.go`,
+    matches more than that: a doc-comment line this spec adds to `impact.go`
+    and the `Entries: make(...)` struct-field lines that `gofmt` realigned.
+    The command that means the criterion is
+    `grep -h 'Fprintf(&buf, "Entries:' internal/export/impact.go internal/export/wrapped.go`,
+    run against both trees; verify ran it and the two lines match.
 14. **All five gates are green,** with no test excluded and no lint
     suppression: `go test ./...` (14 packages `ok`), `gofmt -l .` empty,
     `go vet ./...` clean, `just lint` **0 issues**, `just test-docs` ALL OK.
@@ -3227,7 +3234,9 @@ index 4487640..24a94f2 100755
 
 Paste `./scripts/inventory.sh`'s output between the markers. At design the
 three build-time rows went from 79 / 829 / 200 to **80 / 843 / 205**. The two
-DEC rows (52 and 2) and the `:230` sentence are already on this branch.
+DEC rows (52 and 3 — **CORRECTED at verify** from *2*, which predates the
+R3 ruling that added DEC-028's `## Amendment`; DEC-025, DEC-028 and DEC-030
+each carry one) and the `:230` sentence are already on this branch.
 
 ---
 
@@ -3430,6 +3439,372 @@ design, #219).*
    input, and only reading the output caught it. I would also keep the AC
    checks in one re-runnable file, so verify can re-run them instead of
    trusting my transcript.
+
+## Verification
+
+*Filled in at the end of the **verify** cycle. The orchestrator had already
+confirmed the 18 literals' hash, the byte-for-byte rebuild from a clean `main`,
+and all five gates on the build branch. Those are re-checked cheaply here and
+hold. This record covers what a passing build could not see: the real output a
+user reads, mutants nobody imagined, and whether anything outside the two
+renderers moved.*
+
+- **Branch:** `verify/spec-086-digest-failures`, off `main` at `152dbe9`
+  (PR #220, the build, merged as a squash; no stacking).
+- **Verdict:** ⚠ **PUNCH LIST — three record-and-doc corrections, all fixed in
+  this cycle. No functional defect, and no line of Go changed.** The renderers
+  survived **31 mutants** (the 19 in the matrix, each reproduced independently
+  from its stated edit, plus 12 novel ones), and every one is killed by a
+  named test. The three fixes are the citation asymmetry build routed, a stale
+  count in this spec's §9, and AC-13's command. A fourth routed item is
+  **ruled not a defect**.
+
+### The attack list
+
+| # | Attack | Result |
+|---|---|---|
+| A | Read the real output as a user would, over four window shapes | **HOLDS.** No stranded heading, no doubled blank line, arc in DEC-030 order |
+| B | Do the numbers add up, on the live corpus and against `brag list --type failed`? | **HOLDS.** 538 = 538 = 534 + 4, ids identical |
+| C | 12 mutants the matrix did not try | **HOLDS.** All 12 killed; every prediction matched |
+| D | Reproduce the five abbreviated records | **HOLDS.** All five reproduce, first try, from a runnable command. **V-F0**: commands recorded |
+| E | Reproduce the other 14 matrix records | **HOLDS.** 19 of 19 hashes match and every *Tests that fired* set is exact |
+| F | Who else reads `impact_by_project` / `impact_moments`? | **HOLDS.** No unupdated consumer anywhere in the tree |
+| G | Did DEC-050 rows 3–7 move? | **HOLDS.** 29 invocations byte-identical across the two binaries |
+| H | The citation asymmetry build routed | **V-F1 — real. FIXED** |
+| I | §9's *"(52 and 2)"* | **V-F2 — stale. CORRECTED** |
+| J | AC-13's literal command | **V-F3 — matches more than the criterion. AMENDED** |
+| M | Does this cycle's own fix invalidate a stated hash? | **Yes — V-F0's re-pin. RECORDED, at N=1** |
+| K | The header blockquote's *"Cycle: design"* | **V-F4 — NOT A DEFECT. It is the repo's convention** |
+| L | Is the build reflection honest? | **HOLDS.** Every claim in it checks out, including both zsh traps |
+
+### V-F1 — the `impact` hunk cited DEC-050 alone. FIXED
+
+Build reported it and transcribed the literal as written. It is real. The
+`wrapped` hunk cites DEC-050 **and** the Amendment to DEC-030; the `impact`
+hunk cited DEC-050 only, while the same section says *"locked by DEC-028"*
+twice. `docs/api-contract.md` `+6/−2`, in two places, chosen by which of
+DEC-028's original text the Amendment actually reaches:
+
+- **The `## What didn't work` bullet** now cites *"[DEC-050] and the Amendment
+  to [DEC-028]"*, mirroring the `wrapped` hunk word for word.
+- **The JSON key-list bullet** keeps its DEC-028 link and adds *"whose key
+  list is the one its `## Amendment (2026-09-19, SPEC-086 design)` states"* —
+  because choice 5's key list is exactly what the amendment changes.
+- **The window bullet's DEC-028 link is left alone.** Calendar windows are
+  untouched by the amendment, so pointing it at one would be noise. Build's
+  *"those links land on superseded text"* is true of one of the two, not both.
+
+`AD1` and `AD2` stay green: neither needle is in the edited text.
+
+### V-F2 — §9's *"(52 and 2)"*. CORRECTED
+
+The regenerated block reads **52 and 3**, and
+`grep -l '^## Amendment' decisions/DEC-*.md` names DEC-025, DEC-028 and
+DEC-030. §9's prose predates the R3 ruling that added DEC-028's. The sentence
+now reads *52 and 3*, marked **CORRECTED at verify**, with the three records
+named so the number can be re-derived rather than trusted. The block itself was
+already right: `diff` of the page's 21 lines against `./scripts/inventory.sh`
+output is empty.
+
+### V-F3 — AC-13's command matches more than the criterion. AMENDED
+
+Build is exactly right, and the criterion holds. Run literally on this branch,
+`grep -n 'Entries:' internal/export/impact.go internal/export/wrapped.go`
+prints **7** lines against `main`'s **6**: the extra is a doc comment this spec
+adds at `impact.go:36`, and `wrapped.go:261`'s `Entries: make(...)` struct-field
+line moved a tab because `gofmt` realigned it. The criterion always meant *the
+two format strings*, and those are byte-identical:
+
+```
+$ grep -h 'Fprintf(&buf, "Entries:' internal/export/impact.go internal/export/wrapped.go
+	fmt.Fprintf(&buf, "Entries: %d/%d with impact\n", len(withImpact), opts.EntriesInWindow)
+	fmt.Fprintf(&buf, "Entries: %d\n", len(entries))
+```
+
+Identical on `9133eed` (pre-build `main`) and on `152dbe9`. AC-13 now carries
+that command, marked **AMENDED at verify**, with design's wording kept visible.
+
+### V-F4 — the header blockquote is the convention, not a drift. NOT A DEFECT
+
+The orchestrator routed *"the blockquote says `Cycle: design` while the front
+matter says `verify`."* Checked against every sibling this project shipped:
+
+| spec | front matter | header blockquote |
+|---|---|---|
+| SPEC-085 | `cycle: ship` | *"**Cycle: design.**"* |
+| SPEC-087 | `cycle: ship` | *"**Cycle: design.**"* |
+| SPEC-088 | `cycle: ship` | *"**Cycle: frame — FRAMED 2026-09-15**"* |
+| SPEC-089 | `cycle: ship` | *"**Cycle: frame+design (collapsed by user direction).**"* |
+
+**Four of four disagree with their own front matter, in the same direction.**
+The blockquote records the cycle that *wrote the header*, and the rest of
+SPEC-086's sentence (*"Designed 2026-09-18 against `main` at `3201f50`"*) only
+makes sense read that way. Advancing it to `verify` would falsify the sentence
+it opens and break a convention four shipped specs hold. Left as written.
+
+### Real output, read as a user would
+
+Every run used a `sqlite3 .backup` file copy of `~/.bragfile/db.sqlite`, whose
+SHA-256 was `c4a7cc63a808` before and after — the same copy build measured, so
+the corpus has not moved: **613** entries, max id **635**, **4** `type: failed`
+rows (420, 433, 465, 473), all four carrying an impact, all four in
+2026-09. The live file was never opened for writing. Both binaries were built
+into the scratchpad, one from `152dbe9` and one from `9133eed`.
+
+| Window | `impact` | `wrapped` |
+|---|---|---|
+| **has failures** (`--year` / the current year) | `## Impact` at line 8, `## What didn't work` at 1126, nothing after it | the six-section arc in order: Cadence 8, Top initiatives 26, Impact moments 34, **What didn't work 1152**, Rhythm 1168, Span 1184 |
+| **no failures** (2026-Q2, 164 entries) | — | the five DEC-030 sections, **no** `## What didn't work`; JSON `failures_by_project: []` |
+| **only failures** (`--type failed`) | `Entries: 4/4 with impact`, then `## What didn't work` and **no `## Impact`**; JSON `impact_by_project: []` | a **bare** `## Impact moments` then `## What didn't work` — existing DEC-030 behaviour that LD5 deliberately leaves alone |
+| **empty** (2024 / an unmatched `--type`) | document ends at `Entries: 0/0 with impact`; JSON `[]`/`[]`/`{}` | document ends at `Entries: 0`; every key present, both arrays `[]` |
+
+- **The markdown reads as intended.** One blank line before `## What didn't
+  work`, one after it, then `### <project>` — byte-for-byte the shape
+  `## Impact` already used, because both go through `writeImpactGroups`. No
+  heading is stranded, no blank line is doubled, and DEC-030's amended arc is
+  in order. Group order inside the new section follows DEC-013 (`bragfile` 3
+  before `contextcore-pilot-harness` 1).
+- **The JSON is valid and satisfies both records.** `impact`'s eight keys and
+  `wrapped`'s twelve are exactly the order *Fork A* enumerates, `failures_by_project`
+  last on `impact` and directly after `impact_moments` on `wrapped`. DEC-014
+  part 4 holds on every empty case measured. The failure rows are the 4-key
+  projection, keys `[id, impact, project, title]`.
+- **The numbers add up.** `entries_with_impact` **538** = `sum(counts_by_project)`
+  **538** = 534 impact rows + 4 failure rows. Per project, no count mismatches
+  across the two sections. The `failures_by_project` ids are `[420, 433, 465,
+  473]`, identical to the impact-carrying rows `brag list --type failed`
+  returns. On `wrapped`, `total_entries` 613 with the same 4 ids and no overlap
+  with `impact_moments`.
+- **AC-1, run on both binaries against the same copy**, each guarded against an
+  empty read: `Entries: 538/613 with impact` and `Entries: 613`, equal.
+- **AC-3:** the impact section is **1117 lines** on both surfaces and equal;
+  the failure sections are **15 lines** and equal. The only difference is the
+  blank line before `## Rhythm`.
+- **A near-miss `type` value, end to end, on a scratch DB** (not in the
+  matrix): rows typed `Failed`, `" failed"` and `failure` all render under
+  `## Impact` — as wins — while only the exact `failed` reaches
+  `## What didn't work`. That is DEC-050 rule 1 and DEC-049 part 3 working as
+  decided, and it is what keeps the digest in agreement with
+  `brag list --type failed`, which returns exactly the one row. Recorded
+  because it is the user-visible face of an accepted consequence, not a defect.
+
+### Novel mutants — 12, each predicted before it ran
+
+Same §12 helper shape as build's: back up to the session scratchpad, apply the
+edit, **refuse to run the gate until the content hash has moved**, print the
+mutant's own `diff`, run `go test -count=1 ./...`, restore with `cp`, and
+confirm the pre-hash returned. Every equality is guarded against an empty
+input, and the helper's no-op branch discards a probe's whole result rather
+than crediting its green half. **No outcome contradicted its prediction.**
+
+| id | The edit | Predicted | Observed | pre → post |
+|---|---|---|---|---|
+| **N-1** | `wrapped.go`: render `## What didn't work` **before** `## Impact moments` | 2: the wrapped failure golden and `…WhatDidntWorkRendersOnlyWhenNonEmpty` | **exactly those 2** | `e507f9ce65a8` → `70f6481301da` |
+| **N-2** | `impact.go`: declare `failures_by_project` **before** `impact_by_project` | 2 byte-exact JSON goldens; the key-map tests stay green | **exactly those 2** | `f00b77c8e1c1` → `136126a728ed` |
+| **N-3** | `wrapped.go`: move `failures_by_project` to the **last** key, after `span` | 1 only — `…DEC030ShapeGolden`; 0 would mean the position is unguarded | **1**, as predicted | `e507f9ce65a8` → `1b0dbd0f233b` |
+| **N-4** | `impact.go`: `json:"failures_by_project,omitempty"` (DEC-014 part 4) | 2: `…DEC028ShapeGolden` and `TestToImpact_EmptyWindowShape` | **exactly those 2** | `f00b77c8e1c1` → `b3c86a97ea5a` |
+| **N-5** | `impact.go`: headline counts `worked`, not `withImpact` (the DEC-048 attack) | 1: `…FailureSectionGolden` asserts `Entries: 5/8`; the clean golden stays green | **1**, as predicted | `f00b77c8e1c1` → `58f8209eb391` |
+| **N-6** | `impact.go`: `counts_by_project` over raw `entries` — **M-D's widening twin** | 2–3: `…CountsByProjectSpansBothSections` plus the JSON goldens | **3** | `f00b77c8e1c1` → `fb701453939d` |
+| **N-7** | `wrapped.go`: the failure section guarded on `len(worked) > 0` (copy-paste) | ~4: every clean-fixture markdown golden grows an empty heading | **exactly 4** | `e507f9ce65a8` → `fcdb7d9bb781` |
+| **N-8** | `wrapped.go`: `wrappedGroups` returns a **nil** slice → `failures_by_project: null` | 1–2: `…DEC030ShapeGolden`; the empty-period test stays green, since that branch never calls it | **1**, and the empty-period test was green as predicted | `e507f9ce65a8` → `070743f7abfa` |
+| **N-9** | `impact.go`: `impactGroups` returns a **nil** slice | 2–3 | **2**: `…DEC028ShapeGolden`, `TestToImpact_EmptyWindowShape` | `f00b77c8e1c1` → `4c21d816e258` |
+| **N-10** | `impact.go`: render `## What didn't work` **before** `## Impact` (DEC-028 choice 3) | 2: the markdown failure golden and `…SectionsRenderOnlyWhenNonEmpty` | **exactly those 2** | `f00b77c8e1c1` → `d235c6b29c0e` |
+| **N-11** | `aggregate.go`: `IsFailure` **narrowed** to failures carrying an impact — the direction M-A and M-B do not cover | the drift guard on both its checks, plus the two aggregate tests | **3**: the guard, `TestIsFailure_…`, `TestSplitFailures_…` | `a6001a8d00d6` → `346bbc173551` |
+| **N-12** | `impact.go`: the two JSON assignments swapped — failures land in `impact_by_project` | 3+: both JSON goldens and a `learn` e2e | **exactly 3** | `f00b77c8e1c1` → `930ce1b85430` |
+
+**What the 12 establish.** The two things design argued hardest for are
+independently guarded: the **arc order** on both surfaces (N-1, N-10) and
+**DEC-014 part 4's always-present, never-`null`, never-omitted** form of the
+new key (N-3, N-4, N-8, N-9). N-6 is the useful pair to M-D: the
+`counts_by_project` invariant catches the count being **widened** as well as
+narrowed, so `…CountsByProjectSpansBothSections` is a two-sided guard rather
+than a one-sided one. N-11 closes the drift guard's remaining direction — M-A
+and M-B widen the Go side, and a narrowing is caught by the same test, on both
+its set check and its count anchor.
+
+### V-F0 — the five abbreviated records, now runnable
+
+The five rows whose edit is prose or elided with `…` (M-L1, M-D1, M-D2, M-D3,
+M-D4). Each was re-derived here from the row's own description, without
+consulting build's transcript, and **all five reproduce the stated hash on the
+first run**. Each command below was then **run verbatim** against a pristine
+`152dbe9` checkout, not merely described: all five reproduce there too. Run
+from the repo root; each restores from a `cp` backup afterwards.
+
+```
+M-L1  perl -0pi -e 's/and that heading is left out when there is none\./and that heading is always shown./' internal/cli/impact.go
+M-D1  # both occurrences INSIDE the `brag impact` section only, i.e. between
+      # '### `brag impact --quarter' and '### `brag wrapped ['
+      perl -0pi -e 's/(### `brag impact --quarter.*?)### `brag wrapped \[/($a=$1)=~s|`failures_by_project`|`failures`|g; $a."### `brag wrapped ["/se' docs/api-contract.md
+M-D2  perl -0pi -e "s/\\*\\*What didn't work\\*\\* \\(anything you recorded with \`brag learn\`, shown only\nwhen there is some\\), //" docs/tutorial.md
+M-D3  # swap the two arc entries in the wrapped glossary line
+      perl -0pi -e "s/Impact moments \\xe2\\x86\\x92 What didn't work \\(only when non-empty; DEC-050, DEC-030 Amendment\\) \\xe2\\x86\\x92 Rhythm \\(longest streak, top tags\\/types\\) \\xe2\\x86\\x92 Span/Impact moments \\xe2\\x86\\x92 Rhythm (longest streak, top tags\\/types) \\xe2\\x86\\x92 What didn't work (only when non-empty; DEC-050, DEC-030 Amendment) \\xe2\\x86\\x92 Span/" AGENTS.md
+M-D4  perl -0pi -e 's/### `brag impact --quarter/### `brag  impact --quarter/' docs/api-contract.md
+```
+
+| id | pre → post | stated | Fired |
+|---|---|---|---|
+| M-L1 | `71c2dae1fc23` → `9f6ec4206bb6` | **match** | `TestImpactCmd_HelpNamesTheFailureSection` |
+| M-D1 | `bde92cdba356` → `520445c282a9` | **match** | `AD1` only — ``[missing: `failures_by_project`]``. `AD2` green, so the needle is section-scoped |
+| M-D2 | `e5aa062fa66c` → `61767048bed1` | **match** | `AD4` — `[missing: What didn't work]` |
+| M-D3 | `acc844937b43` → `c0c6bd7a7d58` | **match** | `AD5` — `[missing: Impact moments → What didn't work]` |
+| M-D4 | `bde92cdba356` → `eabca4338391` | **match** | `AD1` with **`section not found`** — the non-vacuity branch, and a different message from M-D1's |
+
+**Two of these five no longer reproduce on THIS branch, and that is V-F1's
+doing, not a defect.** `docs/api-contract.md` was `bde92cdba356` at `152dbe9`
+and is **`68ae22d061da`** after the V-F1 citation fix, so M-D1 and M-D4 are now
+stated against a base this branch no longer has. Both were re-run on the new
+baseline so the next cycle is not sent hunting for a hash that cannot exist:
+**M-D1 `68ae22d061da` → `fbadf13d66f1`** and **M-D4 `68ae22d061da` →
+`ab3a7a96e601`**, each still firing `AD1` alone with the same two distinct
+messages. M-L1, M-D2 and M-D3 are unaffected, because this cycle did not touch
+`internal/cli/impact.go`, `docs/tutorial.md` or `AGENTS.md`. **The general
+lesson, at N=1:** a hash pins a probe to a *file state*, so any cycle that
+edits a probe target invalidates every stated hash on it, silently — the
+matrix rows do not say which base they were taken against. Naming the base
+commit beside the baseline hash would close that, and it is ship's call, not
+this cycle's.
+
+**This is the §12 clause SPEC-088's M-A0 broke, and it did not break here.**
+The five rows reproduced because each had exactly one literal reading, which is
+the same thing M-B3 and M-B4 had at SPEC-088. **The codification candidate on
+STAGE-023's page gains a second positive case and stays at N=0 negatives**, so
+what the evidence supports is still SPEC-088 verify's shape: the defect is a
+record composed *after* the run rather than captured from it, not prose as
+such. Ship's call, and no AGENTS.md edit was made here.
+
+### The other 14 matrix records, re-run rather than trusted
+
+All 14 fully-literal rows were reproduced independently from their stated
+edits. **19 of 19 stated post-hashes match, first try**, and **every row's
+*Tests that fired* set is exactly what the spec's column lists** — M-1 9,
+M-A 3, M-B 2, M-C 10, M-S 2 (with `failure sets differ: SQL=3 Go=2`), M-D 2,
+M-E 3, M-F 4, M-G 1, M-H 3, M-J 3, M-K 3, M-M 2, M-L2 1. Every one of the ten
+targets was at its recorded baseline before the run and back at it after, and
+`git status --porcelain` is clean of them. Build's *"all 19 reproduced, first
+try"* is confirmed, not taken on trust.
+
+### F — consumers of the two changed keys. No unupdated reader
+
+`git grep -n -F` over the whole repo, tracked files, for both needles.
+`impact_by_project`: 14 hits outside this spec. `impact_moments`: 10.
+Classified, with nothing left over:
+
+- **Updated by this PR:** `CHANGELOG.md` (the breaking notice), the two
+  `docs/api-contract.md` key lists, `internal/export/impact.go`,
+  `internal/export/wrapped.go` and the four test files, including
+  `internal/cli/learn_test.go:237`, which is one of the new e2e tests.
+- **Original decision text, preserved by LD6 with an Amendment that names the
+  change:** `DEC-028:100/:125/:270/:303` and `DEC-030:119/:260`. Re-read
+  line by line: none goes false. `:303` (*"an entry with empty `impact` … does
+  not appear in `impact_by_project`"*) is still true, and the `jq`-recipe
+  consequences still transfer — they simply no longer enumerate every
+  with-impact row, which is exactly what each Amendment states.
+- **Archived historical record:** `specs/done/SPEC-048`, `SPEC-049`,
+  `SPEC-051`. Not maintained forward.
+- **`DEC-029:114/:254`** — about `story`'s shape, which is SPEC-094's.
+
+**The four places a reader would most expect to find a stale copy are clean.**
+`BRAG.md`, `README.md`, `plugin/` and `.claude-plugin/` contain **zero**
+occurrences of either key. `internal/mcpserver` exposes no impact or wrapped
+tool or resource — its only `Impact` references are the entry field on
+`brag_add`/`brag_list`, which is untouched. `docs/data-model.md`'s DEC list
+stops at DEC-021.
+
+### G — DEC-050 rows 3–7, confirmed by running them
+
+Not by reading the diff. **29 invocations**, each run against the same frozen
+copy with both binaries, `generated_at` / `Generated:` filtered out, compared
+by exit code and by SHA-256 of the output, each guarded against an empty read.
+**All 29 byte-identical.**
+
+- **Row 3 `summary`:** `--range month` markdown and JSON, `--range week`,
+  `--range month --type failed`. 26345 / 40230 / 5725 / 578 bytes, identical.
+- **Row 4 `story`:** `--quarter` markdown in **all four** bundled profiles
+  (`exec`, `skip`, `manager`, `me`) and `exec --format json`. 218944 / 227867
+  / 227761 / 227687 / 319272 bytes, identical. The failures still render as
+  `- ★ <id>:` in all four, which is the gap DEC-050 leaves open until SPEC-094
+  ships, named in its Consequences.
+- **Row 5 `export`:** markdown, JSON, and markdown `--type failed`. Identical.
+- **Row 6 `coverage`:** `--year` markdown, `--year` JSON, `--year --type
+  failed`. Identical.
+- **Row 7 `list`:** plain, `--format tsv`, `--format json`, `--type failed`.
+  Identical.
+- **Also swept, unasked:** `stats`, `spark`, `memory --project bragfile`.
+  Identical.
+
+### L — the build reflection. HONEST
+
+- **Q1** is accurate on all three points. The `learn_test.go` diff block does
+  bundle the `aggregate` import (hunk 2) with the renames (hunks 3–4) and the
+  new tests (hunk 5), so holding the renames back at step 2 does force holding
+  the import back; the spec does not say so. §9's *"52 and 2"* is stale
+  (V-F2). Five edits are abbreviated (V-F0), and all five did reproduce.
+- **Q2** is accurate, and both zsh traps are real, checked by running them:
+  `zsh -fc 'path=/tmp/nope; echo $PATH'` prints `/tmp/nope`, and
+  `for w in $cmd` yields one word in zsh where bash yields three. Each is
+  exactly the shape that turns an equality check vacuous.
+- **Q3** — keeping the AC checks in one re-runnable file — is the part worth
+  keeping. This cycle paid that cost again: every AC that needed the corpus was
+  re-derived from scratch because the transcript is not runnable.
+- **For ship to weigh, with no AGENTS.md edit made here.** The promotable item
+  is not the zsh quirks themselves but the discipline Q3 names: *guard every
+  equality with a non-emptiness check before trusting it.* Build hit a vacuous
+  green (`""` equal to `""`), and SPEC-088 verify hit the same class through
+  `git diff --quiet` on an untracked file. That is **N=2 on one mechanical
+  surface, both negative**, one short of the meta-rule's paired-opposing bar
+  unless ship counts this cycle's helper — which refused nothing, because every
+  comparison carried a non-emptiness assert — as the positive. **I would call
+  it at the bar as a one-line refinement of the existing §12 clause (1), and
+  short of it as a new rule.** The zsh-specific traps belong in the spec
+  template's *Traps* list, not in §12.
+
+### Gates — all five green on this branch
+
+| gate | result |
+|---|---|
+| `just test` | exit 0 · **1100** passing (incl. subtests) · **843** top-level `func Test*` · **0** failing · **14** packages `ok` |
+| `just test-docs` | exit 0 · **206** `OK:` / **205** distinct ids / **5** `AD` ids / **0** `SKIP:` / **0** `FAIL:` |
+| `just lint` | `0 issues.` |
+| `gofmt -l .` | empty |
+| `go vet ./...` | exit 0 |
+
+`diff` of the page's 21-line inventory block against `./scripts/inventory.sh`
+output is **empty**. `grep -n '===== finalise =====\|===== Group AD'` gives
+`2214` (AD) then `2285` (finalise), so AD is lower (AC-11). The five goldens
+count **42 / 146 / 32 / 66 / 60** `want` lines, exactly AC-6. The fixtures hold
+**3 / 3** `failed` rows with **2 / 2** carrying an impact, and the drift guard
+**8** seeds of which **2** are exact (AC-7) — and all of them spell the literal
+`"failed"` rather than `aggregate.FailureType`, which is LD8. Both LD9
+sentences appear verbatim in `--help` (AC-9). `git show --name-only 152dbe9`
+touches no file under `internal/story`, no `summary.go` and no `memory_test.go`
+(LD13, AC-6).
+
+### What this cycle changed
+
+- `docs/api-contract.md`: the two DEC-028 citations in the `brag impact`
+  section (V-F1), `+6/−2`. **No Go, no test and no `test-docs.sh` change.**
+  Its mutation baseline moves `bde92cdba356` → **`68ae22d061da`**, which
+  re-pins M-D1 and M-D4 (V-F0).
+- This spec: §9's DEC-row count (V-F2), AC-13's command (V-F3), and this
+  section. `cycle:` stays `verify`, as SPEC-085's, SPEC-087's, SPEC-088's and
+  SPEC-089's verify commits all left it. Ship advances it.
+
+### Not findings, checked and clean
+
+- **The corpus was never written to.** The only `brag` invocations against
+  `~/.bragfile/db.sqlite` were the read-only `brag memory --project bragfile`
+  that §13.5 asks for and the `sqlite3 .backup`, which takes a read lock. Every
+  other run used the file copy or a scratch DB under the session scratchpad.
+  **No brag was captured; the brag comes at ship.**
+- **No stray tag.** `AC2` is green with both edited files present. Every
+  tool-call tag named in this section is inline, in backticks.
+- **Counts.** Every count here was taken with `/usr/bin/grep`, `git grep` or
+  Python, never bare `grep`, which in this zsh is a `ugrep` wrapper that
+  respects `.gitignore`.
+- **Nothing out of scope was touched.** No `summary`/`story` renderer, no
+  `guidance/questions.yaml`, no AGENTS.md, no new decision record, and
+  SPEC-094 is untouched at `cycle: frame`.
 
 ## Reflection (Ship)
 

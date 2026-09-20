@@ -518,7 +518,9 @@ Document structure:
   holding only failures has no `## Impact` heading. The `Entries:` tally
   counts both sections. A failure with no impact statement appears in
   neither, like any other impact-less entry. Locked by
-  [DEC-050](../decisions/DEC-050-a-failure-is-never-rendered-as-a-win.md).
+  [DEC-050](../decisions/DEC-050-a-failure-is-never-rendered-as-a-win.md)
+  and the Amendment to
+  [DEC-028](../decisions/DEC-028-impact-digest-window-and-shape.md).
 
 Flags:
 
@@ -561,7 +563,9 @@ Flags:
   shape, holding only the failures). Each entry inside either array is a
   deliberately NARROW 4-key projection `{id, title, project, impact}` —
   NOT DEC-011's 9-key shape — locked by
-  [DEC-028](../decisions/DEC-028-impact-digest-window-and-shape.md).
+  [DEC-028](../decisions/DEC-028-impact-digest-window-and-shape.md),
+  whose key list is the one its
+  `## Amendment (2026-09-19, SPEC-086 design)` states.
 - `--tag <token>`, `--project <name>`, `--type <name>` compose with the
   window and echo into `filters` exactly as `brag summary` does. The
   filter narrows the in-window set before the impact-first split.
