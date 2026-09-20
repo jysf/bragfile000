@@ -3833,7 +3833,7 @@ touches no file under `internal/story`, no `summary.go` and no `memory_test.go`
 from the process-focused build reflection above.*
 
 **Shipped 2026-09-20.** Design `pr:219`, build `pr:220`, verify `pr:221`, ship
-`pr:SHIPPR`. Framing has no PR of its own: it was folded into the design
+`pr:222`. Framing has no PR of its own: it was folded into the design
 commit, as *What design settled* records. The gates were re-run on the ship
 branch after this cycle's edits, the archive and the regeneration — none is
 inherited from verify. See *Ship-cycle gates* below.
@@ -4039,7 +4039,7 @@ framing's record.
    what keeps the digests in agreement with `brag list --type failed`. And
    `brag summary` and `brag story` still render failures as wins in markdown —
    that is SPEC-094's half, named in DEC-050. Evidence ref: `pr:221` (the
-   measurements above), `pr:SHIPPR`.
+   measurements above), `pr:222`.
 
 ### Ship-cycle gates
 

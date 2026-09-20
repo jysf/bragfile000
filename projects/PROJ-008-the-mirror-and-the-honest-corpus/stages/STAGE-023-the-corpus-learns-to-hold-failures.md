@@ -209,7 +209,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       AGENTS.md; the zsh quirks behind it went into
       `projects/_templates/spec.md`'s new `### Traps` subsection instead, which
       is the gap build's Q2 named. `pr:219` (design, with framing folded in),
-      `pr:220` (build), `pr:221` (verify), `pr:SHIPPR` (ship).
+      `pr:220` (build), `pr:221` (verify), `pr:222` (ship).
 - [x] SPEC-087 (shipped on 2026-09-07) — **`Y3` derives instead of caching.**
       Split out of SPEC-086's re-framing rather than absorbed; sequenced
       BEFORE SPEC-086 design and landed there, so DEC-050 will be the **first**
