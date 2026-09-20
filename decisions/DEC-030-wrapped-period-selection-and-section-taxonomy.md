@@ -319,6 +319,44 @@ positional-vs-flag
 surface (choice 1) is the second soft spot but lower-risk (it does not change
 what data is shown, only how the period is named).
 
+## Amendment (2026-09-18, SPEC-086 design)
+
+**Choice 4's arc gains a sixth section, and it is the only conditional one.**
+The arc is now **Cadence → Top initiatives → Impact moments → What didn't
+work → Rhythm → Span**. Everything above this heading is left as written, so
+the amendment can be read against it.
+
+- **Impact moments** now carries the with-impact entries that are *not*
+  recorded failures. An entry whose `type` is the reserved `failed` value
+  (DEC-049) and that carries an impact moves to the next section. Choice 4's
+  *"reuses `WithImpact` + `GroupEntriesByProject`"* still holds.
+  `aggregate.SplitFailures` splits the with-impact subset between the two
+  sections, and neither section narrows it.
+- **What didn't work** holds those failures, grouped by project, in the
+  Impact moments rendering shape. **It renders only when it has an entry.**
+  The five sections choice 4 locked still render whenever the period is
+  non-empty, including a bare `## Impact moments` heading when nothing in
+  the period carries an impact, as they always have. The asymmetry is
+  deliberate. Those five are the celebratory arc and each has something to
+  say about any non-empty period. The new section exists for honesty, and on
+  a clean quarter an empty *"What didn't work"* heading reads as an
+  accusation.
+- **The JSON envelope** gains `failures_by_project` directly after
+  `impact_moments`, which is the markdown position. It has the same
+  `[{project, entries:[{id, title, project, impact}]}]` shape, is always
+  present, and is `[]` when empty. The skeleton above predates it.
+  `impact_moments` no longer carries failures, which is a breaking change
+  named in the CHANGELOG. `total_entries`, the `Entries: N` headline and
+  every other key are unchanged. `top_types` already counted `failed` like
+  any other type.
+- **The arc is still "celebratory."** The digest still celebrates. It no
+  longer does so by presenting a dead end as a win.
+
+The rule for every `--type` surface, and the alternatives it rejected, are in
+[DEC-050](DEC-050-a-failure-is-never-rendered-as-a-win.md). The amended arc is
+pinned by `TestToWrappedMarkdown_FailureSectionGolden` and
+`TestToWrappedMarkdown_WhatDidntWorkRendersOnlyWhenNonEmpty`.
+
 ## References
 
 - Related specs:
