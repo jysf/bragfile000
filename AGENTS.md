@@ -412,7 +412,8 @@ SPEC-082 (STAGE-022): `git diff --quiet` reported *clean* for
 on disk read as a missing one. SPEC-086 build (2026-09-19): a zsh snippet named
 a variable `path`, which in zsh is tied to `PATH`, so every command in the loop
 failed and the comparison reported *0 differences* from `""` against `""`; it
-was caught by reading the output, not by a guard. SPEC-086 verify (2026-09-20):
+was caught by reading the output, not by a guard. SPEC-086 verify (2026-09-20),
+in the orchestrator's own check of that cycle rather than in the verify session:
 `brag story` was compared across two binaries with a `--profile` flag that does
 not exist, so four identical `brag: user error: unknown flag: --profile` lines
 compared **equal** — the inputs were **non-empty**, which is exactly why an
