@@ -42,7 +42,7 @@ The window is bounded on both ends: a named period covers only entries created w
 
 --previous (no positional period) covers the last-completed calendar year — brag wrapped --previous in 2026 is identical to brag wrapped 2025. It is valid only with no positional period: pairing it with an explicit year/quarter (brag wrapped 2026 --previous) is an error, since the positional arg already names a bounded period (name the one you want directly, e.g. brag wrapped 2025).
 
-Output is markdown (default) or a single-object JSON envelope (--format json). The digest renders these sections: Cadence (busiest month + per-month counts), Top initiatives, Impact moments, Rhythm (longest streak, top tags, top types), and Span. Filter flags --tag/--project/--type compose with the period.
+Output is markdown (default) or a single-object JSON envelope (--format json). The digest renders these sections: Cadence (busiest month + per-month counts), Top initiatives, Impact moments, What didn't work (work recorded with brag learn, left out when there is none), Rhythm (longest streak, top tags, top types), and Span. Filter flags --tag/--project/--type compose with the period.
 
 Examples:
   brag wrapped                                # the current calendar year, markdown

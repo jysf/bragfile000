@@ -38,9 +38,9 @@ The section that says the most about how this repository is run is
 | Specs carried to ship and archived | 85 | `projects/*/specs/done/` |
 | …of those, also carrying a build-phase reflection | 79 | `### Build-phase reflection` in those files |
 | Go source files | 70 | `internal/`, `cmd/` |
-| Go test files | 79 | `internal/`, `cmd/` |
-| Go test functions | 829 | `func Test*` in `*_test.go` |
-| Documentation assertions (distinct ids) | 200 | `scripts/test-docs.sh`, run by `just test-docs` |
+| Go test files | 80 | `internal/`, `cmd/` |
+| Go test functions | 843 | `func Test*` in `*_test.go` |
+| Documentation assertions (distinct ids) | 205 | `scripts/test-docs.sh`, run by `just test-docs` |
 | …of those, replacing a manual release-checklist item | 6 | the `W`-series in `scripts/test-docs.sh` |
 | Questions tracked in guidance/questions.yaml | 21 | `guidance/questions.yaml` |
 | …of those, still open | 8 | `status: open` in the same file |

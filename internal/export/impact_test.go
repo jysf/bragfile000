@@ -2,6 +2,7 @@ package export
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -137,7 +138,8 @@ func TestToImpactJSON_DEC028ShapeGolden(t *testing.T) {
         }
       ]
     }
-  ]
+  ],
+  "failures_by_project": []
 }`
 	if string(got) != want {
 		t.Errorf("json golden mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
@@ -190,6 +192,9 @@ Entries: 0/0 with impact`
 	}
 	if string(env["impact_by_project"]) != "[]" {
 		t.Errorf("impact_by_project: got %s, want []", env["impact_by_project"])
+	}
+	if string(env["failures_by_project"]) != "[]" {
+		t.Errorf("failures_by_project: got %s, want []", env["failures_by_project"])
 	}
 	if string(env["filters"]) != "{}" {
 		t.Errorf("filters: got %s, want {}", env["filters"])
@@ -302,5 +307,249 @@ func TestToImpactMarkdown_FiltersEchoed(t *testing.T) {
 	}
 	if len(env.Filters) != 1 {
 		t.Errorf("filters: got %v, want exactly {project: alpha}", env.Filters)
+	}
+}
+
+// impactFailureFixture is impactFixture plus three rows typed "failed" — the
+// literal DEC-049 persists, spelled out rather than taken from
+// aggregate.FailureType so these tests also fail if the constant drifts from
+// the stored value. id 6 is an alpha failure WITH an impact, dated between
+// alpha's two wins, so it must leave their group; id 7 is a failure with NO
+// impact, so it appears nowhere (impact-first, DEC-028 choice 3); id 8 puts
+// gamma in the body only through a failure, so gamma is a failures-only
+// project. 8 in window, 5 with impact: 3 in ## Impact, 2 in ## What didn't
+// work.
+var impactFailureFixture = append(append([]storage.Entry{}, impactFixture...),
+	storage.Entry{ID: 6, Title: "pool-dead-end",
+		Project: "alpha", Type: "failed",
+		Impact:    "cost two days and produced nothing reusable",
+		CreatedAt: time.Date(2026, 7, 2, 11, 0, 0, 0, time.UTC),
+		UpdatedAt: time.Date(2026, 7, 2, 11, 0, 0, 0, time.UTC)},
+	storage.Entry{ID: 7, Title: "retry-noimpact",
+		Project: "delta", Type: "failed",
+		Impact:    "", // a failure with no impact → counted, not shown
+		CreatedAt: time.Date(2026, 7, 3, 11, 0, 0, 0, time.UTC),
+		UpdatedAt: time.Date(2026, 7, 3, 11, 0, 0, 0, time.UTC)},
+	storage.Entry{ID: 8, Title: "vendor-sdk-dead-end",
+		Project: "gamma", Type: "failed",
+		Impact:    "ruled out the vendor SDK",
+		CreatedAt: time.Date(2026, 7, 5, 11, 0, 0, 0, time.UTC),
+		UpdatedAt: time.Date(2026, 7, 5, 11, 0, 0, 0, time.UTC)},
+)
+
+var impactFailureOpts = ImpactOptions{
+	Scope:           "quarter",
+	Filters:         "(none)",
+	EntriesInWindow: 8,
+	Now:             impactFixedNow,
+}
+
+// TestToImpactMarkdown_FailureSectionGolden (LOAD-BEARING, SPEC-086 LD2/LD3).
+// A recorded failure with an impact leaves ## Impact and renders under
+// ## What didn't work, in the same per-entry shape; the Entries: tally is
+// unchanged in meaning — 5 is the with-impact subset, which both sections show.
+func TestToImpactMarkdown_FailureSectionGolden(t *testing.T) {
+	got, err := ToImpactMarkdown(impactFailureFixture, impactFailureOpts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := `# Bragfile Impact
+
+Generated: 2026-07-06T12:00:00Z
+Scope: quarter
+Filters: (none)
+Entries: 5/8 with impact
+
+## Impact
+
+### alpha
+
+- 1: alpha-old
+  cut p95 login latency 40%
+- 4: alpha-new
+  removed the nightly cron entirely
+
+### beta
+
+- 2: beta-mid
+  onboarding time down to 1 day
+
+## What didn't work
+
+### alpha
+
+- 6: pool-dead-end
+  cost two days and produced nothing reusable
+
+### gamma
+
+- 8: vendor-sdk-dead-end
+  ruled out the vendor SDK`
+	if string(got) != want {
+		t.Errorf("markdown golden mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestToImpactJSON_FailureSectionGolden (LOAD-BEARING, SPEC-086 LD4). The
+// failures leave impact_by_project and arrive in failures_by_project, the
+// same group shape and 4-key projection; counts_by_project still counts both.
+func TestToImpactJSON_FailureSectionGolden(t *testing.T) {
+	got, err := ToImpactJSON(impactFailureFixture, impactFailureOpts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := `{
+  "generated_at": "2026-07-06T12:00:00Z",
+  "scope": "quarter",
+  "filters": {},
+  "entries_in_window": 8,
+  "entries_with_impact": 5,
+  "counts_by_project": {
+    "alpha": 3,
+    "beta": 1,
+    "gamma": 1
+  },
+  "impact_by_project": [
+    {
+      "project": "alpha",
+      "entries": [
+        {
+          "id": 1,
+          "title": "alpha-old",
+          "project": "alpha",
+          "impact": "cut p95 login latency 40%"
+        },
+        {
+          "id": 4,
+          "title": "alpha-new",
+          "project": "alpha",
+          "impact": "removed the nightly cron entirely"
+        }
+      ]
+    },
+    {
+      "project": "beta",
+      "entries": [
+        {
+          "id": 2,
+          "title": "beta-mid",
+          "project": "beta",
+          "impact": "onboarding time down to 1 day"
+        }
+      ]
+    }
+  ],
+  "failures_by_project": [
+    {
+      "project": "alpha",
+      "entries": [
+        {
+          "id": 6,
+          "title": "pool-dead-end",
+          "project": "alpha",
+          "impact": "cost two days and produced nothing reusable"
+        }
+      ]
+    },
+    {
+      "project": "gamma",
+      "entries": [
+        {
+          "id": 8,
+          "title": "vendor-sdk-dead-end",
+          "project": "gamma",
+          "impact": "ruled out the vendor SDK"
+        }
+      ]
+    }
+  ]
+}`
+	if string(got) != want {
+		t.Errorf("json golden mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestToImpactJSON_CountsByProjectSpansBothSections pins SPEC-086 LD3, the
+// DEC-048 obligation: no existing count changes what it counts. DEC-028
+// defines counts_by_project over the with-impact subset, so it keeps summing
+// to entries_with_impact, and each project's count is its rows across BOTH
+// sections. Deriving the map from the narrowed impact_by_project loop — the
+// obvious shortcut — makes alpha 2 and drops gamma, and fails here by name.
+func TestToImpactJSON_CountsByProjectSpansBothSections(t *testing.T) {
+	jsonBytes, err := ToImpactJSON(impactFailureFixture, impactFailureOpts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var env struct {
+		EntriesWithImpact int            `json:"entries_with_impact"`
+		CountsByProject   map[string]int `json:"counts_by_project"`
+		ImpactByProject   []struct {
+			Project string            `json:"project"`
+			Entries []json.RawMessage `json:"entries"`
+		} `json:"impact_by_project"`
+		FailuresByProject []struct {
+			Project string            `json:"project"`
+			Entries []json.RawMessage `json:"entries"`
+		} `json:"failures_by_project"`
+	}
+	if err := json.Unmarshal(jsonBytes, &env); err != nil {
+		t.Fatalf("json unmarshal: %v", err)
+	}
+	rows := map[string]int{}
+	for _, g := range env.ImpactByProject {
+		rows[g.Project] += len(g.Entries)
+	}
+	for _, g := range env.FailuresByProject {
+		rows[g.Project] += len(g.Entries)
+	}
+	sum := 0
+	for p, n := range env.CountsByProject {
+		sum += n
+		if rows[p] != n {
+			t.Errorf("counts_by_project[%q] = %d, but the two sections hold %d rows for it", p, n, rows[p])
+		}
+	}
+	if len(rows) != len(env.CountsByProject) {
+		t.Errorf("counts_by_project has %d projects, the two sections have %d", len(env.CountsByProject), len(rows))
+	}
+	if sum != env.EntriesWithImpact || sum != 5 {
+		t.Errorf("counts_by_project sums to %d; entries_with_impact is %d; want both 5", sum, env.EntriesWithImpact)
+	}
+}
+
+// TestToImpactMarkdown_SectionsRenderOnlyWhenNonEmpty pins SPEC-086 LD5 (Fork
+// D) on impact: each section heading appears only when it has an entry. A
+// clean window grows no "## What didn't work"; a failures-only window grows no
+// bare "## Impact". Line equality, not substring (AGENTS.md §9, SPEC-015).
+func TestToImpactMarkdown_SectionsRenderOnlyWhenNonEmpty(t *testing.T) {
+	headings := func(md []byte) []string {
+		var out []string
+		for _, ln := range strings.Split(string(md), "\n") {
+			if strings.HasPrefix(ln, "## ") {
+				out = append(out, ln)
+			}
+		}
+		return out
+	}
+	failuresOnly := []storage.Entry{impactFailureFixture[5], impactFailureFixture[7]}
+	cases := []struct {
+		name    string
+		entries []storage.Entry
+		want    []string
+	}{
+		{"no failures", impactFixture, []string{"## Impact"}},
+		{"failures only", failuresOnly, []string{"## What didn't work"}},
+		{"both", impactFailureFixture, []string{"## Impact", "## What didn't work"}},
+	}
+	for _, c := range cases {
+		opts := impactFailureOpts
+		opts.EntriesInWindow = len(c.entries)
+		md, err := ToImpactMarkdown(c.entries, opts)
+		if err != nil {
+			t.Fatalf("%s: unexpected error: %v", c.name, err)
+		}
+		if got := headings(md); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: ## headings = %q, want %q\n%s", c.name, got, c.want, md)
+		}
 	}
 }

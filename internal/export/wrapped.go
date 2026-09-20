@@ -39,7 +39,9 @@ type WrappedOptions struct {
 
 // ToWrappedMarkdown renders the in-period entries as the celebratory
 // wrapped digest per DEC-014/DEC-030: provenance, then the section arc
-// Cadence → Top initiatives → Impact moments → Rhythm → Span. Returns
+// Cadence → Top initiatives → Impact moments → What didn't work → Rhythm →
+// Span. What didn't work is the one section rendered only when non-empty
+// (DEC-050; DEC-030's Amendment). Returns
 // bytes with the trailing "\n" stripped (matches every other renderer).
 // On an empty period only the header + provenance block (through
 // "Entries: 0") is emitted; the body sections are omitted (DEC-014 part
@@ -89,17 +91,17 @@ func ToWrappedMarkdown(entries []storage.Entry, opts WrappedOptions) ([]byte, er
 		fmt.Fprintf(&buf, "- %s: %d\n", nc.Name, nc.Count)
 	}
 
-	// Impact moments (with-impact entries grouped by project, full text).
+	// Impact moments (with-impact entries that are not failures, grouped by
+	// project, full text), then What didn't work (the with-impact failures),
+	// which renders only when it has an entry (DEC-050).
+	worked, failed := aggregate.SplitFailures(aggregate.WithImpact(entries))
 	fmt.Fprintln(&buf)
 	fmt.Fprintln(&buf, "## Impact moments")
-	for _, group := range aggregate.GroupEntriesByProject(aggregate.WithImpact(entries)) {
+	writeImpactGroups(&buf, worked)
+	if len(failed) > 0 {
 		fmt.Fprintln(&buf)
-		fmt.Fprintf(&buf, "### %s\n", group.Project)
-		fmt.Fprintln(&buf)
-		for _, e := range group.Entries {
-			fmt.Fprintf(&buf, "- %d: %s\n", e.ID, e.Title)
-			fmt.Fprintf(&buf, "  %s\n", e.Impact)
-		}
+		fmt.Fprintln(&buf, "## What didn't work")
+		writeImpactGroups(&buf, failed)
 	}
 
 	// Rhythm (longest streak, top-5 tags, top-3 types).
@@ -137,17 +139,18 @@ func ToWrappedMarkdown(entries []storage.Entry, opts WrappedOptions) ([]byte, er
 // declaration order is the JSON key order DEC-014/DEC-030 lock
 // (encoding/json preserves it).
 type wrappedEnvelope struct {
-	GeneratedAt    string               `json:"generated_at"`
-	Scope          string               `json:"scope"`
-	Filters        map[string]string    `json:"filters"`
-	TotalEntries   int                  `json:"total_entries"`
-	Cadence        cadenceRecord        `json:"cadence"`
-	TopInitiatives []wrappedInitiative  `json:"top_initiatives"`
-	ImpactMoments  []wrappedImpactGroup `json:"impact_moments"`
-	LongestStreak  int                  `json:"longest_streak"`
-	TopTags        []wrappedNameCount   `json:"top_tags"`
-	TopTypes       []wrappedNameCount   `json:"top_types"`
-	Span           wrappedSpanRecord    `json:"span"`
+	GeneratedAt       string               `json:"generated_at"`
+	Scope             string               `json:"scope"`
+	Filters           map[string]string    `json:"filters"`
+	TotalEntries      int                  `json:"total_entries"`
+	Cadence           cadenceRecord        `json:"cadence"`
+	TopInitiatives    []wrappedInitiative  `json:"top_initiatives"`
+	ImpactMoments     []wrappedImpactGroup `json:"impact_moments"`
+	FailuresByProject []wrappedImpactGroup `json:"failures_by_project"`
+	LongestStreak     int                  `json:"longest_streak"`
+	TopTags           []wrappedNameCount   `json:"top_tags"`
+	TopTypes          []wrappedNameCount   `json:"top_types"`
+	Span              wrappedSpanRecord    `json:"span"`
 }
 
 // cadenceRecord uses *string for BusiestMonth so an empty period renders
@@ -199,16 +202,17 @@ func ToWrappedJSON(entries []storage.Entry, opts WrappedOptions) ([]byte, error)
 	series, busiest := aggregate.Cadence(entries, opts.ScopeMonths)
 
 	env := wrappedEnvelope{
-		GeneratedAt:    opts.Now.UTC().Format(time.RFC3339),
-		Scope:          opts.Scope,
-		Filters:        opts.FiltersJSON,
-		TotalEntries:   len(entries),
-		Cadence:        cadenceRecord{Series: series},
-		TopInitiatives: []wrappedInitiative{},
-		ImpactMoments:  []wrappedImpactGroup{},
-		TopTags:        []wrappedNameCount{},
-		TopTypes:       []wrappedNameCount{},
-		Span:           wrappedSpanRecord{},
+		GeneratedAt:       opts.Now.UTC().Format(time.RFC3339),
+		Scope:             opts.Scope,
+		Filters:           opts.FiltersJSON,
+		TotalEntries:      len(entries),
+		Cadence:           cadenceRecord{Series: series},
+		TopInitiatives:    []wrappedInitiative{},
+		ImpactMoments:     []wrappedImpactGroup{},
+		FailuresByProject: []wrappedImpactGroup{},
+		TopTags:           []wrappedNameCount{},
+		TopTypes:          []wrappedNameCount{},
+		Span:              wrappedSpanRecord{},
 	}
 	if env.Filters == nil {
 		env.Filters = map[string]string{}
@@ -222,21 +226,9 @@ func ToWrappedJSON(entries []storage.Entry, opts WrappedOptions) ([]byte, error)
 		for _, nc := range aggregate.MostCommon(extractProjects(entries), 5) {
 			env.TopInitiatives = append(env.TopInitiatives, wrappedInitiative{Project: nc.Name, Count: nc.Count})
 		}
-		for _, group := range aggregate.GroupEntriesByProject(aggregate.WithImpact(entries)) {
-			g := wrappedImpactGroup{
-				Project: group.Project,
-				Entries: make([]wrappedEntry, 0, len(group.Entries)),
-			}
-			for _, e := range group.Entries {
-				g.Entries = append(g.Entries, wrappedEntry{
-					ID:      e.ID,
-					Title:   e.Title,
-					Project: group.Project,
-					Impact:  e.Impact,
-				})
-			}
-			env.ImpactMoments = append(env.ImpactMoments, g)
-		}
+		worked, failed := aggregate.SplitFailures(aggregate.WithImpact(entries))
+		env.ImpactMoments = wrappedGroups(worked)
+		env.FailuresByProject = wrappedGroups(failed)
 		_, longest := aggregate.Streak(entries, opts.Now)
 		env.LongestStreak = longest
 		for _, nc := range aggregate.MostCommon(extractTags(entries), 5) {
@@ -256,6 +248,29 @@ func ToWrappedJSON(entries []storage.Entry, opts WrappedOptions) ([]byte, error)
 	}
 
 	return json.MarshalIndent(env, "", "  ")
+}
+
+// wrappedGroups projects entries into project groups of the same NARROW 4-key
+// entry shape impact uses. Non-nil on empty input, so an empty section
+// renders [].
+func wrappedGroups(entries []storage.Entry) []wrappedImpactGroup {
+	out := make([]wrappedImpactGroup, 0)
+	for _, group := range aggregate.GroupEntriesByProject(entries) {
+		g := wrappedImpactGroup{
+			Project: group.Project,
+			Entries: make([]wrappedEntry, 0, len(group.Entries)),
+		}
+		for _, e := range group.Entries {
+			g.Entries = append(g.Entries, wrappedEntry{
+				ID:      e.ID,
+				Title:   e.Title,
+				Project: group.Project,
+				Impact:  e.Impact,
+			})
+		}
+		out = append(out, g)
+	}
+	return out
 }
 
 // extractTypes returns each entry's non-empty Type field, suitable for

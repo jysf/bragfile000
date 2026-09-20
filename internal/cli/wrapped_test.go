@@ -511,6 +511,21 @@ func TestWrappedCmd_HelpShowsPrevious(t *testing.T) {
 	}
 }
 
+// TestWrappedCmd_HelpListsTheFailureSectionInArcOrder ▲ SPEC-086 LD9: the
+// section list in --help follows DEC-030's arc as amended, so the new section
+// is named between Impact moments and Rhythm, with its only-when-non-empty rule.
+func TestWrappedCmd_HelpListsTheFailureSectionInArcOrder(t *testing.T) {
+	root, outBuf, _ := newWrappedTestRoot(t)
+	root.SetArgs([]string{"wrapped", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := "Impact moments, What didn't work (work recorded with brag learn, left out when there is none), Rhythm"
+	if !bytes.Contains(outBuf.Bytes(), []byte(want)) {
+		t.Errorf("expected %q in help:\n%s", want, outBuf.String())
+	}
+}
+
 func TestWrappedCmd_StdoutStderrSeparation(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	withNowFunc(t, time.Date(2026, 7, 6, 12, 0, 0, 0, time.UTC))

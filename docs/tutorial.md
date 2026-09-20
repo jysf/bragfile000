@@ -534,8 +534,10 @@ excluded), `--month --previous` the previous month, `--year --previous`
 last year. It needs a window flag and can't combine with `--since`. Only
 entries with a non-empty impact appear in the body; a
 `<shown>/<in-window> with impact` tally keeps you honest about what was
-left out. Filter flags `--tag`/`--project`/`--type` compose with the
-window. Pipe the JSON form into an LLM to draft the narrative:
+left out. Anything you recorded with `brag learn` gets its own
+`## What didn't work` section after the impact, so a dead end never reads
+as a win; the section only appears when there is one. Filter flags
+`--tag`/`--project`/`--type` compose with the window. Pipe the JSON form into an LLM to draft the narrative:
 
 ```bash
 brag impact --quarter --format json | claude "draft my quarterly impact summary"
@@ -566,7 +568,9 @@ spill into 2027. The digest renders a celebratory arc: **Cadence** (busiest mont
 Unicode block-glyph sparkline `▁▂▃▄▅▆▇█` over the per-month counts, and
 the per-month count series), **Top initiatives** (your top projects),
 **Impact moments** (entries with an impact statement, in full),
-**Rhythm** (longest streak, top tags, top types), and **Span** (first
+**What didn't work** (anything you recorded with `brag learn`, shown only
+when there is some), **Rhythm** (longest streak, top tags, top types),
+and **Span** (first
 and last entry + active days). Filter flags `--tag`/`--project`/`--type`
 compose with the period. The cadence sparkline is on by default in
 markdown; suppress it with `--no-spark` or a `NO_COLOR` env var (it never

@@ -649,6 +649,80 @@ func TestWithImpact_EmptyInputAndAllEmptyImpact(t *testing.T) {
 	}
 }
 
+// TestIsFailure_ExactMatchOnTheReservedValue pins SPEC-086 LD1: a failure is
+// exactly the reserved value DEC-049 persists — the literal "failed", matched
+// case-sensitively and untrimmed, the comparison storage's --type filter makes.
+// Every near-miss below is a real spelling an agent or a user can write with
+// `brag add --type`, and none of them is a failure.
+func TestIsFailure_ExactMatchOnTheReservedValue(t *testing.T) {
+	cases := []struct {
+		typ  string
+		want bool
+	}{
+		{"failed", true},
+		{"Failed", false},
+		{"FAILED", false},
+		{" failed", false},
+		{"failed ", false},
+		{"failure", false},
+		{"learned", false},
+		{"shipped", false},
+		{"", false},
+	}
+	for _, c := range cases {
+		if got := IsFailure(storage.Entry{Type: c.typ}); got != c.want {
+			t.Errorf("IsFailure(Type=%q) = %v, want %v", c.typ, got, c.want)
+		}
+	}
+	if FailureType != "failed" {
+		t.Errorf("FailureType = %q, want %q (the value is persisted in every corpus)", FailureType, "failed")
+	}
+}
+
+// TestSplitFailures_PartitionsInOrderNeverNil pins SPEC-086 LD2: the split is a
+// partition — every entry lands in exactly one half, input order is kept inside
+// each half, and neither half is ever nil, so an empty section marshals as [].
+func TestSplitFailures_PartitionsInOrderNeverNil(t *testing.T) {
+	in := []storage.Entry{
+		{ID: 1, Type: "shipped"},
+		{ID: 2, Type: "failed"},
+		{ID: 3, Type: ""},
+		{ID: 4, Type: "failed"},
+		{ID: 5, Type: "Failed"},
+	}
+	others, failures := SplitFailures(in)
+	ids := func(es []storage.Entry) []int64 {
+		out := []int64{}
+		for _, e := range es {
+			out = append(out, e.ID)
+		}
+		return out
+	}
+	if got, want := ids(others), []int64{1, 3, 5}; !reflect.DeepEqual(got, want) {
+		t.Errorf("others = %v, want %v", got, want)
+	}
+	if got, want := ids(failures), []int64{2, 4}; !reflect.DeepEqual(got, want) {
+		t.Errorf("failures = %v, want %v", got, want)
+	}
+
+	for _, tc := range []struct {
+		name string
+		in   []storage.Entry
+	}{
+		{"nil input", nil},
+		{"no failures", []storage.Entry{{ID: 1, Type: "shipped"}}},
+		{"only failures", []storage.Entry{{ID: 1, Type: "failed"}}},
+	} {
+		o, f := SplitFailures(tc.in)
+		if o == nil || f == nil {
+			t.Errorf("%s: SplitFailures returned a nil half (others nil=%v, failures nil=%v)", tc.name, o == nil, f == nil)
+		}
+		if len(o)+len(f) != len(tc.in) {
+			t.Errorf("%s: halves hold %d entries, input had %d", tc.name, len(o)+len(f), len(tc.in))
+		}
+	}
+}
+
 // --- SPEC-045: provenance coverage helpers ------------------------------
 
 // coverageAggFixture mirrors the export package's coverageYearFixture (kept

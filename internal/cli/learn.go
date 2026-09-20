@@ -6,17 +6,12 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/jysf/bragfile000/internal/aggregate"
 	"github.com/jysf/bragfile000/internal/capture"
 	"github.com/jysf/bragfile000/internal/config"
 	"github.com/jysf/bragfile000/internal/editor"
 	"github.com/jysf/bragfile000/internal/storage"
 )
-
-// FailureType is the reserved entries.type value marking work that did not
-// work (DEC-049). It is the ONE type value bragfile pins: `brag add --type`
-// stays free-form, and `brag learn` exists so this value cannot fragment the
-// way `shipped`/`ship` and `fixed`/`bugfix` already have in the live corpus.
-const FailureType = "failed"
 
 // learnFieldFlags are the entry-field flags whose presence routes `brag
 // learn` to flag mode. "type" is deliberately ABSENT: the value is pinned,
@@ -24,8 +19,9 @@ const FailureType = "failed"
 var learnFieldFlags = []string{"title", "description", "tags", "project", "impact"}
 
 // NewLearnCmd builds `brag learn` — the capture verb for work that did not
-// work. It is `brag add` with entries.type pinned to FailureType and the
-// milestone nudge suppressed; see runLearn for why the nudge is dropped.
+// work. It is `brag add` with entries.type pinned to aggregate.FailureType
+// (DEC-049) and the milestone nudge suppressed; see runLearn for why the
+// nudge is dropped.
 //
 // Two modes, mirroring add's (DEC-007 / DEC-009) minus JSON mode:
 //   - flag mode: any of the five entry-field flags set; --title is required.
@@ -96,7 +92,7 @@ func runLearnFlags(cmd *cobra.Command, _ []string) error {
 		Description: getFlagString(cmd, "description"),
 		Tags:        getFlagString(cmd, "tags"),
 		Project:     getFlagString(cmd, "project"),
-		Type:        FailureType,
+		Type:        aggregate.FailureType,
 		Impact:      getFlagString(cmd, "impact"),
 	}, cmd.Flags().Changed("project"))
 }
@@ -125,7 +121,7 @@ func runLearnEditor(cmd *cobra.Command) error {
 		Description: parsed.Description,
 		Tags:        parsed.Tags,
 		Project:     parsed.Project,
-		Type:        FailureType,
+		Type:        aggregate.FailureType,
 		Impact:      parsed.Impact,
 	}, parsed.Project != "")
 }

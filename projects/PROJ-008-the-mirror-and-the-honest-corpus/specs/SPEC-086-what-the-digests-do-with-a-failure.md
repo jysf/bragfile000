@@ -7,7 +7,7 @@
 task:
   id: SPEC-086
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify                    # frame | design | build | verify | ship
   blocked: false                   # UNBLOCKED 2026-09-06: SPEC-085 shipped
                                    # (df369e9, PR #199). The reserved `failed`
                                    # value exists and the corpus now holds one.
@@ -3233,9 +3233,203 @@ DEC rows (52 and 2) and the `:230` sentence are already on this branch.
 
 ## Build Completion
 
-*Filled at build.*
+*Filled in at the end of the **build** cycle, before advancing to verify.*
+
+*Built 2026-09-19 in a fresh session, from `main` = `9133eed` (the merged
+design, #219).*
+
+- **Branch:** `build/spec-086-digest-failures`
+- **PR (if applicable):** none opened by build. The orchestrator opens it.
+- **All acceptance criteria met?** **Yes, 14 of 14**, each checked by running
+  it or counting it (evidence under *What build measured*). One criterion
+  carries a wording note for verify, AC-13 (below), and it is not a miss.
+- **New decisions emitted:** none. DEC-050 was emitted at design, and the
+  build made no decision the spec had not already locked.
+- **Deviations from spec:**
+  - **None in any artifact.** All 18 diff blocks were applied with
+    `git apply`, and the result is byte-identical to the spec's blocks. The
+    post-image blob hash in each block's `index` line equals `git hash-object`
+    of the resulting file, 18 of 18, and `git diff` of each of the 17 tracked
+    targets is `cmp`-identical to its block. The inventory block was
+    regenerated, not typed.
+  - **Two disagreements between the spec's prose and the tree, reported and
+    not repaired** (the regeneration and the run are right, per the build
+    prompt):
+    1. §9 says *"The two DEC rows (52 and 2)"*. The regenerated block reads
+       **52 and 3**: DEC-025, DEC-028 and DEC-030 each carry an
+       `## Amendment` heading. The 3 is the R3 ruling's value, and the design
+       commit already regenerated the block to it. §9's prose predates R3.
+       The block, the *What design settled* table and the *Inventory* section
+       all say 3.
+    2. **AC-13's literal command is not quite the criterion.** It says
+       `grep -n 'Entries:' internal/export/impact.go internal/export/wrapped.go`
+       *"shows the same two format strings as `main`"*. The two format
+       strings are identical to `main`'s. The raw grep is not: it also prints
+       one doc-comment line that this spec adds to `impact.go`
+       (*"is emitted only when it has an entry (DEC-050), and the Entries:
+       tally"*), and it prints the `Entries: make(...)` struct-field lines,
+       whose whitespace gofmt realigned. Read as *the two format strings*, AC-13
+       holds. Read as *identical raw grep output*, it does not.
+  - **Method notes, not deviations.** The mutation backups live in the
+    session scratchpad, which is under `/private/tmp`, not bare `/tmp`. The
+    discarded probe M-M₀ was **not** re-run: it has no stated post-hash, it
+    is outside the 19, and the spec already records why it was discarded.
+- **Follow-up work identified:**
+  1. **SPEC-091 overlap.** It is also in build and edits the same two
+     constructors, `NewImpactCmd` and `NewWrappedCmd`. The overlap is
+     textual. Whichever PR lands second rebases, and this spec's `Long`
+     edits are single-sentence and additive.
+  2. **For verify to rule on, not changed here:** the `docs/api-contract.md`
+     citation asymmetry. The new `wrapped` hunk cites DEC-050 **and** DEC-030
+     (which is where the amendment lives). The new `impact` hunk cites DEC-050
+     only. The `impact` section already says *"locked by DEC-028"* in two
+     places (the window, and the 4-key shape), and the word *Amendment* appears
+     nowhere in that section, so a reader who follows those links lands on
+     original text that the amendment has since changed. I transcribed the
+     literal as written.
+  3. **§9's stale "(52 and 2)"** (above) is a record correction for verify or
+     ship, if they want the prose to match the block.
+  4. Nothing new for the stage backlog. `--type` negation stays its own
+     `bug` entry, and SPEC-094 is untouched at `cycle: frame`.
+- **What build measured, for verify to diff against:**
+  - **Corpus, re-derived** on a `sqlite3 .backup` copy (read lock only; the
+    copy's hash was `c4a7cc63a808` before and after every run against it).
+    It moved since design: **613** entries (design 606), max id **635**
+    (628), **141** typeless (136). **Unchanged:** **4** `type: failed` rows,
+    ids 420, 433, 465 and 473, all with an impact, and **20** distinct types.
+    `impact --year` reads `Entries: 538/613 with impact` (design
+    `531/606`) and `wrapped` reads `Entries: 613` (design `606`).
+  - **Baseline on unmodified `main`,** before any edit: `go test -json ./...`
+    gave **1086 passing, 829 top-level, 0 failing**, and `just test-docs`
+    gave **201 `OK:`**, 0 `FAIL:`. Both are the numbers the spec starts from.
+  - **Fail-first, step 2** (§3 and §7 applied; `learn_test.go` held to hunks
+    1 and 5, so its old `FailureType` references and the `aggregate` import
+    were both left out, since the import would otherwise be unused). This is
+    Finding 7, package by package:
+    `aggregate` **build failed** (`undefined: IsFailure`, `FailureType`,
+    `SplitFailures`); `storage` **build failed** (`undefined:
+    aggregate.FailureType`, `aggregate.SplitFailures`); `export` **10** top-level
+    failures (the 6 new tests that fail first, the 2 JSON shape goldens and
+    the 2 empty shapes); `cli` **4** (both `learn` e2e tests, both help
+    tests). `TestToImpactJSON_CountsByProjectSpansBothSections` **passed**,
+    as the spec says it should. All 14 failures are assertions with the
+    stated message and none is a panic. Every other package was `ok`.
+  - **After production code (§1, §2, §4, §5):** `go build`, `go vet` clean,
+    `go test -json ./...` gave **1100 passing, 843 top-level, 0 failing,
+    14 packages ok** (1086 → 1100 and 829 → 843, as AC-10 says).
+  - **Group `AD`:** inserted above `finalise`. `grep -n '===== finalise
+    =====\|===== Group AD'` gives `2214` (AD) then `2285` (finalise).
+    Before the inventory was regenerated `test-docs` gave 204 `OK:` and one
+    `FAIL:`, which was `X3`, as the orchestrator predicted. After: **206
+    `OK:`, 205 distinct ids, 0 `FAIL:`**, and `OK:   AD` appears 5 times.
+  - **Inventory, regenerated by `./scripts/inventory.sh` and spliced between
+    the markers** (21 lines, no blank line inside). The diff of the old block
+    against the script's output moved **exactly three rows** and nothing
+    else: `Go test files` 79 → 80, `Go test functions` 829 → 843,
+    `Documentation assertions (distinct ids)` 200 → 205. The two DEC rows
+    (52, and `## Amendment` at 3) were already correct.
+  - **Acceptance criteria that needed the corpus,** each run with the `main`
+    binary and this branch's binary on the same frozen copy (both binaries
+    were built into the scratchpad, and neither was pointed at the live
+    file):
+    - **AC-1:** `Entries: 538/613 with impact` and `Entries: 613`, identical
+      on both binaries and non-empty.
+    - **AC-2:** `entries_with_impact` 538 = `sum(counts_by_project)` 538 =
+      534 impact rows + 4 failure rows. `failures_by_project` ids are
+      `[420, 433, 465, 473]`, the same set `brag list --type failed` returns
+      that has an impact and falls in the window.
+    - **AC-3:** the two sections' bodies are byte-identical across the
+      surfaces: 1116 lines for `## Impact` against `## Impact moments`, and
+      14 for the failure section. The only difference is the one blank line
+      before `## Rhythm`.
+    - **AC-5:** `impact` keys end in `failures_by_project`, and `wrapped`
+      keys carry it directly after `impact_moments`. No failure id sits in
+      `impact_by_project` or `impact_moments`. A failure row is the 4-key
+      projection.
+    - **AC-7:** counted from the test files. The impact fixture has 3
+      `failed` rows (ids 6 and 8 with an impact, id 7 without) and the wrapped
+      fixture has 3 (ids 3 and 5 with an impact, id 4 without). The drift
+      guard has 2 exact rows and 6 near-misses (`Failed`, `" failed"`,
+      `"failed "`, `failure`, `learned` and the empty string).
+    - **AC-9:** both LD9 sentences appear verbatim in `--help`.
+  - **Goldens (AC-6):** the two existing goldens are **42** and **146**
+    `want` lines (from 41 and 145), and the three new ones are **32, 66 and
+    60**, all counted from the files. `memory_test.go`, `internal/story` and
+    `summary.go` are untouched (LD13).
+  - **Diffstat:** the 18 modified files are **+973 / −104** by `numstat`,
+    exactly the spec's figure, and the new file is 70 lines. The regenerated
+    block is its 3 rows, `+3 / −3`.
+  - **Mutation matrix: all 19 probes.** The probe helper backed each target
+    up, applied the stated edit, printed its diff, **refused to run the gate
+    until the content hash had moved**, restored with `cp`, and confirmed the
+    pre-hash returned. Every target was also checked to be at its recorded
+    baseline before each probe, and all ten baselines matched design's
+    hashes. **All 19 stated post-hashes reproduced from their stated
+    edits**, first try, so no diff was hunted for. The helper's own self-test
+    (an edit that changes nothing) was refused with the gate not run. No probe
+    had a build problem, so no red is a compile error in disguise.
+
+    | # | Target | Post-hash, stated = reproduced | Fired (top-level tests) |
+    |---|---|---|---|
+    | **M-1** | `aggregate.go` | `2642076c19d3` | **9**, the set the spec lists |
+    | **M-A** | `aggregate.go` | `90858b3da15f` | 3: the guard, `IsFailure`, `SplitFailures` |
+    | **M-B** | `aggregate.go` | `b7c212dbc136` | 2: the guard, `IsFailure` |
+    | **M-C** | `aggregate.go` | `725f414acc1c` | **10** in 4 packages. `CountsByProjectSpansBothSections` and both e2e tests stay green, as designed |
+    | **M-S** | `store.go` | `5e0b2f5c607b` | 2: the guard, `TestList_FilterByType`. The guard says **`failure sets differ: SQL=3 Go=2`** (re-run once with output kept) |
+    | **M-D** | `export/impact.go` | `1985bca9562b` | 2, **both new**: `CountsByProjectSpansBothSections`, the JSON failure golden |
+    | **M-E** | `export/impact.go` | `4f46c0b9d85a` | 3 |
+    | **M-F** | `export/wrapped.go` | `12329eaab606` | 4 |
+    | **M-G** | `export/impact.go` | `f7732553c44f` | **1**: `SectionsRenderOnlyWhenNonEmpty`, and it is new |
+    | **M-H** | `cli/learn.go` | `0f91bd325fd6` | 3: `PinsFailedType` and both e2e |
+    | **M-J** | `export/wrapped.go` | `b95cb4914bc2` | 3 |
+    | **M-K** | `export/wrapped.go` | `045433f352e9` | 3 |
+    | **M-M** | `export/wrapped.go` | `6f2af25865c0` | 2 |
+    | **M-L1** | `cli/impact.go` | `9f6ec4206bb6` | 1: the help test |
+    | **M-L2** | `cli/wrapped.go` | `7352ab9bf67b` | 1: the help test |
+    | **M-D1** | `api-contract.md` | `520445c282a9` | `AD1` only, and `AD2` stays green. The message is ``[missing: `failures_by_project`]`` |
+    | **M-D2** | `tutorial.md` | `61767048bed1` | `AD4` |
+    | **M-D3** | `AGENTS.md` | `c0c6bd7a7d58` | `AD5` |
+    | **M-D4** | `api-contract.md` | `eabca4338391` | `AD1`, with **`section not found`**, the non-vacuity branch, and a different message from M-D1's |
+
+    Each fired set equals the spec's *Tests that fired* column for that
+    probe. **M-D and M-G**, the two the spec says matter most, are caught only
+    by tests this spec adds. After the matrix all ten targets were back at
+    their baseline hashes and all 19 files still matched the spec's
+    post-image blob hashes. **Five stated edits are descriptions or are
+    abbreviated with `…`** (M-L1, M-D1, M-D2, M-D3 and M-D4), and I ran the
+    most literal reading of each: M-D1 replaces both occurrences inside the
+    `brag impact` section only, M-D2 deletes the phrase including the line
+    wrap inside it, and M-D3 swaps the two sections. All five reproduced
+    their hash on the first run.
 
 ### Build-phase reflection (3 questions, short answers)
+
+1. **What was unclear in the spec that slowed you down?**
+   — Very little, and nothing that changed an artifact. Three small things.
+   The fail-first instruction says to leave `learn_test.go`'s `FailureType`
+   references alone, but the diff block bundles the `aggregate` import, the
+   renames and the new tests, so holding back the renames also means holding
+   back the import (it is unused until the renames land). I worked that out; the
+   spec does not say it. §9's prose still says the DEC rows are "52 and 2" after
+   R3 made it 3. And five mutation edits are descriptions or are abbreviated
+   with `…`, which cost nothing only because each reproduced first try.
+
+2. **Was there a constraint or decision that should have been listed but wasn't?**
+   — No constraint or decision was missing. The gap is in the *Traps* list,
+   which covers `ugrep` but not this shell's own quirks: two of my verification
+   snippets tripped on zsh (`path` is tied to `PATH`, so using it as a
+   variable name broke every command in the loop, and an unquoted `$cmd` is not
+   word-split), and one produced a **vacuous green** (`""` equal to `""`). I
+   caught both from the output, not from a guard, and discarded the results.
+   The api-contract citation asymmetry is raised above for verify.
+
+3. **If you did this task again, what would you do differently?**
+   — Write every verification check as a small Python script from the start
+   rather than shell, and give each equality a non-emptiness guard before
+   trusting it. Twice an "identical" or a "differs" was decided by an empty
+   input, and only reading the output caught it. I would also keep the AC
+   checks in one re-runnable file, so verify can re-run them instead of
+   trusting my transcript.
 
 ## Reflection (Ship)
 

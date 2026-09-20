@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/jysf/bragfile000/internal/aggregate"
 	"github.com/jysf/bragfile000/internal/storage"
 )
 
@@ -53,11 +55,11 @@ func TestLearnCmd_PinsFailedType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get(%d): %v", id, err)
 	}
-	if got.Type != FailureType {
-		t.Errorf("Type = %q, want %q", got.Type, FailureType)
+	if got.Type != aggregate.FailureType {
+		t.Errorf("Type = %q, want %q", got.Type, aggregate.FailureType)
 	}
-	if FailureType != "failed" {
-		t.Errorf("FailureType = %q, want %q", FailureType, "failed")
+	if aggregate.FailureType != "failed" {
+		t.Errorf("aggregate.FailureType = %q, want %q", aggregate.FailureType, "failed")
 	}
 }
 
@@ -144,8 +146,8 @@ func TestLearnCmd_EditorModeOverwritesUserType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get(%d): %v", id, err)
 	}
-	if got.Type != FailureType {
-		t.Errorf("editor-mode Type = %q, want %q (user's header must be overwritten)", got.Type, FailureType)
+	if got.Type != aggregate.FailureType {
+		t.Errorf("editor-mode Type = %q, want %q (user's header must be overwritten)", got.Type, aggregate.FailureType)
 	}
 }
 
@@ -162,5 +164,140 @@ func TestLearnCmd_EmptyTitleIsUserError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "--title is required") {
 		t.Errorf("error = %v, want it to mention --title is required", err)
+	}
+}
+
+// runDigestCorpus runs one brag invocation against dbPath on a fresh root
+// carrying the two writers (add, learn) and the two digests that section
+// failures (impact, wrapped). A fresh root per call, so no flag value leaks
+// from one invocation into the next.
+func runDigestCorpus(t *testing.T, dbPath string, args ...string) string {
+	t.Helper()
+	t.Setenv("BRAGFILE_DB", "")
+	addStderrIsTTY = func() bool { return false }
+	t.Cleanup(func() { addStderrIsTTY = defaultStderrIsTTY })
+	root := NewRootCmd("test")
+	root.AddCommand(NewAddCmd(), NewLearnCmd(), NewImpactCmd(), NewWrappedCmd())
+	var outBuf, errBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetErr(&errBuf)
+	root.SetArgs(append([]string{"--db", dbPath}, args...))
+	if err := root.Execute(); err != nil {
+		t.Fatalf("brag %v: %v (stderr %q)", args, err, errBuf.String())
+	}
+	return outBuf.String()
+}
+
+// markdownSection returns the lines under the `## <heading>` line, up to the
+// next `## ` heading. Found by line equality, not substring (AGENTS.md §9).
+func markdownSection(md, heading string) string {
+	var out []string
+	in := false
+	for _, ln := range strings.Split(md, "\n") {
+		if strings.HasPrefix(ln, "## ") {
+			in = ln == "## "+heading
+			continue
+		}
+		if in {
+			out = append(out, ln)
+		}
+	}
+	return strings.Join(out, "\n")
+}
+
+// TestLearnCmd_ImpactSectionsWhatItWrote ▲ SPEC-086 LD1 — the writer and the
+// reader held to one value by running both, through a real store: the entry
+// `brag learn` wrote is the one `brag impact` lists under "What didn't work",
+// and the entry `brag add` wrote on the same corpus stays under "Impact". No
+// constant appears here, so this fails if the verb and the digest ever name
+// different values, whichever side moves.
+func TestLearnCmd_ImpactSectionsWhatItWrote(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	winID := strings.TrimSpace(runDigestCorpus(t, dbPath, "add", "-t", "shipped the cache", "-p", "alpha", "-k", "shipped", "-i", "cut p95 40%"))
+	failID := strings.TrimSpace(runDigestCorpus(t, dbPath, "learn", "-t", "tried a worker pool", "-p", "alpha", "-i", "cost two days"))
+
+	md := runDigestCorpus(t, dbPath, "impact", "--since", "2000-01-01")
+	impact := markdownSection(md, "Impact")
+	failed := markdownSection(md, "What didn't work")
+	if !strings.Contains(impact, "- "+winID+": shipped the cache") {
+		t.Errorf("## Impact is missing the brag add entry %s:\n%s", winID, md)
+	}
+	if strings.Contains(impact, "- "+failID+":") {
+		t.Errorf("## Impact still carries the brag learn entry %s:\n%s", failID, md)
+	}
+	if !strings.Contains(failed, "- "+failID+": tried a worker pool\n  cost two days") {
+		t.Errorf("## What didn't work is missing the brag learn entry %s with its impact:\n%s", failID, md)
+	}
+
+	var env struct {
+		ImpactByProject []struct {
+			Entries []struct {
+				ID int64 `json:"id"`
+			} `json:"entries"`
+		} `json:"impact_by_project"`
+		FailuresByProject []struct {
+			Entries []struct {
+				ID int64 `json:"id"`
+			} `json:"entries"`
+		} `json:"failures_by_project"`
+	}
+	if err := json.Unmarshal([]byte(runDigestCorpus(t, dbPath, "impact", "--since", "2000-01-01", "--format", "json")), &env); err != nil {
+		t.Fatalf("json unmarshal: %v", err)
+	}
+	ids := func(groups []struct {
+		Entries []struct {
+			ID int64 `json:"id"`
+		} `json:"entries"`
+	}) string {
+		var out []string
+		for _, g := range groups {
+			for _, e := range g.Entries {
+				out = append(out, strconv.FormatInt(e.ID, 10))
+			}
+		}
+		return strings.Join(out, ",")
+	}
+	if got := ids(env.ImpactByProject); got != winID {
+		t.Errorf("impact_by_project ids = %q, want %q", got, winID)
+	}
+	if got := ids(env.FailuresByProject); got != failID {
+		t.Errorf("failures_by_project ids = %q, want %q", got, failID)
+	}
+}
+
+// TestLearnCmd_WrappedSectionsWhatItWrote ▲ SPEC-086 LD1 — the same
+// writer-to-reader check on brag wrapped. The period is named from the stored
+// row's own created_at, so the test never races a year boundary.
+func TestLearnCmd_WrappedSectionsWhatItWrote(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	winID := strings.TrimSpace(runDigestCorpus(t, dbPath, "add", "-t", "shipped the cache", "-p", "alpha", "-k", "shipped", "-i", "cut p95 40%"))
+	failID := strings.TrimSpace(runDigestCorpus(t, dbPath, "learn", "-t", "tried a worker pool", "-p", "alpha", "-i", "cost two days"))
+
+	id, err := strconv.ParseInt(failID, 10, 64)
+	if err != nil {
+		t.Fatalf("learn stdout should be the id alone, got %q", failID)
+	}
+	s, err := storage.Open(dbPath)
+	if err != nil {
+		t.Fatalf("storage.Open: %v", err)
+	}
+	got, err := s.Get(id)
+	s.Close()
+	if err != nil {
+		t.Fatalf("Get(%d): %v", id, err)
+	}
+	year := strconv.Itoa(got.CreatedAt.UTC().Year())
+
+	md := runDigestCorpus(t, dbPath, "wrapped", year, "--no-spark")
+	moments := markdownSection(md, "Impact moments")
+	failed := markdownSection(md, "What didn't work")
+	if !strings.Contains(moments, "- "+winID+": shipped the cache") {
+		t.Errorf("## Impact moments is missing the brag add entry %s:\n%s", winID, md)
+	}
+	if strings.Contains(moments, "- "+failID+":") {
+		t.Errorf("## Impact moments still carries the brag learn entry %s:\n%s", failID, md)
+	}
+	if !strings.Contains(failed, "- "+failID+": tried a worker pool\n  cost two days") {
+		t.Errorf("## What didn't work is missing the brag learn entry %s with its impact:\n%s", failID, md)
 	}
 }
