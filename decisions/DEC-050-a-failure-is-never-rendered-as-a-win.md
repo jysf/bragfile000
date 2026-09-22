@@ -280,6 +280,33 @@ note actually stays visible. Rule 3's zero-rename result was measured on the
 tree rather than argued (~0.88). **Rule 4 is now the softest part (~0.78)**:
 omitting an empty heading has a defensible opposite, and T1 is its trigger.
 
+## Amendment (2026-09-22, SPEC-094 design)
+
+**Rows 3 and 4 have separate implementers now, row 4 has its mechanism, and
+T3 has fired and closed.** Everything above this heading is left as written,
+so the amendment can be read against it.
+
+- **Row 3 (`brag summary`) is implemented by SPEC-095, not SPEC-094.**
+  SPEC-094's framing (2026-09-22) found that the premise shared by this
+  record's Context and row 3 is false for `summary`: its JSON highlight is
+  `{id, title}` with no `type`. On `summary` a failure cannot be told from a
+  win per entry in either format, which is the *unrepresentable* shape rows
+  1 and 2 fixed, not the lossy-markdown shape `story` has. The posture in
+  row 3 is unchanged. The *"until SPEC-094 ships"* consequence now reads
+  *until SPEC-094 and SPEC-095 ship*.
+- **Row 4's mechanism is
+  [DEC-054](DEC-054-story-candor-decides-what-a-failure-renders-as.md).** A
+  profile whose `candor` is exactly `promotional` omits its failures, with
+  an `Omitted:` line, an always-present `omitted_failure_count`, and a fixed
+  clause appended to the framing directive. Every other profile labels them
+  `✗ <id> (failed)`. A failure with an impact is still an impact beat, so
+  rule 3 holds on `story` with no rename.
+- **T3 fired for the form this record named, and is closed.** A bare count
+  survived the consuming model in 0 of 10 runs. The maintainer allowed a
+  binary-authored clause on 2026-09-22. With it, the omission was stated in
+  14 of 14 runs at framing, and in 25 of 25 at design on the wording DEC-054
+  locks. DEC-054's T1 is the trigger that would reopen it.
+
 ## References
 
 - **DEC-014:** the envelope. Part 4's empty-state rule governs the empty

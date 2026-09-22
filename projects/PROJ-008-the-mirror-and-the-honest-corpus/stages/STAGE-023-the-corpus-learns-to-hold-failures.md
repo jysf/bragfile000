@@ -273,7 +273,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       routed — see SPEC-090 below. `pr:206` (design), `pr:207` (DEC renumber),
       `pr:208` (build), `pr:209` (verify), `pr:210` (ship).
 
-- [ ] SPEC-094 (frame) — **`summary` + `story` markdown honesty.** Given a
+- [ ] SPEC-094 (design) — **`summary` + `story` markdown honesty.** Given a
       file at SPEC-086 design (2026-09-18), in the same edit as this line, so
       the id is claimed rather than reserved in prose. The other
       half of SPEC-086's Fork B, split on defect shape: on these two the data is
@@ -317,6 +317,15 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       the mechanism: may `brag story` append a binary-authored clause to the
       framing directive? A decision record is needed, and design takes the
       next free DEC number when it writes it.
+      **Designed 2026-09-22, against `main` at `f2c7b9f`.** The maintainer
+      answered yes. The record is **DEC-054**, claimed by its file in the
+      design commit. `exec` and `skip` omit failures, with an `Omitted:`
+      line, `omitted_failure_count`, and a fixed clause appended to the
+      directive. `me` and `manager` label them `✗ <id> (failed)`. A failure
+      with an impact is still an impact beat, so nothing is renamed. The
+      clause's locked wording was re-measured: the omission was stated in
+      **25 of 25** runs (Haiku and Sonnet, `exec` and `skip`). DEC-029 and
+      DEC-050 each gain an `## Amendment`.
 - [ ] SPEC-095 (frame) — **`summary` moves a failure out of `## Highlights`.**
       Given a file at SPEC-094's framing (2026-09-22), in the same edit as this
       line. It is DEC-050 row 3, which states the posture in full: SPEC-086's
@@ -459,17 +468,17 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `delete.go`. Cheaper to leave unowned and visible than to invent a spec id
       for it now.
 
-**Count:** 5 shipped / 0 verify / 1 in build / 0 in design / 5 framed / 2 not
+**Count:** 5 shipped / 0 verify / 1 in build / 1 in design / 4 framed / 2 not
 yet written
-(Re-derived at SPEC-094 framing, 2026-09-22. It comes from each file's own
+(Re-derived at SPEC-094 design, 2026-09-22. It comes from each file's own
 `cycle:` field, read with
 `awk '/^---$/{f=!f; next} f && /^[[:space:]]+cycle:/{print $2; exit}'` over
 `projects/PROJ-008-*/specs/*.md` and `specs/done/*.md`, and is not
 incremented. Every file's `stage:` is STAGE-023. shipped = SPEC-085, SPEC-086,
 SPEC-087, SPEC-088 and SPEC-089, the five `cycle: ship` files in `specs/done/`.
-in build = SPEC-091. **Nothing is in design or in verify.** framed = SPEC-090,
-SPEC-092, SPEC-093, SPEC-094 and SPEC-095, the five `cycle: frame` files in
-`specs/`. SPEC-094 and SPEC-095 have had a framing pass and carry a
+in build = SPEC-091. in design = SPEC-094. **Nothing is in verify.**
+framed = SPEC-090, SPEC-092, SPEC-093 and SPEC-095, the four `cycle: frame`
+files in `specs/`. SPEC-094 and SPEC-095 have had a framing pass and carry a
 `## GO / NO-GO`. SPEC-094 was created at SPEC-086's design, and SPEC-095 at
 SPEC-094's framing. The other three are id-claiming files rather than fully
 framed specs: SPEC-090 was created at SPEC-089's ship, and SPEC-092 and

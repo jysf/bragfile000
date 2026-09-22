@@ -347,6 +347,44 @@ YAML schema, config path, and malformed-file behavior are a fresh surface
 release to be convincing (0.7). Both are recorded in
 `/guidance/questions.yaml`.
 
+## Amendment (2026-09-22, SPEC-094 design)
+
+**`candor` becomes a body rule on one value, choice 5's envelope gains a key,
+and the directive can carry a sentence bragfile wrote.** Everything above this
+heading is left as written, so the amendment can be read against it. The
+mechanism and the alternatives it rejected are in
+[DEC-054](DEC-054-story-candor-decides-what-a-failure-renders-as.md), which
+implements [DEC-050](DEC-050-a-failure-is-never-rendered-as-a-win.md) row 4.
+
+- **Choice 2's *"candor level"* now changes the body, on exactly one value.**
+  A profile whose `candor` is `promotional` leaves recorded failures
+  (`type: failed`, DEC-049) out of its threads. Every other value, including
+  none or a misspelling, lists them labelled `- ✗ <id> (failed): <title>`.
+  Profiles are still data, and no Go type enumerates the audiences. The rule
+  reads one field of that data.
+- **Choice 1's impact beats are marked by `aggregate.HasImpact`**, which is
+  `WithImpact`'s rule for a single entry. Until SPEC-094, `thread.go`
+  restated the predicate rather than *"reusing `aggregate.WithImpact`"* as
+  choice 1 says, and the Validation line on `is_impact_beat` held only
+  because the two copies happened to agree. A failure that carries an impact
+  is still an impact beat. **★ no longer marks one**, so ★ now means an
+  impact beat that is not a failure.
+- **Choice 5's envelope gains `omitted_failure_count`**, between `filters`
+  and `threads`. It is always present and `0` when nothing was omitted. The
+  markdown provenance gains `Omitted: <n> recorded failures, not listed for
+  this audience (brag list --type failed)` under `Beats:`, only when
+  `n > 0`. The 7-key beat projection is unchanged.
+- **Choices 5 and 7's *"framing directive appended"* is now followed, when
+  failures were omitted, by one fixed paragraph the binary wrote.** The
+  paragraph is appended to whatever the directive resolved to, including a
+  user's own file. Directives are still bundled assets, and the assets are
+  unchanged. `--print-directive` prints them as authored.
+
+These are pinned by `TestToStoryMarkdown_PromotionalOmitsWithNoteAndClauseGolden`,
+`TestToStoryMarkdown_CandidLabelsFailuresGolden`,
+`TestToStoryJSON_MeProfile_ShapeGolden` and
+`TestStoryPackage_CallsTheSharedPredicates`.
+
 ## References
 
 - Related specs:
