@@ -42,3 +42,14 @@ func TestStoryCmd_HelpListsAllBuiltInAudiences(t *testing.T) {
 		t.Errorf("--audience usage must keep the user-profile affordance, got %q", usage)
 	}
 }
+
+// TestStoryCmd_HelpStatesTheFailureRule ▲ SPEC-094 LD8. `brag story --help`
+// says what happens to work recorded with brag learn, per candor, in one
+// literal sentence set — the only place a user reading the CLI learns that a
+// promotional audience leaves failures out.
+func TestStoryCmd_HelpStatesTheFailureRule(t *testing.T) {
+	want := `Work recorded with brag learn is never marked as a win. me and manager list it where it falls, as "✗ <id> (failed)". skip and exec leave it out, print an Omitted: line counting it, and end the framing directive with a line telling the LLM to say so. A user profile leaves failures out only when its candor is exactly promotional; any other value lists them.`
+	if !strings.Contains(NewStoryCmd().Long, want) {
+		t.Errorf("story --help Long is missing the failure rule:\n%s", NewStoryCmd().Long)
+	}
+}

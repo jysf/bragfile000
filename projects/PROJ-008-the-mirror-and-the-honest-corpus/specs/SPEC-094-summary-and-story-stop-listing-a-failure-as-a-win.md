@@ -7,7 +7,7 @@
 task:
   id: SPEC-094
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify                    # frame | design | build | verify | ship
                                    # Created at SPEC-086 design (2026-09-18) to
                                    # CLAIM the id in the same edit as the STAGE-023
                                    # line that routes work here. It is not framed:
@@ -2872,28 +2872,50 @@ two DEC rows (53 and 5) are already on this branch.
 
 *Filled in at the end of the **build** cycle, before advancing to verify.*
 
-- **Branch:**
-- **PR (if applicable):**
-- **All acceptance criteria met?** yes/no
-- **New decisions emitted:**
-  - `DEC-NNN` — <title> (if any)
-- **Deviations from spec:**
-  - [list]
-- **Follow-up work identified:**
-  - [any new specs for the stage's backlog]
+- **Branch:** `build/spec-094-story-honesty`
+- **PR (if applicable):** none — the orchestrator opens it.
+- **All acceptance criteria met?** yes (AC-1 through AC-14, all reproduced on
+  a fresh read-only copy of the live corpus and the seeded Go fixtures; see
+  the build report for the full numbers).
+- **New decisions emitted:** none. DEC-054 was written at design; this cycle
+  transcribes its mechanism.
+- **Deviations from spec:** none in production code, docs, or tests — all 15
+  literal diffs from *Notes for the Implementer* applied via `git apply`
+  with a clean `--check` both before and after, byte-identical by
+  construction. Two deviations in the build session's own mutation-probe
+  tooling (not the spec's artifacts): (1) my first M-D2 probe edit was
+  malformed (replaced only half of a line-wrapped phrase, producing a
+  duplicated "where it falls" and a hash that did not match
+  `927a9f5d3c3b`) — corrected to span both lines, after which the hash
+  matched exactly. (2) My first whole-repo `func Test` grep for the 856
+  count double-counted by including `.claude/worktrees/*` (full nested
+  repo copies); the spec's own `internal cmd`-scoped `inventory.sh` command
+  gives the correct, matching count. Neither is a spec defect.
+- **Follow-up work identified:** none beyond what the spec already routes
+  (DEC-054 T4 to verify; SPEC-092/093's stale "next free number" lines to
+  SPEC-093).
 
 ### Build-phase reflection (3 questions, short answers)
 
 Process-focused: how did the build go? What friction did the spec create?
 
 1. **What was unclear in the spec that slowed you down?**
-   — <answer>
+   — Nothing in the spec itself. The one friction was mechanical: the
+   mutation matrix's *Diff* column gives exact edit text for every probe
+   except M-D1 ("one of three `omitted_failure_count` mentions" — it doesn't
+   say which), so my probe's hash legitimately can't reproduce
+   `471eb6137945` (mine: `8d7c04ac6af3`). The *behavior* reproduces exactly
+   (AE1 stays green either way), which is what M-D1 exists to show.
 
 2. **Was there a constraint or decision that should have been listed but wasn't?**
-   — <answer>
+   — No. `one-spec-per-pr`, `no-sql-in-cli-layer`, `stdout-is-for-data-stderr-is-for-humans`,
+   and `test-before-implementation` all applied cleanly with no friction.
 
 3. **If you did this task again, what would you do differently?**
-   — <answer>
+   — Scope the first test-function grep to `internal cmd` (as
+   `scripts/inventory.sh` does) from the start, rather than the whole repo,
+   which double- and triple-counts nested worktree copies under
+   `.claude/worktrees/`.
 
 ---
 

@@ -645,7 +645,11 @@ Each audience carries a default window (`me` → year, `manager` → month,
 profile default — to the last-completed period (`--audience me --previous`
 = last year, `--audience exec --quarter --previous` = last quarter).
 Audiences are extensible profiles, not a fixed list — drop a `<name>.yaml`
-in your story-profiles directory to add one. Pipe it into an LLM to finish:
+in your story-profiles directory to add one. Work you recorded with `brag
+learn` is never marked as a win: `me` and `manager` list it where it falls as
+`✗ <id> (failed)`, while `skip` and `exec` leave it out, print an `Omitted:`
+line saying how many, and tell the LLM to end with one line that says so.
+Pipe it into an LLM to finish:
 
 ```bash
 brag story --audience exec --quarter | claude "weave these threads into one headline arc"

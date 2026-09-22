@@ -15,9 +15,10 @@ const (
 	KindTheme      = "theme"
 )
 
-// Beat is one entry projected into a thread. IsImpactBeat mirrors
-// aggregate.WithImpact's rule exactly: an entry is an impact beat iff its
-// Impact field is non-empty.
+// Beat is one entry projected into a thread. IsImpactBeat is
+// aggregate.HasImpact, WithImpact's rule, called rather than restated; a
+// failure that carries an impact is still an impact beat (DEC-054).
+// IsFailure is aggregate.IsFailure, and decides only how the beat renders.
 type Beat struct {
 	ID           int64
 	Title        string
@@ -25,6 +26,7 @@ type Beat struct {
 	Type         string
 	Impact       string
 	IsImpactBeat bool
+	IsFailure    bool
 	CreatedAt    time.Time
 }
 
@@ -68,6 +70,20 @@ func impactBeatCount(t Thread) int {
 	return n
 }
 
+// OmitFailures applies a profile's candor to the in-window entries, before
+// they are threaded (DEC-054). A promotional profile loses its recorded
+// failures (aggregate.IsFailure), and omitted counts them; any other profile
+// gets entries back unchanged with omitted == 0. It runs before BuildThreads
+// on purpose: a thread whose only impact beats were failures then folds
+// under impact_threads_only, and its failures are still counted here.
+func OmitFailures(entries []storage.Entry, p Profile) (shown []storage.Entry, omitted int) {
+	if !p.OmitsFailures() {
+		return entries, 0
+	}
+	shown, failures := aggregate.SplitFailures(entries)
+	return shown, len(failures)
+}
+
 // BuildThreads coalesces the already-in-window entries into deterministic
 // threads per the profile's policy (DEC-029 choice 1/3):
 //  1. initiative threads via aggregate.GroupEntriesByProject (alpha-ASC,
@@ -84,7 +100,7 @@ func BuildThreads(entries []storage.Entry, opts ThreadOptions) []Thread {
 	for _, g := range groups {
 		beats := make([]Beat, 0, len(g.Entries))
 		for _, e := range g.Entries {
-			if opts.DropImpactlessBeats && e.Impact == "" {
+			if opts.DropImpactlessBeats && !aggregate.HasImpact(e) {
 				continue
 			}
 			beats = append(beats, entryToBeat(e, g.Project))
@@ -132,7 +148,8 @@ func entryToBeat(e storage.Entry, project string) Beat {
 		Project:      project,
 		Type:         e.Type,
 		Impact:       e.Impact,
-		IsImpactBeat: e.Impact != "",
+		IsImpactBeat: aggregate.HasImpact(e),
+		IsFailure:    aggregate.IsFailure(e),
 		CreatedAt:    e.CreatedAt,
 	}
 }

@@ -649,6 +649,31 @@ func TestWithImpact_EmptyInputAndAllEmptyImpact(t *testing.T) {
 	}
 }
 
+// TestHasImpact_IsWithImpactsRuleForOneEntry pins SPEC-094 LD6: HasImpact is
+// the per-entry form of WithImpact, and the two agree on every seed —
+// including a whitespace-only impact, which both count as an impact today.
+// brag story calls HasImpact rather than restating the rule.
+func TestHasImpact_IsWithImpactsRuleForOneEntry(t *testing.T) {
+	cases := []struct {
+		impact string
+		want   bool
+	}{
+		{"cut p95 40%", true},
+		{" ", true},
+		{"\n", true},
+		{"", false},
+	}
+	for _, c := range cases {
+		e := storage.Entry{ID: 1, Impact: c.impact}
+		if got := HasImpact(e); got != c.want {
+			t.Errorf("HasImpact(Impact=%q) = %v, want %v", c.impact, got, c.want)
+		}
+		if got := len(WithImpact([]storage.Entry{e})) == 1; got != HasImpact(e) {
+			t.Errorf("Impact=%q: WithImpact keeps it = %v, HasImpact = %v; the two must agree", c.impact, got, HasImpact(e))
+		}
+	}
+}
+
 // TestIsFailure_ExactMatchOnTheReservedValue pins SPEC-086 LD1: a failure is
 // exactly the reserved value DEC-049 persists — the literal "failed", matched
 // case-sensitively and untrimmed, the comparison storage's --type filter makes.

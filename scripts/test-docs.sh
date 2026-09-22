@@ -2282,6 +2282,32 @@ assert_section_names "AD4" "$(ad_section docs/tutorial.md '### Your year in brag
 assert_section_names "AD5" "$(grep -F -- '- **wrapped** —' AGENTS.md)" \
     "AGENTS.md, the wrapped glossary entry" "Impact moments → $ad_label"
 
+# ===== Group AE — story labels or omits a failure (SPEC-094 / DEC-054) =====
+#
+# SPEC-094 changes what `brag story` PRINTS: a recorded failure is labelled
+# `✗ <id> (failed)` on a candid audience and left out, with an `Omitted:` line,
+# `omitted_failure_count` and a directive clause, on a promotional one. The Go
+# suite pins the output; nothing but these ids pins the docs that describe it.
+# Each needle is scoped to its command's section with Group AD's helpers, so a
+# neighbouring command's text cannot satisfy it.
+
+# AE1 — the contract documents the label, the note, the JSON key and the record.
+assert_section_names "AE1" "$(ad_section docs/api-contract.md '### `brag story' '### ')" \
+    "docs/api-contract.md, the brag story section" \
+    '`- ✗ <id> (failed): <title>`' '`Omitted: <n> recorded failures' '`omitted_failure_count`' 'DEC-054'
+
+# AE2 — the tutorial tells a user where a promotional audience's failures went.
+assert_section_names "AE2" "$(ad_section docs/tutorial.md '### Tell your story' '### ')" \
+    "docs/tutorial.md, the brag story section" '`✗ <id> (failed)`' '`Omitted:`'
+
+# AE3 — the agent-facing glossary's learn entry names the third reader.
+assert_section_names "AE3" "$(grep -F -- '- **learn** —' AGENTS.md)" \
+    "AGENTS.md, the learn glossary entry" '`brag story` labels one' 'DEC-054'
+
+# AE4 — the unreleased changelog names the new JSON key.
+assert_section_names "AE4" "$(ad_section CHANGELOG.md '## [Unreleased]' '## [')" \
+    "CHANGELOG.md, the [Unreleased] section" '`omitted_failure_count`' 'DEC-054'
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

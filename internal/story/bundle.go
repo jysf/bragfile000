@@ -15,32 +15,74 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
 // Markers for the standalone-readable markdown body (locked in the
-// goldens): an impact beat leads with ★ (U+2605), a plain beat with ·
-// (U+00B7) — a visible "so what" signal.
+// goldens): an impact beat that is not a failure leads with ★ (U+2605), a
+// plain beat with · (U+00B7) — a visible "so what" signal. A recorded
+// failure leads with ✗ (U+2717) and "(failed)", whether or not it carries an
+// impact, so ★ never marks one (DEC-050, DEC-054).
 const (
-	markerImpact = "★"
-	markerPlain  = "·"
+	markerImpact  = "★"
+	markerPlain   = "·"
+	markerFailure = "✗"
 )
 
 // StoryOptions is the pure renderer's input. The CLI does the windowing,
 // threading, throughline, and directive resolution and passes them in
 // (mirrors export.ImpactOptions). Scope echoes the resolved window token;
 // EntriesInWindow is the raw in-window count for the <shown>/<in-window>
-// beat tally; Now is injected for deterministic goldens.
+// beat tally; Now is injected for deterministic goldens. OmittedFailures
+// is OmitFailures' count, and drives both the Omitted: line and the clause
+// appended to the directive, so a caller cannot set one without the other.
 type StoryOptions struct {
 	Audience        string
 	Scope           string
 	Filters         string            // pre-formatted markdown line ("(none)" or echoed flags)
 	FiltersJSON     map[string]string // JSON filters object (nil → {})
 	EntriesInWindow int
+	OmittedFailures int
 	Now             time.Time
 	Threads         []Thread
 	Throughline     Throughline
 	Directive       string // resolved framing-directive text ("" → section omitted)
+}
+
+// pluralFailures renders a failure count for the Omitted: line and the
+// clause, which must agree on it.
+func pluralFailures(n int) string {
+	if n == 1 {
+		return "1 recorded failure"
+	}
+	return fmt.Sprintf("%d recorded failures", n)
+}
+
+// omissionClause is the fixed, binary-authored text appended to the framing
+// directive when a promotional profile omitted failures (DEC-054). It comes
+// from the binary, not the directive asset, because a user profile can point
+// directive: at its own file, which would not carry it. Its wording was
+// measured against a consuming model at SPEC-094 design; change it only with
+// a re-run of that measurement.
+func omissionClause(n int) string {
+	return fmt.Sprintf("This bundle omits %s for this audience. End with one line that says so; do not drop it.", pluralFailures(n))
+}
+
+// framingDirective is the directive both formats render: the resolved text,
+// with omissionClause appended as its own paragraph when failures were
+// omitted. An empty directive with an omission is the clause alone, so the
+// instruction survives a profile that carries no directive.
+func framingDirective(opts StoryOptions) string {
+	if opts.OmittedFailures == 0 {
+		return opts.Directive
+	}
+	clause := omissionClause(opts.OmittedFailures)
+	d := strings.TrimRight(opts.Directive, "\n")
+	if d == "" {
+		return clause + "\n"
+	}
+	return d + "\n\n" + clause + "\n"
 }
 
 // shownBeats counts the beats surfaced across all threads (the numerator
@@ -69,6 +111,9 @@ func ToStoryMarkdown(opts StoryOptions) ([]byte, error) {
 	fmt.Fprintf(&buf, "Filters: %s\n", opts.Filters)
 	fmt.Fprintf(&buf, "Threads: %d\n", len(opts.Threads))
 	fmt.Fprintf(&buf, "Beats: %d/%d\n", shownBeats(opts.Threads), opts.EntriesInWindow)
+	if opts.OmittedFailures > 0 {
+		fmt.Fprintf(&buf, "Omitted: %s, not listed for this audience (brag list --type failed)\n", pluralFailures(opts.OmittedFailures))
+	}
 
 	if len(opts.Threads) > 0 {
 		fmt.Fprintln(&buf)
@@ -78,10 +123,16 @@ func ToStoryMarkdown(opts StoryOptions) ([]byte, error) {
 			fmt.Fprintf(&buf, "### %s\n", t.Thread)
 			fmt.Fprintln(&buf)
 			for _, b := range t.Beats {
-				if b.IsImpactBeat {
+				switch {
+				case b.IsFailure:
+					fmt.Fprintf(&buf, "- %s %d (failed): %s\n", markerFailure, b.ID, b.Title)
+					if b.IsImpactBeat {
+						fmt.Fprintf(&buf, "  %s\n", b.Impact)
+					}
+				case b.IsImpactBeat:
 					fmt.Fprintf(&buf, "- %s %d: %s\n", markerImpact, b.ID, b.Title)
 					fmt.Fprintf(&buf, "  %s\n", b.Impact)
-				} else {
+				default:
 					fmt.Fprintf(&buf, "- %s %d: %s\n", markerPlain, b.ID, b.Title)
 				}
 			}
@@ -98,11 +149,11 @@ func ToStoryMarkdown(opts StoryOptions) ([]byte, error) {
 		}
 	}
 
-	if opts.Directive != "" {
+	if directive := framingDirective(opts); directive != "" {
 		fmt.Fprintln(&buf)
 		fmt.Fprintln(&buf, "## Framing directive")
 		fmt.Fprintln(&buf)
-		buf.WriteString(opts.Directive)
+		buf.WriteString(directive)
 	}
 
 	return trimTrailingNewline(buf.Bytes()), nil
@@ -123,16 +174,19 @@ func trimTrailingNewline(b []byte) []byte {
 
 // storyEnvelope is the on-the-wire JSON shape (DEC-029 choice 5). Field
 // order = key order (encoding/json preserves struct-tag declaration
-// order): generated_at, scope, audience, filters, threads, throughline,
-// framing_directive. Extends DEC-014's envelope with the arc-aware body.
+// order): generated_at, scope, audience, filters, omitted_failure_count,
+// threads, throughline, framing_directive. Extends DEC-014's envelope with
+// the arc-aware body. omitted_failure_count is always present, 0 when
+// nothing was omitted (DEC-014 part 4, DEC-054).
 type storyEnvelope struct {
-	GeneratedAt      string            `json:"generated_at"`
-	Scope            string            `json:"scope"`
-	Audience         string            `json:"audience"`
-	Filters          map[string]string `json:"filters"`
-	Threads          []threadJSON      `json:"threads"`
-	Throughline      throughlineJSON   `json:"throughline"`
-	FramingDirective string            `json:"framing_directive"`
+	GeneratedAt         string            `json:"generated_at"`
+	Scope               string            `json:"scope"`
+	Audience            string            `json:"audience"`
+	Filters             map[string]string `json:"filters"`
+	OmittedFailureCount int               `json:"omitted_failure_count"`
+	Threads             []threadJSON      `json:"threads"`
+	Throughline         throughlineJSON   `json:"throughline"`
+	FramingDirective    string            `json:"framing_directive"`
 }
 
 type threadJSON struct {
@@ -174,16 +228,18 @@ type spanJSON struct {
 // ToStoryJSON renders the arc-aware DEC-014-extending envelope with
 // 2-space indent (AC-6/AC-10). Threads/Arcs init to non-nil empty
 // slices; Filters nil → {}; framing_directive is always the resolved
-// directive string (renders even on an empty corpus).
+// directive string, with the omission clause when one applies (renders
+// even on an empty corpus).
 func ToStoryJSON(opts StoryOptions) ([]byte, error) {
 	env := storyEnvelope{
-		GeneratedAt:      opts.Now.UTC().Format(time.RFC3339),
-		Scope:            opts.Scope,
-		Audience:         opts.Audience,
-		Filters:          opts.FiltersJSON,
-		Threads:          make([]threadJSON, 0, len(opts.Threads)),
-		Throughline:      throughlineJSON{Arcs: make([]arcJSON, 0, len(opts.Throughline.Arcs))},
-		FramingDirective: opts.Directive,
+		GeneratedAt:         opts.Now.UTC().Format(time.RFC3339),
+		Scope:               opts.Scope,
+		Audience:            opts.Audience,
+		Filters:             opts.FiltersJSON,
+		OmittedFailureCount: opts.OmittedFailures,
+		Threads:             make([]threadJSON, 0, len(opts.Threads)),
+		Throughline:         throughlineJSON{Arcs: make([]arcJSON, 0, len(opts.Throughline.Arcs))},
+		FramingDirective:    framingDirective(opts),
 	}
 	if env.Filters == nil {
 		env.Filters = map[string]string{}

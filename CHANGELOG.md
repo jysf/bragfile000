@@ -46,6 +46,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still sums to `entries_with_impact`. A consumer that read every
   with-impact entry from `impact_by_project` or `impact_moments` now reads
   both keys.
+- **`brag story` no longer marks work that did not work as a win**
+  ([DEC-054](decisions/DEC-054-story-candor-decides-what-a-failure-renders-as.md)).
+  An entry recorded with `brag learn` rendered as `- ★ <id>:` on every
+  audience. `me` and `manager` now list it as `- ✗ <id> (failed):`. `skip`
+  and `exec`, whose profiles are `candor: promotional`, leave it out, print
+  `Omitted: <n> recorded failures, not listed for this audience` under
+  `Beats:`, and append one fixed line to the framing directive telling the
+  LLM to say so. That line is what makes the omission survive the model:
+  measured at design, a bare count reached the model's prose in 0 of 10
+  runs, and with the line the omission was stated in 25 of 25.
+- **Breaking for `skip` and `exec`: `brag story --format json` no longer
+  carries failure beats on a promotional audience.** Every envelope gains
+  `omitted_failure_count`, between `filters` and `threads`, always present
+  and `0` when nothing was left out. `is_impact_beat` and every count keep
+  their meaning: a failure with an impact is still an impact beat.
 - **`brag memory`'s headline count is now `Candidates: <N>`, not
   `Entries: <N>`** ([DEC-048](decisions/DEC-048-provenance-count-names-what-it-counted.md)).
   The number was never the corpus size and never a cap: it is the deduped

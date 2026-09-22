@@ -21,7 +21,8 @@ var ErrProfileNotFound = errors.New("story profile not found")
 // struct is DATA, not a Go enum (DEC-029 choice 2). Fields:
 //   - Selection: ImpactThreadsOnly, DropImpactlessBeats
 //   - Threading/altitude: FoldSmallThreads, ThreadOrder
-//   - Candor is metadata surfaced to the LLM, not a body rule.
+//   - Candor is a body rule on exactly one value, CandorPromotional
+//     (DEC-054); it is not rendered in either format.
 //   - Directive points at the framing-directive asset basename.
 type Profile struct {
 	Name                string
@@ -32,6 +33,21 @@ type Profile struct {
 	ThreadOrder         string // "initiative" | "impact-desc"
 	Candor              string // "candid" | "promotional"
 	Directive           string // asset basename: "me.md" | "exec.md" | <user path>
+}
+
+// CandorPromotional is the one Candor value that changes the body (DEC-054):
+// a promotional profile omits recorded failures from the bundle, counts them
+// in an Omitted: line, and appends a clause to the framing directive telling
+// the consuming model to say so. The match is exact. Every other value —
+// candid, empty, unknown, or a misspelling — labels failures inline instead,
+// because Candor is an unvalidated string in a user profile and the default
+// on a typo must be the one that never drops anything.
+const CandorPromotional = "promotional"
+
+// OmitsFailures reports whether p omits recorded failures rather than
+// labelling them (DEC-054).
+func (p Profile) OmitsFailures() bool {
+	return p.Candor == CandorPromotional
 }
 
 // defaultOverrideDir resolves the user override directory

@@ -168,6 +168,7 @@ func TestToStoryJSON_MeProfile_ShapeGolden(t *testing.T) {
   "scope": "year",
   "audience": "me",
   "filters": {},
+  "omitted_failure_count": 0,
   "threads": [
     {
       "thread": "alpha",
@@ -380,5 +381,10 @@ Beats: 0/0
 	// Empty-window JSON must contain [] arrays, not null.
 	if !strings.Contains(string(jsonBody), `"threads": []`) {
 		t.Errorf("expected empty threads array literal:\n%s", jsonBody)
+	}
+	// SPEC-094: the omission count is always present, 0 on an empty window
+	// (DEC-014 part 4).
+	if !strings.Contains(string(jsonBody), `"omitted_failure_count": 0,`) {
+		t.Errorf("expected omitted_failure_count 0 on an empty window:\n%s", jsonBody)
 	}
 }
