@@ -394,6 +394,14 @@ one question:
 >   stays open, and that should be written into DEC-050 rather than left
 >   implied.
 
+**ANSWERED — YES, as framed. Maintainer, 2026-09-22**, on V2's 14 of 14 and on
+the measurement that today's promotional bundle already loses its failures
+downstream (V0: 0 of 10). `brag story` may append the fixed clause. The
+decision above is unblocked, and design locks the wording, then **re-runs the
+V2 cell against the wording it locks** rather than inheriting framing's. The
+decision record this spec needs is where the posture is written down; DEC-050's
+T3 closes with it.
+
 ### What else was found and not routed
 
 - **`brag review`** also lists all four failures as `- <id>: <title>`
