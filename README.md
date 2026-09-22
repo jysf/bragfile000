@@ -185,18 +185,28 @@ brag delete 12
 
 ## Export for reviews
 
-Markdown report grouped by project (paste into a quarterly review
-or promo packet):
+For a quarterly review or promo packet, use the impact digest — a real
+calendar quarter, led by outcomes:
 
 ```bash
-brag export --format markdown --since 90d > q-review.md
+brag impact --quarter --previous > q-review.md
+```
+
+Drop `--previous` for the current quarter; `brag wrapped 2026 Q2` names one.
+
+Full entry dump, grouped by project:
+
+```bash
+brag export --format markdown --since 90d > last-90-days.md
 ```
 
 JSON dump (for AI piping or backup):
 
 ```bash
-brag export --format json --since 90d > q-review.json
+brag export --format json --since 90d > last-90-days.json
 ```
+
+`export --since` is rolling (`Nd`/`Nw`/`Nm`), never a calendar quarter.
 
 To publish a slice of brags to a website (filter, then reshape into
 clean blog prose with `jq`), see the tutorial's

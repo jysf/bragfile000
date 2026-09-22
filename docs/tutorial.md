@@ -307,8 +307,15 @@ brag export --format markdown                     # grouped by project
 brag export --format markdown --flat              # flat chronological
 brag export --format markdown --out report.md     # write to file
 brag export --format markdown --project platform  # filter first
-brag export --format markdown --since 90d > q.md  # quarter to stdout
+brag export --format markdown --since 90d > q.md  # rolling 90 days
 ```
+
+`--since 90d` is a rolling window off today's clock, not a calendar
+quarter — run in late September it covers late June through September.
+For an actual quarter, use `brag impact --quarter --previous` (the last
+completed one) or `brag wrapped 2026 Q2` (named, bounded at both edges).
+`export` has no `--until`, so it cannot bound a period on the upper edge
+at all.
 
 The default shape groups entries under `## <project>` headings in
 alphabetical-ASC order (entries without a project render last under
@@ -353,7 +360,7 @@ to publish:
 
 ```bash
 brag export --format markdown --project bragfile --out bragfile.md
-brag export --format markdown --since 90d --out last-quarter.md
+brag export --format markdown --since 90d --out last-90-days.md
 brag export --format markdown --project bragfile --type shipped --out shipped.md
 ```
 
