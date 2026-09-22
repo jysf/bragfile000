@@ -304,6 +304,30 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       This entry is where the gate is recorded, not only in SPEC-086's
       reflection: a route written into a spec's own reflection does not reach
       its owner (SPEC-088 ship, Q1).
+      **Framed 2026-09-22: GO at M, now `story` only.** Its premise was
+      false for `summary`: `summary`'s JSON highlight is `{id, title}` with no
+      `type`, so a failure there is *unrepresentable* per entry, the shape
+      SPEC-086 fixed, not the lossy-markdown shape `story` has. The `summary`
+      half moved to **SPEC-095** (next entry). Framing measured DEC-050's T3
+      by piping doctored `exec` bundles through a model. A bare omission note
+      survived **0 of 10** runs, and one with a carry clause appended to the
+      directive survived **14 of 14**. Labelling failures inline or moving
+      them to their own block did not keep them in the prose either
+      (**0 of 20**). Design needs **one maintainer yes/no** before it locks
+      the mechanism: may `brag story` append a binary-authored clause to the
+      framing directive? A decision record is needed, and design takes the
+      next free DEC number when it writes it.
+- [ ] SPEC-095 (frame) — **`summary` moves a failure out of `## Highlights`.**
+      Given a file at SPEC-094's framing (2026-09-22), in the same edit as this
+      line. It is DEC-050 row 3, which states the posture in full: SPEC-086's
+      partition into `## What didn't work` / `failures_by_project`, on a third
+      surface, reusing `aggregate.SplitFailures`. **GO at S**, with nothing
+      blocking it and no dependency on SPEC-094's maintainer question.
+      Measured: 4 of 4 failures listed as highlights under
+      `summary --range month`. **It gates v0.7.0 with SPEC-094**, since the two
+      together are the half of Success Criterion 4 still owed. Verify trap:
+      `--range month` is rolling, and the four failures leave it on the live
+      corpus around 2026-10-06.
 - [ ] (not yet written, `bug`) — **`--type` negation is inexpressible and fails
       silently.** `--type '!failed'`, `'-failed'`, `'shipped,failed'`,
       `'!=failed'` and `'NOT failed'` each return **exit 0 with zero rows, no
@@ -435,19 +459,21 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `delete.go`. Cheaper to leave unowned and visible than to invent a spec id
       for it now.
 
-**Count:** 5 shipped / 0 verify / 1 in build / 0 in design / 4 framed / 2 not
+**Count:** 5 shipped / 0 verify / 1 in build / 0 in design / 5 framed / 2 not
 yet written
-(Re-derived at SPEC-086 ship, 2026-09-20. It comes from each file's own
+(Re-derived at SPEC-094 framing, 2026-09-22. It comes from each file's own
 `cycle:` field, read with
 `awk '/^---$/{f=!f; next} f && /^[[:space:]]+cycle:/{print $2; exit}'` over
 `projects/PROJ-008-*/specs/*.md` and `specs/done/*.md`, and is not
 incremented. Every file's `stage:` is STAGE-023. shipped = SPEC-085, SPEC-086,
 SPEC-087, SPEC-088 and SPEC-089, the five `cycle: ship` files in `specs/done/`.
 in build = SPEC-091. **Nothing is in design or in verify.** framed = SPEC-090,
-SPEC-092, SPEC-093 and SPEC-094, the four `cycle: frame` files in `specs/`. All
-four are id-claiming files rather than fully framed specs: SPEC-090 was created
-at SPEC-089's ship, SPEC-092 and SPEC-093 at SPEC-088's framing, and SPEC-094 at
-SPEC-086's design. `not yet written` is the two `- [ ] (not yet written…`
+SPEC-092, SPEC-093, SPEC-094 and SPEC-095, the five `cycle: frame` files in
+`specs/`. SPEC-094 and SPEC-095 have had a framing pass and carry a
+`## GO / NO-GO`. SPEC-094 was created at SPEC-086's design, and SPEC-095 at
+SPEC-094's framing. The other three are id-claiming files rather than fully
+framed specs: SPEC-090 was created at SPEC-089's ship, and SPEC-092 and
+SPEC-093 at SPEC-088's framing. `not yet written` is the two `- [ ] (not yet written…`
 entries: `--type` negation and `brag delete`. The two recipe defects routed at
 SPEC-088's ship, `advance-cycle` and `archive-spec`, add no entry, because both
 have an owner, SPEC-093 — and both fired again at SPEC-086's ship, so each now
@@ -456,8 +482,9 @@ has two data points rather than one.)
 **The stage does NOT close here.** Success Criteria 1, 2 and the DEC-014/
 DEC-048 envelope line are met by SPEC-085. **Criterion 4** (*the celebratory
 digests do not silently absorb failures*) is now **half met**: SPEC-086 shipped
-the `wrapped` and `impact` half on 2026-09-20, and SPEC-094 owes the
-`summary`/`story` half, which is why that spec gates v0.7.0. Criterion 3 is
+the `wrapped` and `impact` half on 2026-09-20. The `summary`/`story` half is
+owed by SPEC-095 (`summary`) and SPEC-094 (`story`), split at SPEC-094's
+framing on 2026-09-22, which is why both gate v0.7.0. Criterion 3 is
 **half met** — see *The Fork 3 finding* below.
 
 ### The conditional spec fired (2026-09-05, at SPEC-085 design)
