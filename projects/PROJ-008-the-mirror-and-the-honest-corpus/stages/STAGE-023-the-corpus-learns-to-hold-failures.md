@@ -165,18 +165,51 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       and its behaviour in `brag memory`; five forks, all settled. Complexity
       **M**, re-affirmed after the split below. Shipped as `brag learn` +
       **DEC-049**; `pr:199`.
-- [ ] SPEC-086 (design) — digest posture: the `## What didn't work` section on
-      `wrapped` and `impact`. **Re-framed 2026-09-06: UNBLOCKED** (SPEC-085
-      shipped at `df369e9`), **GO at M after splitting**, and it authors
-      **DEC-050**, which states the posture for **all seven** `--type` surfaces
-      so the scope guard below is satisfied by the decision even though the
-      renderer work lands in two PRs. Framing also shrank the DEC-048
-      obligation from *"two count renames"* to *at most one* — see
-      *Re-framing corrections* below. **Designed 2026-09-18:** measured on the
-      tree, the obligation is **zero** renames, because the with-impact subset
-      is split between two sections rather than narrowed. DEC-050 is written,
-      DEC-030 carries an `## Amendment`, and the `summary`/`story` half is
-      **SPEC-094**.
+- [x] SPEC-086 (shipped on 2026-09-20) — **the celebratory digests stop
+      rendering a failure as a win.** `brag impact` and `brag wrapped` gain a
+      `## What didn't work` section, and it authors **DEC-050**, which states
+      the posture for **all seven** `--type` surfaces, so the scope guard below
+      is satisfied by the decision even though the renderer work lands in two
+      PRs. Framing shrank the DEC-048 obligation from *"two count renames"* to
+      *at most one*; design measured it at **zero**, because the with-impact
+      subset is **split** between two sections rather than narrowed —
+      `Entries: 538/613 with impact` is byte-identical on the `main` binary and
+      this branch's, and `entries_with_impact` 538 = `sum(counts_by_project)`
+      538 = 534 impact rows + 4 failure rows. Complexity **M** held by splitting
+      the `summary`/`story` half out as **SPEC-094**. `DEC-030` and — on the
+      maintainer's **R3** ruling, which overturned design's own NO CHANGE call —
+      `DEC-028` each carry an `## Amendment` with their original text untouched
+      (LD6), so the inventory's `## Amendment` row moved 2 → 3. **The JSON
+      change is breaking:** failures leave `impact_by_project` and
+      `impact_moments`, both envelopes gain `failures_by_project` (always
+      present, `[]` when empty, DEC-014 part 4), and `counts_by_project` still
+      spans both sections — guarded from both directions by `M-D` and `N-6`.
+      **Verify returned a punch list of three record-and-doc corrections, all
+      fixed in-cycle, and no functional defect: not one line of Go changed at
+      verify.** The renderers survived **31 mutants** — the 19 in the matrix,
+      each reproduced independently from its stated edit, plus 12 novel ones —
+      and every one is killed by a named test. `V-F1` was the real one: the
+      `impact` hunk of `docs/api-contract.md` cited DEC-050 alone where the
+      `wrapped` hunk cited DEC-050 **and** the amended DEC-030, so a reader
+      following the `impact` links landed on original text the amendment had
+      since changed. `V-F2` corrected this spec's own §9 prose, which still said
+      the DEC rows were *"52 and 2"* after R3 made it 3. `V-F3` amended AC-13's
+      literal command, which matched one more line than the criterion meant.
+      `V-F4` was ruled **not a defect**: the header blockquote records the cycle
+      that wrote it, and four of four shipped siblings hold that convention.
+      **`V-F1` is also SPEC-088's `V-F1` in a new guise, and its own class:**
+      SPEC-088's was a guard blind to a file its session had just written;
+      this one is a *record* blind to the base it was taken against — the V-F1
+      fix moved `docs/api-contract.md`, and `M-D1` and `M-D4` had to be
+      re-pinned. `V-F0` names the mechanism, and this ship re-pinned a third
+      row (`M-D3`) because codifying a §12 clause edits `AGENTS.md`, `M-D3`'s
+      own target. It is **held at N=1** — see *Held codification candidates*
+      below, where the count stays at one case because the unit is the spec,
+      not the row. One §12 clause **cleared at N=3** and is written into
+      AGENTS.md; the zsh quirks behind it went into
+      `projects/_templates/spec.md`'s new `### Traps` subsection instead, which
+      is the gap build's Q2 named. `pr:219` (design, with framing folded in),
+      `pr:220` (build), `pr:221` (verify), `pr:222` (ship).
 - [x] SPEC-087 (shipped on 2026-09-07) — **`Y3` derives instead of caching.**
       Split out of SPEC-086's re-framing rather than absorbed; sequenced
       BEFORE SPEC-086 design and landed there, so DEC-050 will be the **first**
@@ -251,6 +284,26 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `story` half additionally has to turn `Candor` from LLM-facing metadata
       into a body rule (`internal/story/profile.go:24`), which is a
       DEC-029-adjacent decision of its own.
+      **It is the second half of the release gate, and it GATES v0.7.0 — and it
+      is the next spec to frame.** Recorded at SPEC-086 ship (2026-09-20).
+      Success Criterion 4, *the celebratory digests do not silently absorb
+      failures*, is owed by SPEC-086 **and** this spec together; DEC-050's
+      *"until SPEC-094 ships"* consequence is the same statement from the other
+      side. The gap is measured, not assumed: SPEC-086 verify ran
+      `brag story --quarter` in all four bundled profiles against the same
+      frozen corpus copy with both binaries and the failures still render as
+      `- ★ <id>:` in every one, byte-identical across the two — five of the
+      29 invocations in verify's DEC-050 rows 3–7 sweep, every one of which came
+      back identical, so SPEC-086 moved nothing here. Its row-4 input narrowed at
+      the maintainer's **R1** ruling (2026-09-19): two invariants only, never
+      rendered as a win and never *silently* dropped, so a promotional profile
+      (`candor: promotional`; today `exec` and `skip`) **may** omit failures
+      **with a visible note** — a count is the obvious form — and the mechanism
+      is this spec's to design. That ruling raised DEC-050 row 4's confidence
+      from ~0.70 to ~0.90, so what this spec owes is a mechanism, not a posture.
+      This entry is where the gate is recorded, not only in SPEC-086's
+      reflection: a route written into a spec's own reflection does not reach
+      its owner (SPEC-088 ship, Q1).
 - [ ] (not yet written, `bug`) — **`--type` negation is inexpressible and fails
       silently.** `--type '!failed'`, `'-failed'`, `'shipped,failed'`,
       `'!=failed'` and `'NOT failed'` each return **exit 0 with zero rows, no
@@ -382,28 +435,30 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `delete.go`. Cheaper to leave unowned and visible than to invent a spec id
       for it now.
 
-**Count:** 4 shipped / 0 verify / 1 in build / 1 in design / 4 framed / 2 not
+**Count:** 5 shipped / 0 verify / 1 in build / 0 in design / 4 framed / 2 not
 yet written
-(Re-derived at SPEC-086 design, 2026-09-18. It comes from each file's own
+(Re-derived at SPEC-086 ship, 2026-09-20. It comes from each file's own
 `cycle:` field, read with
 `awk '/^---$/{f=!f; next} f && /^[[:space:]]+cycle:/{print $2; exit}'` over
 `projects/PROJ-008-*/specs/*.md` and `specs/done/*.md`, and is not
-incremented. Every file's `stage:` is STAGE-023. shipped = SPEC-085, SPEC-087,
-SPEC-088 and SPEC-089, the four `cycle: ship` files in `specs/done/`. in
-build = SPEC-091. in design = SPEC-086. framed = SPEC-090, SPEC-092, SPEC-093
-and SPEC-094, the four `cycle: frame` files in `specs/`. All four are
-id-claiming files rather than fully framed specs: SPEC-090 was created at
-SPEC-089's ship, SPEC-092 and SPEC-093 at SPEC-088's framing, and SPEC-094 at
+incremented. Every file's `stage:` is STAGE-023. shipped = SPEC-085, SPEC-086,
+SPEC-087, SPEC-088 and SPEC-089, the five `cycle: ship` files in `specs/done/`.
+in build = SPEC-091. **Nothing is in design or in verify.** framed = SPEC-090,
+SPEC-092, SPEC-093 and SPEC-094, the four `cycle: frame` files in `specs/`. All
+four are id-claiming files rather than fully framed specs: SPEC-090 was created
+at SPEC-089's ship, SPEC-092 and SPEC-093 at SPEC-088's framing, and SPEC-094 at
 SPEC-086's design. `not yet written` is the two `- [ ] (not yet written…`
 entries: `--type` negation and `brag delete`. The two recipe defects routed at
 SPEC-088's ship, `advance-cycle` and `archive-spec`, add no entry, because both
-have an owner, SPEC-093.)
+have an owner, SPEC-093 — and both fired again at SPEC-086's ship, so each now
+has two data points rather than one.)
 
 **The stage does NOT close here.** Success Criteria 1, 2 and the DEC-014/
-DEC-048 envelope line are met by SPEC-085; Criterion 4 (*the celebratory
-digests do not silently absorb failures*) is owed by SPEC-086 **and**
-SPEC-094, the `summary`/`story` successor, and Criterion 3 is **half met** — see *The Fork 3
-finding* below.
+DEC-048 envelope line are met by SPEC-085. **Criterion 4** (*the celebratory
+digests do not silently absorb failures*) is now **half met**: SPEC-086 shipped
+the `wrapped` and `impact` half on 2026-09-20, and SPEC-094 owes the
+`summary`/`story` half, which is why that spec gates v0.7.0. Criterion 3 is
+**half met** — see *The Fork 3 finding* below.
 
 ### The conditional spec fired (2026-09-05, at SPEC-085 design)
 
@@ -753,48 +808,136 @@ a helper against inputs its only producer cannot emit is speculative work. This
 note exists so that a future spec which teaches `inventory.sh` a computed or
 quoted label knows it is the change that makes them reachable.
 
-### Held codification candidates (SPEC-088 ship, 2026-09-18)
+### Held codification candidates (SPEC-088 ship, 2026-09-18; updated SPEC-086 ship, 2026-09-20)
 
-Two `AGENTS.md` §12 candidates, each below the codification bar. They are
-listed here rather than in an archived spec because a candidate routed that
-way never arrived. SPEC-087's ship routed the second one to SPEC-088 in its
-own reflection only, and none of SPEC-088's four cycles saw it. **When a spec
-produces a matching case, add it here with its evidence and move the count.**
-The stage close reads this list for *Lessons that should update AGENTS.md*.
+Three `AGENTS.md` §12 candidates below the codification bar, plus the one this
+stage has cleared. They are listed here rather than in an archived spec because a
+candidate routed that way never arrived: SPEC-087's ship routed one to SPEC-088
+in its own reflection only, and none of SPEC-088's four cycles saw it. **When a
+spec produces a matching case, add it here with its evidence and move the
+count.** The stage close reads this list for *Lessons that should update
+AGENTS.md*.
+
+**Bar, restated so nobody re-derives it:** paired opposing-outcome cases clear
+at **N=2**; same-outcome confirming cases need **N=3**. A **refinement of an
+already-promoted clause** clears at **N=2 same-outcome**, on the §12(b)
+precedent — but only when both cases exercise the new sentence's own gap, and a
+case the parent clause already closes is not one of them (SPEC-088 ship's ruling
+on `M-6`).
 
 1. **A refinement of *"A mutation pinned by a hash must also pin its diff"*:
-   record the diff the probe helper printed, not a description written
-   afterward.** Held at **N=1**.
-   - **The case: SPEC-088's M-A0.** Design stated *"restore the pre-SPEC-088
-     line 6"* with hash `89a999aee134`. That is the hash of a whole-file
-     revert to the pre-SPEC-088 template, which also rewrites lines 12–22.
-     The stated edit hashes to `accb16924cb6`. The parent clause's letter was met, because an
-     edit was stated, and the record still was not what ran.
-   - **Not counted: SPEC-087's M-6.** It stated no edit at all. The parent
-     clause closes that on its own, and M-6 is the NEGATIVE the parent was
-     written from. SPEC-088 verify counted it as the second case. Ship does
-     not, because M-A0 *"exposes a different hole"*, in verify's own words.
-   - **An adjacent surface, noted and not counted: SPEC-088 framing's M-4.**
+   the record must be **captured from the run**, not composed after it.** Held
+   at **N=1**. *(Sentence narrowed at SPEC-086 ship — see the positives.)*
+   - **The negative, N=1: SPEC-088's `M-A0`.** Design stated *"restore the
+     pre-SPEC-088 line 6"* with hash `89a999aee134`. That is the hash of a
+     whole-file revert to the pre-SPEC-088 template, which also rewrites lines
+     12–22. The stated edit hashes to `accb16924cb6`. The parent clause's letter
+     was met, because an edit *was* stated, and the record still was not what
+     ran.
+   - **Not counted: SPEC-087's `M-6`.** It stated no edit at all. The parent
+     clause closes that on its own, and `M-6` is the NEGATIVE the parent was
+     written from. SPEC-088 verify counted it as the second case. Ship does not,
+     because `M-A0` *"exposes a different hole"*, in verify's own words.
+   - **An adjacent surface, noted and not counted: SPEC-088 framing's `M-4`.**
      Its printed output was hand-summed from three buckets into two, and the
-     hand-cleaning hid the eight stale DEC files (SPEC-088 V-F4).
+     hand-cleaning hid the eight stale DEC files (SPEC-088 `V-F4`).
+   - **Positives, now 2, and they are why the sentence changed.** Verify's
+     proposed form was *paste the `diff` the probe helper printed, not a
+     description written afterward*. SPEC-086 rules that out as too broad, at
+     **2 positives / 0 negatives** against the hypothesis that *prose* is the
+     defect. **SPEC-088's `M-B3` and `M-B4`** were prose-described and
+     reproduced, each having exactly one literal reading. **SPEC-086's five
+     abbreviated rows** (`M-L1`, `M-D1`, `M-D2`, `M-D3`, `M-D4`) reproduced
+     their stated hash first try at build; verify then re-derived all five
+     *independently from the row's own description*, without reading build's
+     transcript, and ran each one verbatim against a pristine `152dbe9`
+     checkout, where all five reproduced again. A *paste the diff* rule would
+     have failed all ten of those rows for a fault none of them has. So the
+     candidate keeps SPEC-088 verify's diagnosis and drops verify's wording:
+     the defect is **composition after the run**, and the remedy is capture,
+     of which pasting the helper's `diff` is one form.
    - **It clears when** a second stated edit meets the parent clause and does
-     not reproduce its hash. That is N=2 distinct, and the §12(b)
-     refinement's precedent then applies. Verify's proposed sentence: *the
-     edit recorded is the `diff` the probe helper printed, pasted, not a
-     description written afterward.*
-2. **`scripts/test-docs.sh` is itself an input to the inventory table it
+     not reproduce its hash. That is N=2 distinct, and the §12(b) refinement
+     precedent then applies.
+
+2. **A baseline hash must name the commit it was taken against.** Held at
+   **N=1**. New at SPEC-086 ship (2026-09-20). A refinement of the same promoted
+   clause as candidate 1, so its bar is **N=2**, not 3 — it is one case short,
+   not two.
+   - **The case, N=1: SPEC-086's `V-F0`.** A matrix row pins a probe to a
+     *file state* and never says which commit that state came from, so any
+     later cycle that edits the probe target invalidates the row **silently**.
+     It happened inside the cycle that wrote the rows: verify's `V-F1` citation
+     fix moved `docs/api-contract.md` from `bde92cdba356` to `68ae22d061da`, and
+     `M-D1` and `M-D4` were instantly stated against a base the branch no longer
+     had. Verify re-ran both on the new baseline so the next cycle would not
+     hunt a hash that cannot exist. The failure mode is the nasty direction: a
+     reproduction failure reads as a defect in the mutant.
+   - **Two more rows inside the same spec, deliberately not counted.**
+     Codifying candidate 4 below edits `AGENTS.md`, which is `M-D3`'s own
+     target, so SPEC-086's ship re-pinned it too (`acc844937b43` at both
+     `152dbe9` and `b9d9681` → **`520208b59f9b`** after the clause →
+     `b3869cc4cfbb` under the mutant, still firing `AD5` alone). **The counting
+     unit is the spec that paid the lesson, not the row that got invalidated**
+     — `V-F0`'s two rows were one case, and these are a third and fourth row in
+     the same spec. What they add is scope rather than count: the mechanism is
+     not specific to a citation fix, and any cycle that edits a document is one
+     edit away from invalidating a probe it never read.
+   - **It clears at a second spec** whose stated baseline hash is invalidated
+     by a later edit to the probe target. The fix shape is already known and
+     cheap: name the base commit beside the baseline hash in the matrix row.
+
+3. **`scripts/test-docs.sh` is itself an input to the inventory table it
    guards.** A harness spec is always one assertion id away from moving
    `Documentation assertions (distinct ids)`. Held at **N=2 same-outcome**,
    against a bar of 3.
-   - **SPEC-087's LD5.** *"Keep both ids"* held the row at 198 as a side
+   - **SPEC-087's `LD5`.** *"Keep both ids"* held the row at 198 as a side
      effect of a coverage argument. Held at N=1 at SPEC-087's ship.
-   - **SPEC-088's AC8.** The check on the eight-DEC fold was left as a
+   - **SPEC-088's `AC8`.** The check on the eight-DEC fold was left as a
      hand-run grep, because a new id *"would move the distinct-id row past
      the 200 this spec pins."* A guard went unbuilt to hold a derived number
      steady.
-   - **It clears at a third case.** The rule's shape is still open. SPEC-087's
-     build asked for a constraint, and the codifying session should choose
-     it.
+   - **SPEC-086 is a counter-case, and it is recorded rather than counted
+     against the candidate.** It added Group `AD`, five new ids, moved the row
+     200 → **205**, and regenerated the block instead of arguing the row
+     steady. Nothing went unbuilt. What made that cheap is that SPEC-087 had
+     already made `Y3` and `Z7` derive, so the move cost zero assertion edits —
+     which sharpens the candidate's shape: the pressure appears when a spec
+     both *pins* a derived row and *moves* it, not whenever a spec adds an id.
+   - **It clears at a third case** of the pressure, not of the move. The rule's
+     shape is still open. SPEC-087's build asked for a constraint, and the
+     codifying session should choose it.
+
+4. **CLEARED at SPEC-086 ship (2026-09-20), N=3 same-outcome, and written into
+   AGENTS.md §12:** *a **no difference** is a measurement, not a default —
+   validate the inputs before you believe it.* Kept here for the stage close's
+   record, because this is where its third case was argued.
+   - **The three cases are one mechanism:** a *no difference* verdict determined
+     by something other than the content being compared. **SPEC-082** —
+     `git diff --quiet` reported *clean* for an untracked `scripts/coverage.sh`,
+     so a real mutant on disk read as a missing one. **SPEC-086 build** — a zsh
+     snippet named a variable `path`, which is tied to `PATH`, so every command
+     in the loop failed and the comparison reported *0 differences* from `""`
+     against `""`. **SPEC-086 verify** — the orchestrator compared `brag story`
+     across two binaries with a `--profile` flag that does not exist, and four
+     identical `brag: user error: unknown flag: --profile` lines compared equal.
+   - **The third case set the sentence.** Its inputs were **non-empty**, so an
+     emptiness assert would have passed it; only a plausibility check on the
+     output caught it. The clause therefore says *the shape you expected*, of
+     which non-emptiness is the weakest instance.
+   - **Why SPEC-082 is not a reused case.** Clause (1) of the mutation protocol
+     is scoped to mutation probes, and two of these three cases are not mutation
+     probes — both are verification equalities across two binaries, which no
+     promoted clause reached. SPEC-082's remedy was codified narrowly, as *use
+     `shasum` inside the mutation protocol*, and that narrowness is what failed
+     to transfer: the project paid the general case twice inside one cycle, in a
+     place the special case does not reach. Clause (1) is named in the new clause
+     as its **special case**, not its parent.
+   - **The zsh quirks themselves are not in §12.** They went to
+     `projects/_templates/spec.md`'s new `### Traps` subsection, which had no
+     `### Traps` at all before — which is why two consecutive specs wrote one
+     from scratch, and why build's Q2 named the Traps list rather than a
+     constraint or a decision as the gap.
 
 ## Dependencies
 

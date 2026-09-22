@@ -397,6 +397,41 @@ producing a differently-hashed rename (`353b013924bc`) that fires the same two
 guards identically — which is the point: the hash does not identify the edit.
 Codified at SPEC-087 ship (2026-09-07).
 
+**A *no difference* is a measurement, not a default — validate the inputs
+before you believe it.** When a cycle's evidence is an equality — two binaries'
+output compared byte for byte, two hashes compared, a `diff` reported empty, a
+count compared to a count — remember that *equal* is the verdict a **broken**
+check produces for free, and it is indistinguishable in a log from the verdict a
+working one produces. Before trusting it, assert that each side is **the shape
+you expected**: the artifact, not an error message, not a usage line, not an
+empty read. Non-emptiness is the weakest instance of that assert, not the whole
+of it. Earned **N=3 same-outcome** on one mechanical surface — a *no difference*
+verdict determined by something other than the content being compared.
+SPEC-082 (STAGE-022): `git diff --quiet` reported *clean* for
+`scripts/coverage.sh` because the file was untracked, so a real mutant sitting
+on disk read as a missing one. SPEC-086 build (2026-09-19): a zsh snippet named
+a variable `path`, which in zsh is tied to `PATH`, so every command in the loop
+failed and the comparison reported *0 differences* from `""` against `""`; it
+was caught by reading the output, not by a guard. SPEC-086 verify (2026-09-20),
+in the orchestrator's own check of that cycle rather than in the verify session:
+`brag story` was compared across two binaries with a `--profile` flag that does
+not exist, so four identical `brag: user error: unknown flag: --profile` lines
+compared **equal** — the inputs were **non-empty**, which is exactly why an
+emptiness assert alone would have passed it, and only a plausibility check on
+the output caught it. That third case is why the clause says *the shape you
+expected* rather than *non-empty*. The guard belongs inside the comparison
+rather than in the reader: SPEC-086 verify's 29-invocation DEC-050 sweep and its
+AC-1 runs each carried one, and its probe helper discarded a no-op probe's whole
+result rather than crediting its green half. **Clause (1) of the mutation
+protocol above is this rule's special case for mutation probes**, and it is
+cited as a case rather than as the parent because two of the three cases are
+not mutation probes at all — both are verification equalities across two
+binaries, which no promoted clause reached. SPEC-082's remedy was codified
+narrowly, as *use `shasum` inside the mutation protocol*, and that narrowness
+is what failed to transfer: the project then paid the general case twice inside
+one cycle, in a place the special case does not reach. Codified at SPEC-086
+ship (2026-09-20).
+
 **NOT-contains assertions need a self-audit grep against load-bearing prose.**
 When a Failing Test asserts output DOES NOT contain `"X"`, grep the spec's
 load-bearing text (the Long / help-rendering / doc-rendering prose that the

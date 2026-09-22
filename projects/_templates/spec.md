@@ -106,6 +106,27 @@ necessary during build, create a new spec rather than expanding this one.
 
 Gotchas, style preferences, reuse opportunities.
 
+### Traps
+
+*Inherited defaults every spec starts with — shell facts this repo's counts and
+equality checks already depend on. Delete none of them; add the spec's own
+below.*
+
+- **zsh ties `path` to `PATH`.** Never name a variable `path` — assigning it
+  rewrites the search path and every command in the block silently fails.
+  SPEC-086 build did this and the failure surfaced as a comparison reporting
+  *0 differences* from `""` against `""`.
+- **An unquoted `$var` is not word-split in zsh.** `for w in $cmd` yields one
+  word where bash yields three, so a loop over a command string runs the whole
+  string as one argument.
+- **Bare `grep` is a `ugrep` wrapper here, and it respects `.gitignore`.** Count
+  with `/usr/bin/grep` or `git grep`, and quote `--include` globs or zsh expands
+  them and the search never runs. `$?` after a pipe is the last command's exit,
+  not the one you care about.
+- **See AGENTS.md §12 before trusting any equality**: *equal* is the verdict a
+  broken check produces for free. Assert each side is the shape you expected,
+  not merely non-empty.
+
 ---
 
 ## Build Completion
