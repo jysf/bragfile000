@@ -940,7 +940,7 @@ its baseline at the end.**
 | **M-13** | `story/bundle.go` | inside the failure case, `if b.IsImpactBeat {` → `if false {` | →`13df49770bfe` | the same two |
 | **M-14** | `story/bundle.go` | `if d == "" {` / `return clause + "\n"` → `return ""` | →`b3f09ba2799b` | **only** `…ClauseAloneWhenDirectiveEmpty` |
 | **M-16** | `aggregate/aggregate.go` | `return e.Impact != ""` (in `HasImpact`) → `return strings.TrimSpace(e.Impact) != ""` | `2249dacd3b3c`→`147d7cdbc170` | **only** `TestHasImpact_…`. Every story test stays green, which is the drift fix working (Finding 6). |
-| M-D1 | `docs/api-contract.md` | one of three `` `omitted_failure_count` `` → `` `omitted_failures` `` | `1cd16e2a3d7a`→`471eb6137945` | **none**: the probe was too weak (Finding 4) |
+| M-D1 | `docs/api-contract.md` | **the second of three** (`:938` at `c3f707a`): `` extends DEC-014 with `audience`, `omitted_failure_count` (an integer, `` → `` extends DEC-014 with `audience`, `omitted_failures` (an integer, ``. *Pinned at verify (V-F1): as designed, the row read "one of three", which build could not reproduce.* | `1cd16e2a3d7a`→`471eb6137945` | **none**: the probe was too weak (Finding 4) |
 | **M-D1′** | `docs/api-contract.md` | **all three** `` `omitted_failure_count` `` → `` `omitted_failures` `` (every one is in the `story` section) | →`f313c537a4cb` | `AE1` |
 | **M-D2** | `docs/tutorial.md` | `…list it where it falls as` / `` `✗ <id> (failed)`, while `` → `…list it where it falls, while` | `3a5ba9709b54`→`927a9f5d3c3b` | `AE2` |
 | **M-D3** | `AGENTS.md` | `` `brag story` labels one `` → `Story labels one` | `713a717a154f`→`bcab08c6ce19` | `AE3` |
@@ -2916,6 +2916,358 @@ Process-focused: how did the build go? What friction did the spec create?
    `scripts/inventory.sh` does) from the start, rather than the whole repo,
    which double- and triple-counts nested worktree copies under
    `.claude/worktrees/`.
+
+---
+
+## Verification
+
+*Filled in at the end of the **verify** cycle. The orchestrator had already
+confirmed the 15 literals' byte-for-byte rebuild from a clean `main` and all
+five gates. This record covers what a passing build could not see: DEC-054's
+T4, the real output a user reads, mutants nobody wrote, and whether anything
+outside `story` moved.*
+
+- **Branch:** `verify/spec-094-story-honesty`, off `main` at `c3f707a`
+  (PR #228, the build, merged as a squash).
+- **Verdict:** ⚠ **PUNCH LIST: one record correction, fixed in this cycle.
+  No functional defect, and no line of Go changed.** Every acceptance
+  criterion reproduces on a fresh frozen copy. Nine novel mutants were all
+  killed. The M-D1 row now pins one edit and reproduces its hash (V-F1).
+  **T4 fired in part** (V-F2). That is a finding about DEC-050's invariant
+  at the prose level, not a defect in this build, and it is routed to ship.
+
+Every live-corpus number below came from one frozen copy
+(`sqlite3 .backup`, SHA-256 `2657544f9a74…`, the same file design measured:
+621 entries, max id 643, four `failed`), which was unchanged at the end. Two
+binaries ran against it. `brag-pre` was built from a `git archive` of
+`c167764` (the design merge, before `build(SPEC-094)`), and its strings hold
+`omitted_failure_count` 0 times. `brag-new` was built from `c3f707a`, and its
+strings hold the key once.
+
+### The attack list
+
+| # | Attack | Result |
+|---|---|---|
+| 1 | DEC-054 T4: does `✗ … (failed)` survive `me` and `manager` into a model's prose? | **Partly. V-F2.** On `manager` it cuts win-crediting from 22/30 to 4/30. On `me` it changes nothing (1/30 → 2/30). All six residual cases are #473 |
+| 2 | Read the real output: four audiences, failures and none, `n == 1`, misspelled user `candor` | **HOLDS.** Note and clause placed and worded as LD3/LD5; `--print-directive` byte-identical |
+| 3 | Mutants nobody wrote | **HOLDS.** 9 of 9 killed; 2 predictions named more tests than fired |
+| 4 | M-D1's stated hash | **V-F1: under-specified. FIXED.** It was the second of three readings. Codification ruling below: **does not clear** |
+| 5 | Did any other surface move? | **HOLDS.** 22 invocations over 9 commands byte-identical, each side checked to be the artifact |
+| 6 | Who reads `omitted_failure_count` or the story JSON? | **HOLDS.** No consumer outside `internal/story`'s own tests and the docs this spec edited |
+| 7 | Is the build reflection honest? | **HOLDS.** Both tooling errors reproduce as described. Neither warrants promotion |
+
+### V-F2: T4, measured with SPEC-094's method
+
+**Method.** Bundles came from the built binaries, not from edited text:
+`story --audience <me|manager> --since 2026-09-01 --project bragfile`
+(9 beats, 3 failures: 433, 465, 473). Each was built on `brag-new` (`✗`) and
+on `brag-pre` (`★`, the counterfactual). The control was the same two
+audiences over `--project bragfile-site` (48 beats, no failure). Every
+bundle was shape-checked before any run:
+
+| Bundle | Bytes | `✗` lines | `★` failure lines | SHA-256 |
+|---|---:|---:|---:|---|
+| `new-me` | 7 991 | 3 | 0 | `f2434f67f493` |
+| `new-manager` | 8 065 | 3 | 0 | `f6315be65d35` |
+| `pre-me` | 7 964 | 0 | 3 | `1d072f16eb34` |
+| `pre-manager` | 8 038 | 0 | 3 | `b79a95140438` |
+| `ctl-me` / `ctl-manager` | 10 361 / 10 435 | 0 | 0 | `919b007bdd6f` / `3e208c9c3d56` |
+
+(The hashes cover a `Generated:` line, so they identify these files and no
+re-run will reproduce them.) Each run was
+`claude -p --model <haiku|sonnet> --tools "" --no-session-persistence --setting-sources ""`
+with the tutorial's prompt, *"weave these threads into one headline arc"*,
+on `claude` 2.1.280. There were five runs per model per bundle, and three
+per model per control bundle: 52 runs. **Two `new-me`/Sonnet runs were
+lost to tool-call attempts** (11 and 15 words, no prose), the same failure
+framing recorded. They were set aside unread and replaced by two fresh runs.
+
+**Grader, calibrated, then overridden by reading.** Two Sonnet graders
+scored each failure id per output. Grader 1 asked *absent, failure, win or
+neutral*. Grader 2 asked *is this failure credited anywhere as a win, for
+example listed as shipped?* On the 12 control outputs (36 judgments, none
+of them possible) grader 1 made **2 false hits** and grader 2 made **1**.
+Each one credited unrelated `bragfile-site` work to #473. Grader 1 then
+missed the one shape that matters: in `new-manager`/Sonnet run 2 it scored
+#473 *failure* while the prose lists it under **"What shipped"**. Grader 2
+under-counted the counterfactual (10 against my 13 on `pre-manager`/Sonnet).
+**So every non-absent judgment in the 40 test outputs was read by hand, in
+context, and the table is my reading, not either grader's.** *Credited as a
+win* means the prose lists the failure among work shipped, fixed or landed,
+or presents it chiefly as an accomplishment. It still counts when the
+going-wrong is also stated as a "before".
+
+| Cell | Model | Runs | Framed only as a failure | Credited as a win | Absent |
+|---|---|---:|---:|---:|---:|
+| `manager`, `✗` (this build) | Haiku | 5 | 15 | **0** | 0 |
+| `manager`, `✗` | Sonnet | 5 | 11 | **4** (all #473) | 0 |
+| `manager`, `★` (pre-build) | Haiku | 5 | 5 | **9** | 1 |
+| `manager`, `★` | Sonnet | 5 | 2 | **13** | 0 |
+| `me`, `✗` (this build) | Haiku | 5 | 12 | **2** (both #473) | 1 |
+| `me`, `✗` | Sonnet | 5 (+2 lost) | 15 | **0** | 0 |
+| `me`, `★` (pre-build) | Haiku | 5 | 13 | **0** | 2 |
+| `me`, `★` | Sonnet | 5 | 14 | **1** (#473) | 0 |
+
+A corroborating count needs no judgment. An id followed within 12
+characters by `fail`/`failed`/`failure` (`/usr/bin/grep -oiE`) appears
+**11 times** in the 20 `✗` outputs, and **0 times** in the 20 `★` outputs
+and the 12 controls. Models do carry the label: `new-manager`/Sonnet run 3
+writes *"**#433 (failed):** routing fixes by leaving a note in prose doesn't
+work"*, and `new-me`/Sonnet run 3 writes *"**#433 failed**, and it's the
+pivot"*.
+
+**What it means.**
+
+- **On `manager`, the label works, and it is the label that works.** With
+  `★` and the directive's *"Lead with what shipped"*, the failures land
+  under **Shipped** in 22 of 30 mentions. With `✗` they land under
+  **Blockers**, **Friction**, **Risk** or a "what failed" heading in 26 of
+  30.
+- **On `me`, the label is inert.** The directive (*"the messy middle"*) and
+  the entries' own titles (*"did not fire"*, *"why that fails"*) already
+  carry the candour. With `★` too, 27 of 30 mentions are framed as failures.
+- **The residue is one entry, and the entry is the cause.** All six
+  residual cases are #473. Its recorded impact narrates its own fix (*"The
+  guard now derives its keys from the renderer's own output"*). Sonnet on
+  `manager` lists it as shipped in 4 of 5 runs: twice outright (*"**Test
+  coverage gap closed** (#473)"*, run 3, in the same answer that labels 433
+  and 465 *"(failed)"*) and twice alongside a blockers mention. **DEC-050's
+  "a failure is never rendered as a win" holds in the bundle and does not
+  hold in the prose** for a failure whose impact reads like a win. The
+  binary cannot guarantee it downstream, and neither `me.md` nor
+  `manager.md` says what `✗` means.
+- **An inverse error, outside DEC-050.** Two `✗` runs explicitly call #472,
+  a win, a failure: `me`/Sonnet run 3 (*"#472 and #473 are the same failure
+  shape"*) and `me`/Haiku run 5 (*"The other failures (472, 473, 643)"*).
+  The `★` runs were not audited for this.
+
+**T4's trigger fired in part:** the label does not fully survive `manager`.
+**Routed to ship** to decide whether to amend DEC-054 T4 with this result,
+and whether to add one line to `me.md` and `manager.md` saying what `✗`
+means. That change would edit assets that LD14 keeps out of this spec, and
+the wording would need this measurement re-run. **No id is reserved here**
+(the prose-reservation failure, #465).
+
+**Limits.** Two models and one scoped window. There are three failures, all
+with an impact, so an impact-less failure under `✗` is untested. The
+prompt is the tutorial's `exec`-shaped *"one headline arc"*. A
+manager-shaped prompt might behave differently, and that was not measured.
+
+### Real output, read as a user would
+
+All runs were on the frozen copy, with a throwaway `HOME` for user profiles.
+
+- **`me` and `manager`, `--since 2026-09-01`.** The `diff` against `brag-pre`
+  is exactly 4 changed lines each (8 `diff` lines), and each is
+  `- ★ <id>:` → `- ✗ <id> (failed):`. The impact line under it is
+  unchanged (AC-1). JSON is identical after
+  `del(.omitted_failure_count, .generated_at)` in `--since`, `--year` and
+  `--month` (AC-1, AC-4).
+- **`exec` and `skip`, same window.** `Beats: 226/231` and `227/231`, then
+  `Omitted: 4 recorded failures, not listed for this audience (brag list --type failed)`
+  on the line directly below. The document's last line is the clause, a
+  paragraph of its own after the asset's bullet list. On `exec`, the
+  `bragfile` thread drops from 9 to 6 impact beats and moves below
+  `irradiance`, as design reported. That is visible, not wrong. JSON:
+  `omitted_failure_count` is the fifth key, `4` on both and `0` on both
+  candid audiences (AC-5). In all six promotional cells, the arc counts
+  equal `main`'s recomputed over non-failure beats, with 0 failure beats
+  left (AC-4).
+- **The empty state** (`exec --type failed`): `Threads: 0`, `Beats: 0/4`,
+  the `Omitted:` line, and the directive ending in the clause. JSON gives
+  `4` and `[]` (AC-3). A user who asked for failures is told why they got
+  none, and where to find them.
+- **`n == 1`** (`exec --project contextcore-pilot-harness`, #420 only):
+  `Omitted: 1 recorded failure, …` and `This bundle omits 1 recorded failure …`.
+  The singular holds in both places. `me` over the same window labels
+  `✗ 420 (failed)`.
+- **A window with no failure** (`--since 2026-09-09`): `exec` and `skip`
+  have no `Omitted:` line and no clause, and `omitted_failure_count` is `0`
+  and present. The markdown is byte-identical to `brag-pre` apart from
+  `Generated:`.
+- **User profiles.** Eight exec-shaped profiles differed only in `candor`
+  or `directive`:
+
+  | `candor:` as written | Result |
+  |---|---|
+  | `promotionl` (misspelled) | labels 4 `✗`, no note, no clause |
+  | `Promotional` | labels |
+  | `"promotional"` (YAML-quoted) | **labels**: the parser keeps the quotes |
+  | `promotional # exec-like` (trailing comment) | **labels**: the parser keeps the comment |
+  | `promotional   ` (trailing spaces) | omits: the parser trims |
+
+  Each unrecognised value falls to the side that drops nothing (DEC-054
+  part 1), and the `✗` lines make that visible. The quoted and commented
+  forms are valid YAML that a user could reasonably write. **Recorded, not
+  routed:** it is the pre-existing hand parser's behaviour for every key,
+  and it fails safe.
+- **The clause after a user's own directive.** For a file ending
+  `No trailing list.\n\n\n`, the directive is right-trimmed, then `\n\n` and
+  the clause, in both formats. For an **empty** directive file, and for a
+  profile with **no** `directive:` key, `## Framing directive` renders with
+  the clause as its whole body. **`--print-directive`** is byte-identical
+  to `brag-pre` for all four bundled audiences, and it prints a user file
+  as authored, with no clause.
+
+### Novel mutants: 9, each predicted before it ran
+
+The helper backs up to `/tmp`, applies one exact replacement (it refuses
+unless the old text occurs exactly once), **refuses to run the gates until
+the content hash has moved**, runs `go test -count=1 ./...` and
+`./scripts/test-docs.sh`, restores with `cp`, and confirms the pre-hash
+returned. Predictions were written to a file before the first run.
+`test-docs` stayed green for every Go mutant, as predicted.
+
+| id | File | Edit (old → new) | Predicted | Fired | pre → post |
+|---|---|---|---|---|---|
+| **V-N1** | `profile.go` | `return p.Candor == CandorPromotional` → `return strings.TrimSpace(p.Candor) == CandorPromotional` | only `…OnlyExactPromotionalOmits` | **exactly that** | `2e4b6f59c520` → `c30c3e26555d` |
+| **V-N2** | `bundle.go` | `if opts.OmittedFailures == 0 {` → `if opts.OmittedFailures < 0 {` (the clause says "omits 0" on every bundle) | many, including the existing goldens | **8**: the `me`/`exec` markdown goldens, the `me` JSON golden, `EmptyDirectiveOmitsSection`, `EmptyWindow`, and 3 new | `c0decde8de07` → `33081fbd15ca` |
+| **V-N3** | `bundle.go` | `` `json:"omitted_failure_count"` `` → `` `json:"omitted_failure_count,omitempty"` `` | `MeProfile_ShapeGolden`, `EmptyWindow`, the `me` half of `…PromotionalCountsWhatItOmitted` | **exactly those 3** | → `046f5053e450` |
+| **V-N4** | `bundle.go` | `return d + "\n\n" + clause + "\n"` → `… + clause + "\n\n" + clause + "\n"` (clause twice) | 4, and the e2e survives | **2**: `…PromotionalOmitsWithNoteAndClauseGolden`, `TestLoadProfile_OnlyExact…`. The e2e survived, as predicted. **Over-predicted**: `…EveryBeatOmitted…` takes the empty-directive branch, and `…PromotionalCounts…` does not pin the directive's end | → `0e061e2b13f6` |
+| **V-N5** | `bundle.go` | in the failure case, `if b.IsImpactBeat {` → `if true {` (a blank impact line under an impact-less failure) | only `…CandidLabelsFailuresGolden` | **exactly that** | → `95e9f4d39bc5` |
+| **V-N6** | `bundle.go` | in `pluralFailures`, `if n == 1 {` → `if n == -1 {` (never singular) | `…ClauseAloneWhenDirectiveEmpty` and the e2e | **exactly those 2** | → `4ca63d30d632` |
+| **V-N7** | `bundle.go` | `FramingDirective:    framingDirective(opts),` → `FramingDirective:    opts.Directive,` (clause dropped from JSON only) | `ClauseAlone`, `PromotionalCounts`, `EveryBeatOmitted` | **2**: the first two. **Over-predicted**: `EveryBeatOmitted` does not read the JSON directive | → `a219a0ba131f` |
+| **V-N8** | `bundle.go` | `if directive := framingDirective(opts); directive != "" {` → `if directive := opts.Directive; directive != "" {` (clause dropped from markdown only) | 5, including the e2e | **exactly those 5** | → `bfc0ee4e7fcb` |
+| **V-N9** | `cli/story.go` | `EntriesInWindow: len(entries),` → `EntriesInWindow: len(shown),` | only the `learn` e2e | **exactly that** | `90683ed9106a` → `847e8707877a` |
+
+**What the nine establish.** Each half of the note-and-clause pair is
+guarded on its own format (V-N7, V-N8), so LD6's "one field drives all
+three" is enforced, not only designed. DEC-014 part 4's always-present key
+is guarded against `omitempty` (V-N3). The singular (V-N6), the
+denominator (V-N9) and the impact-less failure (V-N5) each have exactly
+one guard. **One gap, recorded and not a defect:** a doubled clause
+survives the e2e and the JSON test, and only the markdown golden and the
+user-file test catch it.
+
+The **first attempt at V-N6 was refused by the helper**, because
+`if n == 1 {` occurs twice in `bundle.go`. It was re-anchored on
+`func pluralFailures(n int) string {` and run as above. A second helper
+fault showed up at item 7: it decoded escapes with `unicode_escape`, which
+mangles non-ASCII, so it refused M-D2 (`✗`) as occurring 0 times. The
+occurrence guard caught it before any gate ran. None of V-N1 to V-N9
+contains non-ASCII, so none of them was affected.
+
+### V-F1: M-D1 pinned. FIXED, and the codification ruling
+
+`docs/api-contract.md` at `c3f707a` (`1cd16e2a3d7a`, the same bytes as
+design's prototype) holds `` `omitted_failure_count` `` three times. Each
+reading of *"one of three"* was hashed and run through the probe:
+
+| Reading | Line | Hash | `AE1` |
+|---|---|---|---|
+| 1st | `:908` | `8d7c04ac6af3` (build's) | green |
+| **2nd** | **`:938`** | **`471eb6137945` (design's)** | green |
+| 3rd | `:954` | `d7c835adfd9f` | green |
+| all three (M-D1′) | — | `f313c537a4cb` | **fires** |
+
+Design ran the second reading. The matrix row now states that edit
+verbatim, and it reproduces `471eb6137945` from a pristine file. Its
+behaviour was never in doubt: every reading leaves `AE1` green, which is
+Finding 4.
+
+**Ruling: this does not clear STAGE-023 held candidate 1.** The candidate
+clears when *"a second stated edit meets the parent clause and does not
+reproduce its hash."* M-D1 does not meet the parent clause. A diff that
+admits three literal readings is not pinned, and SPEC-086 ship already drew
+that line. Its positives (SPEC-088's `M-B3`/`M-B4` and SPEC-086's five
+abbreviated rows) were admitted because each prose description had
+**exactly one** literal reading. So M-D1 is the parent clause's own
+negative, of the same kind as SPEC-087's `M-6`, which ship declined to
+count. `M-A0`, the candidate's one case, has a different defect: a single,
+unambiguous stated edit that is not what ran. M-D1's record is incomplete
+rather than wrong. What ran is one of its readings, and it reproduces the
+moment the reading is named. **The best case for counting it:** the matrix
+preamble says *"the Diff column is the replacement the helper applied,
+verbatim"*, and for this row it was not, which is composition after the
+run in the literal sense. That argument is recorded here for ship, but it
+is not the stated condition. Candidate 1 stays at **N=1**. Ship codifies.
+
+### Other surfaces: nothing moved
+
+22 invocations, each run on `brag-pre` and `brag-new` against the frozen
+copy, were compared after deleting only `Generated:` / `generated_at`
+lines (1 line per document): `impact` (`--year`, `--since`, JSON,
+`--type failed`), `wrapped` (md, JSON), `summary --range month` (md, JSON)
+and `--range week --type failed`, `export` (markdown, JSON), `coverage`
+(md, `--year` JSON), `list` (`--since`, `--type failed`, JSON), `stats`
+(md, JSON), `memory` (`--project bragfile`, JSON), and `review` (`--week`,
+`--month` JSON). **All 22 are identical.** Before any equality was believed,
+each side was checked: exit 0 on both, empty stderr on both, a non-empty
+body (87 B to 516 KB), and the expected first line (`# Bragfile Impact`,
+`# Bragfile Wrapped`, …, `{`, `[`, or a tab-separated row). **Positive
+control:** the same harness on `story --audience exec` reports **DIFF**. So
+the comparison can see a difference between these two binaries, and it
+compared real documents, not two equal error messages. Flags were taken
+from each command's own `--help` first, so no cell ran a flag that does not
+exist.
+
+### Consumers of the new key
+
+`git grep omitted_failure_count` outside this spec finds the renderer, its
+tests (`bundle_test.go`, `candor_test.go`, `learn_test.go`),
+`docs/api-contract.md` (3), `CHANGELOG.md`, DEC-029, DEC-050, DEC-054,
+STAGE-023 and `scripts/test-docs.sh` (`AE1`, `AE4`). Every one was written
+by this spec's design or build. A wider sweep followed, for
+`framing_directive`, `is_impact_beat`, `impact_beat_count`, `"throughline"`
+and `story … --format json` outside `internal/story`, `projects/` and
+`decisions/`. It finds only `docs/api-contract.md`, `docs/tutorial.md:629`,
+`internal/cli/story.go:56` (usage lines) and `CHANGELOG.md`. **`BRAG.md`
+(`:442`) and `README.md` (`:229`) name `brag story` in markdown usage
+only.** In `internal/mcpserver` the only `story` hits are inside
+"hi*story*". There is no story tool (LD14). **The plugin and `examples/`
+have no hit. No unupdated reader.**
+
+### The build reflection: HONEST
+
+- **M-D2's line-wrapped edit.** The phrase does span `docs/tutorial.md:649`
+  and `:650`. The two-line edit reproduces `927a9f5d3c3b` and fires `AE2`.
+  A one-line edit leaves a malformed file with a different hash
+  (`56b75290b01f`, on this reading. Build did not record its own malformed
+  hash, so its exact text cannot be re-derived). What caught it was
+  comparing against the **stated** hash. "Hash moved" alone would have
+  passed it.
+- **The worktree double-count.** `.claude/worktrees/` holds two nested
+  checkouts. `^func Test` over `internal cmd` gives **856**. Over the whole
+  repo it gives **2500**.
+- **Promotion: neither.** The first is the parent §12 clause working, the
+  stated hash catching a malformed probe. It adds no new rule. The second
+  is already covered by *"numbers in docs are derived, not typed"*: count
+  with the script that derives the row. My own helper fault (V-N6's refusal
+  and the `unicode_escape` refusal) is the same shape as the first. An
+  exactly-once occurrence guard caught what a hash-moved guard would not
+  have. It is recorded, not proposed, and it stays at N=1.
+
+### Gates: all five green on this branch
+
+| gate | result |
+|---|---|
+| `just test` | exit 0 · **1113** passing (incl. subtests) · **856** top-level `func Test*` · **0** failing · **14** packages `ok` |
+| `just test-docs` | exit 0 · **210** `OK:` / **209** distinct ids / **4** `AE` ids / **0** `FAIL:` |
+| `just lint` | `0 issues.` |
+| `gofmt -l .` | empty |
+| `go vet ./...` | exit 0 |
+
+### What this cycle changed
+
+- This spec only: the M-D1 matrix row (V-F1) and this section. **No Go, no
+  test, no doc and no `test-docs.sh` change**, so no derived number moves
+  and the inventory block is untouched. `cycle:` stays `verify`. Ship
+  advances it.
+
+### Not findings, checked and clean
+
+- **The corpus was never written to.** The only invocations against
+  `~/.bragfile/db.sqlite` were the read-only `brag memory --project
+  bragfile` that §13.5 asks for and the `sqlite3 .backup`. Every other run
+  used the frozen copy, whose SHA-256 was unchanged at the end. **No brag
+  was captured; the brag comes at ship.**
+- **Every probe target is back at its baseline**, and `git status` was
+  clean between probes.
+- **Counts** were taken with `/usr/bin/grep`, `git grep` or Python. JSON
+  went through files, never `echo`.
+- **Nothing out of scope was touched:** SPEC-095, SPEC-092/093's stale
+  DEC-054 lines, `export/markdown.go:55`, `memory/memory.go:240`, `brag
+  review`, AGENTS.md, and `guidance/questions.yaml`.
 
 ---
 
