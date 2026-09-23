@@ -306,7 +306,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       reading* (see *Held codification candidates*, item 5). `pr:226` (frame),
       `pr:227` (design), `pr:228` (build), `pr:229` (verify), `pr:230`
       (ship).
-- [ ] SPEC-095 (frame) — **`summary` moves a failure out of `## Highlights`.**
+- [ ] SPEC-095 (design) — **`summary` moves a failure out of `## Highlights`.**
       Given a file at SPEC-094's framing (2026-09-22), in the same edit as this
       line. It is DEC-050 row 3, which states the posture in full: SPEC-086's
       partition into `## What didn't work` / `failures_by_project`, on a third
@@ -321,6 +321,13 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       Recorded at SPEC-094 ship (2026-09-23), on this entry rather than only in
       that spec's reflection, for SPEC-088 Q1's reason. The cut itself is its
       own spec after this one.
+      **Designed 2026-09-22 against `main` at `55063e9`, GO at S, held.** The
+      partition covers every in-window entry, so `summary` lists an
+      impact-less failure where `impact` and `wrapped` do not. A window of
+      failures only renders no bare `## Highlights`. Every Go test is seeded
+      and has no window cliff. DEC-050 gains a second `## Amendment` and no
+      new record. Literals are `git diff` output against `55063e9`, and 17
+      probes are hash-gated.
 - [ ] SPEC-096 (frame) — **the candid directives say what a failure label
       means.** Given a file at SPEC-094 ship (2026-09-23), in the same edit as
       this line, on the maintainer's ruling of that day. SPEC-094's verify

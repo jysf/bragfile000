@@ -307,6 +307,50 @@ so the amendment can be read against it.
   14 of 14 runs at framing, and in 25 of 25 at design on the wording DEC-054
   locks. DEC-054's T1 is the trigger that would reopen it.
 
+## Amendment (2026-09-22, SPEC-095 design)
+
+**Row 3 is SPEC-095's everywhere this record names an implementer, and
+design settled its mechanics without touching its posture.** The amendment
+above moved row 3's *Implemented by* and the *"until SPEC-094 ships"*
+consequence. Three sentences above still name SPEC-094 alone for row 3, and
+they read as follows. Everything above this heading is left as written.
+
+- **Context** (*"SPEC-086 covers rows 1 and 2, and SPEC-094 covers rows 3
+  and 4"*): SPEC-086 covers rows 1 and 2, SPEC-095 covers row 3, and
+  SPEC-094 covers row 4. The split was along a defect shape, as the
+  paragraph says, but the paragraph also measured `summary`'s shape wrong.
+  `summary` is the *unrepresentable* shape of rows 1 and 2, not `story`'s
+  lossy markdown.
+- **Validation** (*"SPEC-094's summary and story work lands without
+  revisiting this table"*): SPEC-094 (`story`) and SPEC-095 (`summary`)
+  each land without revisiting the posture.
+- **References** (*"SPEC-094: implements rows 3 and 4"*): SPEC-094
+  implements row 4, and SPEC-095 implements row 3.
+
+**The mechanics inside row 3, settled at SPEC-095's design:**
+
+- **The partition covers every in-window entry, not the with-impact
+  subset.** `summary`'s `## Highlights` lists every entry, impact or not, so
+  rule 2 applied to it splits every entry. Its `## What didn't work`
+  therefore lists a failure with **no** impact, where `impact` and
+  `wrapped` do not. That difference follows from each surface's existing
+  shape. It is not a new rule, and it is not drift. It narrows **T5**'s
+  cost statement: an impact-less failure is invisible on `impact` and
+  `wrapped` but listed by `summary` while it is in `summary`'s window. 0 of
+  4 recorded failures lack an impact, re-measured 2026-09-22.
+- **A window holding only failures renders no bare `## Highlights`**, which
+  is rule 4 applied to the other section, as SPEC-086 applied it to
+  `## Impact`. JSON `highlights` is then `[]`, per DEC-014 part 4.
+- **Rule 5 names the key, not the per-entry shape.** `summary`'s
+  `failures_by_project` holds `summary`'s own 2-key `{id, title}` entries,
+  exactly as its `highlights` does. `impact` and `wrapped` hold DEC-028's
+  4-key entries. `.failures_by_project[].entries[].id` reads the same on all
+  three, and `.impact` is present on two of them.
+- **No count changes what it counts** (rule 3): `By type`, `By project`,
+  `counts_by_type` and `counts_by_project` still count both sections. That
+  was measured on a frozen copy of the live corpus, where both JSON count
+  maps are byte-identical before and after.
+
 ## References
 
 - **DEC-014:** the envelope. Part 4's empty-state rule governs the empty
