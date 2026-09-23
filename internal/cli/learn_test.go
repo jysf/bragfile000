@@ -389,6 +389,9 @@ func TestLearnCmd_SummarySectionsWhatItWrote(t *testing.T) {
 	if !strings.Contains(markdownSection(md, "Summary"), "- failed: 1\n") {
 		t.Errorf("By type should still count the brag learn entry:\n%s", md)
 	}
+	if !strings.Contains(markdownSection(md, "Summary"), "- alpha: 2\n") {
+		t.Errorf("By project should still count both entries:\n%s", md)
+	}
 
 	type group struct {
 		Entries []struct {
@@ -397,6 +400,7 @@ func TestLearnCmd_SummarySectionsWhatItWrote(t *testing.T) {
 	}
 	var env struct {
 		CountsByType      map[string]int `json:"counts_by_type"`
+		CountsByProject   map[string]int `json:"counts_by_project"`
 		Highlights        []group        `json:"highlights"`
 		FailuresByProject []group        `json:"failures_by_project"`
 	}
@@ -420,5 +424,8 @@ func TestLearnCmd_SummarySectionsWhatItWrote(t *testing.T) {
 	}
 	if env.CountsByType["failed"] != 1 || env.CountsByType["shipped"] != 1 {
 		t.Errorf("counts_by_type = %v, want failed:1 and shipped:1", env.CountsByType)
+	}
+	if env.CountsByProject["alpha"] != 2 {
+		t.Errorf("counts_by_project = %v, want alpha:2", env.CountsByProject)
 	}
 }
