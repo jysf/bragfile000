@@ -385,3 +385,19 @@ func lineMatches(s string, re *regexp.Regexp) bool {
 	}
 	return false
 }
+
+// TestSummaryCmd_HelpNamesTheFailureSection ▲ SPEC-095 LD6: summary's --help
+// says where a brag learn entry goes, since it is no longer among the
+// highlights, and that the counts still include it. "What didn't work" is a
+// token no cobra-generated line can produce.
+func TestSummaryCmd_HelpNamesTheFailureSection(t *testing.T) {
+	root, outBuf, _ := newSummaryTestRoot(t)
+	root.SetArgs([]string{"summary", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := `Work recorded with brag learn is listed under its own "What didn't work" heading instead of among the highlights, and that heading is left out when there is none. The by-type and by-project counts still include it.`
+	if !bytes.Contains(outBuf.Bytes(), []byte(want)) {
+		t.Errorf("expected the failure-section sentence in help:\n%s", outBuf.String())
+	}
+}

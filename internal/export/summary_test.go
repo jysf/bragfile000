@@ -3,6 +3,10 @@ package export
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"reflect"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -202,7 +206,8 @@ func TestToSummaryJSON_DEC014ShapeGolden(t *testing.T) {
         }
       ]
     }
-  ]
+  ],
+  "failures_by_project": []
 }`
 
 	got, err := ToSummaryJSON(summaryFixture, opts)
@@ -223,7 +228,7 @@ func TestToSummaryJSON_DEC014ShapeGolden(t *testing.T) {
 	if d, ok := tok.(json.Delim); !ok || d != '{' {
 		t.Fatalf("expected opening {, got %v", tok)
 	}
-	wantKeys := []string{"generated_at", "scope", "filters", "counts_by_type", "counts_by_project", "highlights"}
+	wantKeys := []string{"generated_at", "scope", "filters", "counts_by_type", "counts_by_project", "highlights", "failures_by_project"}
 	for _, k := range wantKeys {
 		tok, err := dec.Token()
 		if err != nil {
@@ -335,7 +340,8 @@ Filters: (none)`
   "filters": {},
   "counts_by_type": {},
   "counts_by_project": {},
-  "highlights": []
+  "highlights": [],
+  "failures_by_project": []
 }`
 		got, err := ToSummaryJSON([]storage.Entry{}, opts)
 		if err != nil {
@@ -461,4 +467,367 @@ func TestToSummaryMarkdown_FiltersLineFormat(t *testing.T) {
 			t.Errorf("expected line %q in:\n%s", "Filters: --project platform --tag auth", string(got))
 		}
 	})
+}
+
+// summaryFailureFixture is summaryFixture plus three rows typed "failed" —
+// the literal DEC-049 persists, spelled out rather than taken from
+// aggregate.FailureType so these tests also fail if the constant drifts from
+// the stored value. id 6 is an alpha failure dated between alpha's two
+// highlights, so it must leave their group. id 7 is a failure with NO impact,
+// and it still lands in ## What didn't work: summary's highlights list every
+// entry, so its partition covers every entry (SPEC-095 LD1), unlike impact's
+// and wrapped's. delta holds only id 7, so it is a failures-only project and
+// must not appear under ## Highlights. id 8 is a (no project) failure, so the
+// section's (no project)-last rule is exercised too. 8 in window: 5
+// highlights, 3 failures.
+var summaryFailureFixture = append(append([]storage.Entry{}, summaryFixture...),
+	storage.Entry{ID: 6, Title: "pool-dead-end",
+		Project: "alpha", Type: "failed",
+		Impact:    "cost two days and produced nothing reusable",
+		CreatedAt: time.Date(2026, 4, 21, 12, 0, 0, 0, time.UTC),
+		UpdatedAt: time.Date(2026, 4, 21, 12, 0, 0, 0, time.UTC)},
+	storage.Entry{ID: 7, Title: "retry-noimpact",
+		Project: "delta", Type: "failed",
+		Impact:    "", // no impact, and still listed (LD1)
+		CreatedAt: time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC),
+		UpdatedAt: time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC)},
+	storage.Entry{ID: 8, Title: "unbound-dead-end",
+		Type:      "failed", // (no project) group
+		Impact:    "ruled out the vendor SDK",
+		CreatedAt: time.Date(2026, 4, 23, 12, 0, 0, 0, time.UTC),
+		UpdatedAt: time.Date(2026, 4, 23, 12, 0, 0, 0, time.UTC)},
+)
+
+var summaryFailureOpts = SummaryOptions{
+	Scope:       "week",
+	Filters:     "(none)",
+	FiltersJSON: map[string]string{},
+	Now:         summaryFixedNow,
+}
+
+// TestToSummaryMarkdown_FailureSectionGolden ▲ SPEC-095 LD2/LD3
+// (LOAD-BEARING). A recorded failure leaves ## Highlights and renders under
+// ## What didn't work, in the same grouped `- <id>: <title>` shape. By type
+// and By project are unchanged in meaning: they count all eight entries,
+// both sections, and `failed: 3` stays where it always was.
+func TestToSummaryMarkdown_FailureSectionGolden(t *testing.T) {
+	got, err := ToSummaryMarkdown(summaryFailureFixture, summaryFailureOpts)
+	if err != nil {
+		t.Fatalf("ToSummaryMarkdown: %v", err)
+	}
+	want := `# Bragfile Summary
+
+Generated: 2026-04-25T12:00:00Z
+Scope: week
+Filters: (none)
+
+## Summary
+
+**By type**
+- failed: 3
+- shipped: 3
+- fixed: 1
+- learned: 1
+
+**By project**
+- alpha: 3
+- beta: 1
+- delta: 1
+- gamma: 1
+- (no project): 2
+
+## Highlights
+
+### alpha
+
+- 1: alpha-old
+- 4: alpha-new
+
+### beta
+
+- 2: beta-mid
+
+### gamma
+
+- 5: gamma-only
+
+### (no project)
+
+- 3: unbound-mid
+
+## What didn't work
+
+### alpha
+
+- 6: pool-dead-end
+
+### delta
+
+- 7: retry-noimpact
+
+### (no project)
+
+- 8: unbound-dead-end`
+	if string(got) != want {
+		t.Errorf("markdown golden mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestToSummaryJSON_FailureSectionGolden ▲ SPEC-095 LD3/LD4 (LOAD-BEARING).
+// The failures leave highlights and arrive in failures_by_project, in the
+// same {project, entries: [{id, title}]} shape; both counts maps still count
+// every entry.
+func TestToSummaryJSON_FailureSectionGolden(t *testing.T) {
+	got, err := ToSummaryJSON(summaryFailureFixture, summaryFailureOpts)
+	if err != nil {
+		t.Fatalf("ToSummaryJSON: %v", err)
+	}
+	want := `{
+  "generated_at": "2026-04-25T12:00:00Z",
+  "scope": "week",
+  "filters": {},
+  "counts_by_type": {
+    "failed": 3,
+    "fixed": 1,
+    "learned": 1,
+    "shipped": 3
+  },
+  "counts_by_project": {
+    "(no project)": 2,
+    "alpha": 3,
+    "beta": 1,
+    "delta": 1,
+    "gamma": 1
+  },
+  "highlights": [
+    {
+      "project": "alpha",
+      "entries": [
+        {
+          "id": 1,
+          "title": "alpha-old"
+        },
+        {
+          "id": 4,
+          "title": "alpha-new"
+        }
+      ]
+    },
+    {
+      "project": "beta",
+      "entries": [
+        {
+          "id": 2,
+          "title": "beta-mid"
+        }
+      ]
+    },
+    {
+      "project": "gamma",
+      "entries": [
+        {
+          "id": 5,
+          "title": "gamma-only"
+        }
+      ]
+    },
+    {
+      "project": "(no project)",
+      "entries": [
+        {
+          "id": 3,
+          "title": "unbound-mid"
+        }
+      ]
+    }
+  ],
+  "failures_by_project": [
+    {
+      "project": "alpha",
+      "entries": [
+        {
+          "id": 6,
+          "title": "pool-dead-end"
+        }
+      ]
+    },
+    {
+      "project": "delta",
+      "entries": [
+        {
+          "id": 7,
+          "title": "retry-noimpact"
+        }
+      ]
+    },
+    {
+      "project": "(no project)",
+      "entries": [
+        {
+          "id": 8,
+          "title": "unbound-dead-end"
+        }
+      ]
+    }
+  ]
+}`
+	if string(got) != want {
+		t.Errorf("json golden mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestToSummary_PartitionCoversEveryInWindowEntry ▲ SPEC-095 LD1/LD3 — DEC-050
+// rules 2 and 3 on summary. Every in-window entry, with or without an impact,
+// is listed exactly once across the two sections: a failure in ## What didn't
+// work, anything else in ## Highlights. The impact-less failure (id 7) is the
+// row impact and wrapped would not list; here it must be listed, or it is
+// counted in By type and shown nowhere. Both counts maps still sum to every
+// entry. Checked in both formats.
+func TestToSummary_PartitionCoversEveryInWindowEntry(t *testing.T) {
+	wantHighlights := "1,2,3,4,5"
+	wantFailures := "6,7,8"
+
+	md, err := ToSummaryMarkdown(summaryFailureFixture, summaryFailureOpts)
+	if err != nil {
+		t.Fatalf("ToSummaryMarkdown: %v", err)
+	}
+	// ids listed under a `## <heading>`, in ascending order, by line.
+	sectionIDs := func(heading string) string {
+		var ids []int
+		in := false
+		for _, ln := range strings.Split(string(md), "\n") {
+			if strings.HasPrefix(ln, "## ") {
+				in = ln == "## "+heading
+				continue
+			}
+			var id int
+			if in && strings.HasPrefix(ln, "- ") {
+				if _, err := fmt.Sscanf(ln, "- %d:", &id); err == nil {
+					ids = append(ids, id)
+				}
+			}
+		}
+		sort.Ints(ids)
+		var out []string
+		for _, id := range ids {
+			out = append(out, strconv.Itoa(id))
+		}
+		return strings.Join(out, ",")
+	}
+	if got := sectionIDs("Highlights"); got != wantHighlights {
+		t.Errorf("## Highlights ids = %q, want %q\n%s", got, wantHighlights, md)
+	}
+	if got := sectionIDs("What didn't work"); got != wantFailures {
+		t.Errorf("## What didn't work ids = %q, want %q\n%s", got, wantFailures, md)
+	}
+
+	raw, err := ToSummaryJSON(summaryFailureFixture, summaryFailureOpts)
+	if err != nil {
+		t.Fatalf("ToSummaryJSON: %v", err)
+	}
+	var env struct {
+		CountsByType      map[string]int   `json:"counts_by_type"`
+		CountsByProject   map[string]int   `json:"counts_by_project"`
+		Highlights        []highlightGroup `json:"highlights"`
+		FailuresByProject []highlightGroup `json:"failures_by_project"`
+	}
+	if err := json.Unmarshal(raw, &env); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	groupIDs := func(groups []highlightGroup) string {
+		var ids []int
+		for _, g := range groups {
+			for _, e := range g.Entries {
+				ids = append(ids, int(e.ID))
+			}
+		}
+		sort.Ints(ids)
+		var out []string
+		for _, id := range ids {
+			out = append(out, strconv.Itoa(id))
+		}
+		return strings.Join(out, ",")
+	}
+	if got := groupIDs(env.Highlights); got != wantHighlights {
+		t.Errorf("highlights ids = %q, want %q", got, wantHighlights)
+	}
+	if got := groupIDs(env.FailuresByProject); got != wantFailures {
+		t.Errorf("failures_by_project ids = %q, want %q", got, wantFailures)
+	}
+	sum := func(m map[string]int) int {
+		n := 0
+		for _, v := range m {
+			n += v
+		}
+		return n
+	}
+	if got := sum(env.CountsByType); got != len(summaryFailureFixture) {
+		t.Errorf("counts_by_type sums to %d, want %d (both sections)", got, len(summaryFailureFixture))
+	}
+	if got := sum(env.CountsByProject); got != len(summaryFailureFixture) {
+		t.Errorf("counts_by_project sums to %d, want %d (both sections)", got, len(summaryFailureFixture))
+	}
+}
+
+// TestToSummary_SectionsRenderOnlyWhenNonEmpty ▲ SPEC-095 LD2 — DEC-050 rule 4
+// on summary, and the failures-only window. Each `##` body section renders
+// only when it has an entry, so a window holding only failures has no bare
+// `## Highlights` heading (SPEC-086 pinned the same for `## Impact`). JSON
+// always carries both keys: the failures-only window renders `"highlights":
+// []` (DEC-014 part 4), and the clean window `"failures_by_project": []`.
+func TestToSummary_SectionsRenderOnlyWhenNonEmpty(t *testing.T) {
+	headings := func(md []byte) []string {
+		var out []string
+		for _, ln := range strings.Split(string(md), "\n") {
+			if strings.HasPrefix(ln, "## ") {
+				out = append(out, ln)
+			}
+		}
+		return out
+	}
+	failuresOnly := []storage.Entry{summaryFailureFixture[5], summaryFailureFixture[6]}
+	cases := []struct {
+		name         string
+		entries      []storage.Entry
+		want         []string
+		wantHL       int
+		wantFailures int
+	}{
+		{"no failures", summaryFixture, []string{"## Summary", "## Highlights"}, 4, 0},
+		{"failures only", failuresOnly, []string{"## Summary", "## What didn't work"}, 0, 2},
+		{"both", summaryFailureFixture, []string{"## Summary", "## Highlights", "## What didn't work"}, 4, 3},
+	}
+	for _, c := range cases {
+		md, err := ToSummaryMarkdown(c.entries, summaryFailureOpts)
+		if err != nil {
+			t.Fatalf("%s: ToSummaryMarkdown: %v", c.name, err)
+		}
+		if got := headings(md); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: ## headings = %q, want %q\n%s", c.name, got, c.want, md)
+		}
+
+		raw, err := ToSummaryJSON(c.entries, summaryFailureOpts)
+		if err != nil {
+			t.Fatalf("%s: ToSummaryJSON: %v", c.name, err)
+		}
+		var env map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &env); err != nil {
+			t.Fatalf("%s: json.Unmarshal: %v", c.name, err)
+		}
+		for key, wantLen := range map[string]int{"highlights": c.wantHL, "failures_by_project": c.wantFailures} {
+			v, ok := env[key]
+			if !ok {
+				t.Errorf("%s: JSON is missing %q:\n%s", c.name, key, raw)
+				continue
+			}
+			var groups []highlightGroup
+			if err := json.Unmarshal(v, &groups); err != nil || groups == nil {
+				t.Errorf("%s: %q = %s, want an array (never null)", c.name, key, v)
+				continue
+			}
+			if len(groups) != wantLen {
+				t.Errorf("%s: %q has %d groups, want %d:\n%s", c.name, key, len(groups), wantLen, raw)
+			}
+		}
+	}
 }

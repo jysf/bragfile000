@@ -2308,6 +2308,26 @@ assert_section_names "AE3" "$(grep -F -- '- **learn** —' AGENTS.md)" \
 assert_section_names "AE4" "$(ad_section CHANGELOG.md '## [Unreleased]' '## [')" \
     "CHANGELOG.md, the [Unreleased] section" '`omitted_failure_count`' 'DEC-054'
 
+# ===== Group AF — summary sections a failure (SPEC-095 / DEC-050 row 3) =====
+#
+# SPEC-095 changes what `brag summary` PRINTS: a recorded failure leaves
+# `## Highlights` for `## What didn't work`, and the JSON envelope gains
+# `failures_by_project`. The Go suite pins the output; these ids pin the docs
+# that describe it, scoped with Group AD's helpers so the `impact` and
+# `wrapped` sections, which already name both needles, cannot satisfy them.
+
+# AF1 — the contract documents the section AND the key on `summary`.
+assert_section_names "AF1" "$(ad_section docs/api-contract.md '### `brag summary' '### ')" \
+    "docs/api-contract.md, the brag summary section" "$ad_heading" '`failures_by_project`'
+
+# AF2 — the agent-facing glossary's learn entry names the fourth reader.
+assert_section_names "AF2" "$(grep -F -- '- **learn** —' AGENTS.md)" \
+    "AGENTS.md, the learn glossary entry" '`brag summary` lists every failure'
+
+# AF3 — the unreleased changelog names the breaking change to `highlights`.
+assert_section_names "AF3" "$(ad_section CHANGELOG.md '## [Unreleased]' '## [')" \
+    "CHANGELOG.md, the [Unreleased] section" '`brag summary --format json` no longer lists failures'
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
