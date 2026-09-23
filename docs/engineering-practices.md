@@ -28,15 +28,15 @@ The section that says the most about how this repository is run is
 |---|---:|---|
 | Decision records | 53 | `decisions/DEC-*.md` (`insight.type: decision`) |
 | …of those, superseded by a later record | 1 | `superseded_by:` in the front-matter |
-| …of those, carrying an explicit `## Amendment` section | 5 | `decisions/DEC-*.md` |
+| …of those, carrying an explicit `## Amendment` section | 6 | `decisions/DEC-*.md` |
 | Decision numbers reserved, not yet decided | 1 | `decisions/DEC-*.md` (`insight.type: reservation`) |
 | Lowest confidence value on a decision record | 0.65 | `insight.confidence` in the front-matter |
 | Highest confidence value on a decision record | 0.95 | `insight.confidence` in the front-matter |
 | Decision records claiming confidence 1.0 | 0 | `insight.confidence` in the front-matter |
 | Projects | 9 | `projects/PROJ-*/brief.md` |
 | Stages | 23 | `projects/*/stages/STAGE-*.md` |
-| Specs carried to ship and archived | 86 | `projects/*/specs/done/` |
-| …of those, also carrying a build-phase reflection | 80 | `### Build-phase reflection` in those files |
+| Specs carried to ship and archived | 87 | `projects/*/specs/done/` |
+| …of those, also carrying a build-phase reflection | 81 | `### Build-phase reflection` in those files |
 | Go source files | 70 | `internal/`, `cmd/` |
 | Go test files | 81 | `internal/`, `cmd/` |
 | Go test functions | 856 | `func Test*` in `*_test.go` |

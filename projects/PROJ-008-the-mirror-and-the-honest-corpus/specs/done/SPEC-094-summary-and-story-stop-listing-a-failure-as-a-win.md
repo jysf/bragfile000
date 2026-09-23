@@ -7,7 +7,7 @@
 task:
   id: SPEC-094
   type: story                      # epic | story | task | bug | chore
-  cycle: verify                    # frame | design | build | verify | ship
+  cycle: ship                      # frame | design | build | verify | ship
                                    # Created at SPEC-086 design (2026-09-18) to
                                    # CLAIM the id in the same edit as the STAGE-023
                                    # line that routes work here. It is not framed:
@@ -3269,6 +3269,29 @@ have no hit. No unupdated reader.**
   DEC-054 lines, `export/markdown.go:55`, `memory/memory.go:240`, `brag
   review`, AGENTS.md, and `guidance/questions.yaml`.
 
+### Ship addendum (2026-09-23): the matrix's bases are named, and `M-D3` was re-run
+
+**The mutation matrix's nine baselines are now tied to commits on `main`.**
+Design measured them *"on the prototype's final files"* and named no commit.
+At ship, each of the nine files hashes to its stated baseline at both
+`c3f707a` (the build merge) and `cf57ea2` (the verify merge). Those are the
+durable bases for every row. A later edit to a target does not invalidate a
+row; it means the row is reproduced from `git show <base>:<path>`.
+
+**This ship moves one target itself.** Codifying the §12 refinement edits
+`AGENTS.md`, `M-D3`'s target. Rather than re-pin the row against a branch
+commit that the squash merge will erase (the way SPEC-086's `"this ship
+commit"` row went stale, see STAGE-023 held candidate 2), the row keeps its
+base:
+
+- **At `c3f707a`:** `M-D3`'s stated edit occurs exactly once, and reproduces
+  `713a717a154f` → `bcab08c6ce19`.
+- **On this ship branch, as a behaviour check only:** `00ae4abc713f` →
+  `3cb78eea9732`. It fires **`AE3` alone** (208 `OK:`, 1 assertion failed),
+  and the pre-hash returned after a `cp` restore. The helper refused to run
+  unless the old text occurred exactly once. This hash is not a pin, because
+  the branch commit does not survive the squash.
+
 ---
 
 ## Reflection (Ship)
@@ -3277,13 +3300,35 @@ have no hit. No unupdated reader.**
 from the process-focused build reflection above.*
 
 1. **What would I do differently next time?**
-   — <answer>
+   — Measure the candid label at design, in the same run as the clause.
+   Design piped 25 promotional bundles through two models and routed the
+   candid half to verify as T4. Verify's 52 runs then found the one residue
+   the binary cannot fix, #473, whose impact narrates its own fix, and the
+   one lever that might, a line in `me.md` and `manager.md`, which LD14 had
+   already put out of scope. Measured at design, that line would have been
+   in this spec or NO-GO'd here. Instead it is SPEC-096, with a second 52-run
+   measurement of its own. Second: pin every matrix row from the helper's own
+   replacement, not a summary written afterwards. M-D1's *"one of three"*
+   cost build a hash it could not reproduce and cost verify three probes.
 
 2. **Does any template, constraint, or decision need updating?**
-   — <answer>
+   — Two, both done in this cycle. **DEC-054** gains an
+   `## Amendment (2026-09-23, SPEC-094 ship)` recording T4's measurement: the
+   method, 22/30 → 4/30 on `manager`, and the conclusion that DEC-050's
+   invariant holds in the bundle and not always in the prose. **AGENTS.md
+   §12**'s *pin its diff* clause gains a refinement, *a pinned diff has
+   exactly one literal reading*, cleared at N=2 paired-opposing (M-D1 against
+   SPEC-086's and SPEC-088's one-reading rows). No template changes: no
+   template carries a mutation matrix, so the rule lives in §12 and in the
+   probe helper that enforces it. No constraint changes.
 
 3. **Is there a follow-up spec I should write now before I forget?**
-   — <answer>
+   — Yes, and it is written: **SPEC-096**, *the candid directives say what a
+   failure label means*, claimed by its file in the same edit as its
+   STAGE-023 line. It carries verify's measurement, the LD14 conflict, and
+   the requirement to re-run the 52 runs. It does not gate v0.7.0.
+   **SPEC-095** already exists; it is the last spec gating v0.7.0 and the
+   next to frame.
 
 4. **What can a user do now that they couldn't before?** — one sentence,
    before → after; quote the confirming number if one exists, name the outcome
@@ -3297,4 +3342,14 @@ from the process-focused build reflection above.*
    reconstruction. Evidence ref: under `one-spec-per-pr` this spec has exactly
    one PR by construction, so tag `pr:<n>` rather than a commit hash (a
    squash-merge destroys the branch commit you were looking at).
-   — <answer>
+   — Before, every `brag story` audience listed each recorded failure as a
+   `★` win (4 of 4 on all four profiles), and a model writing a `manager`
+   update from that bundle credited the failures as shipped in **22 of 30**
+   mentions; now `me` and `manager` label them `✗ <id> (failed)`, which cuts
+   that to **4 of 30** (every survivor #473, whose impact describes its own
+   fix), and `exec` and `skip` leave them out but say so, which a model
+   carried into its prose in **25 of 25** runs where a bare note survived
+   0 of 10. The *before* is taken from framing's re-measurement and verify's
+   `★` counterfactual, not from `## Context`, which predates both. **Not
+   captured by this session:** the brag is drafted for the maintainer's
+   approval (SPEC-086's precedent, and this cycle's instruction).

@@ -249,6 +249,64 @@ bundle. Every hit was read by hand.
   removal of failure beats from `exec` and `skip` is then a break to
   announce, not only a CHANGELOG line (DEC-048 T4, DEC-050 T4).
 
+## Amendment (2026-09-23, SPEC-094 ship)
+
+**T4 fired in part.** SPEC-094's verify measured it (V-F2), and the
+maintainer ruled on 2026-09-23 that the result is recorded here and the
+remedy gets its own spec. Everything above this heading is left as written,
+so the amendment can be read against it.
+
+**Method.** It was SPEC-094's method, pointed at the candid profiles. Bundles
+were built by the binaries on the same frozen corpus copy (621 entries, 4
+`failed`):
+`story --audience <me|manager> --since 2026-09-01 --project bragfile`, which
+is 9 beats, 3 of them failures (433, 465, 473). Each bundle was built twice,
+on the SPEC-094 binary (`✗ <id> (failed)`) and on the pre-build binary (`★`,
+the counterfactual). A no-failure control used `--project bragfile-site`. Each
+run was `claude -p --model <haiku|sonnet> --tools "" --no-session-persistence --setting-sources ""`
+with the tutorial's prompt, *"weave these threads into one headline arc"*.
+There were **52 runs**: five per model per bundle, and three per model per
+control. Two model graders each made false hits on the controls, so every
+non-absent judgment was read by hand. *Credited as a win* means the prose
+lists the failure among work shipped, fixed or landed, or presents it chiefly
+as an accomplishment.
+
+| Profile | Failures credited as wins, `★` (before) | …with `✗` (this record) |
+|---|---:|---:|
+| `manager` (Haiku + Sonnet) | **22 of 30** mentions | **4 of 30**, all #473 |
+| `me` (Haiku + Sonnet) | 1 of 30 | 2 of 30, both #473 |
+
+An id followed within 12 characters by `fail`/`failed`/`failure` appears 11
+times in the 20 `✗` outputs and 0 times in the 20 `★` outputs and the 12
+controls, so models do carry the label.
+
+**What it establishes:**
+
+- **On `manager`, part 1's label does the work.** With `★` and the
+  directive's *"Lead with what shipped"*, the failures landed under
+  **Shipped**. With `✗` they land under blockers, friction or risk in 26 of
+  30 mentions.
+- **On `me`, the label is inert.** The directive's *"messy middle"* and the
+  entries' own titles already carry the candour.
+- **The residue is one entry.** All six residual cases are #473, whose
+  recorded impact narrates its own fix.
+- **So DEC-050's invariant, *a failure is never rendered as a win*, holds in
+  the bundle and not always in the model's prose**, when a failure's impact
+  reads like a win. The binary cannot guarantee it downstream. Neither
+  `me.md` nor `manager.md` says what `✗` means.
+
+**Where it goes.** A line in `me.md` and `manager.md` telling the model what
+`✗` means is **SPEC-096**, claimed by its file at SPEC-094's ship. It edits
+shipped assets that SPEC-094's LD14 kept out of scope, and it must re-run
+this 52-run measurement on the wording it locks. **It does not gate
+v0.7.0.** T4 stays open until SPEC-096 ships or is closed NO-GO.
+
+**Limits.** Two models, one scoped window, and three failures, all with an
+impact, so an impact-less failure under `✗` is untested. The prompt is
+`exec`-shaped, and a manager-shaped prompt was not measured. Two `✗` runs on
+`me` also called #472, a win, a failure. That error is outside DEC-050, and
+the `★` runs were not audited for it.
+
 ## References
 
 - **DEC-050**: the posture. This record implements row 4 and closes T3.
@@ -259,5 +317,7 @@ bundle. Every hit was read by hand.
 - **DEC-048**: a count names what it counted. It is part 3's authority.
 - **DEC-049**: the reserved value, written by `brag learn`.
 - **SPEC-094**: this record's spec, with both measurements in full.
+- **SPEC-096**: the directive line T4's measurement asks for. Claimed at
+  SPEC-094's ship and not yet framed.
 - **SPEC-086**: the sibling. It implements rows 1 and 2, and its shape set
   this spec's shape.
