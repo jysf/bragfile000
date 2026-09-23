@@ -27,6 +27,12 @@ type SummaryOptions struct {
 // DEC-014. Returns bytes with the trailing "\n" stripped (matches
 // ToJSON / ToMarkdown). On empty input, only the header + provenance
 // block is emitted; the Summary and Highlights sections are omitted.
+//
+// The recorded failures (aggregate.SplitFailures, over EVERY in-window
+// entry, because highlights list every entry) leave ## Highlights for
+// ## What didn't work, in the same grouped shape (DEC-050 row 3). Each of
+// the two sections is emitted only when it has an entry. The By type and
+// By project counts still count both.
 func ToSummaryMarkdown(entries []storage.Entry, opts SummaryOptions) ([]byte, error) {
 	var buf bytes.Buffer
 	fmt.Fprintln(&buf, "# Bragfile Summary")
@@ -51,17 +57,33 @@ func ToSummaryMarkdown(entries []storage.Entry, opts SummaryOptions) ([]byte, er
 	for _, pc := range aggregate.ByProject(entries) {
 		fmt.Fprintf(&buf, "- %s: %d\n", pc.Project, pc.Count)
 	}
-	fmt.Fprintln(&buf)
-	fmt.Fprintln(&buf, "## Highlights")
-	for _, group := range aggregate.GroupForHighlights(entries) {
+	worked, failed := aggregate.SplitFailures(entries)
+	if len(worked) > 0 {
 		fmt.Fprintln(&buf)
-		fmt.Fprintf(&buf, "### %s\n", group.Project)
+		fmt.Fprintln(&buf, "## Highlights")
+		writeHighlightGroups(&buf, worked)
+	}
+	if len(failed) > 0 {
 		fmt.Fprintln(&buf)
-		for _, ref := range group.Entries {
-			fmt.Fprintf(&buf, "- %d: %s\n", ref.ID, ref.Title)
-		}
+		fmt.Fprintln(&buf, "## What didn't work")
+		writeHighlightGroups(&buf, failed)
 	}
 	return trimTrailingNewline(buf.Bytes()), nil
+}
+
+// writeHighlightGroups renders entries grouped by project as `### <project>`
+// blocks of `- <id>: <title>` lines. ## Highlights and ## What didn't work
+// both render through it, so a failure reads in the same shape as the
+// highlight it used to be.
+func writeHighlightGroups(buf *bytes.Buffer, entries []storage.Entry) {
+	for _, group := range aggregate.GroupForHighlights(entries) {
+		fmt.Fprintln(buf)
+		fmt.Fprintf(buf, "### %s\n", group.Project)
+		fmt.Fprintln(buf)
+		for _, ref := range group.Entries {
+			fmt.Fprintf(buf, "- %d: %s\n", ref.ID, ref.Title)
+		}
+	}
 }
 
 // summaryEnvelope is the on-the-wire shape for ToSummaryJSON. Field
@@ -74,6 +96,9 @@ type summaryEnvelope struct {
 	CountsByType    map[string]int    `json:"counts_by_type"`
 	CountsByProject map[string]int    `json:"counts_by_project"`
 	Highlights      []highlightGroup  `json:"highlights"`
+	// FailuresByProject is DEC-050 rule 5's key: the recorded failures,
+	// grouped exactly as Highlights is. Always present, [] when empty.
+	FailuresByProject []highlightGroup `json:"failures_by_project"`
 }
 
 type highlightGroup struct {
@@ -88,9 +113,12 @@ type highlightEntry struct {
 
 // ToSummaryJSON renders the JSON envelope per DEC-014: single object,
 // flat top-level keys (generated_at, scope, filters, counts_by_type,
-// counts_by_project, highlights), pretty-printed with 2-space indent.
-// Empty-state values per DEC-014 choice (4): counts maps render as
-// {} and highlights as [], never null.
+// counts_by_project, highlights, failures_by_project), pretty-printed
+// with 2-space indent. highlights carries the entries that are not
+// recorded failures and failures_by_project the ones that are (DEC-050);
+// both counts maps still count every in-window entry. Empty-state values
+// per DEC-014 choice (4): counts maps render as {} and both arrays as
+// [], never null.
 func ToSummaryJSON(entries []storage.Entry, opts SummaryOptions) ([]byte, error) {
 	env := summaryEnvelope{
 		GeneratedAt:     opts.Now.UTC().Format(time.RFC3339),
@@ -98,7 +126,6 @@ func ToSummaryJSON(entries []storage.Entry, opts SummaryOptions) ([]byte, error)
 		Filters:         opts.FiltersJSON,
 		CountsByType:    map[string]int{},
 		CountsByProject: map[string]int{},
-		Highlights:      []highlightGroup{},
 	}
 	if env.Filters == nil {
 		env.Filters = map[string]string{}
@@ -109,6 +136,17 @@ func ToSummaryJSON(entries []storage.Entry, opts SummaryOptions) ([]byte, error)
 	for _, pc := range aggregate.ByProject(entries) {
 		env.CountsByProject[pc.Project] = pc.Count
 	}
+	worked, failed := aggregate.SplitFailures(entries)
+	env.Highlights = highlightGroups(worked)
+	env.FailuresByProject = highlightGroups(failed)
+	return json.MarshalIndent(env, "", "  ")
+}
+
+// highlightGroups projects entries onto the {project, entries: [{id,
+// title}]} group shape both summary arrays share. Non-nil for empty
+// input, so either key renders as [] rather than null.
+func highlightGroups(entries []storage.Entry) []highlightGroup {
+	out := []highlightGroup{}
 	for _, group := range aggregate.GroupForHighlights(entries) {
 		hg := highlightGroup{
 			Project: group.Project,
@@ -119,7 +157,7 @@ func ToSummaryJSON(entries []storage.Entry, opts SummaryOptions) ([]byte, error)
 				ID: ref.ID, Title: ref.Title,
 			})
 		}
-		env.Highlights = append(env.Highlights, hg)
+		out = append(out, hg)
 	}
-	return json.MarshalIndent(env, "", "  ")
+	return out
 }

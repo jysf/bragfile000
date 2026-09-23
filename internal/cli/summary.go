@@ -25,6 +25,8 @@ Output is markdown (default) or a single-object JSON envelope (--format json) pe
 
 --range is required: week = last 7 UTC days from time.Now(); month = last 30 UTC days. Rolling, NOT calendar. Filter flags --tag/--project/--type compose with the range.
 
+Work recorded with brag learn is listed under its own "What didn't work" heading instead of among the highlights, and that heading is left out when there is none. The by-type and by-project counts still include it.
+
 Examples:
   brag summary --range week                          # last 7 UTC days, markdown
   brag summary --range month --format json           # last 30 UTC days, JSON envelope

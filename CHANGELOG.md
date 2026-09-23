@@ -46,6 +46,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still sums to `entries_with_impact`. A consumer that read every
   with-impact entry from `impact_by_project` or `impact_moments` now reads
   both keys.
+- **`brag summary` lists work that did not work under its own
+  `## What didn't work` heading, not among `## Highlights`**
+  ([DEC-050](decisions/DEC-050-a-failure-is-never-rendered-as-a-win.md)).
+  Its highlights carry no type, so an entry recorded with `brag learn` read
+  as a highlight like any other. It now renders in the new section, after
+  the highlights, in the same shape. Because `summary` lists every entry,
+  the section lists a failure with no impact too, which `impact` and
+  `wrapped` leave out. `By type` and `By project` still count it.
+- **Breaking: `brag summary --format json` no longer lists failures in
+  `highlights`.** The envelope gains `failures_by_project`, after
+  `highlights`, in the same `{project, entries:[{id, title}]}` shape. It is
+  always present and `[]` when empty. `counts_by_type` and
+  `counts_by_project` are unchanged. A script that read every entry from
+  `highlights` now reads both keys.
 - **`brag story` no longer marks work that did not work as a win**
   ([DEC-054](decisions/DEC-054-story-candor-decides-what-a-failure-renders-as.md)).
   An entry recorded with `brag learn` rendered as `- ★ <id>:` on every

@@ -332,10 +332,13 @@ func IsFailure(e storage.Entry) bool {
 
 // SplitFailures partitions entries into those that are not failures and those
 // that are (IsFailure), preserving input order within each. Both results are
-// non-nil so JSON callers never see null. The digests call it on the
+// non-nil so JSON callers never see null. impact and wrapped call it on the
 // with-impact subset, never in place of WithImpact: WithImpact keeps meaning
 // "non-empty impact", and this decides only which section a row renders in
-// (DEC-050).
+// (DEC-050). story's OmitFailures and summary call it on every in-window
+// entry instead: summary's highlights list every entry, impact or not, so its
+// section lists a failure with no impact, which impact's and wrapped's do not
+// (SPEC-095).
 func SplitFailures(entries []storage.Entry) (others, failures []storage.Entry) {
 	others = make([]storage.Entry, 0, len(entries))
 	failures = make([]storage.Entry, 0)

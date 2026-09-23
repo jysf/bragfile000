@@ -168,17 +168,17 @@ func TestLearnCmd_EmptyTitleIsUserError(t *testing.T) {
 }
 
 // runDigestCorpus runs one brag invocation against dbPath on a fresh root
-// carrying the two writers (add, learn), the two digests that section
-// failures (impact, wrapped), and story, which labels or omits them
-// (SPEC-094). A fresh root per call, so no flag value leaks from one
-// invocation into the next.
+// carrying the two writers (add, learn), the three digests that section
+// failures (impact, wrapped, summary — SPEC-095), and story, which labels or
+// omits them (SPEC-094). A fresh root per call, so no flag value leaks from
+// one invocation into the next.
 func runDigestCorpus(t *testing.T, dbPath string, args ...string) string {
 	t.Helper()
 	t.Setenv("BRAGFILE_DB", "")
 	addStderrIsTTY = func() bool { return false }
 	t.Cleanup(func() { addStderrIsTTY = defaultStderrIsTTY })
 	root := NewRootCmd("test")
-	root.AddCommand(NewAddCmd(), NewLearnCmd(), NewImpactCmd(), NewWrappedCmd(), NewStoryCmd())
+	root.AddCommand(NewAddCmd(), NewLearnCmd(), NewImpactCmd(), NewWrappedCmd(), NewSummaryCmd(), NewStoryCmd())
 	var outBuf, errBuf bytes.Buffer
 	root.SetOut(&outBuf)
 	root.SetErr(&errBuf)
@@ -355,5 +355,70 @@ func TestLearnCmd_StoryLabelsOrOmitsWhatItWrote(t *testing.T) {
 	}
 	if env.OmittedFailureCount == nil || *env.OmittedFailureCount != 1 {
 		t.Errorf("exec omitted_failure_count = %v, want 1", env.OmittedFailureCount)
+	}
+}
+
+// TestLearnCmd_SummarySectionsWhatItWrote ▲ SPEC-095 LD1/LD2/LD5 — the
+// writer-to-reader check on brag summary, through a real store and with no
+// constant in sight. The brag learn entry carries NO impact on purpose: it is
+// the row impact and wrapped leave out, and summary must still list it, under
+// "What didn't work" and not under "Highlights" (LD1). Both rows are written
+// now and the window is --range week, so the test has no window cliff (LD5):
+// it cannot pass on a window that holds no failure. Every negative is paired
+// with a positive on the same section.
+func TestLearnCmd_SummarySectionsWhatItWrote(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	winID := strings.TrimSpace(runDigestCorpus(t, dbPath, "add", "-t", "shipped the cache", "-p", "alpha", "-k", "shipped"))
+	failID := strings.TrimSpace(runDigestCorpus(t, dbPath, "learn", "-t", "tried a worker pool", "-p", "alpha"))
+
+	md := runDigestCorpus(t, dbPath, "summary", "--range", "week")
+	highlights := markdownSection(md, "Highlights")
+	failed := markdownSection(md, "What didn't work")
+	if !strings.Contains(highlights, "- "+winID+": shipped the cache") {
+		t.Errorf("## Highlights is missing the brag add entry %s:\n%s", winID, md)
+	}
+	if strings.Contains(highlights, "- "+failID+":") {
+		t.Errorf("## Highlights still carries the brag learn entry %s:\n%s", failID, md)
+	}
+	if !strings.Contains(failed, "- "+failID+": tried a worker pool") {
+		t.Errorf("## What didn't work is missing the brag learn entry %s:\n%s", failID, md)
+	}
+	if strings.Contains(failed, "- "+winID+":") {
+		t.Errorf("## What didn't work carries the brag add entry %s:\n%s", winID, md)
+	}
+	if !strings.Contains(markdownSection(md, "Summary"), "- failed: 1\n") {
+		t.Errorf("By type should still count the brag learn entry:\n%s", md)
+	}
+
+	type group struct {
+		Entries []struct {
+			ID int64 `json:"id"`
+		} `json:"entries"`
+	}
+	var env struct {
+		CountsByType      map[string]int `json:"counts_by_type"`
+		Highlights        []group        `json:"highlights"`
+		FailuresByProject []group        `json:"failures_by_project"`
+	}
+	if err := json.Unmarshal([]byte(runDigestCorpus(t, dbPath, "summary", "--range", "week", "--format", "json")), &env); err != nil {
+		t.Fatalf("json unmarshal: %v", err)
+	}
+	ids := func(groups []group) string {
+		var out []string
+		for _, g := range groups {
+			for _, e := range g.Entries {
+				out = append(out, strconv.FormatInt(e.ID, 10))
+			}
+		}
+		return strings.Join(out, ",")
+	}
+	if got := ids(env.Highlights); got != winID {
+		t.Errorf("highlights ids = %q, want %q", got, winID)
+	}
+	if got := ids(env.FailuresByProject); got != failID {
+		t.Errorf("failures_by_project ids = %q, want %q", got, failID)
+	}
+	if env.CountsByType["failed"] != 1 || env.CountsByType["shipped"] != 1 {
+		t.Errorf("counts_by_type = %v, want failed:1 and shipped:1", env.CountsByType)
 	}
 }

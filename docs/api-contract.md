@@ -364,7 +364,18 @@ carrying:
   list).
 - **Highlights:** entry titles + IDs grouped by project,
   chronological-ASC within group; descriptions are intentionally
-  elided for the "skim before pasting" goal.
+  elided for the "skim before pasting" goal. Recorded failures are
+  not highlights (next item).
+- **`## What didn't work`** (markdown): the in-window entries whose
+  `type` is the reserved `failed` that `brag learn` writes, pulled out
+  of `## Highlights` and rendered after it in the same grouped shape.
+  Unlike `brag impact` and `brag wrapped`, it lists a failure with no
+  impact statement too, because `summary`'s highlights list every
+  entry. Each of the two sections appears only when it has an entry:
+  a window with no recorded failure has no `## What didn't work`
+  heading, and a window holding only failures has no `## Highlights`
+  heading. `By type` and `By project` count both sections. Locked by
+  [DEC-050](../decisions/DEC-050-a-failure-is-never-rendered-as-a-win.md).
 
 Flags:
 - `--range week|month` REQUIRED. `week` = last 7 UTC days from
@@ -374,6 +385,12 @@ Flags:
   single-object envelope (NOT an array — diverges from DEC-011's
   list shape because aggregations carry metadata). Shape locked by
   [DEC-014](../decisions/DEC-014-rule-based-output-shape.md).
+  Top-level keys: `generated_at`, `scope`, `filters`,
+  `counts_by_type`, `counts_by_project` (both count every in-window
+  entry, failures included), `highlights` (an array of
+  `{project, entries:[{id, title}]}` groups, failures excluded), and
+  `failures_by_project` (the same shape, holding only the failures).
+  Both arrays are always present, as `[]` when empty.
 - `--tag <token>`, `--project <name>`, `--type <name>` reuse `brag
   list`'s `ListFilter` semantics. No `--since`/`--limit`/`--out` on
   summary in MVP.

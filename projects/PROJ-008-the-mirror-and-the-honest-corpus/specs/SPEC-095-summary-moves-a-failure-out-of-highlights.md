@@ -7,7 +7,7 @@
 task:
   id: SPEC-095
   type: story                      # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: verify                    # frame | design | build | verify | ship
                                    # Designed 2026-09-22 against main 55063e9,
                                    # GO at S, held. Framing's record is kept
                                    # below as written.
@@ -1767,3 +1767,74 @@ index 9c183c4..ee60ba4 100644
  | Questions tracked in guidance/questions.yaml | 21 | `guidance/questions.yaml` |
  | …of those, still open | 8 | `status: open` in the same file |
 ```
+
+---
+
+## Build Completion
+
+*Filled in at the end of the **build** cycle, before advancing to verify.*
+
+- **Branch:** `build/spec-095-summary-honesty`
+- **PR (if applicable):** none — the orchestrator opens it.
+- **All acceptance criteria met?** yes (AC-1 through AC-10), all reproduced
+  on a scratch store written at run time (LD5), never the live corpus. The
+  live-corpus numbers were independently re-derived on a read-only
+  `sqlite3 .backup` copy (hash `c93395b6e9bc2f…`, matching design's stated
+  hash exactly, unchanged before and after): 623 entries, 4 failures
+  (420/433/465/473), 0 impact-less, `--range month` holds 233 entries,
+  `--range week` holds 0 failures — all identical to design's numbers.
+- **New decisions emitted:** none. DEC-050's `## Amendment (2026-09-22,
+  SPEC-095 design)` was written at design; this cycle only implements it.
+- **Deviations from spec:** none in production code, docs, or tests — all 11
+  literal diffs applied via `git apply` with a clean `--check` both before
+  and after, and every one is byte-identical to the spec's block (the
+  `internal/export/summary_test.go` block only matches at `-U12` context,
+  per the spec's own trap; `git diff -U3`'s default framing differs but the
+  content is identical). Two things worth recording, neither a spec defect:
+  1. **M-9's reproduced hash** (`c840a90180f2`) differs from the spec's
+     stated `e9404d9921ee`. The matrix's *Diff* column gives M-9's edit only
+     in prose ("the same line wrapped in `if tc.Type != "failed" { … }`"),
+     not an exact literal, unlike every other row. My one-line wrap differs
+     byte-for-byte from design's (unstated) formatting. The three tests the
+     spec says M-9 fires — `TestToSummaryJSON_FailureSectionGolden`,
+     `TestToSummary_PartitionCoversEveryInWindowEntry`, and the e2e test —
+     fired, and only those three, which is what the probe exists to show.
+  2. **The design-time inventory table's "main" column understates the
+     Amendment-section row.** It states `5` for `main` (`55063e9`), but the
+     file actually committed at that commit already reads `6`
+     (`decisions/DEC-025/028/029/030/050/054`, checked with `git grep -l
+     '^## Amendment' 55063e9`). This predates this build — the row was
+     already `6` in `docs/engineering-practices.md` at `HEAD` before
+     `just inventory` ran — so the regenerated block still reads `6` and the
+     row is unchanged by this spec's work, consistent with "every other row
+     is unchanged." The design commit's own re-derivation table just cites a
+     stale number for that one cell.
+- **Follow-up work identified:** none beyond what the spec already routes
+  (SPEC-096, `--type` negation, the v0.7.0 release cut).
+
+### Build-phase reflection (3 questions, short answers)
+
+Process-focused: how did the build go? What friction did the spec create?
+
+1. **What was unclear in the spec that slowed you down?**
+   — Nothing in the spec's own mechanics. The one friction was mechanical,
+   same shape as SPEC-094's build: the mutation matrix's *Diff* column gives
+   exact edit text for every probe except M-9, whose wrap is described only
+   in prose. The *behavior* (which tests fire) reproduces exactly, which is
+   what M-9 exists to show; only the incidental final hash differs.
+
+2. **Was there a constraint or decision that should have been listed but
+   wasn't?**
+   — No. `one-spec-per-pr`, `no-sql-in-cli-layer`,
+   `stdout-is-for-data-stderr-is-for-humans`, and `test-before-implementation`
+   all applied cleanly with no friction.
+
+3. **If you did this task again, what would you do differently?**
+   — Diff the regenerated `docs/engineering-practices.md` against the spec's
+   embedded literal by *content* (splice the block, `diff` the result) rather
+   than trying `git apply --check` on the embedded patch directly — the
+   patch's context no longer matches once the file has already moved past
+   the pre-inventory state, which is expected and not a failure to
+   investigate.
+
+---
