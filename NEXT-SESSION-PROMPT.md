@@ -1,4 +1,4 @@
-# Orchestration session — PROJ-008: finish STAGE-023 and cut v0.7.0
+# Orchestration session — PROJ-008: finish SPEC-095, then cut v0.7.0
 
 Paste this whole file as the opening message of a fresh session, from
 `/Users/jyashinsky/PSeven/experiments/bragfile000`.
@@ -8,195 +8,179 @@ Paste this whole file as the opening message of a fresh session, from
 ## Your role: orchestrator, not implementer
 
 This repo runs **one Claude session per cycle** (AGENTS.md §6): frame, design,
-build, verify and ship each get a fresh session. **You are the session that
-spans them.**
+build, verify and ship each get a fresh one. **You are the session that spans
+them.**
 
 1. **You write every handoff prompt.** The user runs it in a fresh session and
    pastes the report back.
-2. **You verify every report against the tree before accepting it.** Re-derive
-   load-bearing claims; never restate a summary. In the last run this caught
-   real errors in both directions — cycles corrected the orchestrator's counts,
-   and the orchestrator corrected cycles' diagnoses.
+2. **You verify every report against the tree.** Re-derive load-bearing claims;
+   never restate a summary. The strongest check this project has found is
+   **reconstruction**: extract the spec's embedded diffs, apply them to a clean
+   `main`, and diff the result against the pushed branch. It has confirmed four
+   builds byte-for-byte and would have caught any hand edit.
 3. **You open PRs and do ship bookkeeping. The user merges. Never merge.**
 4. **You draft brag entries and wait for approval** (BRAG.md's loop).
 
 Report honestly: failed gates with their output, and your own mistakes plainly.
+The previous orchestrator made several — a stale claim in a handoff, a
+`--profile` flag that does not exist, a uniqueness checker that silently
+dropped blank lines — and each was caught by checking the shape of a result
+rather than trusting it. Expect to do the same.
 
-## Where the repo is (re-derived 2026-09-14 — every number here will move)
+## Where the repo is (re-derived 2026-09-23 — every number will move)
 
-- `main` = **`7c615f5`**. All five gates green: `just test` · `just test-docs`
-  (**199 `OK:` lines / 198 distinct ids** — two units, `S3` double-emits) ·
-  `just lint` · `gofmt -l .` · `go vet ./...`.
-- **Two open PRs**, both mergeable, 7/7 CI:
-  - **#211** (`73dbf38`) — SPEC-091 design: grouped `brag --help` + three
-    help-text gaps. Frame and design were collapsed; the spec is at `cycle: build`.
-  - **#212** (`6208eeb`) — DEC-053 (in-place edit posture), STAGE-027 frame,
-    round-2 field feedback routed onto the PROJ-008 brief.
-- **Release:** last tag **v0.6.1** (2026-08-13), **56 commits behind `main`**.
-  `brag learn` and SPEC-089's fixes are unreleased.
-- **Corpus:** 570 entries, 4 `type: failed`. ~130 entries/week recently, most
-  from one project. `brag memory`'s 200-entry pool now covers only ~30 days.
-- **`next_id` on `main`:** SPEC-091, DEC-053, STAGE-024 — all already claimed by
-  the open PRs or by prose. See *Traps*.
+- `main` = **`6590772`**. All five gates green on a clean worktree:
+  `just test` (14 packages) · `just test-docs` (**213 `OK:` / 212 distinct**) ·
+  `just lint` (0 issues) · `gofmt -l .` · `go vet ./...`.
+- **No open PRs.** Last tag **v0.6.1**, **78 commits** behind `main`.
+- **Corpus:** 623 entries, 4 `type: failed` (ids 420, 433, 465, 473), none
+  impact-less.
+- **Next free ids:** `SPEC-097`, `DEC-055`, `STAGE-028`.
+- **PROJ-008 / STAGE-023 specs:** 6 shipped (085, 086, 087, 088, 089, 094) ·
+  **095 in verify** · 091 in build · 090, 092, 093, 096 at frame.
 
-## Decisions already made — do not relitigate
+## In flight right now
 
-- **v0.7.0 ships the honest-corpus work.** Scope and order below.
-- **`brag edit` for agents (STAGE-027 / DEC-053) is v0.8.0**, not v0.7.0.
-- **Projects need no work.** `brag add -p <any name>` needs no registration;
-  `brag project` exists only to track where local in-progress work lives, so
-  `project new` requiring `--path` is correct.
-- **`brag lint` (STAGE-025, in #212's brief) waits for the maintainer's review.**
-  Do not design, reword or act on it. Unregistered project names are legitimate.
-- **STAGE-020 (evidence links) is parked.** Do not touch it.
+**SPEC-095's verify cycle is running in another session**, started
+2026-09-23. Its branch is `verify/spec-095-summary-honesty`. **Its report comes
+to you.** Verify it, open the PR, and the user merges.
+
+**That session shares the main checkout.** While it runs, `git status` there
+shows a modified file mid-mutation-probe — the previous orchestrator ran gates
+against that tree once and got a spurious `just test` failure over 12 packages
+instead of 14. **Do your own checks in a detached worktree** under your
+scratchpad (`git worktree add --detach <path> origin/main`), never in the
+shared checkout.
 
 ## The plan
 
-### Step 0 — tidy the open PRs, then the user merges them
+### 1. SPEC-095 — verify, then ship
 
-- Strip the stray tool-call XML: a trailing `</content>` line at
-  `DEC-053:128`, `STAGE-027:152`, and `SPEC-091:224`.
-- #212's body tells the field reporter to "upgrade" for SPEC-089's fixes.
-  Nothing has been released; correct it.
-- Mark STAGE-027 as targeting v0.8.0. **Leave the lint item's text alone.**
-- The two PRs don't overlap, so order is free. Merge one at a time and re-check
-  gates on `main` between them.
+The last spec gating v0.7.0: `brag summary` moves failures out of
+`## Highlights` into `## What didn't work`, with a breaking JSON change
+(`highlights` loses failures, `failures_by_project` is added).
 
-### Steps 1–6 — v0.7.0
+Ship owes: reflection, STAGE-023 bookkeeping, `just archive-spec`, the
+inventory regeneration, the codification calls below, and a **brag draft** for
+the user to approve.
 
-| # | Spec | State | Notes |
-|---|---|---|---|
-| 1 | **SPEC-088** — harness guards | frame, S (provisional) | `Y4` derives; the decision-type vocabulary (template lists 5 types, inventory counts 2, a `type: analysis` DEC hard-fails `Z7`); a guard against stray tool-call XML in tracked markdown; id reservation. Not user-facing, but every later spec hits these. **Keep it small — split rather than absorb.** |
-| 2 | **SPEC-086** — `impact` + `wrapped` show failures honestly | frame, M | The release gate. Authors **DEC-050** (still unused; reserved). See notes below. |
-| 3 | **`summary` + `story` follow-up** | not yet written | Second half of the gate. **Claim its id with a file** at SPEC-086 design. |
-| 4 | **SPEC-091** — grouped help | build, M | Already designed (#211). Gives `learn` a visible home. |
-| 5 | **SPEC-090** — `add --json` repeated key, plus a `--type` error message | frame, S→M, bug | Also fold in `delete`'s missing stdout signal, as SPEC-089 bundled two bugs. **Split if it grows past M.** |
-| 6 | **v0.7.0 release cut** | not yet written | `projects/_templates/spec-release-cut.md`; SPEC-077 (v0.6.1) is the model. **Confirm with the user before tagging.** |
+### 2. The v0.7.0 release cut
 
-**STAGE-023 closes with one criterion half-met** (failures surviving in
-`brag memory` beyond the pool horizon). Record it honestly, the way PROJ-007
-closed with an explicit scope reduction.
+A spec of its own, from `projects/_templates/spec-release-cut.md`, modelled on
+`projects/PROJ-006-agent-native-depth-core/specs/done/SPEC-077-v0-6-1-release-cut.md`.
 
-### Notes per step
+- **Confirm the version number and the `[Unreleased]` contents with the user
+  before anything is tagged.** `[Unreleased]` currently holds `brag learn` plus
+  **three breaking JSON changes** (`impact`, `wrapped`, `summary`), which is
+  the minor-bump argument.
+- The operational pre-flight is ticked **at design** (AGENTS.md §4):
+  goreleaser, `.github/workflows/release.yml`, the `jysf/homebrew-tap` formula,
+  and a real `brew upgrade` check after publish. Every production escape this
+  repo has had was operational, not logical.
 
-**SPEC-086** — framed twice, 649 lines; read all of it. The hard parts:
-- **Fork A is the real work.** Once *Impact moments* stops carrying every entry
-  with an impact, its count changes meaning, and DEC-048 forbids silently
-  redefining it. The JSON envelope moves too — a breaking wire change.
-- **Fork C:** put the failure predicate in `internal/aggregate`, single-sourced;
-  `aggregate.IsAgentAuthored` + its drift-guard test is the precedent.
-- **Fork D:** the empty *section* case. The cited precedent (DEC-014 part 4)
-  covers the empty *document*, and the two surfaces already disagree.
-- **Fork E:** re-framing already found the moving goldens by running the code:
-  2–3 files across 2 packages (one in `internal/cli`), and
-  `internal/export/memory_test.go:247` does **not** move. Re-verify at design.
-- `wrapped`'s change amends **DEC-030**'s locked section arc.
+### 3. After the release, in no fixed order
 
-**`summary` + `story` follow-up** — implements DEC-050's posture.
-`summary`'s section is literally `## Highlights`. **All four** bundled `story`
-profiles drop `type` in markdown (`exec` and `skip` are `candor: promotional`);
-`--format json` already carries it. Turning `Candor` from "metadata surfaced to
-the LLM" (`internal/story/profile.go:24`) into a body rule is a decision.
+- **SPEC-091** (build) — grouped `brag --help`. Already designed; its build
+  edits the same two constructors SPEC-094 touched, so it rebases.
+- **SPEC-090** (frame) — `add --json` drops a repeated key, plus the `--type`
+  error message.
+- **SPEC-092, SPEC-093** (frame) — harness: `Y4` derives; ids claimed by files.
+  Neither gates any release. SPEC-093 also owns two recipe defects:
+  `just advance-cycle` strips the inline enum comment, and `just archive-spec`
+  uses a plain `mv` so `AC2` goes red until the move is staged.
+- **SPEC-096** (frame) — a line in `me.md` / `manager.md` saying what `✗`
+  means. Does not gate v0.7.0, by the maintainer's ruling.
 
-**SPEC-091** — relocates `cmd/brag/main.go`'s `AddCommand` block into a
-testable `cli.AssembleRoot`. `test-docs.sh` greps `--help`; the spec carries a
-premise-audit step. Its `edit --help` text documents the `$EDITOR` edit that
-ships in v0.7.0 — correct, since agent edit is deferred.
+## Decisions already made — do not relitigate
 
-**SPEC-090** — `encoding/json` silently keeps the last duplicate key and has no
-hook for it; rejecting needs a `json.Decoder` token pre-pass. The MCP `brag_add`
-ingress decodes with the same package — **framing must drive it, not assume it.**
-`delete.go:75` (`Aborted.`) and `:86` (`Deleted.`) both print to stderr and
-both return nil, so a script can't tell them apart — DEC-052's defect, on delete.
+- **DEC-050** is the posture for all seven `--type` surfaces. DEC-054 makes
+  `Candor` a rendering rule.
+- **A promotional `story` audience omits failures, shows a note, and `brag
+  story` appends a fixed clause to the framing directive** — the maintainer
+  approved the binary writing that text (2026-09-22), on the measurement that a
+  bare note survived the consuming model 0 of 10 while the clause survived 25
+  of 25.
+- **A failure with no impact** is listed by `summary` but only counted by
+  `impact` and `wrapped`. Accepted for v0.7.0 with a revisit trigger.
+- **SPEC-092, SPEC-093 and SPEC-096 do not gate v0.7.0.**
+- **No brags for frame, design, build or verify cycles** — capture at ship,
+  where the outcome exists. A brag's `impact` is the value delivered, not a
+  description of the change; the maintainer has cut two drafts for that.
 
-**`--type` error message (added to SPEC-090 by the user, 2026-09-14).** Today
-`--type '!failed'`, `'-failed'`, `'shipped,failed'` return exit 0 and zero rows
-with no diagnostic — and v0.7.0 is the release that gives users a reason to
-exclude failures. Recommended rule, for framing to confirm: **if a `--type`
-value contains `!`, `,`, whitespace or a leading `-`, and the query matches
-zero rows, fail with a user error (exit 1)** saying `--type` matches one exact
-value and has no negation or lists.
-- *Only on zero rows,* because `type` is free-form on write (DEC-049), so a
-  stored type could legitimately contain those characters. This rule can never
-  reject a query that would have returned rows. None of the 20 stored types
-  contain them today — re-check.
-- *An error, not a stderr hint,* because an empty JSON envelope with exit 0 is
-  the silent failure itself; scripts need the exit code (DEC-052's reasoning).
-- *Sites:* the seven read commands (`list`, `story`, `export`, `coverage`,
-  `wrapped`, `summary`, `impact`) each copy the same 3-line flag block, and MCP
-  `brag_list` sets it at `internal/mcpserver/server.go:246` beside its existing
-  input checks. One shared helper, not eight copies. Keep it out of
-  `internal/storage` — storage doesn't emit user diagnostics.
-- Real negation (an `--exclude-type`-style flag) stays out of v0.7.0.
-- Update STAGE-023's backlog: its unwritten `--type` item is now part of SPEC-090.
+## Open questions for the maintainer
 
-**Release cut** — the operational pre-flight is ticked at design (AGENTS.md §4):
-goreleaser, `.github/workflows/release.yml`, `jysf/homebrew-tap`, a real
-`brew upgrade` check after publish. `[Unreleased]` holds a **breaking** JSON key
-rename (`brag memory` → `candidates`), which is the minor-bump argument.
+1. **Should `just test-docs` run in CI?** It does not today, even though
+   `CLAUDE.md:24` says it does. Until it does, every doc assertion — including
+   the two guards SPEC-088 added — gates only local runs. Unanswered across
+   this whole release.
+2. **Should DEC-014 get an amendment naming `failures_by_project`?** Three
+   surfaces now add that key. SPEC-095's design said no, because DEC-014's
+   choice 2 leaves each spec to document its own keys.
+
+## Codification: one family, three properties
+
+STAGE-023 carries a *Held codification candidates* section. AGENTS.md §12 now
+holds one clause from this run (**unique** — a pinned diff has exactly one
+literal reading), and two candidates are held below the bar: **faithful**
+(record the diff the probe printed, not a description written afterwards, N=1)
+and **based** (a baseline hash names the commit it was taken against, N=1).
+
+**The live evidence, for whoever rules next:** three consecutive specs each had
+exactly one probe row that did not reproduce, each through a different gap —
+SPEC-088's `M-A0` (an unambiguous edit that was not the one that ran),
+SPEC-094's `M-D1` (an old side with three readings), SPEC-095's `M-9` (a new
+side written as a sketch, `if tc.Type != "failed" { … }`). Two rounds of added
+rule text have not stopped it; the one mechanical guard in the family did fire.
+Weigh whether the answer is capture rather than more prose.
 
 ## Traps this project has hit — carry them into every handoff
 
-- **A count from grep is a hypothesis.** An X-of-N claim is two measurements
-  plus a unit. Grep scope is part of the claim: a `projects/`-only grep reported
-  10 where the repo had 11, and a `head -30`-truncated list was once reported as
-  "none".
-- **Measure on the real corpus, not a 2-row fixture.** Two claims last run were
-  false only because they were measured on a toy database.
-- **Quote `--include` globs** — unquoted, zsh expands them and the search
-  silently never runs. `find` works directly; the `rtk` proxy intercepts some
-  forms. `$?` after a pipe is the last command's exit, not yours.
-- **Mutation protocol (§12 + AGENTS.md:364):** confirm the target's hash
-  **moved before running the gate** — a no-op mutant's green half looks exactly
-  like a working guard. Restore from a `/tmp` backup, **never `git checkout`**.
-- **A green guard is not evidence.** SPEC-089's guard tested 2 of 5 keys;
-  deleting a key left all 14 packages green.
-- **Derived tables: regenerate, never predict.** `just inventory` **only
-  prints** — paste it with no blank lines inside the markers (`X3` is
-  byte-for-byte). `Y3`/`Z7` now derive (SPEC-087): adding a DEC costs zero
-  harness edits. **If either ever needs a hand-edit, that is a regression.**
-- **Ids: reserve with a file, in the same edit as the sentence.** `next_id`
-  scans filenames **in the working tree** — a file on an unmerged branch
-  reserves nothing, and there's no guard for DEC ids. After #212 merges, the
-  next stage id is **STAGE-028**; STAGE-024/025/026 exist only in prose and
-  `just new-stage` can't produce them. Don't create stages this release;
-  SPEC-088 owns the fix.
-- **Stray tool-call XML.** Files written by sessions have ended in
-  `</content>` / `</invoke>` — five files so far, surviving CI and multiple PRs. Until
-  SPEC-088's guard lands, every handoff must grep
-  `^\s*</(content|invoke)>\s*$` before committing a written document.
-- **Squash merges detach stacked PRs.** Don't stack. If it happens, cherry-pick
-  the commit onto `main`, prove the tree is unchanged, and `--force-with-lease`.
-  Retargeting alone doesn't re-trigger CodeQL; a push does.
-- **`just archive-spec` — run it once.** The active-project resolver needs a
-  comment-free `status: active`.
-- **Never write to the live corpus** from a test. Use `--db` or `t.TempDir()`.
-
-## Not in v0.7.0 — do not fold in
-
-- **STAGE-027 / agent edit → v0.8.0.** Two design gaps to settle then:
-  `Store.Update` overwrites the whole row (`WHERE id = ?`) and a partial edit is
-  read-then-write across two transactions, so concurrent agent edits lose one
-  silently (fix: expected-`updated_at` check, or merge inside one transaction);
-  and nothing records who edited an entry.
-- **`brag lint` / STAGE-025** — maintainer review first.
-- **Real `--type` negation** (e.g. an `--exclude-type` flag). Only the error
-  message for negation/list syntax is in v0.7.0, as part of SPEC-090.
-- **Memory pool durability** (`memory-pool-composition-excludes-older-entries`).
-- **Housekeeping:** `projects/PROJ-001-mvp/backlog.md` still lists the shipped
-  streak bug as open and its "Removed / delivered" section is empty; two used
-  prompts in the repo root (`retired-tap-migration-prompt.md`,
-  `spec-078-verify-prompt.md`); `internal/cli/root.go:13`'s unguarded "four";
-  goreleaser's `brews:` deprecation and no shell completions in the formula
-  (may surface at the release cut — route, don't absorb).
-- **PROJ-009** — still zero benchmarks.
+- **A count from grep is a hypothesis.** State the command; scope is part of
+  the claim. After a pipe, `$?` is the last command's status.
+- **A *no difference* is a measurement, not a default** (AGENTS.md §12).
+  Before believing an equality, assert each side is the artifact you expected.
+  Known landmines: `story` takes `--audience` (not `--profile`), `search` has
+  no `--format`, `summary` has no `--since`.
+- **Use `/usr/bin/grep` or `git grep` for counts.** Bare `grep` here is a
+  `ugrep` wrapper that respects `.gitignore`. Keep `.claude/worktrees/` out of
+  repo-wide counts — it holds nested repo copies.
+- **zsh:** never name a variable `path` (it is tied to `PATH`); an unquoted
+  `$var` does not word-split; `echo` mangles JSON; `$B:file` is a path
+  modifier, so brace it as `${B}:file`.
+- **Extracting a spec's literals:** SPEC-086 and SPEC-094 fence them with
+  **four** backticks, SPEC-095 with **three**. Check before extracting — a
+  wrong fence yields an empty patch that looks like a clean result.
+- **Blank context lines in those diffs have no leading space**, because the
+  repo strips trailing whitespace. A parser that only accepts `' '` or `'-'`
+  prefixes silently drops them.
+- **`just archive-spec` uses a plain `mv`:** stage the move (`git add -A`)
+  before running any gate, or `AC2` goes red. **`just advance-cycle` strips the
+  inline enum comment** from the `cycle:` line; restore it by hand.
+- **The stray-tag self-check must include untracked files:**
+  `git ls-files -z --cached --others --exclude-standard | xargs -0 /usr/bin/grep -d skip -nE '^[[:space:]]*</(content|invoke)>[[:space:]]*$' /dev/null`
+- **Derived tables: regenerate, never predict.** `just inventory` only prints.
+- **Ids: reserve with a file, in the same edit as the sentence.**
+- **Never write to the live corpus.** Measure on a `sqlite3 .backup` copy, and
+  hash it before and after.
+- **Window cliff:** the four failures leave `summary --range month` between
+  **2026-10-06** and **2026-10-08**, and `story --quarter` on **2026-10-01**.
+  After that a live-corpus "does not contain" check passes vacuously. Use
+  seeded stores, and pair every NOT-contains with a positive.
+- **Dependency bumps:** re-run the **behavioral** surface, not the build. At
+  go-sdk 1.7.0 the signatures held while the wire shapes moved. A live MCP
+  stdio probe on 1.8.0 (5 tools, 2 resources plus the templated one,
+  `-32602` for an unknown tool) and a sqlite 1.59.0 smoke (migrations, FTS,
+  `--type` filter) both passed on 2026-09-22.
+- **Squash merges orphan branch commits.** A baseline hash that names a branch
+  commit stops reproducing once the branch is deleted; SPEC-086 already has one
+  such row.
 
 ## Capture
 
-- **MCP `brag_add` stamps `agent:`/`model:` automatically; the CLI doesn't.**
-  Prefer MCP. Project is `bragfile`.
-- Draft, then wait for approval. Transcribe `impact` from each spec's
-  *"what can a user do now that they couldn't before"* answer.
-- Record honest failures as `type: failed`. `brag learn` isn't in the released
-  binary until v0.7.0 — use `brag_add` with `type: failed` until then.
-- `impact` is capped at **1024 characters** (DEC-046); MCP rejects longer.
+- **MCP `brag_add` stamps `agent:` and `model:` automatically; the CLI does
+  not.** Prefer MCP. Project is `bragfile`.
+- Draft, then wait for approval. `impact` is capped at 1024 characters
+  (DEC-046), and shorter reads better — the two captured this run are 500 and
+  526 characters.
+- This run captured **#632** (SPEC-088) and **#644** (SPEC-086) and **#645**
+  (SPEC-094). SPEC-095's is owed at its ship.
