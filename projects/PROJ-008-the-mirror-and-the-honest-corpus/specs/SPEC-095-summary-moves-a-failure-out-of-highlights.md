@@ -1852,8 +1852,9 @@ outside `summary` moved.*
 
 - **Branch:** `verify/spec-095-summary-honesty`, off `main` at `6590772`
   (PR #232, the build, merged as a squash; no stacking).
-- **Verdict:** ⚠ **PUNCH LIST: two record corrections, both fixed in this
-  cycle. No functional defect, and no line of Go, test or harness changed.**
+- **Verdict:** ⚠ **PUNCH LIST: two record corrections and one test
+  strengthened (V-F3, second pass), all fixed in this cycle. No functional
+  defect, and no line of production Go or harness changed.**
   **21 mutants** stand against it. The matrix has 16: M-9 was re-run here
   from its corrected record, and the other 15 are as build reproduced them
   and were not re-run. The other 5 are new in this cycle. A named test kills
@@ -2117,6 +2118,8 @@ inventory row counts, so the block was not regenerated. `X3` is green.
 - This spec only: M-9's row and the matrix preamble note (V-F1), the
   inventory table's `## Amendment` cells (V-F2), and this section. **No Go,
   test, doc or harness change.** `cycle:` stays `verify`. Ship advances it.
+  *(Superseded by the second pass below: V-F3 adds 7 lines of assertions to
+  one existing test, `internal/cli/learn_test.go`.)*
 
 ### Not findings, checked and clean
 
@@ -2133,5 +2136,159 @@ inventory row counts, so the block was not regenerated. `X3` is green.
 - **An observation, not routed:** `By type` on the live month window
   prints `- : 29`, for entries with an empty type. It is byte-identical on
   the pre-build binary, so it predates this spec.
+
+### Second, independent pass (2026-09-23)
+
+*A fresh session was handed the same verify brief after the pass above was
+pushed. The maintainer chose an independent re-run: every attack below was
+run before this pass read the section above, and then the two were
+reconciled. The live corpus had moved, so it was re-frozen: 624 entries,
+max id 646 (a `learned` row, not a failure), `sqlite3 .backup` SHA-256
+`b831fbb2c11d…`, unchanged at the end, and the file kept read-only
+(`chmod a-w`). Binaries: `brag-old` from `git archive dfee276` (`main`
+before `build(SPEC-095)`) and `brag-new` from this branch.*
+
+**Where the two passes agree** (each reproduced here independently):
+
+- **M-9.** From base `3b81e79b3fdf` (`internal/export/summary.go` at
+  `6590772`), the gofmt three-line wrap reproduces design's `e9404d9921ee`
+  and the one-line wrap reproduces build's `c840a90180f2`. Both fire exactly
+  `TestLearnCmd_SummarySectionsWhatItWrote`,
+  `TestToSummaryJSON_FailureSectionGolden` and
+  `TestToSummary_PartitionCoversEveryInWindowEntry`. V-F1's corrected row
+  is right.
+- **Real output** on the re-frozen copy. `--range week`: the markdown is
+  byte-identical to `brag-old` with `Generated:` removed, and the JSON is
+  identical after deleting `generated_at` and the new key, which is `[]`.
+  `--range month`: `diff` is exactly the 4 deletions (433, 465, 473 from
+  `### bragfile`, 420 from `### contextcore-pilot-harness`) plus the 12-line
+  `## What didn't work`. `By type` still prints `- failed: 4`, and both
+  count maps are `==` to `brag-old`'s. `highlights` holds 230 ids, down from
+  234. `--range month --type failed`: `## Summary` then `## What didn't
+  work`, no `## Highlights`, `"highlights": []`, `counts_by_type`
+  `{"failed":4}`, key order ending `highlights,failures_by_project`.
+  `--range week --type failed` (an empty window): provenance only, and JSON
+  `highlights` and `failures_by_project` both `[]`. Every side was checked
+  first: rc 0, empty stderr, first line `# Bragfile Summary` or `{`.
+- **An impact-less failure, seeded** into a second copy with `brag learn -t
+  "seeded impactless dead end" -p zz-seed` (id 647, `impact=''`). It is
+  under `## What didn't work` in `--range week` and `--range month`, is in
+  `failures_by_project` and absent from `highlights`, and is counted
+  (`failed: 1`/`5`, `zz-seed: 1`) in both formats. `impact --since 1d`
+  reads `Entries: 3/4 with impact` and lists id 647 nowhere in either
+  format. That is the designed asymmetry.
+- **Nothing else changed.** 17 more invocations were byte-identical across
+  the two binaries, with `Generated`/`generated_at` removed: `impact
+  --quarter` (both formats), `impact --month --previous`, `wrapped 2026`
+  (both formats), `story --audience manager|exec --since 2026-09-01`,
+  `export` (both formats), `coverage --quarter`, `coverage --year --format
+  json`, `list`, `stats` (both formats), `memory --project bragfile`,
+  `review --month` and `search failure`. **The shape guard fired on this
+  pass's own first attempt:** bare `coverage` printed the same usage error
+  from both binaries (0 stdout lines, rc 1), which compared *equal*. It was
+  discarded and re-run with a window, as the section above did with
+  `wrapped 2026-Q3`.
+- **Consumers.** `git grep` for `"highlights"`, `.highlights`,
+  `failures_by_project`, and `summary … json` across `docs`, `BRAG.md`,
+  `README.md`, `AGENTS.md`, `plugin`, `.claude-plugin`,
+  `internal/mcpserver`, `cmd`, `scripts` and `justfile` (excluding
+  `docs/research` and `docs/blog`). The only reader of the shape is the
+  contract, which build updated, and the `test-docs` guards on it.
+  `README.md:223` is a bare command. `internal/mcpserver`, `plugin` and
+  `.claude-plugin` have no `summary` mention at all.
+
+**Five more mutants, none of them among M-1…M-10 or V-1…V-5.** The same
+kind of helper, written fresh: it refuses an old side that does not occur
+exactly once, refuses the gates until the hash moves, prints the diff it
+applied, runs `go test -count=1 ./...`, restores with `cp` from `/tmp`, and
+confirms the hash is back. All five went back to `3b81e79b3fdf`.
+Predictions were stated before the first run.
+
+| # | Edit (from the printed diff) | Predicted | Fired | Hash |
+|---|---|---|---|---|
+| **N-1** | JSON: the 3-line `for _, pc := range aggregate.ByProject(entries) {` loop plus the next line `worked, failed := aggregate.SplitFailures(entries)` (`:136`–`:139`) → the split line first, then the loop over `aggregate.ByProject(worked)` (`counts_by_project` stops counting failures) | JSON golden, `PartitionCovers…`; e2e survives | exactly those two. **Matched**. **After V-F3, the e2e fires too** | →`d74d20504e66` |
+| **N-2** | the same reorder on the markdown path (`:57`–`:60`, the `By project` loop's `fmt.Fprintf(&buf, "- %s: %d\n", pc.Project, pc.Count)`) | md golden only | md golden only. **Matched**: one killer, which is V-F3. **After V-F3, the e2e fires too** | →`4e0c88901494` |
+| **N-3** | `:68` `"## What didn't work")` → `"## What didn’t work")`, with U+2019 (a heading that looks right and matches nothing) | md golden, `PartitionCovers…`, `SectionsRenderOnly…`, the e2e | exactly those four. **Matched** | →`14d1b6842279` |
+| **N-4** | `:141` `env.FailuresByProject = highlightGroups(failed)` → `…highlightGroups(failed)[:min(1, len(highlightGroups(failed)))]` (only the first failure group survives) | JSON golden, `PartitionCovers…`, `SectionsRenderOnly…`; the e2e survives (its one failure is one group) | exactly those three. **Matched** | →`38b07c3b128d` |
+| **N-5** | `:141` the same line → wrapped in gofmt `if len(failed) > 0 {` … `}` (`null`, not `[]`, on a clean window; M-8 nulls both keys, V-1 omits this one) | `DEC014ShapeGolden`, `EmptyEntries…/json`, `SectionsRenderOnly…` | exactly those three (+ the parent `EmptyEntries…`). **Matched** | →`c16866f2771c` |
+
+#### V-F3: `By project` had no end-to-end pin. FIXED
+
+AC-3 names `- alpha: 2` under `**By project**` and
+`.counts_by_project.alpha` → `2`, but `TestLearnCmd_SummarySectionsWhatItWrote`
+checked only `By type` in both formats. So N-2, a CLI-visible break of
+DEC-048 on the markdown path, was killed by exactly one renderer golden, and
+N-1 by two renderer tests and no CLI test. The section above found the
+`By type` half of this (V-4) and correctly called it *no gap*. `By project`
+is the thinner half. It is still covered, so this is a strengthening, not a
+defect. The test now asserts `- alpha: 2\n` in the markdown `## Summary`
+and `counts_by_project["alpha"] == 2` in the JSON, 7 added lines. It passes
+on the build, and **re-running N-1 and N-2 makes it fire on both** (hashes
+as in the table). It adds no test function and no subtest, so no derived
+number moves. **The decision-to-test map** row for rule 3 should now also
+name the e2e, which ship can fold in with V-4's note.
+
+#### Where the two passes disagree: the codification ruling
+
+Both passes recommend the same **remedy**: a probe helper committed to
+`scripts/` that emits the matrix row, meaning the diff it applied, the base
+hash and its commit, from its own run. No new AGENTS.md sentence. They
+disagree on **what M-9 counts toward**, and ship should decide with both
+arguments in view.
+
+The section above files M-9 under item 5 as a *new-side uniqueness* case
+and holds candidate 1 at N=1. This pass argues M-9 is **candidate 1's
+second negative**:
+
+1. **Candidate 1's property is where the cell came from, not how many
+   readings it has.** Design's helper applied one literal edit, because a
+   hash cannot come from a sketch, and `e9404d9921ee` proves which edit it
+   was. The cell was then written *afterwards, as a description*, with a
+   `…` where the applied text had been. That is candidate 1's text word for
+   word: *"record the diff the probe printed rather than a description
+   written afterwards."* M-A0 and M-9 share this cause, and differ only in
+   which symptom the description produced: a wrong reading, or several.
+2. **Filing by symptom is how the three cases escaped.** Item 5's guard
+   checks the old side. A new-side guard would check the new side. Every
+   symptom-level clause leaves the next symptom outside it, which is the
+   section above's own point 3. Filing by cause puts all three cases, and
+   the next one, under the clause whose remedy closes them.
+3. **M-D1 is the case that does not fit this reading.** SPEC-094's ship
+   filed it under uniqueness, and it could have been either. This pass
+   does not relitigate it, and counts only M-A0 and M-9.
+4. **The paired positive is in this spec.** Every row that reached the
+   matrix as literal text reproduced its hash first try in build and again
+   here: design's other 15, V-1 to V-5 above, and N-1 to N-5 in this pass,
+   all recorded from the diff the helper printed. So candidate 1 would be at
+   **N=2 paired-opposing** (M-A0 and M-9 negative, printed diffs positive
+   across two independent verify passes), which is this repo's bar.
+
+**On "is more rule text the answer?":** no, and the two passes agree. The
+one mechanical guard in this family (item 5's refusal) is what actually
+held, and the misses are always where no guard looks. If ship promotes
+candidate 1, the codified form should be one sentence pointing at a
+committed helper, *the matrix cell is the diff `scripts/probe` printed*,
+not a fourth description of a property. Until the helper exists, a
+promoted clause is still discipline. That is the argument for routing the
+helper as the first deliverable after v0.7.0 and codifying with it, rather
+than before it.
+
+#### Not findings
+
+- `aggregate.IsFailure` is `e.Type == "failed"`, case-sensitive, so a
+  hand-typed `-k Failed` stays under `## Highlights`. That is DEC-050 rule
+  1's shared predicate, the same one `--type failed` uses and
+  `TestFailureClassifier_GoPredicateMatchesTypeFilter` pins. It is not
+  `summary`'s to change, and not routed.
+- The `- : 29` empty-type line reproduces here too, identical on
+  `brag-old`, so it predates this spec.
+- Nothing was written to `~/.bragfile/db.sqlite`: one `.backup` and §13.5's
+  `brag memory`. No brag was captured.
+- **Gates, re-run on the final tree after V-F3:** `go test -count=1 -v
+  ./...` **1119** `--- PASS`, **0** `--- FAIL`, **14** packages `ok` (the
+  count is unchanged, because V-F3 adds assertions and no test);
+  `test-docs` **213** `OK:` / **212** distinct / **0** `FAIL` / **0**
+  `SKIP`, `ALL OK`; `just lint` `0 issues.`; `gofmt -l .` empty; `go vet`
+  clean. No derived number moved, so the inventory was not regenerated.
 
 ---
