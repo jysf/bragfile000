@@ -294,11 +294,20 @@ func Span(entries []storage.Entry) CorpusSpan {
 func WithImpact(entries []storage.Entry) []storage.Entry {
 	out := make([]storage.Entry, 0, len(entries))
 	for _, e := range entries {
-		if e.Impact != "" {
+		if HasImpact(e) {
 			out = append(out, e)
 		}
 	}
 	return out
+}
+
+// HasImpact reports whether e carries a recorded impact: its Impact field is
+// non-empty. It is WithImpact's rule for one entry, split out so a caller
+// that projects entries one at a time (brag story's impact beats) calls the
+// rule instead of restating it — a restated copy is one a change to this
+// function leaves behind with every test green (SPEC-094).
+func HasImpact(e storage.Entry) bool {
+	return e.Impact != ""
 }
 
 // FailureType is the reserved entries.type value marking work that did not

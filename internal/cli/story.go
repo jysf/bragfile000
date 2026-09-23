@@ -36,6 +36,8 @@ func NewStoryCmd() *cobra.Command {
   skip     skip-level / director — outcomes grouped by initiative, less detail, more "so what"; quarterly
   exec     impact-forward promotion — impact-bearing threads only, one headline arc, terse
 
+Work recorded with brag learn is never marked as a win. me and manager list it where it falls, as "✗ <id> (failed)". skip and exec leave it out, print an Omitted: line counting it, and end the framing directive with a line telling the LLM to say so. A user profile leaves failures out only when its candor is exactly promotional; any other value lists them.
+
 Each audience carries a default window; an explicit window flag overrides it. Windows are CALENDAR periods (like brag impact), mutually exclusive:
   --quarter / --month / --year / --since D   (D: YYYY-MM-DD or Nd/Nw/Nm)
 
@@ -195,7 +197,8 @@ func runStory(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("list entries: %w", err)
 	}
 
-	threads := story.BuildThreads(entries, story.ThreadOptionsFromProfile(profile, theme))
+	shown, omitted := story.OmitFailures(entries, profile)
+	threads := story.BuildThreads(shown, story.ThreadOptionsFromProfile(profile, theme))
 	throughline := story.BuildThroughline(threads)
 
 	filtersMD, filtersJSON := echoFiltersForStory(cmd)
@@ -205,6 +208,7 @@ func runStory(cmd *cobra.Command, _ []string) error {
 		Filters:         filtersMD,
 		FiltersJSON:     filtersJSON,
 		EntriesInWindow: len(entries),
+		OmittedFailures: omitted,
 		Now:             now,
 		Threads:         threads,
 		Throughline:     throughline,

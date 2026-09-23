@@ -858,20 +858,27 @@ Document structure (markdown):
 
 - **Provenance:** `Generated:` (RFC3339), `Scope:` (the resolved window
   token), `Audience:` (the requested name), `Filters:` (echoed flags or
-  `(none)`), `Threads: <n>`, and a `Beats: <shown>/<in-window>` tally.
+  `(none)`), `Threads: <n>`, and a `Beats: <shown>/<in-window>` tally. When
+  a promotional profile left recorded failures out, one more line follows,
+  and it is absent otherwise (`1 recorded failure` for one):
+  `Omitted: <n> recorded failures, not listed for this audience (brag list --type failed)`.
 - **Threads** (`## Threads`; omitted on an empty corpus per DEC-014):
   per-thread `### <thread>` blocks. Each beat renders `- ★ <id>: <title>`
   with an indented impact line when it carries a non-empty `impact`, or
   `- · <id>: <title>` when it does not (the ★/· markers are the visible
-  "so what" signal).
+  "so what" signal). A recorded failure renders `- ✗ <id> (failed): <title>`
+  instead, with its impact line when it has one, so ★ never marks a failure.
 - **Throughline** (`## Throughline (skeleton)`; omitted on an empty
   corpus): one line per thread — `- <thread> [<kind>]: <n> beats, <m>
   with impact (<first> → <last>)` — the ordered thread refs + span +
   beat/impact counts. The skeleton is deterministic; the LLM (via the
   directive) finds the actual arc.
 - **Framing directive** (`## Framing directive`): the audience's directive
-  text appended verbatim. Renders even on an empty corpus; omitted only
-  when the resolved directive itself is empty.
+  text appended verbatim. When failures were omitted, bragfile appends one
+  fixed paragraph after it, whatever file the directive came from:
+  `This bundle omits <n> recorded failures for this audience. End with one line that says so; do not drop it.`
+  Renders even on an empty corpus; omitted only when the resolved directive
+  is empty and nothing was omitted.
 
 Audiences are **data-driven shaping profiles**, NOT a Go enum: `me`/`exec`
 load from bundled `embed.FS` assets; a user `<name>.yaml` in the
@@ -894,6 +901,19 @@ are the middle):
   impact-less beats DROPPED, small threads folded, one headline arc
   (threads ordered impact-beat-count DESC); default window `quarter`.
 
+**Recorded failures** (entries whose `type` is exactly `failed`, as `brag
+learn` writes them) are never marked as a win. A profile whose `candor` is
+exactly `promotional` — `skip` and `exec` — leaves them out before threads are
+built and folded, and says how many in the `Omitted:` line, in
+`omitted_failure_count`, and in the paragraph appended to the directive.
+Every other profile — `me`, `manager`, and a user profile whose `candor` is
+anything else, empty or misspelled — lists them where they fall, labelled
+`✗ <id> (failed)`. A failure that carries an impact still counts as an impact
+beat (`is_impact_beat`, `<m> with impact`); only its marker differs. Locked by
+[DEC-054](../decisions/DEC-054-story-candor-decides-what-a-failure-renders-as.md),
+which implements
+[DEC-050](../decisions/DEC-050-a-failure-is-never-rendered-as-a-win.md) row 4.
+
 Flags:
 
 - `--audience <name>` is REQUIRED. An unknown audience (no bundled
@@ -915,12 +935,15 @@ Flags:
   after the initiative threads, grouping every in-window entry carrying
   that tag, time-ordered. Not subject to fold/drop (an explicit opt-in).
 - `--format markdown|json` defaults to `markdown`. The JSON envelope
-  extends DEC-014 with `audience`, `threads` (each `{thread, kind, span,
-  beats:[...]}`), `throughline` (`{arcs:[...]}`), and `framing_directive`,
+  extends DEC-014 with `audience`, `omitted_failure_count` (an integer,
+  always present, `0` when nothing was omitted), `threads` (each `{thread,
+  kind, span, beats:[...]}`), `throughline` (`{arcs:[...]}`), and
+  `framing_directive` (with the appended paragraph when one applies),
   2-space indent. Each beat is a 7-key projection `{id, title, project,
   type, impact, is_impact_beat, created_at}`.
 - `--print-directive` prints ONLY the resolved framing directive to
-  stdout and exits 0 — no window, no DB read.
+  stdout and exits 0 — no window, no DB read, and so never the omission
+  paragraph, which depends on the window.
 - `--tag`/`--project`/`--type` compose with the window and echo into
   `filters`.
 
@@ -928,7 +951,9 @@ Empty-window: provenance renders (`Threads: 0`, `Beats: 0/0`); the
 `## Threads` and `## Throughline` sections are omitted from markdown; the
 `## Framing directive` section still renders. JSON renders `threads` `[]`,
 `throughline.arcs` `[]`, `framing_directive` the directive string,
-`filters` `{}`.
+`filters` `{}`, `omitted_failure_count` `0`. When every in-window entry is an
+omitted failure (`--audience exec --type failed`), the threads are empty in
+the same way and the `Omitted:` line is what says why.
 
 ### `brag memory [--query <text>] [--project <name>] [--budget <n>]` (STAGE-019)
 

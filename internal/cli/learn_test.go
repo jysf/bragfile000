@@ -168,16 +168,17 @@ func TestLearnCmd_EmptyTitleIsUserError(t *testing.T) {
 }
 
 // runDigestCorpus runs one brag invocation against dbPath on a fresh root
-// carrying the two writers (add, learn) and the two digests that section
-// failures (impact, wrapped). A fresh root per call, so no flag value leaks
-// from one invocation into the next.
+// carrying the two writers (add, learn), the two digests that section
+// failures (impact, wrapped), and story, which labels or omits them
+// (SPEC-094). A fresh root per call, so no flag value leaks from one
+// invocation into the next.
 func runDigestCorpus(t *testing.T, dbPath string, args ...string) string {
 	t.Helper()
 	t.Setenv("BRAGFILE_DB", "")
 	addStderrIsTTY = func() bool { return false }
 	t.Cleanup(func() { addStderrIsTTY = defaultStderrIsTTY })
 	root := NewRootCmd("test")
-	root.AddCommand(NewAddCmd(), NewLearnCmd(), NewImpactCmd(), NewWrappedCmd())
+	root.AddCommand(NewAddCmd(), NewLearnCmd(), NewImpactCmd(), NewWrappedCmd(), NewStoryCmd())
 	var outBuf, errBuf bytes.Buffer
 	root.SetOut(&outBuf)
 	root.SetErr(&errBuf)
@@ -299,5 +300,60 @@ func TestLearnCmd_WrappedSectionsWhatItWrote(t *testing.T) {
 	}
 	if !strings.Contains(failed, "- "+failID+": tried a worker pool\n  cost two days") {
 		t.Errorf("## What didn't work is missing the brag learn entry %s with its impact:\n%s", failID, md)
+	}
+}
+
+// TestLearnCmd_StoryLabelsOrOmitsWhatItWrote ▲ SPEC-094 LD1/LD3/LD4 — the
+// writer-to-reader check on brag story, through a real store and with no
+// constant in sight. A candid audience lists the brag learn entry as
+// "✗ <id> (failed)" with its impact, beside the brag add entry's ★. A
+// promotional one leaves it out, and both its Omitted: line and its closing
+// clause say so; its JSON counts it.
+func TestLearnCmd_StoryLabelsOrOmitsWhatItWrote(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	winID := strings.TrimSpace(runDigestCorpus(t, dbPath, "add", "-t", "shipped the cache", "-p", "alpha", "-k", "shipped", "-i", "cut p95 40%"))
+	failID := strings.TrimSpace(runDigestCorpus(t, dbPath, "learn", "-t", "tried a worker pool", "-p", "alpha", "-i", "cost two days"))
+
+	me := runDigestCorpus(t, dbPath, "story", "--audience", "me", "--since", "2000-01-01")
+	threads := markdownSection(me, "Threads")
+	if !strings.Contains(threads, "- ★ "+winID+": shipped the cache\n  cut p95 40%") {
+		t.Errorf("me should list the brag add entry %s as ★:\n%s", winID, me)
+	}
+	if !strings.Contains(threads, "- ✗ "+failID+" (failed): tried a worker pool\n  cost two days") {
+		t.Errorf("me should label the brag learn entry %s as failed, with its impact:\n%s", failID, me)
+	}
+	if strings.Contains(me, "- ★ "+failID+":") || strings.Contains(me, "\nOmitted: ") {
+		t.Errorf("me must neither star the failure nor omit it:\n%s", me)
+	}
+
+	exec := runDigestCorpus(t, dbPath, "story", "--audience", "exec", "--since", "2000-01-01")
+	if !strings.Contains(markdownSection(exec, "Threads"), "- ★ "+winID+": shipped the cache") {
+		t.Errorf("exec should still list the brag add entry %s:\n%s", winID, exec)
+	}
+	if strings.Contains(exec, " "+failID+": ") || strings.Contains(exec, " "+failID+" (failed)") {
+		t.Errorf("exec must not list the brag learn entry %s:\n%s", failID, exec)
+	}
+	if !strings.Contains(exec, "\nBeats: 1/2\nOmitted: 1 recorded failure, not listed for this audience (brag list --type failed)\n") {
+		t.Errorf("exec should count the omitted failure under Beats:\n%s", exec)
+	}
+	if !strings.HasSuffix(strings.TrimRight(exec, "\n"), "\n\nThis bundle omits 1 recorded failure for this audience. End with one line that says so; do not drop it.") {
+		t.Errorf("exec should end with the omission clause:\n%s", exec)
+	}
+
+	// --print-directive reads no store, so it prints the asset as authored:
+	// the clause depends on the window, and there is none.
+	directive := runDigestCorpus(t, dbPath, "story", "--audience", "exec", "--print-directive")
+	if !strings.Contains(directive, "business impact") || strings.Contains(directive, "This bundle omits") {
+		t.Errorf("--print-directive should print exec's directive without the clause:\n%s", directive)
+	}
+
+	var env struct {
+		OmittedFailureCount *int `json:"omitted_failure_count"`
+	}
+	if err := json.Unmarshal([]byte(runDigestCorpus(t, dbPath, "story", "--audience", "exec", "--since", "2000-01-01", "--format", "json")), &env); err != nil {
+		t.Fatalf("json unmarshal: %v", err)
+	}
+	if env.OmittedFailureCount == nil || *env.OmittedFailureCount != 1 {
+		t.Errorf("exec omitted_failure_count = %v, want 1", env.OmittedFailureCount)
 	}
 }
