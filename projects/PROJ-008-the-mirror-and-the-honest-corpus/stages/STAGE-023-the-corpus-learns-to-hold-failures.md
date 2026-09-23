@@ -304,7 +304,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       Nine novel mutants were all killed. That row is the negative of the §12
       refinement codified at this ship, *a pinned diff has exactly one literal
       reading* (see *Held codification candidates*, item 5). `pr:226` (frame),
-      `pr:227` (design), `pr:228` (build), `pr:229` (verify), `pr:SHIPPR`
+      `pr:227` (design), `pr:228` (build), `pr:229` (verify), `pr:230`
       (ship).
 - [ ] SPEC-095 (frame) — **`summary` moves a failure out of `## Highlights`.**
       Given a file at SPEC-094's framing (2026-09-22), in the same edit as this
