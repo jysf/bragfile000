@@ -273,59 +273,39 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       routed — see SPEC-090 below. `pr:206` (design), `pr:207` (DEC renumber),
       `pr:208` (build), `pr:209` (verify), `pr:210` (ship).
 
-- [ ] SPEC-094 (design) — **`summary` + `story` markdown honesty.** Given a
-      file at SPEC-086 design (2026-09-18), in the same edit as this line, so
-      the id is claimed rather than reserved in prose. The other
-      half of SPEC-086's Fork B, split on defect shape: on these two the data is
-      already present (`story --format json` carries `"type": "failed"`;
-      `summary`'s `## Summary → By type` prints `failed: 1`) and only the
-      per-entry markdown drops it. **Unconditional** — DEC-050 will have stated
-      their posture, so this implements a decision rather than making one. Its
-      `story` half additionally has to turn `Candor` from LLM-facing metadata
-      into a body rule (`internal/story/profile.go:24`), which is a
-      DEC-029-adjacent decision of its own.
-      **It is the second half of the release gate, and it GATES v0.7.0 — and it
-      is the next spec to frame.** Recorded at SPEC-086 ship (2026-09-20).
-      Success Criterion 4, *the celebratory digests do not silently absorb
-      failures*, is owed by SPEC-086 **and** this spec together; DEC-050's
-      *"until SPEC-094 ships"* consequence is the same statement from the other
-      side. The gap is measured, not assumed: SPEC-086 verify ran
-      `brag story --quarter` in all four bundled profiles against the same
-      frozen corpus copy with both binaries and the failures still render as
-      `- ★ <id>:` in every one, byte-identical across the two — five of the
-      29 invocations in verify's DEC-050 rows 3–7 sweep, every one of which came
-      back identical, so SPEC-086 moved nothing here. Its row-4 input narrowed at
-      the maintainer's **R1** ruling (2026-09-19): two invariants only, never
-      rendered as a win and never *silently* dropped, so a promotional profile
-      (`candor: promotional`; today `exec` and `skip`) **may** omit failures
-      **with a visible note** — a count is the obvious form — and the mechanism
-      is this spec's to design. That ruling raised DEC-050 row 4's confidence
-      from ~0.70 to ~0.90, so what this spec owes is a mechanism, not a posture.
-      This entry is where the gate is recorded, not only in SPEC-086's
-      reflection: a route written into a spec's own reflection does not reach
-      its owner (SPEC-088 ship, Q1).
-      **Framed 2026-09-22: GO at M, now `story` only.** Its premise was
-      false for `summary`: `summary`'s JSON highlight is `{id, title}` with no
-      `type`, so a failure there is *unrepresentable* per entry, the shape
-      SPEC-086 fixed, not the lossy-markdown shape `story` has. The `summary`
-      half moved to **SPEC-095** (next entry). Framing measured DEC-050's T3
-      by piping doctored `exec` bundles through a model. A bare omission note
-      survived **0 of 10** runs, and one with a carry clause appended to the
-      directive survived **14 of 14**. Labelling failures inline or moving
-      them to their own block did not keep them in the prose either
-      (**0 of 20**). Design needs **one maintainer yes/no** before it locks
-      the mechanism: may `brag story` append a binary-authored clause to the
-      framing directive? A decision record is needed, and design takes the
-      next free DEC number when it writes it.
-      **Designed 2026-09-22, against `main` at `f2c7b9f`.** The maintainer
-      answered yes. The record is **DEC-054**, claimed by its file in the
-      design commit. `exec` and `skip` omit failures, with an `Omitted:`
-      line, `omitted_failure_count`, and a fixed clause appended to the
-      directive. `me` and `manager` label them `✗ <id> (failed)`. A failure
-      with an impact is still an impact beat, so nothing is renamed. The
-      clause's locked wording was re-measured: the omission was stated in
-      **25 of 25** runs (Haiku and Sonnet, `exec` and `skip`). DEC-029 and
-      DEC-050 each gain an `## Amendment`.
+- [x] SPEC-094 (shipped on 2026-09-23) — **`story` stops listing a failure as
+      a win.** Given a file at SPEC-086 design (2026-09-18), in the same edit as
+      this line, and split at its framing (2026-09-22) on defect shape: `story`
+      carries `"type": "failed"` in JSON and dropped it only in markdown, while
+      `summary` cannot represent a failure per entry at all, so `summary` went
+      to **SPEC-095**. **The mechanism is DEC-054**, and it implements DEC-050
+      row 4. A profile whose `candor` is exactly `promotional` (`exec`, `skip`)
+      omits recorded failures before threads are built and says so three ways:
+      an `Omitted: <n> recorded failures …` line under `Beats:`, an
+      always-present `omitted_failure_count`, and a fixed clause the binary
+      appends to the framing directive. Every other value labels them
+      `- ✗ <id> (failed):`, so a typo never drops anything. A failure with an
+      impact is still an impact beat, so no count was renamed (DEC-048), and
+      `internal/story` now calls `aggregate.HasImpact` instead of restating it.
+      **The clause was measured, not assumed.** A bare note survived the
+      consuming model in 0 of 10 runs at framing. With the clause, on the
+      wording design locked, the omission was stated in **25 of 25** runs
+      (Haiku and Sonnet, `exec` and `skip`), as the prose's last line every
+      time. **Verify measured the candid half (DEC-054 T4) and it fired in
+      part.** On `manager`, failures credited as wins fell from **22/30 to
+      4/30** mentions; on `me` the label is inert (1/30 → 2/30). All six
+      residual cases are #473, the one failure whose impact describes its own
+      fix. So DEC-050's invariant holds in the bundle and not always in the
+      prose. That is recorded in DEC-054's ship amendment, and the directive
+      line it asks for is **SPEC-096** (below). **Verify's punch list was one
+      record fix and no functional defect:** the `M-D1` matrix row said *"one
+      of three"* mentions, which build could not reproduce, and verify pinned
+      it to the second (`:938` at `c3f707a`), which reproduces design's hash.
+      Nine novel mutants were all killed. That row is the negative of the §12
+      refinement codified at this ship, *a pinned diff has exactly one literal
+      reading* (see *Held codification candidates*, item 5). `pr:226` (frame),
+      `pr:227` (design), `pr:228` (build), `pr:229` (verify), `pr:SHIPPR`
+      (ship).
 - [ ] SPEC-095 (frame) — **`summary` moves a failure out of `## Highlights`.**
       Given a file at SPEC-094's framing (2026-09-22), in the same edit as this
       line. It is DEC-050 row 3, which states the posture in full: SPEC-086's
@@ -337,6 +317,22 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       together are the half of Success Criterion 4 still owed. Verify trap:
       `--range month` is rolling, and the four failures leave it on the live
       corpus around 2026-10-06.
+      **It is now the last spec gating v0.7.0, and the next spec to frame.**
+      Recorded at SPEC-094 ship (2026-09-23), on this entry rather than only in
+      that spec's reflection, for SPEC-088 Q1's reason. The cut itself is its
+      own spec after this one.
+- [ ] SPEC-096 (frame) — **the candid directives say what a failure label
+      means.** Given a file at SPEC-094 ship (2026-09-23), in the same edit as
+      this line, on the maintainer's ruling of that day. SPEC-094's verify
+      measured DEC-054 T4: the `✗ <id> (failed)` label cut failures credited as
+      wins on `manager` from 22/30 to 4/30, did nothing on `me`, and left one
+      failure, #473, credited as shipped because its own impact reads like a
+      fix. Neither `me.md` nor `manager.md` tells the model what `✗` means.
+      The candidate is one line in each. It edits **shipped profile assets**,
+      which SPEC-094's LD14 kept out of scope, and it **requires re-running the
+      52-run measurement** on whatever wording it locks. Unframed, and
+      provisionally S. **Does not gate v0.7.0**, by the maintainer's ruling: the
+      bundle already satisfies DEC-050, and this is about the model's prose.
 - [ ] (not yet written, `bug`) — **`--type` negation is inexpressible and fails
       silently.** `--type '!failed'`, `'-failed'`, `'shipped,failed'`,
       `'!=failed'` and `'NOT failed'` each return **exit 0 with zero rows, no
@@ -468,33 +464,36 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `delete.go`. Cheaper to leave unowned and visible than to invent a spec id
       for it now.
 
-**Count:** 5 shipped / 0 verify / 1 in build / 1 in design / 4 framed / 2 not
+**Count:** 6 shipped / 0 verify / 1 in build / 0 in design / 5 framed / 2 not
 yet written
-(Re-derived at SPEC-094 design, 2026-09-22. It comes from each file's own
+(Re-derived at SPEC-094 ship, 2026-09-23. It comes from each file's own
 `cycle:` field, read with
 `awk '/^---$/{f=!f; next} f && /^[[:space:]]+cycle:/{print $2; exit}'` over
 `projects/PROJ-008-*/specs/*.md` and `specs/done/*.md`, and is not
-incremented. Every file's `stage:` is STAGE-023. shipped = SPEC-085, SPEC-086,
-SPEC-087, SPEC-088 and SPEC-089, the five `cycle: ship` files in `specs/done/`.
-in build = SPEC-091. in design = SPEC-094. **Nothing is in verify.**
-framed = SPEC-090, SPEC-092, SPEC-093 and SPEC-095, the four `cycle: frame`
-files in `specs/`. SPEC-094 and SPEC-095 have had a framing pass and carry a
-`## GO / NO-GO`. SPEC-094 was created at SPEC-086's design, and SPEC-095 at
-SPEC-094's framing. The other three are id-claiming files rather than fully
-framed specs: SPEC-090 was created at SPEC-089's ship, and SPEC-092 and
-SPEC-093 at SPEC-088's framing. `not yet written` is the two `- [ ] (not yet written…`
-entries: `--type` negation and `brag delete`. The two recipe defects routed at
-SPEC-088's ship, `advance-cycle` and `archive-spec`, add no entry, because both
-have an owner, SPEC-093 — and both fired again at SPEC-086's ship, so each now
-has two data points rather than one.)
+incremented. Every file's `stage:` is STAGE-023, read the same way. shipped =
+SPEC-085, SPEC-086, SPEC-087, SPEC-088, SPEC-089 and SPEC-094, the six
+`cycle: ship` files in `specs/done/`. in build = SPEC-091. **Nothing is in
+design or verify.** framed = SPEC-090, SPEC-092, SPEC-093, SPEC-095 and
+SPEC-096, the five `cycle: frame` files in `specs/`. Only SPEC-095 has had a
+framing pass and carries a `## GO / NO-GO`; it was created at SPEC-094's
+framing. The other four are id-claiming files rather than fully framed specs:
+SPEC-090 was created at SPEC-089's ship, SPEC-092 and SPEC-093 at SPEC-088's
+framing, and SPEC-096 at SPEC-094's ship. `not yet written` is the two
+`- [ ] (not yet written…` entries: `--type` negation and `brag delete`. The
+two recipe defects routed at SPEC-088's ship, `advance-cycle` and
+`archive-spec`, add no entry, because both have an owner, SPEC-093. Both fired
+again at SPEC-094's ship, as they did at SPEC-086's: `advance-cycle` stripped
+the `cycle:` comment, which was restored by hand, and the archive's plain `mv`
+was staged with `git add -A` before any gate ran.)
 
 **The stage does NOT close here.** Success Criteria 1, 2 and the DEC-014/
 DEC-048 envelope line are met by SPEC-085. **Criterion 4** (*the celebratory
-digests do not silently absorb failures*) is now **half met**: SPEC-086 shipped
-the `wrapped` and `impact` half on 2026-09-20. The `summary`/`story` half is
-owed by SPEC-095 (`summary`) and SPEC-094 (`story`), split at SPEC-094's
-framing on 2026-09-22, which is why both gate v0.7.0. Criterion 3 is
-**half met** — see *The Fork 3 finding* below.
+digests do not silently absorb failures*) is now **three quarters met**:
+SPEC-086 shipped `wrapped` and `impact` on 2026-09-20, and SPEC-094 shipped
+`story` on 2026-09-23. The `summary` quarter is owed by **SPEC-095**, which is
+why it is now the last spec gating v0.7.0. SPEC-096 does not gate it: it acts
+on the prose a model writes from a `story` bundle, not on the bundle.
+Criterion 3 is **half met** — see *The Fork 3 finding* below.
 
 ### The conditional spec fired (2026-09-05, at SPEC-085 design)
 
@@ -844,9 +843,9 @@ a helper against inputs its only producer cannot emit is speculative work. This
 note exists so that a future spec which teaches `inventory.sh` a computed or
 quoted label knows it is the change that makes them reachable.
 
-### Held codification candidates (SPEC-088 ship, 2026-09-18; updated SPEC-086 ship, 2026-09-20)
+### Held codification candidates (SPEC-088 ship, 2026-09-18; updated SPEC-086 ship, 2026-09-20, and SPEC-094 ship, 2026-09-23)
 
-Three `AGENTS.md` §12 candidates below the codification bar, plus the one this
+Three `AGENTS.md` §12 candidates below the codification bar, plus the two this
 stage has cleared. They are listed here rather than in an archived spec because a
 candidate routed that way never arrived: SPEC-087's ship routed one to SPEC-088
 in its own reflection only, and none of SPEC-088's four cycles saw it. **When a
@@ -892,9 +891,32 @@ on `M-6`).
      candidate keeps SPEC-088 verify's diagnosis and drops verify's wording:
      the defect is **composition after the run**, and the remedy is capture,
      of which pasting the helper's `diff` is one form.
-   - **It clears when** a second stated edit meets the parent clause and does
-     not reproduce its hash. That is N=2 distinct, and the §12(b) refinement
-     precedent then applies.
+   - **Not counted, ruled at SPEC-094 ship (2026-09-23): SPEC-094's `M-D1`.**
+     Design's row read *"one of three `omitted_failure_count` mentions"*; build
+     could not reproduce its hash, and verify pinned it to the second reading.
+     Verify ruled it **does not** clear this candidate, and **ship confirms**.
+     The candidate's hazard is a record that reads as exactly one edit and is
+     not the edit that ran, so a reader is misled with no signal. `M-D1` misled
+     nobody: the row disclosed its own ambiguity, and design's hash reproduced
+     the moment its reading was named. It is *faithful but ambiguous*, which is
+     the parent clause failing, not this refinement. **The counter-argument,
+     weighed and rejected:** the matrix preamble says the Diff column is *"the
+     replacement the helper applied, verbatim"*, and for this row it was not,
+     which is composition after the run in the literal sense. That is true, but
+     it is a false claim about a column, and the row beside it said so. Had the
+     row been captured from the helper, it would also have been unique, so
+     uniqueness is the property that failed, and item 5 is where it is written.
+   - **Re-scoped at SPEC-094 ship, so the three items do not overlap.** A
+     reproducible probe record has three properties, and each has one home:
+     **unique** (the stated edit has exactly one literal reading, item 5,
+     codified), **faithful** (that one reading is the edit that ran, this
+     item) and **based** (the baseline names the commit it was taken against,
+     item 2). `M-A0` is a fidelity failure; `M-D1` a uniqueness failure;
+     `V-F0` a base failure. A future case is counted under exactly one of them.
+   - **It clears when** a second stated edit with exactly one literal reading
+     does not reproduce its hash, because the edit that ran was a different
+     one. That is N=2 distinct, and the §12(b) refinement precedent then
+     applies.
 
 2. **A baseline hash must name the commit it was taken against.** Held at
    **N=1**. New at SPEC-086 ship (2026-09-20). A refinement of the same promoted
@@ -919,9 +941,53 @@ on `M-6`).
      the same spec. What they add is scope rather than count: the mechanism is
      not specific to a citation fix, and any cycle that edits a document is one
      edit away from invalidating a probe it never read.
-   - **It clears at a second spec** whose stated baseline hash is invalidated
-     by a later edit to the probe target. The fix shape is already known and
-     cheap: name the base commit beside the baseline hash in the matrix row.
+   - **Weighed at SPEC-094 ship (2026-09-23): verify's corrected `M-D1`
+     names its base** (`:938` at `c3f707a`). That is the fix shape applied,
+     and `c3f707a` is a squash commit on `main`, so it will survive. **It is
+     an application, not yet a positive.** A positive counts toward a
+     paired-opposing N=2 only when it pays off, meaning a later cycle
+     reproduces the row after its target has moved. `docs/api-contract.md` has
+     not moved since `c3f707a`. It is likely to move soon, because SPEC-095
+     edits its `brag summary` section.
+   - **Found at SPEC-094 ship: SPEC-086's own named bases, one save and one
+     miss.** SPEC-094's build moved both of SPEC-086's re-pinned targets.
+     - *Save:* `docs/api-contract.md` was stated as **`68ae22d061da` as of
+       `b9d9681`**. The file is `1cd16e2a3d7a` on `main` now, and the row still
+       reproduces: `git show b9d9681:docs/api-contract.md` hashes to
+       `68ae22d061da`, and applying M-D1's stated edit to it gives exactly the
+       stated **`fbadf13d66f1`**.
+     - *Miss:* `AGENTS.md` was stated as **`520208b59f9b` as of "this ship
+       commit"**. At `c0b840e`, the squash merge on `main`, `AGENTS.md` hashes
+       to **`8367a0159c19`**. A second commit in the same PR (`935c8f0`, the
+       attribution fix) edited `AGENTS.md` after the re-pin, and the squash
+       then erased the commit the row meant. `520208b59f9b` exists only at
+       `0568e7a`, reachable today only through the unmerged branch
+       `ship/spec-086-digest-failures`.
+     **Both rows are SPEC-086's, so they add scope and not count.** The
+     paired-opposing precedent (SPEC-023 against SPEC-024) is two specs, each
+     of which decided whether to apply the rule. Here one spec wrote both rows,
+     and SPEC-094 only moved the files. What they add is the sentence's missing
+     half: **the named base must be a commit on `main`**, because a squash
+     merge destroys "this commit", and the template's Q4 already says so about
+     `pr:` tags.
+   - **Invalidation alone is not a case.** SPEC-094's build silently
+     invalidated both SPEC-086 rows above, and nobody paid, because nobody
+     re-ran them. Every spec that edits a document does this to every earlier
+     spec's probes on it. Counting invalidations would clear the candidate on
+     noise; the case is a cycle that **pays**, meaning it tries to reproduce a
+     row and cannot, because the base moved.
+   - **SPEC-094's own rows are named, not re-pinned.** This ship's §12 edit
+     moves `AGENTS.md`, which is `M-D3`'s target. Rather than re-pin (SPEC-086
+     ship's move), ship named the base: all nine of the matrix's baselines hash
+     identically at `c3f707a` and at `cf57ea2`, both on `main`. `M-D3` was also
+     re-run against the new file, and it still fires `AE3` alone (SPEC-094,
+     *Ship addendum*). Not counted: it was caused by the codifying ship itself,
+     inside the same cycle.
+   - **Still N=1.** It clears at a **second spec that pays** for an unnamed
+     or non-durable base, **or** at **N=2 paired-opposing** when a spec other
+     than SPEC-086 reproduces a `main`-named row after its target moved. The
+     nearest test is SPEC-094's `M-D1` at `c3f707a`, once SPEC-095 has edited
+     `docs/api-contract.md`.
 
 3. **`scripts/test-docs.sh` is itself an input to the inventory table it
    guards.** A harness spec is always one assertion id away from moving
@@ -974,6 +1040,33 @@ on `M-6`).
      `### Traps` at all before — which is why two consecutive specs wrote one
      from scratch, and why build's Q2 named the Traps list rather than a
      constraint or a decision as the gap.
+
+5. **CLEARED at SPEC-094 ship (2026-09-23), N=2 paired-opposing, and written
+   into AGENTS.md §12** as a refinement of *"A mutation pinned by a hash must
+   also pin its diff"*: ***a pinned diff has exactly one literal reading.***
+   SPEC-094's verify suggested the sentence and deliberately did not propose
+   it. Ship decided it, on these grounds.
+   - **NEGATIVE: SPEC-094 design's `M-D1`.** Its `old → new` pair occurred
+     three times in the target. Build reproduced the behaviour and not the hash
+     (`8d7c04ac6af3` against the stated `471eb6137945`), and verify had to hash
+     all three readings to recover design's.
+   - **POSITIVE: SPEC-088's `M-B3`/`M-B4` and SPEC-086's five abbreviated
+     rows.** Each was prose with exactly one literal reading, and each
+     reproduced first try. SPEC-086's ship admitted them on exactly that
+     property, before anyone had named it as a rule. SPEC-094's verify then
+     enforced it mechanically: its probe helper refused its own ambiguous
+     `V-N6` anchor (`if n == 1 {`, twice in `bundle.go`) before any gate ran.
+   - **Why it clears, and at what bar.** A costly miss and cheap saves, on the
+     same surface (a matrix row a later cycle reads to reproduce a hash), from
+     different specs, is the meta-rule's paired-opposing N=2. It also meets the
+     refinement bar, because the negative exercises the new sentence's own gap:
+     `M-D1` met the parent's letter, *the line changed and its replacement
+     text*, as an `old → new` pair, and still pinned nothing.
+   - **What it absorbs, and what it does not.** It absorbs verify's
+     suggestion. It does not absorb item 1 (fidelity) or item 2 (base), which
+     stay held, each with its own clearing condition. **SPEC-087's `M-6` is not
+     counted**, because it stated no edit, which the parent clause closes.
+     SPEC-088's `M-A0` is not a case, because it had one reading.
 
 ## Dependencies
 

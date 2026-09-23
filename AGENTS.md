@@ -397,6 +397,33 @@ producing a differently-hashed rename (`353b013924bc`) that fires the same two
 guards identically — which is the point: the hash does not identify the edit.
 Codified at SPEC-087 ship (2026-09-07).
 
+**Refinement of the clause above — a pinned diff has exactly one literal
+reading.** *State the edit* is met only when applying it to the target admits
+exactly one result: the replaced text occurs **exactly once** in the file, or
+the row names the line it sits on. An `old → new` pair whose `old` occurs three
+times meets the letter of *"the line changed and its replacement text"* and
+still pins nothing, because each reading hashes differently and behaves the
+same under the guard. The test is mechanical, so make it a guard rather than a
+habit: the probe helper refuses an edit whose old text does not occur exactly
+once, before it touches the file. Earned **N=2 paired-opposing** on one
+surface, a matrix row that a later cycle reads to reproduce a hash. NEGATIVE:
+SPEC-094 design's `M-D1` stated its rename as *"one of three
+`omitted_failure_count` mentions"*; build reproduced the behaviour but not the
+hash (`8d7c04ac6af3` against the stated `471eb6137945`), and verify had to hash
+all three readings to find design's (the second, `:938` at `c3f707a`).
+POSITIVE: SPEC-088's `M-B3`/`M-B4` and SPEC-086's five abbreviated rows were
+written as prose, each with exactly one literal reading, and all reproduced
+first try; SPEC-086's verify re-derived its five from their own descriptions
+against a pristine checkout, and its ship admitted them on exactly this
+property. SPEC-094's verify then enforced it: its helper refused its own
+ambiguous `V-N6` anchor (`if n == 1 {`, twice in `bundle.go`) before any gate
+ran. SPEC-087's `M-6` is not counted, because it stated no edit, which the
+clause above already closes. **What this refinement does not cover:** a
+uniquely readable edit that is not the one that ran (SPEC-088's `M-A0`), and a
+baseline hash that does not name its commit. Each is a different property of
+the same record, and each is held on STAGE-023's page below the bar. Codified
+at SPEC-094 ship (2026-09-23).
+
 **A *no difference* is a measurement, not a default — validate the inputs
 before you believe it.** When a cycle's evidence is an equality — two binaries'
 output compared byte for byte, two hashes compared, a `diff` reported empty, a
