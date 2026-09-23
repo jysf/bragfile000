@@ -306,7 +306,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       reading* (see *Held codification candidates*, item 5). `pr:226` (frame),
       `pr:227` (design), `pr:228` (build), `pr:229` (verify), `pr:230`
       (ship).
-- [ ] SPEC-095 (design) — **`summary` moves a failure out of `## Highlights`.**
+- [x] SPEC-095 (shipped on 2026-09-23) — **`summary` moves a failure out of `## Highlights`.**
       Given a file at SPEC-094's framing (2026-09-22), in the same edit as this
       line. It is DEC-050 row 3, which states the posture in full: SPEC-086's
       partition into `## What didn't work` / `failures_by_project`, on a third
@@ -328,6 +328,17 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       and has no window cliff. DEC-050 gains a second `## Amendment` and no
       new record. Literals are `git diff` output against `55063e9`, and 17
       probes are hash-gated.
+      **Shipped 2026-09-23.** On the live month window exactly the four
+      failures leave `## Highlights` for `## What didn't work`, and both count
+      maps are byte-identical to the pre-build binary (DEC-048 held with no
+      rename). Verify ran twice, independently, and returned a punch list of
+      two record fixes and one strengthened test, all fixed in-cycle, with no
+      production Go changed: `M-9`'s sketched new side pinned (filed under
+      item 5 of *Held codification candidates*), a typed `5` corrected to a
+      derived `6`, and `By project` given an end-to-end pin. Ten novel
+      mutants, all killed. Its verify also ran candidate 2's named test,
+      which ship reproduced and **codified** into AGENTS.md §12. `pr:231`
+      (design), `pr:232` (build), `pr:234` (verify), `pr:235` (ship).
 - [ ] SPEC-096 (frame) — **the candid directives say what a failure label
       means.** Given a file at SPEC-094 ship (2026-09-23), in the same edit as
       this line, on the maintainer's ruling of that day. SPEC-094's verify
@@ -441,6 +452,20 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `scripts/_lib.sh`, for `next_id` at `:107`. Framing decides whether it
       is a line in this spec's build or a split of its own. Either way it has
       a named owner. **Not fixed at SPEC-088 ship**, by instruction.
+      **Also owned here, routed at SPEC-095 ship (2026-09-23), after v0.7.0:
+      commit the mutation-probe helper to `scripts/`.** Every spec since
+      SPEC-087 has written its own probe helper in a session scratchpad
+      (SPEC-095's design `probe.py`, and one per verify pass), so each guards
+      only what that session thought of, and none persists. The committed
+      helper refuses an old side that does not occur exactly once and a new
+      side containing `…`, refuses the gates until the hash moves, restores
+      from a backup, and **emits the matrix row from its own run: the applied
+      diff, the base hash and the `main` commit it was read at**. That closes
+      SPEC-095's `M-9` (a sketched new side, *Held codification candidates*
+      item 5), makes §12's base refinement mechanical, and is the tool any
+      decision on item 1 should be made with. It lands here because this
+      spec already owns the recipe layer in `scripts/`. It does not gate
+      v0.7.0.
       **Also owned here, found at SPEC-088 ship (2026-09-18): `just
       archive-spec` turns `AC2` red on every archive.**
       `scripts/archive-spec.sh` moves the spec with a plain `mv`, not
@@ -471,35 +496,34 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `delete.go`. Cheaper to leave unowned and visible than to invent a spec id
       for it now.
 
-**Count:** 6 shipped / 0 verify / 1 in build / 0 in design / 5 framed / 2 not
+**Count:** 7 shipped / 0 verify / 1 in build / 0 in design / 4 framed / 2 not
 yet written
-(Re-derived at SPEC-094 ship, 2026-09-23. It comes from each file's own
+(Re-derived at SPEC-095 ship, 2026-09-23. It comes from each file's own
 `cycle:` field, read with
 `awk '/^---$/{f=!f; next} f && /^[[:space:]]+cycle:/{print $2; exit}'` over
 `projects/PROJ-008-*/specs/*.md` and `specs/done/*.md`, and is not
-incremented. Every file's `stage:` is STAGE-023, read the same way. shipped =
-SPEC-085, SPEC-086, SPEC-087, SPEC-088, SPEC-089 and SPEC-094, the six
-`cycle: ship` files in `specs/done/`. in build = SPEC-091. **Nothing is in
-design or verify.** framed = SPEC-090, SPEC-092, SPEC-093, SPEC-095 and
-SPEC-096, the five `cycle: frame` files in `specs/`. Only SPEC-095 has had a
-framing pass and carries a `## GO / NO-GO`; it was created at SPEC-094's
-framing. The other four are id-claiming files rather than fully framed specs:
-SPEC-090 was created at SPEC-089's ship, SPEC-092 and SPEC-093 at SPEC-088's
-framing, and SPEC-096 at SPEC-094's ship. `not yet written` is the two
-`- [ ] (not yet written…` entries: `--type` negation and `brag delete`. The
-two recipe defects routed at SPEC-088's ship, `advance-cycle` and
-`archive-spec`, add no entry, because both have an owner, SPEC-093. Both fired
-again at SPEC-094's ship, as they did at SPEC-086's: `advance-cycle` stripped
-the `cycle:` comment, which was restored by hand, and the archive's plain `mv`
-was staged with `git add -A` before any gate ran.)
+incremented; only files whose `stage:` is STAGE-023, read the same way, are
+counted. shipped = SPEC-085, SPEC-086, SPEC-087, SPEC-088, SPEC-089, SPEC-094
+and SPEC-095, the seven `cycle: ship` files in `specs/done/`. in build =
+SPEC-091. **Nothing is in design or verify.** framed = SPEC-090, SPEC-092,
+SPEC-093 and SPEC-096, the four `cycle: frame` files in `specs/`, all of them
+id-claiming files rather than fully framed specs: SPEC-090 was created at
+SPEC-089's ship, SPEC-092 and SPEC-093 at SPEC-088's framing, and SPEC-096 at
+SPEC-094's ship. `not yet written` is the two `- [ ] (not yet written…`
+entries: `--type` negation and `brag delete`. The routed recipe work,
+`advance-cycle`, `archive-spec` and now the probe helper, adds no entry,
+because it has an owner, SPEC-093. Both recipe defects fired again at
+SPEC-095's ship: `advance-cycle` stripped the `cycle:` comment, which was
+restored at column 36, and the archive's plain `mv` was staged with
+`git add -A` before any gate ran.)
 
 **The stage does NOT close here.** Success Criteria 1, 2 and the DEC-014/
 DEC-048 envelope line are met by SPEC-085. **Criterion 4** (*the celebratory
-digests do not silently absorb failures*) is now **three quarters met**:
-SPEC-086 shipped `wrapped` and `impact` on 2026-09-20, and SPEC-094 shipped
-`story` on 2026-09-23. The `summary` quarter is owed by **SPEC-095**, which is
-why it is now the last spec gating v0.7.0. SPEC-096 does not gate it: it acts
-on the prose a model writes from a `story` bundle, not on the bundle.
+digests do not silently absorb failures*) is now **met**: SPEC-086 shipped
+`wrapped` and `impact` on 2026-09-20, SPEC-094 shipped `story` and SPEC-095
+shipped `summary` on 2026-09-23. Nothing left in the backlog gates v0.7.0;
+the release cut is its own spec. SPEC-096 does not gate it: it acts on the
+prose a model writes from a `story` bundle, not on the bundle.
 Criterion 3 is **half met** — see *The Fork 3 finding* below.
 
 ### The conditional spec fired (2026-09-05, at SPEC-085 design)
@@ -850,9 +874,9 @@ a helper against inputs its only producer cannot emit is speculative work. This
 note exists so that a future spec which teaches `inventory.sh` a computed or
 quoted label knows it is the change that makes them reachable.
 
-### Held codification candidates (SPEC-088 ship, 2026-09-18; updated SPEC-086 ship, 2026-09-20, and SPEC-094 ship, 2026-09-23)
+### Held codification candidates (SPEC-088 ship, 2026-09-18; updated SPEC-086 ship, 2026-09-20, SPEC-094 ship, 2026-09-23, and SPEC-095 ship, 2026-09-23)
 
-Three `AGENTS.md` §12 candidates below the codification bar, plus the two this
+Two `AGENTS.md` §12 candidates below the codification bar, plus the three this
 stage has cleared. They are listed here rather than in an archived spec because a
 candidate routed that way never arrived: SPEC-087's ship routed one to SPEC-088
 in its own reflection only, and none of SPEC-088's four cycles saw it. **When a
@@ -924,8 +948,66 @@ on `M-6`).
      does not reproduce its hash, because the edit that ran was a different
      one. That is N=2 distinct, and the §12(b) refinement precedent then
      applies.
+   - **Ruled at SPEC-095 ship (2026-09-23): SPEC-095's `M-9` is not this
+     item's second negative. Still N=1.** `M-9`'s new side was a sketch,
+     *"wrapped in `if tc.Type != "failed" { … }`"*, and verify hashed five
+     readings of it. Its record is under item 5, the only place it is
+     counted. SPEC-095's second verify pass argued the other way, by cause:
+     design's helper applied one literal edit (`e9404d9921ee` proves which),
+     and the cell was a description written afterwards, which is this
+     item's text word for word, so `M-A0` and `M-9` share a cause and differ
+     only in symptom. **The argument is sound about cause, and ship does not
+     adopt it**, because adopting it amends two sentences this page
+     pre-registered at SPEC-094 ship: the clearing condition above requires
+     *"exactly one literal reading"*, which `M-9` fails five times over, and
+     the re-scope says *"a future case is counted under exactly one"*
+     property, filed by the property that failed. Counting `M-9` here would
+     re-scope the item by cause **with the very case that the re-scope
+     clears it on**, which is the move a pre-registered condition exists to
+     prevent. SPEC-094's ship already weighed the same counter-argument for
+     `M-D1` and filed it by symptom. **If a later session wants the item
+     scoped by cause** (*"the record is the output of the run"*), that is a
+     deliberate re-scope, to be written as one, and `M-A0` + `M-9` would then
+     stand at N=2 with the printed-diff rows of SPEC-095's two verify passes
+     as the positive. It should be decided with the committed helper in hand
+     (SPEC-093, *Also owned here*), because the helper is the remedy both
+     readings share, and the codified form would be one sentence pointing at
+     it.
 
-2. **A baseline hash must name the commit it was taken against.** Held at
+2. **CLEARED at SPEC-095 ship (2026-09-23), N=2 paired-opposing, and written
+   into AGENTS.md §12** as a refinement of *"A mutation pinned by a hash must
+   also pin its diff"*: ***a baseline hash names the commit it was taken
+   against, and that commit is on `main`.*** The record below is kept as it
+   stood, for the stage close.
+   - **The positive that cleared it, reproduced by ship itself rather than
+     taken from verify.** SPEC-094's `M-D1` names `:938` at `c3f707a`, a
+     squash commit on `main` (`git merge-base --is-ancestor c3f707a main`).
+     SPEC-095's build (`6590772`) moved `docs/api-contract.md`, the only
+     commit touching it since. Hash-gated at ship:
+     `git show c3f707a:docs/api-contract.md` hashes to **`1cd16e2a3d7a`**, the
+     stated old side occurs **once**, on `:938`, and the edit gives
+     **`471eb6137945`**, exactly as stated. The file on `main` hashes to
+     **`3da3b8d8a35f`**, the line is now `:955`, and the same edit there
+     gives `0a292ba41733`. So the named base was load-bearing: without it
+     the row cannot be reproduced.
+   - **Why this is a cycle that paid, not an invalidation.** SPEC-095's
+     verify *attempted* the reproduction after the target moved, which is
+     the act the negative's cycle paid for, and this time the attempt
+     succeeded because of the name. The row was written by SPEC-094 and
+     reproduced by SPEC-095, a spec other than SPEC-086, which is the
+     clearing condition as pre-registered. N=2 paired-opposing against
+     SPEC-086's `V-F0`.
+   - **The sentence carries its missing half**, as found at SPEC-094 ship:
+     the named base must be **a commit on `main`**, because a squash erases
+     *"this commit"* (SPEC-086's `935c8f0`/`c0b840e` miss).
+   - **Applied in the same ship.** SPEC-095's matrix baselines are named at
+     `6590772` and `04a01f3`. The §12 edit moves `AGENTS.md`, the target of
+     SPEC-094's `M-D3` and SPEC-095's `M-D4`; both keep their named bases
+     rather than being re-pinned to a branch commit, and both were re-run on
+     the edited file as behaviour checks (`AE3` alone and `AF2` alone).
+
+   *The candidate as held before it cleared:* **A baseline hash must name the
+   commit it was taken against.** Held at
    **N=1**. New at SPEC-086 ship (2026-09-20). A refinement of the same promoted
    clause as candidate 1, so its bar is **N=2**, not 3 — it is one case short,
    not two.
@@ -1074,6 +1156,24 @@ on `M-6`).
      stay held, each with its own clearing condition. **SPEC-087's `M-6` is not
      counted**, because it stated no edit, which the parent clause closes.
      SPEC-088's `M-A0` is not a case, because it had one reading.
+   - **A post-codification case, filed here at SPEC-095 ship (2026-09-23):
+     SPEC-095's `M-9`, the new side.** Design's row stated the old side
+     literally (one occurrence, the guard held) and the new side as a
+     sketch, *"wrapped in `if tc.Type != "failed" { … }`"*. Build reproduced
+     the behaviour and not the hash (`c840a90180f2` against the stated
+     `e9404d9921ee`), and verify hashed **five** readings from base
+     `3b81e79b3fdf` (as of `6590772`) to find design's, the gofmt three-line
+     wrap. The clause's first sentence already covers it (*"applying it to
+     the target admits exactly one result"*); **its guard does not**, because
+     the guard it prescribes checks only that the old text *"occurs exactly
+     once"*. So `M-9` is a **guard-scope** case of a codified clause, not a
+     count toward anything, and it needs no new prose. Both of SPEC-095's
+     verify passes recommend the same remedy, and ship routes it: **commit
+     the probe helper to `scripts/`, emitting the matrix row (the applied
+     diff, the base hash and its commit) from its own run**, which makes a
+     row with a `…` impossible to write. Owner: **SPEC-093**, after v0.7.0
+     (see its entry, *Also owned here*). Candidate 1's ruling on the same
+     case is under item 1.
 
 ## Dependencies
 

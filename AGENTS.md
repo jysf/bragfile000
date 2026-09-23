@@ -421,8 +421,28 @@ ran. SPEC-087's `M-6` is not counted, because it stated no edit, which the
 clause above already closes. **What this refinement does not cover:** a
 uniquely readable edit that is not the one that ran (SPEC-088's `M-A0`), and a
 baseline hash that does not name its commit. Each is a different property of
-the same record, and each is held on STAGE-023's page below the bar. Codified
-at SPEC-094 ship (2026-09-23).
+the same record. The first is held on STAGE-023's page below the bar; the
+second is the refinement below. Codified at SPEC-094 ship (2026-09-23).
+
+**Refinement of the same clause — a baseline hash names the commit it was
+taken against, and that commit is on `main`.** A hash pins a file state, and a
+later cycle that edits the file leaves the row stated against a base the tree
+no longer has. Named, the row survives the move: it is reproduced from
+`git show <base>:<path>`, and a failure to reproduce then means the mutant, not
+the drift. The base must be a commit already on `main`, never *"this commit"*
+on a branch, because a squash merge erases the branch commit, and so does a
+second commit in the same PR after a re-pin. Earned **N=2 paired-opposing** on
+one surface, a matrix row a later cycle reads to reproduce a hash. NEGATIVE:
+SPEC-086's `V-F0`, whose `M-D1` and `M-D4` named no commit and went stale
+inside their own cycle when a citation fix moved `docs/api-contract.md`; its
+ship's *"this ship commit"* re-pin of `M-D3` was then erased by a later commit
+in the same PR and the squash (`935c8f0`, `c0b840e`). POSITIVE: SPEC-094's
+`M-D1`, stated as `1cd16e2a3d7a` at `c3f707a`, reproduced its
+`471eb6137945` at SPEC-095's verify and again at its ship, after SPEC-095's
+build had moved the file to `3da3b8d8a35f`; the same edit on the moved file
+lands on another line and hashes to `0a292ba41733`. A row invalidated and
+never re-run is not a case, because nobody paid. Codified at SPEC-095 ship
+(2026-09-23).
 
 **A *no difference* is a measurement, not a default — validate the inputs
 before you believe it.** When a cycle's evidence is an equality — two binaries'

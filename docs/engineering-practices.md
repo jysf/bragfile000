@@ -35,8 +35,8 @@ The section that says the most about how this repository is run is
 | Decision records claiming confidence 1.0 | 0 | `insight.confidence` in the front-matter |
 | Projects | 9 | `projects/PROJ-*/brief.md` |
 | Stages | 23 | `projects/*/stages/STAGE-*.md` |
-| Specs carried to ship and archived | 87 | `projects/*/specs/done/` |
-| …of those, also carrying a build-phase reflection | 81 | `### Build-phase reflection` in those files |
+| Specs carried to ship and archived | 88 | `projects/*/specs/done/` |
+| …of those, also carrying a build-phase reflection | 82 | `### Build-phase reflection` in those files |
 | Go source files | 70 | `internal/`, `cmd/` |
 | Go test files | 81 | `internal/`, `cmd/` |
 | Go test functions | 862 | `func Test*` in `*_test.go` |

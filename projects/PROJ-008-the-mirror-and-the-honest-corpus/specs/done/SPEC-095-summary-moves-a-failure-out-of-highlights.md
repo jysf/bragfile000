@@ -7,7 +7,7 @@
 task:
   id: SPEC-095
   type: story                      # epic | story | task | bug | chore
-  cycle: verify                    # frame | design | build | verify | ship
+  cycle: ship                      # frame | design | build | verify | ship
                                    # Designed 2026-09-22 against main 55063e9,
                                    # GO at S, held. Framing's record is kept
                                    # below as written.
@@ -376,7 +376,10 @@ at baseline. Baselines, on the prototype (= `55063e9` + the literals):
 its baseline at the end.** Each *Diff* cell's old text occurs exactly once
 in its baseline file, so each row has one literal reading. *(Verify, V-F1:
 true of every old side, and false of M-9's new side, which was written as a
-sketch. The row now states it literally.)*
+sketch. The row now states it literally.)* *(Ship: every baseline above
+hashes identically at `6590772`, the build merge, and at `04a01f3`, the
+verify merge, both on `main`. Those are the rows' durable bases, so a row
+is reproduced from `git show 6590772:<path>`, not from the file on disk.)*
 
 | # | File | Diff (text replaced → replacement) | Hash | Fired |
 |---|---|---|---|---|
@@ -711,7 +714,7 @@ design's while the same tests fire is reported, not hidden.
 |---|---|
 | DEC-050 rule 1 (the predicate) | reached only through `SplitFailures`, which has `TestSplitFailures_PartitionsInOrderNeverNil` and `TestFailureClassifier_GoPredicateMatchesTypeFilter` (unchanged) |
 | DEC-050 rule 2 / LD1 | `TestToSummary_PartitionCoversEveryInWindowEntry`, `TestLearnCmd_SummarySectionsWhatItWrote` |
-| DEC-050 rule 3 / LD3 / DEC-048 | `TestToSummary_PartitionCoversEveryInWindowEntry` (the count sums), both failure goldens, M-9 |
+| DEC-050 rule 3 / LD3 / DEC-048 | `TestToSummary_PartitionCoversEveryInWindowEntry` (the count sums, **JSON only**), both failure goldens, `TestLearnCmd_SummarySectionsWhatItWrote` (`By type` and, since verify's V-F3, `By project`, in both formats), M-9. *Corrected at ship: in markdown, rule 3 is held by the md failure golden and the e2e, not by the count sums (verify's V-4 note and V-F3)* |
 | DEC-050 rule 4 / LD2 | `TestToSummary_SectionsRenderOnlyWhenNonEmpty`, `TestToSummaryMarkdown_DEC014FullDocumentGolden` |
 | DEC-050 rule 5 / LD4 | `TestToSummaryJSON_FailureSectionGolden`, `TestToSummaryJSON_DEC014ShapeGolden` |
 | DEC-014 part 4 | `TestToSummary_EmptyEntriesEmitsProvenanceOnly`, `TestToSummary_SectionsRenderOnlyWhenNonEmpty` |
@@ -2292,3 +2295,86 @@ than before it.
   clean. No derived number moved, so the inventory was not regenerated.
 
 ---
+
+### Ship addendum (2026-09-23): two codification rulings, and the bases are named
+
+**Candidate 1 (faithful): `M-9` does not count. Still N=1.** The two verify
+passes disagreed, and ship sides with the first on the page's own terms.
+STAGE-023 pre-registered the clearing condition as *"a second stated edit
+with exactly one literal reading does not reproduce its hash"*, and the
+re-scope says a future case is *"counted under exactly one"* property.
+`M-9`'s new side had at least five readings, so it is a uniqueness case,
+filed under item 5 as a **guard-scope** case of the codified clause: the
+clause's text covers it, its old-side-only guard does not. The second pass's
+argument by cause is sound, and adopting it would amend a pre-registered
+rule with the case that then clears it. Ship declines to do that and records
+the argument on the stage page as a deliberate re-scope a later session may
+make, with the committed helper in hand. Both passes' remedy is routed:
+**commit the probe helper to `scripts/`, emitting the matrix row from its own
+run**, owned by **SPEC-093**, after v0.7.0. No new AGENTS.md prose for it.
+
+**Candidate 2 (based): CLEARED, N=2 paired-opposing, codified in AGENTS.md
+§12.** Reproduced at ship with a hash-gated probe, not taken from verify:
+`git show c3f707a:docs/api-contract.md` (`c3f707a` is on `main`) hashes to
+`1cd16e2a3d7a`, SPEC-094's `M-D1` old side occurs once, on `:938`, and the
+edit gives `471eb6137945`, as stated. The file on `main` is `3da3b8d8a35f`,
+moved by `6590772` alone, where the line is `:955` and the same edit gives
+`0a292ba41733`. A reproduction attempt after the target moved succeeded
+because the base was named: a cycle that paid, from a spec other than
+SPEC-086, against `V-F0`. The clause carries the missing half: the named base
+is a commit on `main`.
+
+**This ship moves a probe target, so it names bases rather than re-pinning.**
+The §12 edit moves `AGENTS.md`, the target of SPEC-094's `M-D3` (base
+`713a717a154f` at `c3f707a`) and this spec's `M-D4` (base `5fb3a6d60c68` at
+`6590772`; re-derived at ship from that base, `→ 3e34c51a9a38`, as stated).
+Neither is re-pinned. Both were re-run on the edited file as behaviour checks
+only, with the helper refusing a non-unique old side and restoring by `cp`:
+`M-D3` fires **`AE3` alone** and `M-D4` fires **`AF2` alone**, and the file
+hash returned each time. Those working-tree hashes are not pins, because no
+branch commit survives the squash. The matrix preamble now names `6590772`
+and `04a01f3` for all five baselines, each hashed at both.
+
+**Record fixes.** The decision-to-test map's rule-3 row now credits
+`TestLearnCmd_SummarySectionsWhatItWrote` and says the count sums are JSON
+only (verify's V-4 and V-F3).
+
+---
+
+## Reflection (Ship)
+
+*Appended during the **ship** cycle. Outcome-focused reflection, distinct
+from the process-focused build reflection above.*
+
+1. **What would I do differently next time?**
+   — Write every matrix cell from the helper's printed diff, the new side
+   as well as the old. Design's helper enforced SPEC-094's uniqueness guard
+   on the old side, and all 16 old sides held; the one row that did not
+   reproduce was the one new side written as a sketch after the run. That
+   cost build a hash, verify five probes, and ship a codification ruling.
+   The durable fix is a helper in `scripts/` that writes the row itself,
+   now routed to SPEC-093.
+
+2. **Does any template, constraint, or decision need updating?**
+   — One, done in this cycle: **AGENTS.md §12** gains *a baseline hash
+   names the commit it was taken against, and that commit is on `main`*,
+   cleared at N=2 paired-opposing (SPEC-086's `V-F0` against SPEC-094's
+   `M-D1` reproducing at `c3f707a` after this spec moved its file). The
+   uniqueness refinement's closing sentence now points at it. No decision
+   record is amended: DEC-050's second amendment was written at design and
+   holds. No template or constraint changes. The DEC-014 amendment naming
+   `failures_by_project` stays an open maintainer question.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — No new spec. The probe helper is routed to **SPEC-093**, which has a
+   file and already owns `scripts/`'s recipe defects, rather than given a
+   new id in prose. The v0.7.0 release cut is next, and is its own spec.
+   SPEC-096 stays open and does not gate the cut.
+
+4. **What can a user do now that they couldn't before?**
+   — Before, `brag summary` listed every recorded failure under
+   `## Highlights`, where a manager or a script reading it saw a dead end
+   as a highlight; after, on the live month window, exactly the 4 failures
+   among its 234 highlights move to `## What didn't work` (and to
+   `failures_by_project` in JSON), and both count maps are byte-identical to
+   the pre-build binary, so no total changed meaning. `pr:235`.
