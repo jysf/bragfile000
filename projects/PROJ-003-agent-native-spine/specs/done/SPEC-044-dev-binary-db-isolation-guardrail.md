@@ -4,7 +4,7 @@
 task:
   id: SPEC-044
   type: story
-  cycle: build                     # design + build delivered together (retro R3)
+  cycle: ship                      # design + build delivered together (retro R3); closed out 2026-09-24
   blocked: false
   priority: high                   # retro P1: a prod-DB safety gap with no code guardrail
   complexity: M
@@ -160,3 +160,38 @@ released binaries are unaffected.
 3. **If you did this task again, what would you do differently?**
    — Nothing. Putting the guard in `Open` (the single pre-apply choke point)
    avoided a 10-site CLI refactor and kept the policy in one testable place.
+
+---
+
+## Close-out (2026-09-24)
+
+**Shipped 2026-07-05 in #72 (`bc29a6a`), and never closed out.** The build
+merged, DEC-026 was written, and PROJ-003's brief records this spec as
+shipped, but the file stayed at `cycle: build` and was never archived. It is
+closed out here, as a chore, with no code change. Checked on `main` at
+`5edc40e`: `internal/storage/devguard.go` is in `storage.Open`'s path
+(`store.go:95`), and `go test -run 'Dev|Guard' ./internal/storage` passes.
+There was no verify cycle, because design and build were delivered together
+(retro R3), and there is no ship PR other than #72.
+
+## Reflection (Ship)
+
+*Written at close-out, 2026-09-24, from the record rather than at the time.*
+
+1. **What would I do differently next time?**
+   — Run the ship step in the same PR as a collapsed design+build. The work
+   shipped, but its file sat at `cycle: build` for eleven weeks and read as
+   pending work in `just status`, to the point of being proposed for a move
+   into a future project.
+
+2. **Does any template, constraint, or decision need updating?**
+   — No. DEC-026 still describes the guard as built.
+
+3. **Is there a follow-up spec I should write now before I forget?**
+   — No.
+
+4. **What can a user do now that they couldn't before?**
+   — Nothing new at close-out. Since v0.3.1 (it merged just after the
+   v0.3.0 cut; `git tag --contains bc29a6a` starts at v0.3.1), a dev build
+   refuses to migrate an established `~/.bragfile` DB, which is the failure
+   that hit the v0.2.0 cut. `pr:72`.
