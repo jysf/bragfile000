@@ -360,6 +360,13 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       line and the fix shape are all measured, so it is a bug and not a
       question — and filing it as a question would move `Y4`'s pinned counts
       and force an inventory regeneration for zero information gain.
+      **Its error message was routed to SPEC-090** by the user on 2026-09-14,
+      in `NEXT-SESSION-PROMPT.md` (#213), with a recommended rule: exit 1
+      when a `--type` value contains `!`, `,`, whitespace or a leading `-`
+      *and* matches zero rows. **SPEC-090's framing (2026-09-24) sent it
+      back here**, because the two share no code and together would pass the
+      "split if it grows past M" line. The rule travels with this entry.
+      Whether it gates v0.7.0 is the maintainer's call.
 
 - [ ] SPEC-090 (frame) — **`brag add --json` drops a repeated key silently,
       the way the editor buffer used to.** Routed out of SPEC-089 verify
@@ -385,6 +392,19 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       rejecting means a `json.Decoder`-token pre-pass over the object.
       Same shape on the MCP `brag_add` ingress, which the SDK decodes with the
       same package.
+      **Framed 2026-09-24: GO at M, and it gates v0.7.0**, by the
+      maintainer's pull-in that day. It is the last spec before the cut.
+      Framing re-measured both ingresses. MCP was driven end to end against
+      a scratch DB, and the "same package" claim above is wrong in detail:
+      the SDK uses `segmentio/encoding/json`, and the two ingresses disagree
+      on six variant rows. Every user-owned field on both ingresses, and
+      every MCP provenance field (`cost:9.99` over `1.00`), is silently
+      rewritten. **The fork is open for the maintainer, yes or no: reject a
+      repeated top-level key on both ingresses in v0.7.0, as a named
+      breaking change.** Framing recommends yes. The record would be a new
+      DEC, not an amendment to DEC-051, and framing does not claim its id.
+      The `--type` error message the 2026-09-14 prompt routed here is
+      **out**, and returns to the `--type` entry above.
 
 - [ ] SPEC-091 (build) — **the help surface reads as families and tells the
       truth.** Groups `brag --help` into Write / Read / Digest / Admin (moving
@@ -521,8 +541,9 @@ restored at column 36, and the archive's plain `mv` was staged with
 DEC-048 envelope line are met by SPEC-085. **Criterion 4** (*the celebratory
 digests do not silently absorb failures*) is now **met**: SPEC-086 shipped
 `wrapped` and `impact` on 2026-09-20, SPEC-094 shipped `story` and SPEC-095
-shipped `summary` on 2026-09-23. Nothing left in the backlog gates v0.7.0;
-the release cut is its own spec. SPEC-096 does not gate it: it acts on the
+shipped `summary` on 2026-09-23. **SPEC-090 gates v0.7.0**, by the
+maintainer's pull-in of 2026-09-24, and it is the last spec before the cut.
+Nothing else in the backlog gates it, and the release cut is its own spec. SPEC-096 does not gate it: it acts on the
 prose a model writes from a `story` bundle, not on the bundle.
 Criterion 3 is **half met** — see *The Fork 3 finding* below.
 
