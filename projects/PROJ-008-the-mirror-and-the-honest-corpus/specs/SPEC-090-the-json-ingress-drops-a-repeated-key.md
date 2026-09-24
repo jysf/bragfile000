@@ -438,6 +438,11 @@ so that "a repeated key is an error" has no exceptions to document.
 > (MCP), exit 0 / success. The asymmetry with DEC-051 is recorded as
 > deliberate.
 
+**Answered, 2026-09-24: yes, reject.** The maintainer, in the orchestration
+session: *"if you mean a repeated key in the json, then I think reject is
+fine."* It is a repeated key in the JSON object (`{"impact":"A","impact":"B"}`),
+so the condition holds. Design proceeds on the reject branch.
+
 ---
 
 ## The record: a new decision record, not an amendment to DEC-051
@@ -508,6 +513,9 @@ does not make it.** The 2026-09-14 note's argument that it should is
 sound: *"v0.7.0 is the release that gives users a reason to exclude
 failures."* If it does, it needs its own file and id, claimed by writing the
 file.
+
+*Maintainer, 2026-09-24: it does **not** gate v0.7.0. It has its own file
+now, **SPEC-097**, parked in STAGE-027 for a decision on where it belongs.*
 
 ---
 
