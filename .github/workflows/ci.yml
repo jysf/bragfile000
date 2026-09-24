@@ -46,6 +46,12 @@ jobs:
       - name: Run go test ./...
         run: go test ./...
 
+      # The documentation-content assertions (`just test-docs`). Both OSes:
+      # the script is plain bash 3.2 + jq and passes on BSD and GNU userlands.
+      # S2/S3 SKIP here because the runners have no claude CLI.
+      - name: Run scripts/test-docs.sh
+        run: ./scripts/test-docs.sh
+
   # golangci-lint. One OS is enough: the linters are static analysis over the
   # same source, and the two OS-specific surfaces this repo has (path handling
   # and the $EDITOR launch) are exercised by the matrix above.
