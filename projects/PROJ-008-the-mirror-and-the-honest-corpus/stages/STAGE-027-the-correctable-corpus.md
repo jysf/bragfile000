@@ -106,6 +106,7 @@ to it and collides on the next `new-*`.
 - [ ] (not yet written) — non-interactive CLI edit: `brag edit --set`/`--json`, partial update, reusing `capture.ValidateChanged`.
 - [ ] (not yet written) — `brag_edit` MCP tool: partial update by id, provenance-tag safe; run it through actual client **registration** at design, not just schema validation (validate ≠ registration — the SPEC-041 lesson).
 - [ ] (not yet written) — docs/help: state the fixup-vs-retraction split (`add`/`edit --help`, `docs/for-ai-agents.md`); may fold into SPEC-091.
+- [ ] SPEC-097 (frame) — **`--type` negation fails silently** (`--type '!failed'` → exit 0, no rows, no message). **Parked here for a decision, not a thematic fit** (maintainer, 2026-09-24): moved out of SPEC-090's scope and out of STAGE-023, and it does not gate v0.7.0. Framing decides error-message-only versus real negation, and which stage owns it.
 
 **Count:** 0 shipped / 0 active / 3 pending
 

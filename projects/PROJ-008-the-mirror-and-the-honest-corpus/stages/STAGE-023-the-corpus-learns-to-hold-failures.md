@@ -351,7 +351,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       52-run measurement** on whatever wording it locks. Unframed, and
       provisionally S. **Does not gate v0.7.0**, by the maintainer's ruling: the
       bundle already satisfies DEC-050, and this is about the model's prose.
-- [ ] (not yet written, `bug`) — **`--type` negation is inexpressible and fails
+- [x] (moved to SPEC-097, STAGE-027, 2026-09-24) — **`--type` negation is inexpressible and fails
       silently.** `--type '!failed'`, `'-failed'`, `'shipped,failed'`,
       `'!=failed'` and `'NOT failed'` each return **exit 0 with zero rows, no
       diagnostic**; only `--type ''` errors. `internal/storage/store.go:389` is
@@ -360,6 +360,17 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       line and the fix shape are all measured, so it is a bug and not a
       question — and filing it as a question would move `Y4`'s pinned counts
       and force an inventory regeneration for zero information gain.
+      **Its error message was routed to SPEC-090** by the user on 2026-09-14,
+      in `NEXT-SESSION-PROMPT.md` (#213), with a recommended rule: exit 1
+      when a `--type` value contains `!`, `,`, whitespace or a leading `-`
+      *and* matches zero rows. **SPEC-090's framing (2026-09-24) sent it
+      back here**, because the two share no code and together would pass the
+      "split if it grows past M" line. The rule travels with this entry.
+      Whether it gates v0.7.0 is the maintainer's call.
+      **Moved 2026-09-24, by the maintainer:** it does **not** gate v0.7.0.
+      It now has its own file, **SPEC-097** (`cycle: frame`, unframed),
+      parked in **STAGE-027** for a decision on where it belongs. The rule
+      and this history travel with that file. This entry stays as the record.
 
 - [ ] SPEC-090 (frame) — **`brag add --json` drops a repeated key silently,
       the way the editor buffer used to.** Routed out of SPEC-089 verify
@@ -385,6 +396,20 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       rejecting means a `json.Decoder`-token pre-pass over the object.
       Same shape on the MCP `brag_add` ingress, which the SDK decodes with the
       same package.
+      **Framed 2026-09-24: GO at M, and it gates v0.7.0**, by the
+      maintainer's pull-in that day. It is the last spec before the cut.
+      Framing re-measured both ingresses. MCP was driven end to end against
+      a scratch DB, and the "same package" claim above is wrong in detail:
+      the SDK uses `segmentio/encoding/json`, and the two ingresses disagree
+      on six variant rows. Every user-owned field on both ingresses, and
+      every MCP provenance field (`cost:9.99` over `1.00`), is silently
+      rewritten. **The fork is open for the maintainer, yes or no: reject a
+      repeated top-level key on both ingresses in v0.7.0, as a named
+      breaking change.** Framing recommends yes. The record would be a new
+      DEC, not an amendment to DEC-051, and framing does not claim its id.
+      The `--type` error message the 2026-09-14 prompt routed here is
+      **out**, and returns to the `--type` entry above, which the
+      maintainer then gave its own file, SPEC-097, in STAGE-027.
 
 - [ ] SPEC-091 (build) — **the help surface reads as families and tells the
       truth.** Groups `brag --help` into Write / Read / Digest / Admin (moving
@@ -496,7 +521,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       `delete.go`. Cheaper to leave unowned and visible than to invent a spec id
       for it now.
 
-**Count:** 7 shipped / 0 verify / 1 in build / 0 in design / 4 framed / 2 not
+**Count:** 7 shipped / 0 verify / 1 in build / 0 in design / 4 framed / 1 not
 yet written
 (Re-derived at SPEC-095 ship, 2026-09-23. It comes from each file's own
 `cycle:` field, read with
@@ -509,8 +534,9 @@ SPEC-091. **Nothing is in design or verify.** framed = SPEC-090, SPEC-092,
 SPEC-093 and SPEC-096, the four `cycle: frame` files in `specs/`, all of them
 id-claiming files rather than fully framed specs: SPEC-090 was created at
 SPEC-089's ship, SPEC-092 and SPEC-093 at SPEC-088's framing, and SPEC-096 at
-SPEC-094's ship. `not yet written` is the two `- [ ] (not yet written…`
-entries: `--type` negation and `brag delete`. The routed recipe work,
+SPEC-094's ship. `not yet written` is the one `- [ ] (not yet written…`
+entry, `brag delete`. The `--type` negation entry moved to SPEC-097 in
+STAGE-027 on 2026-09-24, so it is no longer counted here. The routed recipe work,
 `advance-cycle`, `archive-spec` and now the probe helper, adds no entry,
 because it has an owner, SPEC-093. Both recipe defects fired again at
 SPEC-095's ship: `advance-cycle` stripped the `cycle:` comment, which was
@@ -521,8 +547,9 @@ restored at column 36, and the archive's plain `mv` was staged with
 DEC-048 envelope line are met by SPEC-085. **Criterion 4** (*the celebratory
 digests do not silently absorb failures*) is now **met**: SPEC-086 shipped
 `wrapped` and `impact` on 2026-09-20, SPEC-094 shipped `story` and SPEC-095
-shipped `summary` on 2026-09-23. Nothing left in the backlog gates v0.7.0;
-the release cut is its own spec. SPEC-096 does not gate it: it acts on the
+shipped `summary` on 2026-09-23. **SPEC-090 gates v0.7.0**, by the
+maintainer's pull-in of 2026-09-24, and it is the last spec before the cut.
+Nothing else in the backlog gates it, and the release cut is its own spec. SPEC-096 does not gate it: it acts on the
 prose a model writes from a `story` bundle, not on the bundle.
 Criterion 3 is **half met** — see *The Fork 3 finding* below.
 
