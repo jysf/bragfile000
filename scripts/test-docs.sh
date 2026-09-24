@@ -2067,11 +2067,11 @@ fi
 # ===== Group AC — the harness guards (SPEC-088) =====
 #
 # Two ways a session can quietly corrupt this repo's OWN documents, each
-# measured before it was guarded. Neither is reachable from CI: `just
-# test-docs` is local-only (.github/workflows/ci.yml runs test, lint and
-# coverage and has no test-docs job), so both assertions gate what a human or
-# an agent runs locally. That is the honest scope, and it is why both failure
-# messages name the remedy instead of pointing at a build log.
+# measured before it was guarded. Both also run in CI since test-docs joined
+# the ci.yml matrix job (after SPEC-095), but a clean CI checkout holds no
+# session's unstaged writes, so the case they exist for is still caught
+# locally. That is why both failure messages name the remedy instead of
+# pointing at a build log.
 
 # AC1 — the `insight.type` vocabulary decisions/_template.md advertises must be
 # exactly the set scripts/inventory.sh emits a row for. DERIVED on both sides,
