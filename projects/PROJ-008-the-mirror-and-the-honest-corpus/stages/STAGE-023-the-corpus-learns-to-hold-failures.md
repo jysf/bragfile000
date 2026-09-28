@@ -372,7 +372,7 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       parked in **STAGE-027** for a decision on where it belongs. The rule
       and this history travel with that file. This entry stays as the record.
 
-- [ ] SPEC-090 (frame) — **`brag add --json` drops a repeated key silently,
+- [ ] SPEC-090 (design) — **`brag add --json` drops a repeated key silently,
       the way the editor buffer used to.** Routed out of SPEC-089 verify
       (2026-09-08); **given a file at SPEC-089 ship (2026-09-08) so the id is
       claimed and the item has a named owner**, per SPEC-087 LD6 and this
@@ -398,6 +398,17 @@ Format: `- [status] SPEC-ID (cycle) — one-line summary`
       same package.
       **Framed 2026-09-24: GO at M, and it gates v0.7.0**, by the
       maintainer's pull-in that day. It is the last spec before the cut.
+      **Designed 2026-09-27 against `main` at `01b10ca`**, on the maintainer's
+      *reject* ruling, with **DEC-055** written in the design commit (and a
+      pointer amendment on DEC-012). One check, `capture.CheckRepeatedKeys`,
+      runs on the raw bytes before either decoder: in `parseAddJSON`, and as
+      SDK receiving middleware ahead of `brag_add`'s schema validation. Keys
+      match the way `encoding/json` matches fields (unescaped, case-folded),
+      top level only. Driven on the real `brag mcp serve`: all eleven
+      repeated-key variants are refused on both ingresses with one message
+      and an unchanged database hash. (The sentence above that the SDK
+      decodes "with the same package" is SPEC-089's, kept as written. Framing
+      measured otherwise: the SDK uses `segmentio/encoding/json`.)
       Framing re-measured both ingresses. MCP was driven end to end against
       a scratch DB, and the "same package" claim above is wrong in detail:
       the SDK uses `segmentio/encoding/json`, and the two ingresses disagree
