@@ -206,6 +206,13 @@ The schema mirrors this guide's field table:
 - **Unknown keys are strict-rejected.** A typo like `{"titl": "x"}`
   surfaces as `unknown field "titl"` rather than silently losing
   your title.
+- **A repeated key is rejected.** `{"title":"x","impact":"A","impact":"B"}`
+  writes nothing and exits 1 with `key "impact" appears more than once`,
+  where it used to store `B` silently. Keys match case-insensitively, so
+  `"Impact"` repeats `"impact"`. A JSON library never emits a repeat, so
+  this only bites a payload built by string templating (`printf`, a
+  heredoc). A schema validator cannot catch it either: it parses the
+  payload first, and parsing keeps one value.
 
 Minimal valid payload:
 

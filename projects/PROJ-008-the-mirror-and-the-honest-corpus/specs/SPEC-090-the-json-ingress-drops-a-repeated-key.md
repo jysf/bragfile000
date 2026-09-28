@@ -7,7 +7,7 @@
 task:
   id: SPEC-090
   type: bug                        # epic | story | task | bug | chore
-  cycle: design                    # frame | design | build | verify | ship
+  cycle: build                     # frame | design | build | verify | ship
                                    # DESIGNED 2026-09-27 against main 01b10ca
                                    # on the maintainer's reject ruling; DEC-055
                                    # is claimed by the design commit's file.
@@ -2592,3 +2592,93 @@ commit's block: `Go source files` 70 → 71, `Go test files` 81 → 83,
 `Go test functions` 862 → 870, and `Documentation assertions (distinct ids)`
 212 → 218. Paste its output between the markers. If another row moves, `main`
 has moved; trust the script, and say so in the build reflection.
+
+---
+
+## Build Completion
+
+*Filled in at the end of the **build** cycle, before advancing to verify.*
+
+- **Branch:** `build/spec-090-json-duplicate-key`
+- **PR (if applicable):** none — the orchestrator opens it.
+- **All acceptance criteria met?** yes (AC-1 through AC-10), all reproduced on
+  a scratch store (never `~/.bragfile/db.sqlite`) and, for AC-3/AC-4, against
+  the real `brag mcp serve` binary with a held-open stdin (Traps). AC-1: exit
+  1, empty stdout, exact stderr, DB hash unchanged (`bd107ab6ee48…` before and
+  after). AC-2: the case-fold message names both spellings. AC-3: the real
+  server's rejected-call result is byte-for-byte
+  `{"content":[{"type":"text","text":"brag_add: key \"impact\" appears more than once"}],"isError":true}`,
+  the DB hash held across the reject, and a following clean `brag_add` on the
+  same session succeeded. AC-4: all twelve rows plus 12a/12b reproduced the
+  `after` columns on both the CLI binary and the real server; the four extra
+  cases (r00/r13/r14/r15) too, with the DB hash unmoved across all four
+  rejections on each ingress. AC-5: the clean payload stores `REAL` on both
+  ingresses; the four malformed/non-repeat payloads (`titl` typo, truncated
+  object, array-wrapped, two concatenated objects) gave byte-identical stderr
+  on a binary built from `main` (`95d7b39`) and the build binary. AC-6:
+  `go test -count=1 ./...` is 1150 pass / 0 fail across 14 packages, the 8 new
+  tests exist under their spec'd names, and `git diff --stat` on the two
+  touched test files shows pure insertions (one import + one appended test
+  each). AC-7: `./scripts/test-docs.sh` is 219 OK / 0 FAIL including
+  `AG1`–`AG6`, and the inventory block matches `just inventory`'s output
+  verbatim. AC-8: all five gates green (below). AC-9: all 18 kept probes
+  reproduced exactly, hash-gated before and after each — see *Deviations* for
+  the one self-inflicted extraction bug caught before any probe ran. AC-10:
+  `git diff main -- decisions/DEC-055-*.md decisions/DEC-012-*.md` is empty,
+  and DEC-012's text above its amendment header is byte-identical to
+  `01b10ca` through line 284 (line 285 is the ordinary blank separator before
+  the new heading).
+- **New decisions emitted:** none. DEC-055 and DEC-012's amendment were
+  written at design; this cycle only implements the rule.
+- **Deviations from spec:**
+  - None in the shipped diff: all 13 `git diff` blocks in §1–§13 applied via
+    `git apply` with a clean `--check` both before and after, and every one of
+    the 13 resulting file hashes matches the spec's stated hash exactly. No
+    hunk was applied by hand.
+  - One build-tooling-only note, not a spec defect: my first extraction of the
+    13 diff blocks from the spec's markdown fencing used a non-greedy regex
+    that swallowed the trailing blank line of §10 (`BRAG.md`), whose block
+    happens to end on a blank line right before the closing fence. Caught
+    immediately by validating each hunk's old/new line counts against its
+    `@@` header before ever calling `git apply` — the mismatch (`old=5/6,
+    new=12/13`) pointed straight at the missing line. Re-extracted by
+    splitting on the fence lines' positions instead of a regex spanning them,
+    and all 19 hunks (13 build blocks plus every mutation-matrix cell)
+    balanced after that. The spec's own stated trap — that the repo's
+    trailing-whitespace strip turns a hunk's blank context line into an empty
+    line, needing a restored single space — held for 13 lines across the
+    build blocks and 7 more across the mutation-matrix diffs; every one sat
+    inside a hunk body, confirmed by parsing rather than by eye.
+- **Follow-up work identified:** none beyond what the spec already routes
+  (SPEC-097 for `--type`, SPEC-093 for the probe helper, SPEC-091/092/096, and
+  the v0.7.0 release cut). The two "open, not blocking" items in *Corrections
+  and open questions* (read-only MCP tools parity, an SDK bump's re-run
+  obligation) are noted there and not reopened here.
+
+### Build-phase reflection (3 questions, short answers)
+
+Process-focused: how did the build go? What friction did the spec create?
+
+1. **What was unclear in the spec that slowed you down?**
+   — Nothing in the spec's own mechanics — every literal, hash, and matrix
+   cell was exact. The only friction was self-inflicted tooling: extracting
+   markdown-fenced diff blocks programmatically needs the extraction verified
+   by hunk arithmetic (old/new line counts against `@@`), not trusted by
+   inspection, because a boundary bug in a regex can silently drop a line at a
+   fence edge and nothing about the resulting patch looks wrong until
+   `git apply` either fails elsewhere or, worse, succeeds with a shifted hunk.
+
+2. **Was there a constraint or decision that should have been listed but
+   wasn't?**
+   — No. `no-sql-in-cli-layer`, `stdout-is-for-data-stderr-is-for-humans`,
+   `one-spec-per-pr`, and AGENTS.md §12's mutation clauses all applied
+   cleanly. Every one of the 13 build diffs and 18 probe diffs had an old side
+   occurring exactly once in its base file, so nothing was ever applied by
+   hand or by inference.
+
+3. **If you did this task again, what would you do differently?**
+   — Validate each embedded diff's hunk line-count arithmetic immediately
+   after parsing it out of the markdown, before the first `git apply --check`,
+   rather than after a hash mismatch. That check is cheap (pure arithmetic on
+   the `@@` header vs. counted lines) and would have caught the §10
+   extraction bug at parse time instead of at verification time.
