@@ -282,3 +282,16 @@ pressed, 0.75 on choice 4 alone is honest; 0.85 composite holds.
     present tense).
   - `docs/data-model.md` (DEC-012 cross-reference added; no schema
     change).
+
+## Amendment (2026-09-27, SPEC-090 design)
+
+A seventh rule now applies to this schema, recorded in
+[DEC-055](DEC-055-a-repeated-json-key-is-rejected-on-both-machine-ingresses.md)
+rather than here: an input object that names the same top-level key twice
+(compared after unescaping and case-insensitively, as the decoder matches
+fields) is rejected with nothing written, before it is decoded. Choices 1–6
+stand as written above, with two narrowings. Choice 4: a server-owned key is
+still tolerated and ignored, but sent twice it is an error like any other
+repeat. Choice 5: a repeated unknown key is reported as a repeat, not as
+`unknown field`; either way it is rejected with the key named. The MCP
+`brag_add` tool, which mirrors this schema, applies the same rule.
