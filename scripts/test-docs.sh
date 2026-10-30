@@ -2328,6 +2328,42 @@ assert_section_names "AF2" "$(grep -F -- '- **learn** —' AGENTS.md)" \
 assert_section_names "AF3" "$(ad_section CHANGELOG.md '## [Unreleased]' '## [')" \
     "CHANGELOG.md, the [Unreleased] section" '`brag summary --format json` no longer lists failures'
 
+# ===== Group AG — a repeated JSON key is rejected (SPEC-090 / DEC-055) =====
+#
+# SPEC-090 makes `brag add --json` and MCP `brag_add` refuse a repeated
+# top-level key instead of keeping the last value. The Go suite pins the
+# behaviour on both ingresses; these ids pin the docs a caller reads, each
+# scoped with Group AD's helpers to the one section that documents that
+# ingress, so the other ingress's text cannot satisfy it.
+
+# AG1 — the contract's `add --json` block states the rule and the record.
+assert_section_names "AG1" "$(ad_section docs/api-contract.md '**STAGE-003 (JSON stdin form):**' '**STAGE-')" \
+    "docs/api-contract.md, the brag add --json block" 'appears more than once' 'DEC-055'
+
+# AG2 — the contract's `brag_add` bullet states it for the MCP tool.
+assert_section_names "AG2" "$(ad_section docs/api-contract.md '- **`brag_add`**' '- **`brag_list`**')" \
+    "docs/api-contract.md, the brag_add bullet" 'appears more than once' 'DEC-055'
+
+# AG3 — the agent-facing tool reference tells a caller what comes back.
+assert_section_names "AG3" "$(ad_section docs/for-ai-agents.md '### `brag_add`' '### ')" \
+    "docs/for-ai-agents.md, the brag_add section" 'brag_add: key "impact" appears more than once'
+
+# AG4 — BRAG.md's JSON contract, which tells a caller to validate against the
+# schema, says the schema cannot catch a repeat.
+assert_section_names "AG4" "$(ad_section BRAG.md '## JSON contract' '## ')" \
+    "BRAG.md, the JSON contract section" '**A repeated key is rejected.**'
+
+# AG5 — the unreleased changelog names the breaking change, and no longer
+# says the JSON ingress is unchanged (SPEC-089's bullet, rewritten).
+ag_unreleased=$(ad_section CHANGELOG.md '## [Unreleased]' '## [')
+assert_section_names "AG5" "$ag_unreleased" "CHANGELOG.md, the [Unreleased] section" \
+    '**Breaking: `brag add --json` and the MCP `brag_add` tool reject a' 'DEC-055'
+if printf '%s\n' "$ag_unreleased" | grep -F -q 'is a separate decoder and is unchanged'; then
+    fail "AG6" "CHANGELOG.md [Unreleased] still says the --json ingress is unchanged"
+else
+    ok "AG6"
+fi
+
 # ===== finalise =====
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

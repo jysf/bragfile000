@@ -37,10 +37,10 @@ The section that says the most about how this repository is run is
 | Stages | 23 | `projects/*/stages/STAGE-*.md` |
 | Specs carried to ship and archived | 89 | `projects/*/specs/done/` |
 | …of those, also carrying a build-phase reflection | 83 | `### Build-phase reflection` in those files |
-| Go source files | 70 | `internal/`, `cmd/` |
-| Go test files | 81 | `internal/`, `cmd/` |
-| Go test functions | 862 | `func Test*` in `*_test.go` |
-| Documentation assertions (distinct ids) | 212 | `scripts/test-docs.sh`, run by `just test-docs` |
+| Go source files | 71 | `internal/`, `cmd/` |
+| Go test files | 83 | `internal/`, `cmd/` |
+| Go test functions | 870 | `func Test*` in `*_test.go` |
+| Documentation assertions (distinct ids) | 218 | `scripts/test-docs.sh`, run by `just test-docs` |
 | …of those, replacing a manual release-checklist item | 6 | the `W`-series in `scripts/test-docs.sh` |
 | Questions tracked in guidance/questions.yaml | 21 | `guidance/questions.yaml` |
 | …of those, still open | 8 | `status: open` in the same file |

@@ -84,7 +84,11 @@ the same `~/.bragfile/db.sqlite` the CLI uses (see §7 to change that).
 Returns the created entry as a single JSON object with the nine standard keys:
 `id`, `title`, `description`, `tags`, `project`, `type`, `impact`,
 `created_at`, `updated_at`. A missing or empty `title` is a **tool error**,
-never a silent insert. Unlike the CLI `brag add`, `brag_add` does **not** emit
+never a silent insert. So is a key sent twice, whether as
+`"impact"` and `"impact"` or as `"impact"` and `"Impact"`: nothing is written,
+and the tool error names the key, e.g.
+`brag_add: key "impact" appears more than once`. Send each key once and retry.
+Unlike the CLI `brag add`, `brag_add` does **not** emit
 a milestone line.
 
 ### `brag_list` — list entries

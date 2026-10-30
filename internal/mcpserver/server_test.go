@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -313,5 +314,49 @@ func TestServer_AddReturnValueParity(t *testing.T) {
 		if string(gv) != string(wv) {
 			t.Errorf("field %q not byte-identical: brag_add=%s export=%s", k, gv, wv)
 		}
+	}
+}
+
+// TestServer_AddRejectsARepeatOfEveryField: a repeat of any brag_add key,
+// the provenance ones included, is a tool error naming the key, and nothing
+// is written (DEC-055). The keys come from addIn's own tags, so a field added
+// later is covered with no edit here. The arguments go over the wire as raw
+// bytes: a map could not hold the repeat.
+func TestServer_AddRejectsARepeatOfEveryField(t *testing.T) {
+	var keys []string
+	typ := reflect.TypeFor[addIn]()
+	for i := range typ.NumField() {
+		name, _, _ := strings.Cut(typ.Field(i).Tag.Get("json"), ",")
+		keys = append(keys, name)
+	}
+	// Non-vacuity: six entry fields and DEC-024/DEC-027's five provenance ones.
+	if len(keys) < 11 {
+		t.Fatalf("addIn has %d json keys, want at least 11: %v", len(keys), keys)
+	}
+	cs, s := newTestServer(t, "repeat-probe")
+	for _, k := range keys {
+		raw := `{"title":"t","` + k + `":"1","` + k + `":"2"}`
+		if k == "title" {
+			raw = `{"title":"a","title":"b"}`
+		}
+		r, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "brag_add", Arguments: json.RawMessage(raw)})
+		if err != nil {
+			t.Fatalf("%s: transport error: %v", raw, err)
+		}
+		if !r.IsError {
+			t.Errorf("%s: want isError, got a success", raw)
+			continue
+		}
+		text := r.Content[0].(*mcp.TextContent).Text
+		if want := `brag_add: key "` + k + `" appears more than once`; text != want {
+			t.Errorf("%s: got %q, want %q", raw, text, want)
+		}
+	}
+	rows, err := s.List(storage.ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(rows) != 0 {
+		t.Errorf("want nothing written, got %d rows", len(rows))
 	}
 }

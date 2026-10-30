@@ -61,7 +61,27 @@ func New(s *storage.Store) *mcp.Server {
 
 	addResources(srv, s)
 
+	srv.AddReceivingMiddleware(rejectRepeatedKeys)
+
 	return srv
+}
+
+// rejectRepeatedKeys runs the repeated-key check (DEC-055) on brag_add's raw
+// argument bytes. It is middleware, not a line in handleAdd, because the SDK
+// validates the arguments against the schema and decodes them last-wins before
+// the handler runs: by then a repeat is either gone or reported as something
+// else. `brag add --json` runs the same check before its own decode.
+func rejectRepeatedKeys(next mcp.MethodHandler) mcp.MethodHandler {
+	return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+		if call, ok := req.(*mcp.CallToolRequest); ok && call.Params.Name == "brag_add" {
+			if err := capture.CheckRepeatedKeys(call.Params.Arguments); err != nil {
+				res := &mcp.CallToolResult{}
+				res.SetError(fmt.Errorf("brag_add: %w", err))
+				return res, nil
+			}
+		}
+		return next(ctx, method, req)
+	}
 }
 
 // addIn is brag_add's input shape. Title has no `,omitempty` so the SDK's
