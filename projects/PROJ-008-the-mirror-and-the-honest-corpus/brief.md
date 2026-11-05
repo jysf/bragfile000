@@ -172,6 +172,9 @@ and its rejected option are recorded in `stages/STAGE-023-*.md` under
       still open; the case for going early is that the friction is live now (a
       maintainer and an agent both hit it in one week), and it is what makes
       STAGE-023's unapproved auto-capture safe to lean on.
+- [ ] **STAGE-028 — app review hardening**: the actionable findings of the
+      2026-10-03 code review (permissions, `(no project)` sentinel collision,
+      MCP bounds, CI gates). Proposed 2026-11-05; no user-facing capability.
 
 > **USER PRIORITY, stated 2026-08-23 at activation: `brag learn` matters most.**
 > **Framing agreed, 2026-09-05 — but not merely on preference.** The deciding
