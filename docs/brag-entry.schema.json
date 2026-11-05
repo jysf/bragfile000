@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/jysf/bragfile000/blob/main/docs/brag-entry.schema.json",
   "title": "Brag entry — `brag add --json` stdin contract",
-  "description": "Single-object stdin payload accepted by `brag add --json`. Mirrors DEC-012's six locked choices in JSON Schema vocabulary; mirrors DEC-011's nine-key per-entry shape on the input side. The binary's runtime parser is the authoritative validator; this schema is the documented contract for AI agents and other external consumers to validate candidate payloads against before piping. See BRAG.md (https://github.com/jysf/bragfile000/blob/main/BRAG.md) for the integration guide.",
+  "description": "Single-object stdin payload accepted by `brag add --json`. Mirrors DEC-012's six locked choices in JSON Schema vocabulary; mirrors DEC-011's nine-key per-entry shape on the input side. The binary's runtime parser is the authoritative validator; this schema is the documented contract for AI agents and other external consumers to validate candidate payloads against before piping. The binary also rejects a repeated top-level key, compared case-insensitively (DEC-055); JSON Schema cannot express that, and a validator that parses the payload first never sees the repeat. See BRAG.md (https://github.com/jysf/bragfile000/blob/main/BRAG.md) for the integration guide.",
   "type": "object",
   "required": ["title"],
   "additionalProperties": false,

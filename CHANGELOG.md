@@ -91,6 +91,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that means *an array of entry objects* on `brag impact`, `brag review`,
   `brag summary` and `brag wrapped`. Update any `jq .entries` to
   `jq .candidates`.
+- **Breaking: `brag add --json` and the MCP `brag_add` tool reject a
+  repeated key**
+  ([DEC-055](decisions/DEC-055-a-repeated-json-key-is-rejected-on-both-machine-ingresses.md)).
+  Both decoders kept the last of a repeated key and said nothing, so
+  `{"title":"x","impact":"A","impact":"B"}` stored `B` with exit 0, and a
+  second `"type"` could silently turn a win into a `failed` entry. Now
+  nothing is written: the CLI exits 1 with
+  `--json input: key "impact" appears more than once` on stderr, and
+  `brag_add` returns that message as a tool error. Keys are compared after
+  unescaping and case-insensitively, so `"Impact"` repeats `"impact"`, and a
+  repeat with the same value is rejected too. Only top-level keys count. A
+  payload built with a JSON library cannot contain a repeat; one built by
+  string templating (`printf`, a heredoc) can, and now fails instead of
+  storing a value its author may not have meant.
 
 ### Fixed
 
@@ -105,7 +119,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   user error (exit 1) with nothing written; the rejection is atomic. Repeating
   an *unknown* header is still ignored, as before. Reaches all three editor
   ingresses: `brag edit`, `brag add` (editor mode) and `brag learn`. The
-  `brag add --json` ingress is a separate decoder and is unchanged.
+  `brag add --json` and MCP `brag_add` ingresses are separate decoders; they
+  get the same rule under *Changed* (DEC-055).
 - **`brag edit` now prints the edited entry's id to stdout on a write**
   ([DEC-052](decisions/DEC-052-brag-edit-emits-the-mutated-id-on-stdout.md)),
   and still prints nothing on a no-op. Both outcomes previously produced empty

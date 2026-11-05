@@ -102,6 +102,14 @@ brag list --format json | jq '.[0]' | brag add --json
 - Unknown keys are strict-rejected with the offending key named in
   the error (catches typos like `"titl"` before they become silently-
   missing entries).
+- A repeated top-level key is rejected before anything is decoded:
+  exit 1, nothing written, and stderr names the key
+  (`--json input: key "impact" appears more than once`). Two keys are
+  the same key when they match case-insensitively after unescaping
+  (`"impact"`, `"Impact"` and an escaped spelling are one key), and
+  a repeated server-owned key counts too. A repeat inside a nested
+  value does not. The MCP `brag_add` tool applies the same rule
+  ([DEC-055](../decisions/DEC-055-a-repeated-json-key-is-rejected-on-both-machine-ingresses.md)).
 - `tags` stays a comma-joined string per
   [DEC-004](../decisions/DEC-004-tags-comma-joined-for-mvp.md); array
   form (`["a","b"]`) is rejected with an error naming DEC-004.
@@ -1366,8 +1374,13 @@ same `~/.bragfile/db.sqlite` the CLI uses:
   and the optional `session`/`cost`/`tokens` seed provenance params
   (DEC-027). Inserts via `Store.Add` and returns the created entry
   as a single [DEC-011](../decisions/DEC-011-json-output-shape.md) object.
-  A missing/empty `title` is a tool error, never a silent insert. Unlike
-  `brag add`, the MCP tool does **not** emit a SPEC-039 milestone line and
+  A missing/empty `title` is a tool error, never a silent insert. So is a
+  repeated top-level key, with nothing written:
+  `brag_add: key "impact" appears more than once`. It is checked on the raw
+  arguments, before the SDK validates or decodes them, by the same rule as
+  `brag add --json`
+  ([DEC-055](../decisions/DEC-055-a-repeated-json-key-is-rejected-on-both-machine-ingresses.md)).
+  Unlike `brag add`, the MCP tool does **not** emit a SPEC-039 milestone line and
   does **not** auto-fill `project` from a server-side cwd — the MCP server
   has no meaningful cwd relative to the calling agent.
 - **`brag_list`** — filters `tag`/`project`/`type` (exact match), the time
@@ -1528,6 +1541,7 @@ Machine-parseable output is stdout only; stderr is for humans.
 - `DEC-011` — shared JSON output shape for `brag list --format json` and `brag export --format json`
 - `DEC-013` — markdown export shape for `brag export --format markdown` (+`--flat`)
 - `DEC-012` — stdin-JSON schema for `brag add --json` (single object, title required, server-owned fields tolerated-and-ignored)
+- `DEC-055` — a repeated top-level key is rejected on `brag add --json` and MCP `brag_add`, with nothing written: keys are compared after unescaping and case-insensitively (encoding/json's own field match), top level only, by one shared check that runs before either decoder.
 - `DEC-014` — rule-based output shape for `brag summary`, `brag review`, `brag stats`, and `brag impact`: single-object JSON envelope with `generated_at` / `scope` / `filters` provenance + per-spec payload keys; markdown convention reuses DEC-013's provenance + summary-block style.
 - `DEC-016` — tag mutation semantics: `brag tags` in-use-only taxonomy (count-DESC/name-ASC; `{tag,count}` JSON shape), rename-errors-into-existing, merge via DELETE+INSERT, orphan tags invisible (no GC).
 - `DEC-017` — `entries.project` ↔ `projects` relationship (soft string match) + `projects.status` enum + single `state_note`; the data `brag project show`/`list` render.
