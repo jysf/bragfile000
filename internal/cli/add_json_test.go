@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -625,5 +626,54 @@ func TestAddJSON_ExplicitProjectWins(t *testing.T) {
 	}
 	if entries[0].Project != "explicit" {
 		t.Errorf("Project: got %q want %q", entries[0].Project, "explicit")
+	}
+}
+
+// TestAddCmd_JSON_RepeatOfEveryFieldIsRejected: a repeat of any key the
+// schema accepts, server-owned ones included, writes nothing and names the
+// key (DEC-055). The keys come from addJSONInput's own tags rather than a
+// typed list, so a field added later is covered with no edit here.
+func TestAddCmd_JSON_RepeatOfEveryFieldIsRejected(t *testing.T) {
+	var keys []string
+	typ := reflect.TypeFor[addJSONInput]()
+	for i := range typ.NumField() {
+		name, _, _ := strings.Cut(typ.Field(i).Tag.Get("json"), ",")
+		keys = append(keys, name)
+	}
+	// Non-vacuity: DEC-012's six user-owned keys and three server-owned ones.
+	if len(keys) < 9 {
+		t.Fatalf("addJSONInput has %d json keys, want at least 9: %v", len(keys), keys)
+	}
+	for _, k := range keys {
+		t.Run(k, func(t *testing.T) {
+			stdin := `{"title":"t","` + k + `":"a","` + k + `":"b"}`
+			if k == "title" {
+				stdin = `{"title":"a","title":"b"}`
+			}
+			root, dbPath := newRootWithAdd(t)
+			var outBuf, errBuf bytes.Buffer
+			root.SetOut(&outBuf)
+			root.SetErr(&errBuf)
+			root.SetIn(strings.NewReader(stdin))
+			root.SetArgs([]string{"--db", dbPath, "add", "--json"})
+
+			err := root.Execute()
+			if err == nil {
+				t.Fatalf("%s: expected error, got nil", stdin)
+			}
+			if !errors.Is(err, ErrUser) {
+				t.Fatalf("expected errors.Is(err, ErrUser); got %v", err)
+			}
+			want := `--json input: key "` + k + `" appears more than once`
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("got %q, want it to contain %q", err.Error(), want)
+			}
+			if outBuf.Len() != 0 {
+				t.Errorf("expected stdout empty, got %q", outBuf.String())
+			}
+			if got := len(listAll(t, dbPath)); got != 0 {
+				t.Errorf("expected 0 entries, got %d", got)
+			}
+		})
 	}
 }

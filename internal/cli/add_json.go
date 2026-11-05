@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -49,7 +50,16 @@ type addJSONInput struct {
 // hydrated storage.Entry. Server-owned fields on the input are dropped.
 // All errors route through UserErrorf so ErrUser propagates.
 func parseAddJSON(r io.Reader) (storage.Entry, error) {
-	dec := json.NewDecoder(r)
+	raw, err := io.ReadAll(r)
+	if err != nil {
+		return storage.Entry{}, UserErrorf("invalid JSON input: %v", err)
+	}
+	// Before the decode, which keeps the last of a repeated key and says
+	// nothing (DEC-055). MCP brag_add runs the same check.
+	if err := capture.CheckRepeatedKeys(raw); err != nil {
+		return storage.Entry{}, UserErrorf("--json input: %v", err)
+	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 
 	var in addJSONInput
