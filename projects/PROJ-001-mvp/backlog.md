@@ -1007,6 +1007,15 @@ would touch is changing.
 hand often enough to be annoyed — the same itch `zoxide`/`autojump` scratch. If
 that never happens, this is correctly dead.
 
+> **Trigger fired 2026-11-27.** The maintainer asked for `brag project <name|id>
+> cd` and wants it built into the app; it is now the top unscheduled item in the
+> active project (PROJ-008 brief, "Smaller / unscheduled"). **Interim:** a
+> hand-written zsh `brag()` wrapper in the maintainer's `~/.zshrc` handles that
+> form by reading `brag project show <x> --format json` and `cd`-ing to
+> `.locations[0]` — i.e. it already assumes first-registered = primary, the
+> DEC-041 question below. That wrapper is the shape `shell-init` should replace;
+> note the user-facing form it trained is `brag project <x> cd`, not `bragcd`.
+
 ### The design, so it need not be re-derived
 
 `brag project here` already does cwd → project (`ProjectForPath`, SPEC-031).
