@@ -230,7 +230,10 @@ now, and §2.1 / §2.3 arrive with v0.7.0.
   non-interactive edit on both surfaces, the fixup path. **Recurred twice** (the
   reporter, then an agent that could not find how to edit a brag at all), which is
   what promoted it from "unscheduled" to a framed stage with a recorded posture.
-- **Smaller / unscheduled.** A write-time `brag add --check` similarity warning
+- **Smaller / unscheduled.** **First in line (added 2026-11-27): jump to a
+  project's directory** — `brag project goto` (resolver) + `brag shell-init`
+  (shell wrapper), designed in full in `projects/PROJ-001-mvp/backlog.md`; its
+  revisit trigger has fired, and it takes the reserved `DEC-041`. Also: a write-time `brag add --check` similarity warning
   (§3.1's write side, pairs with the mirror's read side); and CLI
   `--agent`/`--model`/`--session` flags for MCP parity (§4.3 option B) — a
   capture/provenance question, larger than the doc fix SPEC-091 makes.
